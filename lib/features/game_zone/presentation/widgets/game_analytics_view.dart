@@ -126,7 +126,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
           const SizedBox(width: 8),
           _buildPill(1, 'ম্যাচ হিস্টোরি (History)', Icons.history_rounded),
           const SizedBox(width: 8),
-          _buildPill(2, 'ট্যুর লিডারবোর্ড', Icons.leaderboard_rounded),
+          _buildPill(2, 'গ্রুপ লিডারবোর্ড', Icons.leaderboard_rounded),
         ],
       ),
     );
@@ -323,7 +323,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 icon: Icons.games_rounded,
               ),
               _buildMetricItem(
-                label: 'মোট জয়',
+                label: 'মোট জয়',
                 value: '${analytics.totalWins}',
                 icon: Icons.emoji_events_rounded,
                 color: Colors.amber,
@@ -414,7 +414,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${stat.matchesWon} / ${stat.matchesPlayed} জয়',
+                    '${stat.matchesWon} / ${stat.matchesPlayed} জয়',
                     style: TextStyle(
                       color: context.forest.text,
                       fontSize: 13,
@@ -489,7 +489,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               ),
               const SizedBox(height: 16),
               Text(
-                'কোনো ম্যাচ হিস্টোরি পাওয়া যায়নি',
+                'কোনো ম্যাচ হিস্টোরি পাওয়া যায়নি',
                 style: TextStyle(
                   color: context.forest.text,
                   fontSize: 16,
@@ -644,7 +644,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               ),
               const SizedBox(height: 16),
               Text(
-                'ট্যুর লিডারবোর্ড সক্রিয় নয়',
+                'গ্রুপ লিডারবোর্ড সক্রিয় নয়',
                 style: TextStyle(
                   color: context.forest.text,
                   fontSize: 16,
@@ -753,7 +753,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'ট্যুর চ্যাম্পিয়ন (Tour Champion)',
+                        'গ্রুপ চ্যাম্পিয়ন (Group Champion)',
                         style: TextStyle(
                           color: Colors.amber,
                           fontSize: 12,
@@ -770,7 +770,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                         ),
                       ),
                       Text(
-                        '${entries.first.totalWins} জয় • ${entries.first.winRate.toStringAsFixed(0)}% উইন রেট',
+                        '${entries.first.totalWins} জয় • ${entries.first.winRate.toStringAsFixed(0)}% উইন রেট',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -868,7 +868,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${entry.totalWins} জয়',
+                      '${entry.totalWins} জয়',
                       style: TextStyle(
                         color: context.forest.text,
                         fontSize: 13,

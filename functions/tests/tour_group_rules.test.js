@@ -1334,6 +1334,39 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('group photo', () => {
+    const OBJECT = '0123456789abcdef0123456789abcdef';
+    const photo = (tour = TOUR, folder = 'avatars', ext = 'jpg') =>
+      `https://bhromon.fun/media/${tour}/${folder}/${OBJECT}.${ext}`;
+    const tourRef = (who) => doc(db(who), 'tours', TOUR);
+
+    test('the owner and admins set the photo to a file in this group space', async () => {
+      await assertSucceeds(updateDoc(tourRef('owner'), { photoUrl: photo() }));
+      await assertSucceeds(updateDoc(tourRef('admin'), { photoUrl: photo(TOUR, 'avatars', 'webp') }));
+    });
+
+    test('the owner and admins remove the photo', async () => {
+      await assertSucceeds(updateDoc(tourRef('admin'), { photoUrl: photo() }));
+      await assertSucceeds(updateDoc(tourRef('admin'), { photoUrl: null }));
+      await assertSucceeds(updateDoc(tourRef('owner'), { photoUrl: photo() }));
+      await assertSucceeds(updateDoc(tourRef('owner'), { photoUrl: null }));
+    });
+
+    test('a photo from another space, folder, host or file type is refused', async () => {
+      await assertFails(updateDoc(tourRef('admin'), { photoUrl: photo('other-tour') }));
+      await assertFails(updateDoc(tourRef('admin'), { photoUrl: photo(TOUR, 'covers') }));
+      await assertFails(updateDoc(tourRef('admin'), { photoUrl: photo(TOUR, 'avatars', 'mp4') }));
+      await assertFails(updateDoc(tourRef('admin'), { photoUrl: 'https://evil.example/track.png' }));
+      await assertFails(updateDoc(tourRef('admin'), { photoUrl: `https://bhromon.fun/media/${TOUR}/avatars/not-an-id.jpg` }));
+      await assertFails(updateDoc(tourRef('admin'), { photoUrl: 42 }));
+    });
+
+    test('a plain member cannot change the photo', async () => {
+      await assertFails(updateDoc(tourRef('member'), { photoUrl: photo() }));
+      await assertFails(updateDoc(tourRef('member'), { photoUrl: null }));
+    });
+  });
+
   test('unauthenticated users can read nothing in the tour group', async () => {
     await assertFails(getDoc(doc(anon(), 'memberships', `${TOUR}__${people.member.email}`)));
     await assertFails(getDoc(doc(anon(), 'invites', CODE)));

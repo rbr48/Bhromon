@@ -110,7 +110,7 @@ class TourNotice {
       id: id,
       title: map['title'] as String? ?? 'নোটিশ',
       content: map['content'] as String? ?? '',
-      author: map['author'] as String? ?? 'ট্যুর লিডার',
+      author: map['author'] as String? ?? 'গ্রুপ অ্যাডমিন',
       authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
       urgent: map['urgent'] as bool? ?? false,
       createdAt: readDate(map['createdAt']) ?? DateTime.now(),

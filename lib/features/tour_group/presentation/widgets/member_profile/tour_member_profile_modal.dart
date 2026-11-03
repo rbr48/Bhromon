@@ -118,11 +118,18 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
 
   StreamSubscription<dynamic>? _profileSub;
 
+  /// The tour's members, read once in [initState] when the modal loads them itself (no
+  /// list was passed in), so a rebuild never reads the repository.
+  Stream<List<TourMember>>? _membersStream;
+
   @override
   void initState() {
     super.initState();
     _note = widget.statusNote;
     _bloodGroup = widget.bloodGroup;
+    if (widget.members == null) {
+      _membersStream = _repo.watchMembers(widget.tourId);
+    }
     _loadExtraProfileData();
   }
 
@@ -387,7 +394,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             child: widget.members != null
                 ? _buildDirectModalBody(l10n, widget.members!)
                 : StreamBuilder<List<TourMember>>(
-                    stream: _repo.watchMembers(widget.tourId),
+                    stream: _membersStream,
                     builder: (context, membersSnap) {
                       final members = membersSnap.data ?? [];
                       final member = members.firstWhere(

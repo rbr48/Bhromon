@@ -98,7 +98,7 @@ String _firstCharacters(String text, int count) =>
 /// so with a permission error. Any other failure means the server did not answer.
 String _callWriteFailure(Object error) {
   if (error is FirebaseException && error.code == 'permission-denied') {
-    return 'This call was refused. Check that you are both still members of this tour, then try again.';
+    return 'This call was refused. Check that you are both still members of this group, then try again.';
   }
   return kCallUnreachableMessage;
 }
@@ -398,7 +398,7 @@ class CallSignalingService {
     // The rules accept a call only between two members of the tour they share.
     if (sharedTourId == null || remoteEmail == null || remoteEmail.isEmpty) {
       throw const CallSetupException(
-        'You can only call members of a tour you share.',
+        'You can only call members of a group you share.',
       );
     }
     _begin(callId, remoteUid, isCaller: true);

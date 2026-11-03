@@ -22,16 +22,20 @@ const _card = Color(0xFF142428);
 /// on the shared list, notices that need an answer, and who has checked in today.
 /// Each row opens the screen it summarises.
 class FamilyHomeCard extends StatefulWidget {
-  const FamilyHomeCard({super.key, required this.tourId});
+  const FamilyHomeCard({super.key, required this.tourId, this.repository});
 
   final String tourId;
+
+  /// The data source. The hub passes its own, so a test can supply one without Firebase.
+  final TourGroupRepository? repository;
 
   @override
   State<FamilyHomeCard> createState() => _FamilyHomeCardState();
 }
 
 class _FamilyHomeCardState extends State<FamilyHomeCard> {
-  final TourGroupRepository _repository = TourGroupRepository();
+  late final TourGroupRepository _repository =
+      widget.repository ?? TourGroupRepository();
   final List<StreamSubscription<dynamic>> _subs = [];
   Timer? _dayTick;
 

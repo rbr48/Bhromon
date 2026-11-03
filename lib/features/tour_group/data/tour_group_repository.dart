@@ -5,7 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+
+import 'package:bhromon/core/utils/session_shared_stream.dart';
+import 'package:bhromon/core/utils/shared_stream_registry.dart';
 
 import '../../../../core/utils/app_logger.dart';
 import '../domain/models/date_codec.dart';
@@ -29,13 +33,16 @@ import '../domain/models/vehicle_models.dart';
 import '../domain/services/call_partner.dart';
 import '../domain/services/emergency_numbers.dart';
 import '../domain/services/media_references.dart';
+import '../domain/services/media_rules.dart';
+import '../domain/services/member_profile_sync.dart';
+import 'active_group.dart';
+import 'group_stream_budget.dart';
 import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
 import 'channel_message_cache.dart';
 import 'channel_read_store.dart';
-import 'tour_hub_preference.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 import 'vps_notification_service.dart';
@@ -271,7 +278,7 @@ class TourGroupRepository {
     }
     await ChannelReadStore().clearTour(tourId);
     await TourMediaJournal.instance.dropTour(tourId);
-    await TourHubPreference().forget(tourId);
+    await ActiveGroup.instance.clearIf(tourId);
     await ChannelMessageCache().clearTour(tourId);
     try {
       // Photos and videos the tour loaded sit in the image cache, which cannot
@@ -405,12 +412,54 @@ class TourGroupRepository {
   // Groups
   // ---------------------------------------------------------------------------
 
+  /// One groups list for the whole app. Screens each build their own repository, so the
+  /// sharing lives in static state: one upstream however many screens listen.
+  static SessionSharedStream<List<TourGroup>>? _sharedMyGroups;
+
+  /// One members stream per tour, shared by every screen that shows that tour's members.
+  /// Its upstreams are counted by [GroupStreamBudget].
+  static final SharedStreamRegistry<String, List<TourMember>> _sharedMembers =
+      SharedStreamRegistry<String, List<TourMember>>(
+    onUpstreamStart: (tourId) =>
+        GroupStreamBudget.open(GroupStreamBudget.membersKey(tourId)),
+    onUpstreamEnd: (tourId) =>
+        GroupStreamBudget.close(GroupStreamBudget.membersKey(tourId)),
+  );
+
+  /// The tours as they were last seen this session. A new listen starts from these, so
+  /// the eager fetch runs once per session, not once per listen.
+  static final Map<String, TourGroup> _sessionTourDocs = {};
+
+  /// True while the groups list is answered from this device's cache rather than the
+  /// server. The groups list shows an offline banner when this stays true.
+  static final ValueNotifier<bool> groupsServedFromCache =
+      ValueNotifier<bool>(false);
+
   /// Tours the signed-in user is an active member of, live.
   ///
   /// Membership decides the list. Cached tours show only until the first
   /// membership answer arrives, so tours the user left or was removed from
-  /// stop appearing.
+  /// stop appearing. Every caller shares one upstream (see [_sharedMyGroups]).
   Stream<List<TourGroup>> watchMyGroups() {
+    final shared = _sharedMyGroups ??= SessionSharedStream<List<TourGroup>>(
+      _openMyGroups,
+      onUpstreamStart: () => GroupStreamBudget.open(GroupStreamBudget.myGroups),
+      onUpstreamEnd: () => GroupStreamBudget.close(GroupStreamBudget.myGroups),
+    );
+    return shared.stream;
+  }
+
+  /// Starts [watchMyGroups] again from nothing, for a retry after an error. The old
+  /// listeners are closed, so a screen must listen to the stream returned here.
+  Stream<List<TourGroup>> restartMyGroups() {
+    final old = _sharedMyGroups;
+    _sharedMyGroups = null;
+    unawaited(old?.reset());
+    return watchMyGroups();
+  }
+
+  /// The upstream of [watchMyGroups]: the membership rows, then each tour, live.
+  Stream<List<TourGroup>> _openMyGroups() {
     late StreamController<List<TourGroup>> controller;
     StreamSubscription<User?>? authSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? membershipSub;
@@ -433,26 +482,35 @@ class TourGroupRepository {
     void stopTour(String tourId) {
       tourSubs.remove(tourId)?.cancel();
       tours.remove(tourId);
+      _sessionTourDocs.remove(tourId);
+      unawaited(forgetMembers(tourId));
     }
 
     void startTour(String tourId, String email) {
-      // Eager one-off fetch for fast Web and desktop startup
-      _tour(tourId).get().then((doc) {
-        try {
-          final data = doc.data();
-          if (doc.exists && data != null && !controller.isClosed) {
-            final group = TourGroup.fromMap(doc.id, data);
-            tours[tourId] = group;
-            _cacheLocalGroup(group);
-            emit();
+      final known = _sessionTourDocs[tourId];
+      if (known != null) {
+        tours[tourId] = known;
+      } else {
+        // Eager one-off fetch for fast Web and desktop startup, once per session.
+        _tour(tourId).get().then((doc) {
+          try {
+            final data = doc.data();
+            if (doc.exists && data != null && !controller.isClosed) {
+              final group = TourGroup.fromMap(doc.id, data);
+              tours[tourId] = group;
+              _sessionTourDocs[tourId] = group;
+              _cacheLocalGroup(group);
+              emit();
+            }
+          } catch (e, st) {
+            logWarning(
+                '[TourGroupRepository] eager get tour $tourId failed', e, st);
           }
-        } catch (e, st) {
+        }).catchError((Object e, StackTrace st) {
           logWarning(
-              '[TourGroupRepository] eager get tour $tourId failed', e, st);
-        }
-      }).catchError((Object e, StackTrace st) {
-        logWarning('[TourGroupRepository] eager get tour $tourId error', e, st);
-      });
+              '[TourGroupRepository] eager get tour $tourId error', e, st);
+        });
+      }
 
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
         (doc) {
@@ -461,6 +519,7 @@ class TourGroupRepository {
             if (doc.exists && data != null) {
               final group = TourGroup.fromMap(doc.id, data);
               tours[tourId] = group;
+              _sessionTourDocs[tourId] = group;
               _cacheLocalGroup(group);
               // Owner rows written before role 'owner' was saved as 'admin'.
               // The owner's own app repairs them here.
@@ -516,6 +575,8 @@ class TourGroupRepository {
 
     void bindUser(User? user) {
       if (user == null) {
+        _sessionTourDocs.clear();
+        unawaited(_sharedMembers.clear());
         clearUserTours();
         emit();
         return;
@@ -525,6 +586,7 @@ class TourGroupRepository {
         return;
       }
       clearUserTours();
+      _sessionTourDocs.clear();
       boundUserId = user.uid;
 
       final rawEmail = user.email;
@@ -546,37 +608,15 @@ class TourGroupRepository {
           _memberships.where('email', isEqualTo: email).snapshots().listen(
         (snapshot) {
           heardFromServer = true;
+          groupsServedFromCache.value = snapshot.metadata.isFromCache;
           rolesByTour.clear();
-          final myName = currentDisplayName;
-          final myPhoto = currentPhotoUrl;
-          final myUid = currentUid;
           for (final d in snapshot.docs) {
             final data = d.data();
             final id = data['tourId'] as String? ?? '';
-            // A row an admin added has no uid, and chats and calls need one. The member
-            // writes their own, which the rules allow and nothing else on the row.
-            if ((data['uid'] as String? ?? '').isEmpty && myUid.isNotEmpty) {
-              d.reference.update({'uid': myUid}).catchError((Object _) {});
-            }
             final rawStatus = (data['status'] as String?)?.toLowerCase();
             final isActive = rawStatus == null || rawStatus == 'active';
             if (isActive && id.isNotEmpty) {
               rolesByTour[id] = data['role'] as String? ?? 'member';
-            }
-            // Proactively self-heal membership row with latest in-app profile.
-            final updates = <String, dynamic>{};
-            if (myUid.isNotEmpty &&
-                (data['uid'] == null || (data['uid'] as String).isEmpty)) {
-              updates['uid'] = myUid;
-            }
-            if (myName != 'Explorer' && data['displayName'] != myName) {
-              updates['displayName'] = myName;
-            }
-            if (myPhoto != null && data['photoUrl'] != myPhoto) {
-              updates['photoUrl'] = myPhoto;
-            }
-            if (updates.isNotEmpty) {
-              unawaited(d.reference.update(updates).catchError((_) {}));
             }
           }
           final ids = rolesByTour.keys.toSet();
@@ -625,6 +665,7 @@ class TourGroupRepository {
       onCancel: () async {
         await authSub?.cancel();
         clearUserTours();
+        groupsServedFromCache.value = false;
       },
     );
 
@@ -833,7 +874,7 @@ class TourGroupRepository {
       } on FirebaseException catch (e, st) {
         logWarning('[TourGroupRepository] join membership set failed', e, st);
         throw const TourAccessException(
-            'এই ট্যুরে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
+            'এই গ্রুপে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
       }
     } else {
       // If already a member but inactive, reactivate membership so security rules permit reading
@@ -857,7 +898,7 @@ class TourGroupRepository {
     }
 
     if (group == null) {
-      throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
+      throw const TourAccessException('গ্রুপটি এখন আর পাওয়া যাচ্ছে না।');
     }
     await _cacheLocalGroup(group);
 
@@ -886,9 +927,9 @@ class TourGroupRepository {
 
     final tourDoc = await _tour(tourId).get();
     if (!tourDoc.exists) {
-      throw StateError('ট্যুরটি খুঁজে পাওয়া যায়নি।');
+      throw StateError('গ্রুপটি খুঁজে পাওয়া যায়নি।');
     }
-    final tourName = tourDoc.data()?['name'] as String? ?? 'Tour';
+    final tourName = tourDoc.data()?['name'] as String? ?? 'Group';
 
     final membershipRef = _memberships.doc(_membershipId(tourId, cleanEmail));
     try {
@@ -975,6 +1016,61 @@ class TourGroupRepository {
   Future<void> setMomentsEnabled(String tourId, bool enabled) async {
     _requireEmail();
     await _tour(tourId).update({'momentsEnabled': enabled});
+  }
+
+  /// Uploads [file] as the group's photo and records it on the group, then removes the
+  /// photo it replaces. The file goes to the group's own media space, so only members
+  /// can read it. The owner or an admin may do this; the rules refuse anyone else.
+  /// [onProgress] reports the upload from 0 to 1. Returns the new photo's URL.
+  Future<String> changeGroupPhoto({
+    required String tourId,
+    required XFile file,
+    String? previousUrl,
+    void Function(double progress)? onProgress,
+  }) async {
+    _requireEmail();
+    final contentType = imageContentType(file.name);
+    if (contentType == null) {
+      throw ArgumentError.value(
+          file.name, 'file', 'not an image type the media server accepts');
+    }
+    final upload = await TourMediaUploader.start(
+      tourId: tourId,
+      folder: 'avatars',
+      file: file,
+      contentType: contentType,
+      extension: storedExtension(file.name, 'jpg'),
+      maxBytes: kMaxImageBytes,
+      journal: TourMediaJournal.untracked,
+    );
+    final progressSub =
+        onProgress == null ? null : upload.progress.listen(onProgress);
+    final String url;
+    try {
+      url = await upload.finish();
+      await _tour(tourId).update({'photoUrl': url});
+    } catch (_) {
+      // The group does not point at the new file, so it must not stay on the server.
+      await upload.discard();
+      rethrow;
+    } finally {
+      await progressSub?.cancel();
+    }
+    if (previousUrl != null && previousUrl != url) {
+      await TourMediaUploader.deleteMedia(previousUrl);
+    }
+    return url;
+  }
+
+  /// Removes the group's photo. The owner or an admin may do this. The file is deleted
+  /// once the group no longer points at it.
+  Future<void> removeGroupPhoto(
+      {required String tourId, String? previousUrl}) async {
+    _requireEmail();
+    await _tour(tourId).update({'photoUrl': null});
+    if (previousUrl != null) {
+      await TourMediaUploader.deleteMedia(previousUrl);
+    }
   }
 
   /// Admins save the itinerary. The summary fields older screens read are
@@ -1087,41 +1183,36 @@ class TourGroupRepository {
     }
   }
 
-  /// Active members of a tour, owner first, then by join date.
+  /// The active members of a tour, owner first, then by join date. Every screen that asks
+  /// for the same tour shares one upstream (see [forgetMembers]).
   Stream<List<TourMember>> watchMembers(String tourId) {
+    return _sharedMembers.stream(tourId, () => _openMembers(tourId));
+  }
+
+  /// Ends the shared members stream of [tourId], when the user leaves the group or is
+  /// removed from it. The next listen opens a fresh upstream.
+  Future<void> forgetMembers(String tourId) => _sharedMembers.remove(tourId);
+
+  /// Ends every shared stream and cached value. Called at sign-out.
+  Future<void> resetSessionCaches() async {
+    groupsServedFromCache.value = false;
+    _sessionTourDocs.clear();
+    await _sharedMembers.clear();
+    // Drop the holder as well, so the next sign-in opens a new groups upstream.
+    final old = _sharedMyGroups;
+    _sharedMyGroups = null;
+    await old?.reset();
+    await ActiveGroup.instance.clear();
+  }
+
+  /// The upstream of [watchMembers]. It only reads: a member's own row is brought up to
+  /// date by [syncMyMemberProfile].
+  Stream<List<TourMember>> _openMembers(String tourId) {
     return _memberships
         .where('tourId', isEqualTo: tourId)
         .where('status', isEqualTo: 'active')
         .snapshots()
         .map((snapshot) {
-      final myEmail = currentEmail;
-      final myUid = currentUid;
-      if (myEmail.isNotEmpty && myUid.isNotEmpty) {
-        for (final d in snapshot.docs) {
-          final data = d.data();
-          if (normalizeEmail(data['email'] as String? ?? '') == myEmail) {
-            final updates = <String, dynamic>{};
-            // Back-fill uid if missing.
-            if (data['uid'] == null || (data['uid'] as String).isEmpty) {
-              updates['uid'] = myUid;
-            }
-            // Self-heal displayName / photoUrl from in-app profile so that
-            // other members always see the latest name and avatar.
-            final myName = currentDisplayName;
-            final myPhoto = currentPhotoUrl;
-            if (data['displayName'] != myName && myName != 'Explorer') {
-              updates['displayName'] = myName;
-            }
-            if (data['photoUrl'] != myPhoto && myPhoto != null) {
-              updates['photoUrl'] = myPhoto;
-            }
-            if (updates.isNotEmpty) {
-              unawaited(d.reference.update(updates).catchError((_) {}));
-            }
-            break;
-          }
-        }
-      }
       final members =
           snapshot.docs.map((d) => TourMember.fromMap(d.data())).toList();
       members.sort((a, b) {
@@ -1130,6 +1221,33 @@ class TourGroupRepository {
       });
       return members;
     });
+  }
+
+  /// Brings the signed-in person's own membership rows up to date with the in-app name,
+  /// photo and uid. It writes only the fields that differ, logs each failed write, and
+  /// runs on sign-in and after a profile save. It never runs from a read.
+  /// Returns how many rows were written.
+  Future<int> syncMyMemberProfile() async {
+    final email = currentEmail;
+    if (email.isEmpty) return 0;
+    final uid = currentUid;
+    final name = currentDisplayName;
+    final photo = currentPhotoUrl;
+    final snapshot = await _memberships.where('email', isEqualTo: email).get();
+    return applyMemberRowSync<QueryDocumentSnapshot<Map<String, dynamic>>>(
+      snapshot.docs,
+      updatesFor: (doc) => memberRowUpdates(
+        row: doc.data(),
+        uid: uid,
+        displayName: name,
+        photoUrl: photo,
+      ),
+      write: (doc, updates) => doc.reference.update(updates),
+      onFailure: (error, stackTrace) => logWarning(
+          '[TourGroupRepository] member profile sync failed',
+          error,
+          stackTrace),
+    );
   }
 
   /// The tours the signed-in person is an active member of, read from the server.
@@ -1331,7 +1449,7 @@ class TourGroupRepository {
     final target = normalizeEmail(email);
     if (target == actor) {
       throw const TourAccessException(
-          'নিজেকে সরাতে "ট্যুর ছেড়ে যান" ব্যবহার করুন।');
+          'নিজেকে সরাতে "গ্রুপ ছেড়ে যান" ব্যবহার করুন।');
     }
     final batch = _firestore.batch();
     batch.set(_tour(tourId).collection('bans').doc(target), {
@@ -1349,13 +1467,13 @@ class TourGroupRepository {
     final actor = _requireEmail();
     final target = normalizeEmail(newOwnerEmail);
     if (target == actor) {
-      throw const TourAccessException('আপনি ইতিমধ্যে এই ট্যুরের মালিক।');
+      throw const TourAccessException('আপনি ইতিমধ্যে এই গ্রুপের মালিক।');
     }
     final targetRow =
         await _memberships.doc(_membershipId(tourId, target)).get();
     if (!targetRow.exists || targetRow.data()?['status'] != 'active') {
       throw const TourAccessException(
-          'মালিকানা শুধু এই ট্যুরের সক্রিয় সদস্যকে দেওয়া যাবে।');
+          'মালিকানা শুধু এই গ্রুপের সক্রিয় সদস্যকে দেওয়া যাবে।');
     }
 
     final batch = _firestore.batch();
@@ -1377,6 +1495,7 @@ class TourGroupRepository {
           'মালিক হিসেবে আগে মালিকানা অন্য সদস্যকে হস্তান্তর করুন।');
     }
     await _memberships.doc(_membershipId(tourId, email)).delete();
+    await forgetMembers(tourId);
     await clearLocalTourData(tourId);
   }
 

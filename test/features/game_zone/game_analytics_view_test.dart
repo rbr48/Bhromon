@@ -119,9 +119,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Switch to Tour Leaderboard tab
-    await tester.tap(find.textContaining('ট্যুর লিডারবোর্ড'));
+    await tester.tap(find.textContaining('গ্রুপ লিডারবোর্ড'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('ট্যুর লিডারবোর্ড সক্রিয় নয়'), findsOneWidget);
+    expect(find.textContaining('গ্রুপ লিডারবোর্ড সক্রিয় নয়'), findsOneWidget);
   });
 }

@@ -1,4 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bhromon/core/utils/app_logger.dart';
+import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/usecases/get_current_profile_usecase.dart';
 import '../../domain/usecases/sign_in_email_usecase.dart';
@@ -21,6 +26,12 @@ class AuthCubit extends Cubit<AuthState> {
   final SignInGoogleUseCase _signInGoogle;
   final SignOutUseCase _signOut;
   final UpdateProfileUseCase _updateProfile;
+
+  /// The group repository that the cubit syncs member rows with and resets at sign-out.
+  /// A field rather than a constructor parameter, so injection is unchanged. Tests
+  /// replace it.
+  @visibleForTesting
+  TourGroupRepository Function() groupRepository = () => TourGroupRepository();
 
   AuthCubit(
     this._getCurrentProfile,
@@ -56,6 +67,17 @@ class AuthCubit extends Cubit<AuthState> {
     return AuthError(failure.message, reason: reason);
   }
 
+  /// Keeps the signed-in person's group member rows in step with their profile. A
+  /// failure is logged; it never blocks sign-in or the profile save.
+  void _syncGroupMembership() {
+    unawaited(groupRepository()
+        .syncMyMemberProfile()
+        .catchError((Object e, StackTrace st) {
+      logWarning('[AuthCubit] group member sync failed', e, st);
+      return 0;
+    }));
+  }
+
   Future<void> signInWithEmail(String email) async {
     emit(const AuthLoading());
     final result = await _signInEmail(email);
@@ -70,7 +92,10 @@ class AuthCubit extends Cubit<AuthState> {
     final result = await _verifyOtp(smsCode);
     result.fold(
       (failure) => emit(_failedState(failure)),
-      (profile) => emit(Authenticated(profile)),
+      (profile) {
+        _syncGroupMembership();
+        emit(Authenticated(profile));
+      },
     );
   }
 
@@ -79,7 +104,10 @@ class AuthCubit extends Cubit<AuthState> {
     final result = await _signInGoogle();
     result.fold(
       (failure) => emit(_failedState(failure)),
-      (profile) => emit(Authenticated(profile)),
+      (profile) {
+        _syncGroupMembership();
+        emit(Authenticated(profile));
+      },
     );
   }
 
@@ -88,7 +116,12 @@ class AuthCubit extends Cubit<AuthState> {
     final result = await _signOut();
     result.fold(
       (failure) => emit(_failedState(failure)),
-      (_) => emit(const Unauthenticated()),
+      (_) {
+        unawaited(groupRepository().resetSessionCaches().catchError(
+            (Object e, StackTrace st) =>
+                logWarning('[AuthCubit] group cache reset failed', e, st)));
+        emit(const Unauthenticated());
+      },
     );
   }
 
@@ -97,7 +130,10 @@ class AuthCubit extends Cubit<AuthState> {
     final result = await _updateProfile(profile);
     result.fold(
       (failure) => emit(_failedState(failure)),
-      (updatedProfile) => emit(Authenticated(updatedProfile)),
+      (updatedProfile) {
+        _syncGroupMembership();
+        emit(Authenticated(updatedProfile));
+      },
     );
   }
 }

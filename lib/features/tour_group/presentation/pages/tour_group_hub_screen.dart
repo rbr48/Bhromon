@@ -7,13 +7,29 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/hub_modules.dart';
 import '../../domain/services/tour_choice.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
+import 'package:bhromon/core/config/feature_flags.dart';
+
+import '../../data/active_group.dart';
 import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
+import '../widgets/groups/group_card.dart';
+import '../widgets/groups/members_sheet.dart';
+import '../widgets/groups/members_strip.dart';
+import '../widgets/groups/next_step_card.dart';
+import '../widgets/groups/group_skeleton.dart';
+import '../widgets/groups/offline_banner.dart';
+import '../widgets/groups/sos_row.dart';
+import '../widgets/groups/switcher_chips.dart';
+import '../widgets/tour_membership_guard.dart';
+import '../tour_routes.dart';
+import '../widgets/group_avatar.dart';
+import '../widgets/group_photo_sheet.dart';
 import '../widgets/family/family_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../tour_pdf_export.dart';
@@ -28,11 +44,15 @@ class TourGroupHubScreen extends StatefulWidget {
   /// Where the hub keeps its own pick. Tests pass a fake; the app leaves it null.
   final TourHubPreference? preference;
 
+  /// Which layout to show. Null follows kGroupsV2; tests pass it to try both.
+  final bool? groupsV2;
+
   const TourGroupHubScreen({
     super.key,
     this.repository,
     this.initialTourId,
     this.preference,
+    this.groupsV2,
   });
 
   @override
@@ -42,8 +62,14 @@ class TourGroupHubScreen extends StatefulWidget {
 class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   late final TourGroupRepository _repository =
       widget.repository ?? TourGroupRepository();
-  late final TourHubPreference _preference =
-      widget.preference ?? TourHubPreference();
+
+  /// Whether to show the groups list and group page (kGroupsV2 unless a test sets it).
+  bool get _useGroupsV2 => widget.groupsV2 ?? kGroupsV2;
+
+  /// The group the hub is on. Tests pass their own preference, and get their own instance.
+  late final ActiveGroup _active = widget.preference == null
+      ? ActiveGroup.instance
+      : ActiveGroup(preference: widget.preference);
   // The tour picked, created or joined during this visit. It is kept even
   // before the membership list includes it.
   TourGroup? _selectedGroup;
@@ -55,15 +81,21 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   void initState() {
     super.initState();
     _groupsStream = _repository.watchMyGroups();
-    _rememberedTourId = _preference.read();
+    _rememberedTourId = _active.current;
     final routeTourId = widget.initialTourId;
-    if (routeTourId != null) unawaited(_preference.remember(routeTourId));
+    if (routeTourId != null) unawaited(_active.select(routeTourId));
   }
 
-  final Map<String, Stream<List<TourMember>>> _memberStreams = {};
+  Stream<List<TourMember>> _membersOf(String tourId) =>
+      _repository.watchMembers(tourId);
 
-  Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
-      .putIfAbsent(tourId, () => _repository.watchMembers(tourId));
+  /// Starts the groups list again after an error. The old listeners close, and the list
+  /// is read from a new upstream. Called from the retry button, never from build.
+  void _retryGroups() {
+    setState(() {
+      _groupsStream = _repository.restartMyGroups();
+    });
+  }
 
   bool _viewerIsOwner(TourGroup group, List<TourMember> members) =>
       group.ownerEmail == _repository.currentEmail ||
@@ -85,7 +117,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   void _selectTour(TourGroup group) {
-    unawaited(_preference.remember(group.id));
+    unawaited(_active.select(group.id));
     setState(() => _selectedGroup = group);
   }
 
@@ -119,13 +151,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         Widget tile(TourGroup g) {
           final selected = g.id == current.id;
           return ListTile(
-            leading: Icon(
-                g.isFamily
-                    ? Icons.family_restroom_rounded
-                    : Icons.card_travel_rounded,
-                color: selected
-                    ? context.forest.accentText
-                    : context.forest.text54),
+            leading: GroupAvatar(
+                isFamily: g.isFamily, photoUrl: g.photoUrl, size: 40),
             title: Text(g.name,
                 style: TextStyle(
                     color: selected
@@ -528,6 +555,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         }
         if (!context.mounted) return;
         await exportTourPdf(context, group: group, repository: _repository);
+      case 'photo':
+        await showGroupPhotoSheet(context,
+            group: group, repository: _repository);
       case 'add_member':
         _showAddMemberDialog(context, group.id);
       case 'moments':
@@ -588,12 +618,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.leaveTour(group.id);
-          unawaited(_preference.forget(group.id));
+          unawaited(_active.clearIf(group.id));
           if (mounted) {
             setState(() {
               _selectedGroup = null;
-              _memberStreams.remove(group.id);
-              _groupsStream = _repository.watchMyGroups();
             });
             if (nav.canPop()) {
               nav.pop();
@@ -652,12 +680,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
-          unawaited(_preference.forget(group.id));
+          unawaited(_active.clearIf(group.id));
           if (mounted) {
             setState(() {
               _selectedGroup = null;
-              _memberStreams.remove(group.id);
-              _groupsStream = _repository.watchMyGroups();
             });
             if (nav.canPop()) {
               nav.pop();
@@ -669,6 +695,569 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     }
   }
 
+  /// The group menu: copy the code, export, Moments, add a member, renew the code, and
+  /// delete or leave. Shown in the banner and on the group page.
+  Widget _groupMenuButton(BuildContext context, TourGroup group) {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: context.forest.text70, size: 20),
+      color: context.forest.dialog,
+      onSelected: (v) => _onGroupMenu(context, group, v),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'copy_code',
+          child: _menuRow(context, Icons.copy_rounded,
+              context.l10n.translate('hub_copy_invite_code')),
+        ),
+        PopupMenuItem(
+          value: 'export_pdf',
+          child: _menuRow(context, Icons.picture_as_pdf_rounded,
+              context.l10n.translate('pdf_export_menu')),
+        ),
+        PopupMenuItem(
+          value: 'photo',
+          child: _menuRow(context, Icons.photo_camera_rounded,
+              context.l10n.translate('group_photo_title')),
+        ),
+        if (group.isManaged)
+          PopupMenuItem(
+            value: 'moments',
+            child: _menuRow(
+                context,
+                group.momentsEnabled
+                    ? Icons.visibility_off_rounded
+                    : Icons.visibility_rounded,
+                context.l10n.translate(group.momentsEnabled
+                    ? 'hub_moments_turn_off'
+                    : 'hub_moments_turn_on')),
+          ),
+        if (group.ownerEmail == _repository.currentEmail) ...[
+          PopupMenuItem(
+            value: 'add_member',
+            child: _menuRow(context, Icons.person_add_alt_1,
+                context.l10n.translate('hub_add_member_by_email')),
+          ),
+          PopupMenuItem(
+            value: 'code',
+            child: _menuRow(context, Icons.key_rounded,
+                context.l10n.translate('hub_renew_code'),
+                iconColor: context.forest.text70),
+          ),
+          PopupMenuItem(
+            value: 'delete',
+            child: _menuRow(
+                context,
+                Icons.delete_outline_rounded,
+                context.l10n.translate(
+                    group.isFamily ? 'hub_delete_family' : 'hub_delete_tour'),
+                color: Colors.redAccent,
+                iconColor: Colors.redAccent),
+          ),
+        ] else
+          PopupMenuItem(
+            value: 'leave',
+            child: _menuRow(
+                context,
+                Icons.logout_rounded,
+                context.l10n.translate(
+                    group.isFamily ? 'hub_leave_family' : 'hub_leave_tour'),
+                iconColor: context.forest.text70),
+          ),
+      ],
+    );
+  }
+
+  /// Opens [group] on the group page and makes it the active group.
+  /// How soon a second tap on the same tool tile is ignored, so a double tap opens one
+  /// route, not two (plan section 9.3).
+  static const Duration _toolTapGap = Duration(milliseconds: 600);
+  final Map<String, DateTime> _lastToolTap = {};
+
+  /// The tap for the tool tile [tile]. A tap that comes within [_toolTapGap] of the last
+  /// tap on that tile is ignored.
+  VoidCallback _toolTap(String tile, VoidCallback onTap) {
+    return () {
+      final now = DateTime.now();
+      final last = _lastToolTap[tile];
+      if (last != null && now.difference(last) < _toolTapGap) return;
+      _lastToolTap[tile] = now;
+      onTap();
+    };
+  }
+
+  void _openGroup(TourGroup group) {
+    unawaited(_active.select(group.id));
+    context.go(tourHubPath(group.id));
+  }
+
+  /// Behind kGroupsV2: the groups list when the route names no group, and the group page
+  /// when it names one.
+  Widget _buildGroupsV2(
+    BuildContext context,
+    AsyncSnapshot<List<TourGroup>> snapshot,
+    List<TourGroup> groups,
+  ) {
+    final routeId = widget.initialTourId;
+    if (routeId == null || routeId.isEmpty) {
+      return _buildGroupsList(context, snapshot, groups);
+    }
+    TourGroup? group;
+    for (final candidate in groups) {
+      if (candidate.id == routeId) group = candidate;
+    }
+    if (group != null) return _buildGroupPage(context, group);
+    final loading = snapshot.connectionState == ConnectionState.waiting &&
+        !snapshot.hasData;
+    return _buildGroupShell(
+      context,
+      loading
+          ? const GroupSkeleton(cards: 2)
+          : _buildGroupNotAvailable(context),
+    );
+  }
+
+  /// The groups list when the groups cannot load: what happened, and a retry (section 5.2).
+  /// It never reads as "no groups", which would be wrong while the groups are unknown.
+  Widget _buildGroupsError(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 48, color: context.forest.text54),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.translate('hub_groups_load_failed'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.forest.text70, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+            onPressed: _retryGroups,
+            child: Text(context.l10n.translate('hub_try_again')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The groups list (B1): the switcher, one card per group, and the members of the
+  /// selected group. Empty and loading states follow section 5.2.
+  Widget _buildGroupsList(
+    BuildContext context,
+    AsyncSnapshot<List<TourGroup>> snapshot,
+    List<TourGroup> groups,
+  ) {
+    final l10n = context.l10n;
+    final loading = snapshot.connectionState == ConnectionState.waiting &&
+        !snapshot.hasData;
+    final selectedId = _active.current;
+    return Scaffold(
+      backgroundColor: context.forest.background,
+      appBar: _hubAppBar(context),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: ListView(
+            // Keeps the scroll position across the trip to a group page and back.
+            key: const PageStorageKey<String>('groups-list'),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            children: [
+              Text(
+                l10n.translate('hub_nav_tours'),
+                style: TextStyle(
+                  color: context.forest.text,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (groups.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  l10n.translate('group_open_hint'),
+                  style: TextStyle(color: context.forest.text70, fontSize: 13),
+                ),
+              ],
+              GroupsOfflineBanner(
+                fromCache: TourGroupRepository.groupsServedFromCache,
+              ),
+              const SizedBox(height: 12),
+              if (loading)
+                const GroupSkeleton()
+              else if (snapshot.hasError && groups.isEmpty)
+                _buildGroupsError(context)
+              else if (groups.isEmpty)
+                _buildEmptyState(context)
+              else ...[
+                if (groups.length > 1) ...[
+                  SwitcherChips(
+                    groups: groups,
+                    selectedId: selectedId,
+                    onSelected: _openGroup,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                for (final group in groups)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GroupCard(
+                      group: group,
+                      selected: group.id == selectedId,
+                      onTap: () => _openGroup(group),
+                      members: group.id == selectedId
+                          ? _memberStripFor(context, group)
+                          : null,
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
+    );
+  }
+
+  /// The group page (B2): the members strip, the next step, the safety row, and the group
+  /// tools without Game zone and News (decisions D-1, D-2 and D-8).
+  Widget _buildGroupPage(BuildContext context, TourGroup group) {
+    final l10n = context.l10n;
+    final kind = group.isFamily
+        ? l10n.translate('hub_section_family')
+        : l10n.translate('hub_section_trips');
+    final subtitle = group.isFamily
+        ? kind
+        : '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – '
+            '${localizedDateFormat('d MMM yyyy').format(group.endDate)}';
+    return Scaffold(
+      backgroundColor: context.forest.background,
+      appBar: AppBar(
+        backgroundColor: context.forest.background,
+        elevation: 0,
+        leading: IconButton(
+          tooltip: l10n.translate('group_back_to_list'),
+          icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
+          onPressed: () => context.go('/group-hub'),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              group.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.forest.text,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(color: context.forest.text54, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [_groupMenuButton(context, group)],
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: TourMembershipGuard(
+            tourId: group.id,
+            repository: _repository,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              children: [
+                _memberStripFor(context, group),
+                const SizedBox(height: 14),
+                NextStepCard(group: group, now: DateTime.now()),
+                if (!group.isManaged) ...[
+                  SosRow(
+                    title: l10n.translate('hub_module_safety'),
+                    subtitle: l10n.translate('group_sos_sub'),
+                    onTap: () => context.push('/group/${group.id}/safety'),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                Text(
+                  l10n.translate('hub_modules_heading'),
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _buildModulesGrid(context, group, excludeGamesAndNews: true),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: BhromonBottomNav(selectedIndex: 0, tourId: group.id),
+    );
+  }
+
+  /// The members strip for [group], from the one shared members stream of that group.
+  Widget _memberStripFor(BuildContext context, TourGroup group) {
+    return StreamBuilder<List<TourMember>>(
+      stream: _membersOf(group.id),
+      builder: (context, snapshot) {
+        final members = snapshot.data;
+        // Never "0 members" while the members load (section 5.2).
+        if (members == null) return const GroupSkeleton(cards: 1);
+        return MembersStrip(
+          members: members,
+          onSeeAll: () => _openMembers(context, group, members),
+        );
+      },
+    );
+  }
+
+  /// Opens the members sheet. Admins may open a member's manage sheet and add members.
+  void _openMembers(
+      BuildContext context, TourGroup group, List<TourMember> current) {
+    final isAdmin = _viewerIsAdmin(current);
+    final isOwner = _viewerIsOwner(group, current);
+    unawaited(showMembersSheet(
+      context,
+      members: _membersOf(group.id),
+      viewerIsAdmin: isAdmin,
+      onMemberTap: (member) => _showManageMemberSheet(
+        context,
+        group.id,
+        member,
+        viewerIsOwner: isOwner,
+        viewerIsAdmin: isAdmin,
+      ),
+      onAddMember:
+          isAdmin ? () => _showAddMemberDialog(context, group.id) : null,
+    ));
+  }
+
+  /// A page shell for a group that is loading or not available.
+  Widget _buildGroupShell(BuildContext context, Widget body) {
+    return Scaffold(
+      backgroundColor: context.forest.background,
+      appBar: AppBar(
+        backgroundColor: context.forest.background,
+        elevation: 0,
+        leading: IconButton(
+          tooltip: context.l10n.translate('group_back_to_list'),
+          icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
+          onPressed: () => context.go('/group-hub'),
+        ),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            child: body,
+          ),
+        ),
+      ),
+      bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
+    );
+  }
+
+  Widget _buildGroupNotAvailable(BuildContext context) {
+    final l10n = context.l10n;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.translate('group_not_available'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.forest.text70),
+          ),
+          TextButton(
+            onPressed: () => context.go('/group-hub'),
+            child: Text(l10n.translate('group_back_to_list')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant TourGroupHubScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A new group in the route (a card, a chip or a link) becomes the active group.
+    final routeId = widget.initialTourId;
+    if (routeId != null &&
+        routeId.isNotEmpty &&
+        routeId != oldWidget.initialTourId) {
+      unawaited(_active.select(routeId));
+    }
+  }
+
+  /// The hub's app bar: the logo and title, and the menu to add or join a group.
+  PreferredSizeWidget _hubAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: context.forest.background,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF1B4332),
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/logo.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.explore,
+                  color: context.forest.accentText,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Bhromon',
+                style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                context.l10n.translate('hub_title'),
+                style: TextStyle(
+                  color: context.forest.accentText,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        PopupMenuButton<String>(
+          tooltip: context.l10n.translate('hub_add_menu'),
+          icon: const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
+          color: context.forest.dialog,
+          onSelected: (choice) {
+            switch (choice) {
+              case 'family':
+                _showCreateFamilyDialog(context);
+              case 'office':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.officePreset);
+              case 'campus':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.campusPreset);
+              case 'mess':
+                _showCreateFamilyDialog(context, preset: TourGroup.messPreset);
+              case 'society':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.societyPreset);
+              case 'samity':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.samityPreset);
+              case 'school':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.schoolPreset);
+              case 'sports':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.sportsPreset);
+              case 'study':
+                _showCreateFamilyDialog(context, preset: TourGroup.studyPreset);
+              case 'committee':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.committeePreset);
+              case 'trip':
+                _showCreateGroupDialog(context);
+              case 'join':
+                _showJoinGroupDialog(context);
+            }
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'family',
+              child: _menuRow(context, Icons.family_restroom_rounded,
+                  context.l10n.translate('hub_create_family')),
+            ),
+            PopupMenuItem(
+              value: 'office',
+              child: _menuRow(context, Icons.work_rounded,
+                  context.l10n.translate('hub_create_office')),
+            ),
+            PopupMenuItem(
+              value: 'campus',
+              child: _menuRow(context, Icons.school_rounded,
+                  context.l10n.translate('hub_create_campus')),
+            ),
+            PopupMenuItem(
+              value: 'mess',
+              child: _menuRow(context, Icons.kitchen_rounded,
+                  context.l10n.translate('hub_create_mess')),
+            ),
+            PopupMenuItem(
+              value: 'society',
+              child: _menuRow(context, Icons.apartment_rounded,
+                  context.l10n.translate('hub_create_society')),
+            ),
+            PopupMenuItem(
+              value: 'samity',
+              child: _menuRow(context, Icons.savings_rounded,
+                  context.l10n.translate('hub_create_samity')),
+            ),
+            PopupMenuItem(
+              value: 'school',
+              child: _menuRow(context, Icons.menu_book_rounded,
+                  context.l10n.translate('hub_create_school')),
+            ),
+            PopupMenuItem(
+              value: 'sports',
+              child: _menuRow(context, Icons.sports_soccer_rounded,
+                  context.l10n.translate('hub_create_sports')),
+            ),
+            PopupMenuItem(
+              value: 'study',
+              child: _menuRow(context, Icons.local_library_rounded,
+                  context.l10n.translate('hub_create_study')),
+            ),
+            PopupMenuItem(
+              value: 'committee',
+              child: _menuRow(context, Icons.how_to_vote_rounded,
+                  context.l10n.translate('hub_create_committee')),
+            ),
+            PopupMenuItem(
+              value: 'trip',
+              child: _menuRow(context, Icons.card_travel_rounded,
+                  context.l10n.translate('hub_create_new_tour')),
+            ),
+            PopupMenuItem(
+              value: 'join',
+              child: _menuRow(context, Icons.group_add_outlined,
+                  context.l10n.translate('hub_join_with_code')),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<TourGroup>>(
@@ -677,6 +1266,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         // Only tours the membership list still names are shown, so a tour the
         // user left or was removed from drops out at once.
         final groups = snapshot.data ?? [];
+        if (_useGroupsV2) return _buildGroupsV2(context, snapshot, groups);
         final current = pickTour(groups, [
           _selectedGroup?.id,
           widget.initialTourId,
@@ -685,166 +1275,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
         return Scaffold(
           backgroundColor: context.forest.background,
-          appBar: AppBar(
-            backgroundColor: context.forest.background,
-            elevation: 0,
-            automaticallyImplyLeading: false,
-            title: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFF1B4332),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        Icons.explore,
-                        color: context.forest.accentText,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Bhromon',
-                      style: TextStyle(
-                        color: context.forest.text,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      context.l10n.translate('hub_title'),
-                      style: TextStyle(
-                        color: context.forest.accentText,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              PopupMenuButton<String>(
-                tooltip: context.l10n.translate('hub_add_menu'),
-                icon: const Icon(Icons.add_circle_outline,
-                    color: AppColors.midGreen),
-                color: context.forest.dialog,
-                onSelected: (choice) {
-                  switch (choice) {
-                    case 'family':
-                      _showCreateFamilyDialog(context);
-                    case 'office':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.officePreset);
-                    case 'campus':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.campusPreset);
-                    case 'mess':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.messPreset);
-                    case 'society':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.societyPreset);
-                    case 'samity':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.samityPreset);
-                    case 'school':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.schoolPreset);
-                    case 'sports':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.sportsPreset);
-                    case 'study':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.studyPreset);
-                    case 'committee':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.committeePreset);
-                    case 'trip':
-                      _showCreateGroupDialog(context);
-                    case 'join':
-                      _showJoinGroupDialog(context);
-                  }
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'family',
-                    child: _menuRow(context, Icons.family_restroom_rounded,
-                        context.l10n.translate('hub_create_family')),
-                  ),
-                  PopupMenuItem(
-                    value: 'office',
-                    child: _menuRow(context, Icons.work_rounded,
-                        context.l10n.translate('hub_create_office')),
-                  ),
-                  PopupMenuItem(
-                    value: 'campus',
-                    child: _menuRow(context, Icons.school_rounded,
-                        context.l10n.translate('hub_create_campus')),
-                  ),
-                  PopupMenuItem(
-                    value: 'mess',
-                    child: _menuRow(context, Icons.kitchen_rounded,
-                        context.l10n.translate('hub_create_mess')),
-                  ),
-                  PopupMenuItem(
-                    value: 'society',
-                    child: _menuRow(context, Icons.apartment_rounded,
-                        context.l10n.translate('hub_create_society')),
-                  ),
-                  PopupMenuItem(
-                    value: 'samity',
-                    child: _menuRow(context, Icons.savings_rounded,
-                        context.l10n.translate('hub_create_samity')),
-                  ),
-                  PopupMenuItem(
-                    value: 'school',
-                    child: _menuRow(context, Icons.menu_book_rounded,
-                        context.l10n.translate('hub_create_school')),
-                  ),
-                  PopupMenuItem(
-                    value: 'sports',
-                    child: _menuRow(context, Icons.sports_soccer_rounded,
-                        context.l10n.translate('hub_create_sports')),
-                  ),
-                  PopupMenuItem(
-                    value: 'study',
-                    child: _menuRow(context, Icons.local_library_rounded,
-                        context.l10n.translate('hub_create_study')),
-                  ),
-                  PopupMenuItem(
-                    value: 'committee',
-                    child: _menuRow(context, Icons.how_to_vote_rounded,
-                        context.l10n.translate('hub_create_committee')),
-                  ),
-                  PopupMenuItem(
-                    value: 'trip',
-                    child: _menuRow(context, Icons.card_travel_rounded,
-                        context.l10n.translate('hub_create_new_tour')),
-                  ),
-                  PopupMenuItem(
-                    value: 'join',
-                    child: _menuRow(context, Icons.group_add_outlined,
-                        context.l10n.translate('hub_join_with_code')),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          appBar: _hubAppBar(context),
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 960),
@@ -887,9 +1318,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.midGreen),
-                              onPressed: () => setState(() {
-                                _groupsStream = _repository.watchMyGroups();
-                              }),
+                              onPressed: _retryGroups,
                               child:
                                   Text(context.l10n.translate('hub_try_again')),
                             ),
@@ -910,7 +1339,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       _buildActiveTourBanner(context, current, groups),
                       const SizedBox(height: 18),
                       if (current.isHousehold) ...[
-                        FamilyHomeCard(tourId: current.id),
+                        FamilyHomeCard(
+                            tourId: current.id, repository: _repository),
                         const SizedBox(height: 18),
                       ],
 
@@ -1221,73 +1651,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert,
-                        color: context.forest.text70, size: 20),
-                    color: context.forest.dialog,
-                    onSelected: (v) => _onGroupMenu(context, group, v),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'copy_code',
-                        child: _menuRow(context, Icons.copy_rounded,
-                            context.l10n.translate('hub_copy_invite_code')),
-                      ),
-                      PopupMenuItem(
-                        value: 'export_pdf',
-                        child: _menuRow(context, Icons.picture_as_pdf_rounded,
-                            context.l10n.translate('pdf_export_menu')),
-                      ),
-                      if (group.isManaged)
-                        PopupMenuItem(
-                          value: 'moments',
-                          child: _menuRow(
-                              context,
-                              group.momentsEnabled
-                                  ? Icons.visibility_off_rounded
-                                  : Icons.visibility_rounded,
-                              context.l10n.translate(group.momentsEnabled
-                                  ? 'hub_moments_turn_off'
-                                  : 'hub_moments_turn_on')),
-                        ),
-                      if (group.ownerEmail == _repository.currentEmail) ...[
-                        PopupMenuItem(
-                          value: 'add_member',
-                          child: _menuRow(
-                              context,
-                              Icons.person_add_alt_1,
-                              context.l10n
-                                  .translate('hub_add_member_by_email')),
-                        ),
-                        PopupMenuItem(
-                          value: 'code',
-                          child: _menuRow(context, Icons.key_rounded,
-                              context.l10n.translate('hub_renew_code'),
-                              iconColor: context.forest.text70),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: _menuRow(
-                              context,
-                              Icons.delete_outline_rounded,
-                              context.l10n.translate(group.isFamily
-                                  ? 'hub_delete_family'
-                                  : 'hub_delete_tour'),
-                              color: Colors.redAccent,
-                              iconColor: Colors.redAccent),
-                        ),
-                      ] else
-                        PopupMenuItem(
-                          value: 'leave',
-                          child: _menuRow(
-                              context,
-                              Icons.logout_rounded,
-                              context.l10n.translate(group.isFamily
-                                  ? 'hub_leave_family'
-                                  : 'hub_leave_tour'),
-                              iconColor: context.forest.text70),
-                        ),
-                    ],
-                  ),
+                  _groupMenuButton(context, group),
                   if (!group.isFamily)
                     IconButton(
                       icon: Icon(Icons.edit_calendar_rounded,
@@ -1311,13 +1675,32 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            group.name,
-            style: TextStyle(
-              color: context.forest.text,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Tooltip(
+                message: context.l10n.translate('group_photo_title'),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => showGroupPhotoSheet(context,
+                      group: group, repository: _repository),
+                  child: GroupAvatar(
+                      isFamily: group.isFamily,
+                      photoUrl: group.photoUrl,
+                      size: 52),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  group.name,
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           if (!group.isFamily)
@@ -1680,199 +2063,180 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  Widget _buildModulesGrid(BuildContext context, TourGroup group) {
-    // Family circles have no trip, so the trip-only tiles stay hidden.
-    final isTrip = !group.isFamily;
+  Widget _buildModulesGrid(BuildContext context, TourGroup group,
+      {bool excludeGamesAndNews = false}) {
     final l10n = context.l10n;
-    final entries = <String, _ModuleItem>{
-      if (group.momentsOpen)
-        'feed': _ModuleItem(
-          title: l10n.translate('hub_module_feed'),
-          subtitle: l10n.translate('hub_module_feed_sub'),
-          icon: Icons.camera_alt_rounded,
-          color: const Color(0xFFF43F5E),
-          onTap: () => context.push('/group/${group.id}/feed'),
-        ),
-      'ledger': _ModuleItem(
-        title: l10n.translate('hub_module_ledger'),
-        subtitle: l10n.translate('hub_module_ledger_sub'),
-        icon: Icons.account_balance_wallet_rounded,
-        color: const Color(0xFF52B788),
-        onTap: () => context.push('/group/${group.id}/ledger'),
-      ),
-      if (isTrip && group.modules.seatsRooms)
-        'seats': _ModuleItem(
-          title: l10n.translate('hub_module_seats'),
-          subtitle: l10n.translate('hub_module_seats_sub'),
-          icon: Icons.airline_seat_recline_extra_rounded,
-          color: const Color(0xFF6366F1),
-          onTap: () => context.push('/group/${group.id}/logistics'),
-        ),
-      if (!group.isManaged &&
-          !group.isMess &&
-          !group.isSociety &&
-          !group.isSamity)
-        'calendar': group.isFamily
-            ? _ModuleItem(
-                title: l10n.translate('hub_module_family_dates'),
-                subtitle: l10n.translate('hub_module_family_dates_sub'),
-                icon: Icons.event_repeat_rounded,
-                color: const Color(0xFF84CC16),
-                onTap: () => context.push('/group/${group.id}/family-dates'),
-              )
-            : _ModuleItem(
-                title: l10n.translate('hub_module_calendar'),
-                subtitle: l10n.translate('hub_module_calendar_sub'),
-                icon: Icons.calendar_month_rounded,
-                color: const Color(0xFF84CC16),
-                onTap: () => context.push('/group/${group.id}/calendar'),
-              ),
-      if (group.isFamily && !group.isManaged)
-        'family_tasks': _ModuleItem(
-          title: l10n.translate('hub_module_family_tasks'),
-          subtitle: l10n.translate('hub_module_family_tasks_sub'),
-          icon: Icons.checklist_rounded,
-          color: const Color(0xFF22D3EE),
-          onTap: () => context.push('/group/${group.id}/family-tasks'),
-        ),
-      if (group.isMess)
-        'meals': _ModuleItem(
-          title: l10n.translate('mess_module_meals'),
-          subtitle: l10n.translate('mess_module_meals_sub'),
-          icon: Icons.restaurant_rounded,
-          color: const Color(0xFFF59E0B),
-          onTap: () => context.push('/group/${group.id}/meals'),
-        ),
-      if (group.isSociety || group.isCommittee)
-        'requests': _ModuleItem(
-          title: l10n.translate('society_module_requests'),
-          subtitle: l10n.translate('society_module_requests_sub'),
-          icon: Icons.build_circle_rounded,
-          color: const Color(0xFFEA580C),
-          onTap: () => context.push('/group/${group.id}/requests'),
-        ),
-      if (group.isSamity)
-        'samity': _ModuleItem(
-          title: l10n.translate('samity_module_samity'),
-          subtitle: l10n.translate('samity_module_samity_sub'),
-          icon: Icons.savings_rounded,
-          color: const Color(0xFF65A30D),
-          onTap: () => context.push('/group/${group.id}/samity'),
-        ),
-      if (group.isHousehold)
-        'dependents': _ModuleItem(
-          title: l10n.translate('hub_module_dependents'),
-          subtitle: l10n.translate('hub_module_dependents_sub'),
-          icon: Icons.family_restroom_rounded,
-          color: const Color(0xFFF472B6),
-          onTap: () => context.push('/group/${group.id}/dependents'),
-        ),
-      if (group.isHousehold)
-        'album': _ModuleItem(
-          title: l10n.translate('hub_module_album'),
-          subtitle: l10n.translate('hub_module_album_sub'),
-          icon: Icons.photo_album_rounded,
-          color: const Color(0xFFFBBF24),
-          onTap: () => context.push('/group/${group.id}/album'),
-        ),
-      if (isTrip && group.modules.tideSafety)
-        'tide': _ModuleItem(
-          title: group.tourType == TourType.beach
-              ? l10n.translate('hub_module_tide')
-              : l10n.translate('hub_module_weather'),
-          subtitle: group.tourType == TourType.beach
-              ? l10n.translate('hub_module_tide_sub')
-              : l10n.translate('hub_module_weather_sub'),
-          icon: group.tourType == TourType.beach
-              ? Icons.waves_rounded
-              : Icons.wb_sunny_rounded,
-          color: const Color(0xFF38BDF8),
-          onTap: () => context.push('/group/${group.id}/tide'),
-        ),
-      'notices': _ModuleItem(
-        title: l10n.translate('hub_module_notices'),
-        subtitle: l10n.translate('hub_module_notices_sub'),
-        icon: Icons.campaign_rounded,
-        color: const Color(0xFFEAB308),
-        onTap: () => context.push('/group/${group.id}/notices'),
-      ),
-      if (isTrip)
-        'journey': _ModuleItem(
-          title: l10n.translate('hub_module_journey'),
-          subtitle: l10n.translate('hub_journey_sub', args: {
-            'origin': group.originCity,
-            'destination': group.destination
-          }),
-          icon: Icons.alt_route_rounded,
-          color: const Color(0xFF10B981),
-          onTap: () => context.push('/group/${group.id}/journey'),
-        ),
-      if (!group.isManaged)
-        'safety': _ModuleItem(
-          title: l10n.translate('hub_module_safety'),
-          subtitle: l10n.translate('hub_module_safety_sub'),
-          icon: Icons.shield_rounded,
-          color: const Color(0xFFEF4444),
-          onTap: () => context.push('/group/${group.id}/safety'),
-        ),
-      if (group.modules.games)
-        'games': _ModuleItem(
-          title: l10n.translate('hub_module_games'),
-          subtitle: l10n.translate('hub_module_games_sub'),
-          icon: Icons.sports_esports_rounded,
-          color: const Color(0xFFF59E0B),
-          onTap: () => context.push('/game-zone'),
-        ),
-      if (isTrip)
-        'quiz': _ModuleItem(
-          title: l10n.translate('hub_module_quiz'),
-          subtitle: l10n.translate('hub_quiz_sub',
-              args: {'destination': group.destination}),
-          icon: Icons.quiz_rounded,
-          color: const Color(0xFF8B5CF6),
-          onTap: () => context.push('/group/${group.id}/quiz'),
-        ),
-      if (isTrip)
-        'scrapbook': _ModuleItem(
-          title: l10n.translate('hub_module_scrapbook'),
-          subtitle: l10n.translate('hub_module_scrapbook_sub'),
-          icon: Icons.auto_stories_rounded,
-          color: const Color(0xFFD97706),
-          onTap: () => context.push('/group/${group.id}/scrapbook'),
-        ),
-      if (isTrip)
-        'checklist': _ModuleItem(
-          title: l10n.translate('hub_module_checklist'),
-          subtitle: l10n.translate('hub_module_checklist_sub'),
-          icon: Icons.checklist_rtl_rounded,
-          color: const Color(0xFF14B8A6),
-          onTap: () => context.push('/group/${group.id}/checklist'),
-        ),
-      if (group.modules.chat)
-        'channels': _ModuleItem(
-          title: l10n.translate('hub_module_channels'),
-          subtitle: l10n.translate('hub_module_channels_sub'),
-          icon: Icons.forum_rounded,
-          color: const Color(0xFFEC4899),
-          onTap: () => context.push('/group/${group.id}/channels'),
-        ),
-      'news': _ModuleItem(
-        title: l10n.translate('hub_module_news'),
-        subtitle: l10n.translate('hub_module_news_sub'),
-        icon: Icons.article_rounded,
-        color: const Color(0xFF0EA5E9),
-        onTap: () => context.push('/newspaper-hub'),
-      ),
-    };
-    // Trips keep the trip order. A family circle leads with what the family uses
-    // every day. Any tile missing from the order is still shown, at the end.
-    final order = isTrip ? _tripModuleOrder : _familyModuleOrder;
-    final modules = [
-      for (final id in order)
-        if (entries.containsKey(id)) entries[id]!,
-      for (final entry in entries.entries)
-        if (!order.contains(entry.key)) entry.value,
+    // Which tools apply, and in what order, comes from hubModulesFor. This only builds
+    // the tile for each id.
+    final ids = [
+      for (final id in hubModulesFor(group))
+        if (!(excludeGamesAndNews && (id == 'games' || id == 'news'))) id,
     ];
+    final builders = <String, _ModuleItem Function()>{
+      'feed': () => _ModuleItem(
+            title: l10n.translate('hub_module_feed'),
+            subtitle: l10n.translate('hub_module_feed_sub'),
+            icon: Icons.camera_alt_rounded,
+            color: const Color(0xFFF43F5E),
+            onTap: () => context.push('/group/${group.id}/feed'),
+          ),
+      'ledger': () => _ModuleItem(
+            title: l10n.translate('hub_module_ledger'),
+            subtitle: l10n.translate('hub_module_ledger_sub'),
+            icon: Icons.account_balance_wallet_rounded,
+            color: const Color(0xFF52B788),
+            onTap: () => context.push('/group/${group.id}/ledger'),
+          ),
+      'seats': () => _ModuleItem(
+            title: l10n.translate('hub_module_seats'),
+            subtitle: l10n.translate('hub_module_seats_sub'),
+            icon: Icons.airline_seat_recline_extra_rounded,
+            color: const Color(0xFF6366F1),
+            onTap: () => context.push('/group/${group.id}/logistics'),
+          ),
+      'calendar': () => group.isFamily
+          ? _ModuleItem(
+              title: l10n.translate('hub_module_family_dates'),
+              subtitle: l10n.translate('hub_module_family_dates_sub'),
+              icon: Icons.event_repeat_rounded,
+              color: const Color(0xFF84CC16),
+              onTap: () => context.push('/group/${group.id}/family-dates'),
+            )
+          : _ModuleItem(
+              title: l10n.translate('hub_module_calendar'),
+              subtitle: l10n.translate('hub_module_calendar_sub'),
+              icon: Icons.calendar_month_rounded,
+              color: const Color(0xFF84CC16),
+              onTap: () => context.push('/group/${group.id}/calendar'),
+            ),
+      'family_tasks': () => _ModuleItem(
+            title: l10n.translate('hub_module_family_tasks'),
+            subtitle: l10n.translate('hub_module_family_tasks_sub'),
+            icon: Icons.checklist_rounded,
+            color: const Color(0xFF22D3EE),
+            onTap: () => context.push('/group/${group.id}/family-tasks'),
+          ),
+      'meals': () => _ModuleItem(
+            title: l10n.translate('mess_module_meals'),
+            subtitle: l10n.translate('mess_module_meals_sub'),
+            icon: Icons.restaurant_rounded,
+            color: const Color(0xFFF59E0B),
+            onTap: () => context.push('/group/${group.id}/meals'),
+          ),
+      'requests': () => _ModuleItem(
+            title: l10n.translate('society_module_requests'),
+            subtitle: l10n.translate('society_module_requests_sub'),
+            icon: Icons.build_circle_rounded,
+            color: const Color(0xFFEA580C),
+            onTap: () => context.push('/group/${group.id}/requests'),
+          ),
+      'samity': () => _ModuleItem(
+            title: l10n.translate('samity_module_samity'),
+            subtitle: l10n.translate('samity_module_samity_sub'),
+            icon: Icons.savings_rounded,
+            color: const Color(0xFF65A30D),
+            onTap: () => context.push('/group/${group.id}/samity'),
+          ),
+      'dependents': () => _ModuleItem(
+            title: l10n.translate('hub_module_dependents'),
+            subtitle: l10n.translate('hub_module_dependents_sub'),
+            icon: Icons.family_restroom_rounded,
+            color: const Color(0xFFF472B6),
+            onTap: () => context.push('/group/${group.id}/dependents'),
+          ),
+      'album': () => _ModuleItem(
+            title: l10n.translate('hub_module_album'),
+            subtitle: l10n.translate('hub_module_album_sub'),
+            icon: Icons.photo_album_rounded,
+            color: const Color(0xFFFBBF24),
+            onTap: () => context.push('/group/${group.id}/album'),
+          ),
+      'tide': () => _ModuleItem(
+            title: group.tourType == TourType.beach
+                ? l10n.translate('hub_module_tide')
+                : l10n.translate('hub_module_weather'),
+            subtitle: group.tourType == TourType.beach
+                ? l10n.translate('hub_module_tide_sub')
+                : l10n.translate('hub_module_weather_sub'),
+            icon: group.tourType == TourType.beach
+                ? Icons.waves_rounded
+                : Icons.wb_sunny_rounded,
+            color: const Color(0xFF38BDF8),
+            onTap: () => context.push('/group/${group.id}/tide'),
+          ),
+      'notices': () => _ModuleItem(
+            title: l10n.translate('hub_module_notices'),
+            subtitle: l10n.translate('hub_module_notices_sub'),
+            icon: Icons.campaign_rounded,
+            color: const Color(0xFFEAB308),
+            onTap: () => context.push('/group/${group.id}/notices'),
+          ),
+      'journey': () => _ModuleItem(
+            title: l10n.translate('hub_module_journey'),
+            subtitle: l10n.translate('hub_journey_sub', args: {
+              'origin': group.originCity,
+              'destination': group.destination,
+            }),
+            icon: Icons.alt_route_rounded,
+            color: const Color(0xFF10B981),
+            onTap: () => context.push('/group/${group.id}/journey'),
+          ),
+      'safety': () => _ModuleItem(
+            title: l10n.translate('hub_module_safety'),
+            subtitle: l10n.translate('hub_module_safety_sub'),
+            icon: Icons.shield_rounded,
+            color: const Color(0xFFEF4444),
+            onTap: () => context.push('/group/${group.id}/safety'),
+          ),
+      'games': () => _ModuleItem(
+            title: l10n.translate('hub_module_games'),
+            subtitle: l10n.translate('hub_module_games_sub'),
+            icon: Icons.sports_esports_rounded,
+            color: const Color(0xFFF59E0B),
+            onTap: () => context.push('/game-zone'),
+          ),
+      'quiz': () => _ModuleItem(
+            title: l10n.translate('hub_module_quiz'),
+            subtitle: l10n.translate('hub_quiz_sub',
+                args: {'destination': group.destination}),
+            icon: Icons.quiz_rounded,
+            color: const Color(0xFF8B5CF6),
+            onTap: () => context.push('/group/${group.id}/quiz'),
+          ),
+      'scrapbook': () => _ModuleItem(
+            title: l10n.translate('hub_module_scrapbook'),
+            subtitle: l10n.translate('hub_module_scrapbook_sub'),
+            icon: Icons.auto_stories_rounded,
+            color: const Color(0xFFD97706),
+            onTap: () => context.push('/group/${group.id}/scrapbook'),
+          ),
+      'checklist': () => _ModuleItem(
+            title: l10n.translate('hub_module_checklist'),
+            subtitle: l10n.translate('hub_module_checklist_sub'),
+            icon: Icons.checklist_rtl_rounded,
+            color: const Color(0xFF14B8A6),
+            onTap: () => context.push('/group/${group.id}/checklist'),
+          ),
+      'channels': () => _ModuleItem(
+            title: l10n.translate('hub_module_channels'),
+            subtitle: l10n.translate('hub_module_channels_sub'),
+            icon: Icons.forum_rounded,
+            color: const Color(0xFFEC4899),
+            onTap: () => context.push('/group/${group.id}/channels'),
+          ),
+      'news': () => _ModuleItem(
+            title: l10n.translate('hub_module_news'),
+            subtitle: l10n.translate('hub_module_news_sub'),
+            icon: Icons.article_rounded,
+            color: const Color(0xFF0EA5E9),
+            onTap: () => context.push('/newspaper-hub'),
+          ),
+    };
+    final modules = [for (final id in ids) builders[id]!()];
+
+    // Each tile is a fixed width and a height set by its aspect ratio. At a larger text
+    // scale the tile grows with its text, so the ratio shrinks by the same factor.
+    final tileTextScale = MediaQuery.textScalerOf(context).scale(14) / 14;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1895,7 +2259,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           itemCount: modules.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: childAspectRatio,
+            childAspectRatio: childAspectRatio / tileTextScale,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
           ),
@@ -1904,7 +2268,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: m.onTap,
+                onTap: _toolTap(m.title, m.onTap),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding:
@@ -2301,9 +2665,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             );
                             if (mounted) {
                               _selectTour(newGroup);
-                              setState(() {
-                                _groupsStream = _repository.watchMyGroups();
-                              });
+                              setState(() {});
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -2763,9 +3125,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             );
                             if (mounted) {
                               _selectTour(newGroup);
-                              setState(() {
-                                _groupsStream = _repository.watchMyGroups();
-                              });
+                              setState(() {});
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -3243,11 +3603,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 await _repository.joinGroupWithCode(code);
                             if (mounted) {
                               _selectTour(joinedGroup);
-                              setState(() {
-                                _memberStreams[joinedGroup.id] =
-                                    _repository.watchMembers(joinedGroup.id);
-                                _groupsStream = _repository.watchMyGroups();
-                              });
+                              setState(() {});
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -3668,43 +4024,6 @@ Widget _menuRow(
     ],
   );
 }
-
-/// The order of the hub's tiles for a trip.
-const List<String> _tripModuleOrder = [
-  'feed',
-  'ledger',
-  'seats',
-  'calendar',
-  'tide',
-  'notices',
-  'journey',
-  'safety',
-  'games',
-  'quiz',
-  'scrapbook',
-  'checklist',
-  'channels',
-  'news',
-];
-
-/// The order of the hub's tiles for a family circle: the day-to-day tools first,
-/// and the shared news last.
-const List<String> _familyModuleOrder = [
-  'channels',
-  'notices',
-  'requests',
-  'samity',
-  'family_tasks',
-  'meals',
-  'dependents',
-  'album',
-  'calendar',
-  'safety',
-  'feed',
-  'ledger',
-  'games',
-  'news',
-];
 
 class _ModuleItem {
   final String title;

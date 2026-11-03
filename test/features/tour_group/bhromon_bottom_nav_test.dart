@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
+import 'package:bhromon/core/config/feature_flags.dart';
 
 /// A tour-less stand-in for a tour screen: the screen's tour, if any, comes in
 /// through its address, the way the app's own tour screens receive it.
@@ -124,7 +125,9 @@ void main() {
       await tester.tap(find.text('Groups'));
       await tester.pumpAndSettle();
 
-      expect(find.text('hub page tour_a'), findsOneWidget);
+      // With groups v2 the Groups tab opens the list, which names no tour.
+      expect(find.text(kGroupsV2 ? 'hub page -' : 'hub page tour_a'),
+          findsOneWidget);
     });
   });
 
@@ -144,7 +147,10 @@ void main() {
       );
     });
 
-    testWidgets('does not borrow the tour the hub remembers', (tester) async {
+    testWidgets(
+        kGroupsV2
+            ? 'with groups v2, Moments uses the active group'
+            : 'does not borrow the tour the hub remembers', (tester) async {
       final box = await tester.runAsync(
         () => Hive.openBox<dynamic>('tour_groups_box'),
       );
@@ -159,8 +165,12 @@ void main() {
       await tester.tap(find.text('Moments'));
       await tester.pumpAndSettle();
 
-      expect(find.text('hub page -'), findsOneWidget);
-      expect(find.text('feed of tour_b'), findsNothing);
+      if (kGroupsV2) {
+        expect(find.text('feed of tour_b'), findsOneWidget);
+      } else {
+        expect(find.text('hub page -'), findsOneWidget);
+        expect(find.text('feed of tour_b'), findsNothing);
+      }
     });
   });
 }

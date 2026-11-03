@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../tour_routes.dart';
+import 'package:bhromon/core/config/feature_flags.dart';
+import '../../data/active_group.dart';
 
 /// The persistent 5 navigation destinations used across the entire application:
 /// 0: Tours (Hub)
@@ -65,15 +67,20 @@ class BhromonBottomNav extends StatelessWidget {
     if (currentIndex != null && index == currentIndex) return;
 
     final openTourId = (tourId != null && tourId.isNotEmpty) ? tourId : null;
+    // With kGroupsV2, Channels and Moments use the group on screen, or else the active
+    // group (P3.4). Without it they never borrow a remembered group.
+    final activeTourId =
+        openTourId ?? (kGroupsV2 ? ActiveGroup.instance.current : null);
 
     switch (index) {
       case 0:
-        context.go(tourHubPath(openTourId));
+        // With kGroupsV2 the Groups tab opens the list (P3.4).
+        context.go(kGroupsV2 ? '/group-hub' : tourHubPath(openTourId));
         break;
       case 1:
         _openTourTab(
           context,
-          openTourId,
+          activeTourId,
           'channels',
           missingTourMessage:
               'চ্যানেল খুলতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
@@ -82,7 +89,7 @@ class BhromonBottomNav extends StatelessWidget {
       case 2:
         _openTourTab(
           context,
-          openTourId,
+          activeTourId,
           'feed',
           missingTourMessage:
               'মোমেন্টস দেখতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
@@ -131,16 +138,20 @@ class BhromonBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final navBar = NavigationBar(
-      selectedIndex: selectedIndex.clamp(0, 4),
-      maintainBottomViewPadding: true,
-      onDestinationSelected: (index) => handleSelect(
-        context,
-        index,
-        tourId: tourId,
-        currentIndex: selectedIndex,
+    // A fixed-height bar cannot grow with the text, so its labels stop at 1.3x.
+    final navBar = MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.3,
+      child: NavigationBar(
+        selectedIndex: selectedIndex.clamp(0, 4),
+        maintainBottomViewPadding: true,
+        onDestinationSelected: (index) => handleSelect(
+          context,
+          index,
+          tourId: tourId,
+          currentIndex: selectedIndex,
+        ),
+        destinations: destinations(context),
       ),
-      destinations: destinations(context),
     );
 
     final width = MediaQuery.sizeOf(context).width;

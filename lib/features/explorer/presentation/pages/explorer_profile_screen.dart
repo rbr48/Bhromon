@@ -34,6 +34,10 @@ import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 import '../widgets/server_patron_card.dart';
+import 'package:bhromon/core/config/feature_flags.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/explorer/presentation/widgets/games_link_card.dart';
+import 'package:bhromon/features/explorer/domain/profile_tabs.dart';
 
 /// The modern, Tour Group-Centric Profile Screen for Bhromon Travelers.
 /// Replaces the legacy public social/YouTube architecture with live
@@ -50,11 +54,20 @@ class ExplorerProfileScreen extends StatefulWidget {
   /// group's membership confirms it.
   final String? emailHint;
 
+  /// The group repository. The app leaves this null; tests pass a fake.
+  final TourGroupRepository? repository;
+
+  /// Reads the raw profile fields (blood group, status note, bios). The app leaves this
+  /// null and reads Firestore; tests pass a fake.
+  final Future<Map<String, dynamic>?> Function(String uid)? readProfileData;
+
   const ExplorerProfileScreen({
     super.key,
     required this.uid,
     this.tourId,
     this.emailHint,
+    this.repository,
+    this.readProfileData,
   });
 
   @override
@@ -63,18 +76,21 @@ class ExplorerProfileScreen extends StatefulWidget {
 
 class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   late final GetExplorerProfileUseCase _getExplorerProfile;
-  final TourGroupRepository _tourRepo = TourGroupRepository();
+  late final TourGroupRepository _tourRepo;
+
+  /// The signed-in person's groups, created once in [initState] (BUG-1).
+  late final Stream<List<TourGroup>> _myGroupsStream;
 
   ExplorerProfile? _profile;
   bool _isLoading = false;
   String? _error;
-  DocumentSnapshot? _rawProfileDoc;
+  Map<String, dynamic>? _rawProfileData;
   String? _bloodGroup;
   String? _statusNote;
   String _activeCategory = 'all';
 
   // Active tab: 'tours' | 'vault' | 'settings'
-  String _activeTab = 'tours';
+  String _activeTab = defaultProfileTab(groupsV2: kGroupsV2);
 
   // On someone else's profile: the groups you share with them, null until
   // known, and their email as their membership row in a shared group gives it.
@@ -89,6 +105,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _tourRepo = widget.repository ?? TourGroupRepository();
+    _myGroupsStream = _tourRepo.watchMyGroups();
     LocaleController.instance.addListener(_onLocaleChanged);
     _getExplorerProfile = getIt<GetExplorerProfileUseCase>();
     _tourId = widget.tourId;
@@ -131,6 +149,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     });
   }
 
+  /// The raw profile document's fields, read from Firestore. Null when there is none.
+  Future<Map<String, dynamic>?> _readProfileData(String uid) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('explorer_profiles')
+        .doc(uid)
+        .get();
+    return doc.data();
+  }
+
   Future<void> _loadProfile() async {
     final authState = context.read<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
@@ -170,16 +197,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         (p) => p,
       );
 
-      final rawDoc = await FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .doc(profile.uid)
-          .get();
+      final data =
+          await (widget.readProfileData ?? _readProfileData)(profile.uid);
 
       if (mounted) {
-        final data = rawDoc.data();
         setState(() {
           _profile = profile;
-          _rawProfileDoc = rawDoc;
+          _rawProfileData = data;
           _bloodGroup = data?['bloodGroup'] as String?;
           _statusNote =
               data?['statusNote'] as String? ?? data?['note'] as String?;
@@ -197,7 +221,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   String _getDisplayBio(ExplorerProfile profile) {
-    final rawData = _rawProfileDoc?.data() as Map<String, dynamic>?;
+    final rawData = _rawProfileData;
     if (_isBn) {
       final bn = rawData?['bioBangla'] as String?;
       if (bn != null && bn.trim().isNotEmpty) return bn.trim();
@@ -510,7 +534,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 const SizedBox(height: 16),
                 Text(
                   _isBn
-                      ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
+                      ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
                       : 'Failed to load profile: $_error',
                   style: TextStyle(color: context.forest.text70, fontSize: 13),
                   textAlign: TextAlign.center,
@@ -541,7 +565,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return StreamBuilder<List<TourGroup>>(
-      stream: _tourRepo.watchMyGroups(),
+      stream: _myGroupsStream,
       builder: (context, groupsSnap) {
         final myGroups = groupsSnap.data ?? [];
         if (!isOwnProfile && groupsSnap.hasData) _ensureSharedGroups(myGroups);
@@ -931,8 +955,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               onTap: () => _showEditProfileBottomSheet(profile),
               child: Text(
                 bio.isEmpty
-                    ? (_isBn ? '+ বায়ো যুক্ত করুন' : '+ Add Bio')
-                    : (_isBn ? 'বায়ো পরিবর্তন করুন' : 'Edit Bio'),
+                    ? (_isBn ? '+ বায়ো যুক্ত করুন' : '+ Add Bio')
+                    : (_isBn ? 'বায়ো পরিবর্তন করুন' : 'Edit Bio'),
                 style: TextStyle(
                   color: context.forest.accentText,
                   fontSize: 12,
@@ -999,7 +1023,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
-            _isBn ? 'সক্রিয়' : 'Active',
+            _isBn ? 'সক্রিয়' : 'Active',
             _isBn ? 'লেজার' : 'Ledger',
             Icons.account_balance_wallet_rounded,
           ),
@@ -1061,7 +1085,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               icon: const Icon(Icons.add_circle, size: 18),
               label: Text(
-                _isBn ? 'নতুন ট্যুর' : 'Create Tour',
+                _isBn ? 'নতুন গ্রুপ' : 'Create Group',
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
@@ -1084,7 +1108,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               icon: const Icon(Icons.key_rounded, size: 18),
               label: Text(
-                _isBn ? 'কোডে যোগ' : 'Join Tour',
+                _isBn ? 'কোডে যোগ' : 'Join Group',
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
@@ -1106,7 +1130,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     '${profile.displayName} — on Bhromon\nhttps://app.bhromon.fun';
                 SharePlus.instance.share(ShareParams(text: text));
               },
-              tooltip: _isBn ? 'শেয়ার' : 'Share',
+              tooltip: _isBn ? 'শেয়ার' : 'Share',
               icon: Icon(Icons.share_outlined,
                   color: context.forest.text70, size: 20),
             ),
@@ -1141,7 +1165,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final categories = [
       (
         id: 'all',
-        label: _isBn ? 'সব ট্যুর' : 'All Tours',
+        label: _isBn ? 'সব গ্রুপ' : 'All Groups',
         icon: Icons.wb_sunny_rounded,
         color: AppColors.gold,
       ),
@@ -1153,7 +1177,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       ),
       (
         id: 'hills',
-        label: _isBn ? 'পাহাড় ও ঝর্ণা' : 'Hills & Treks',
+        label: _isBn ? 'পাহাড় ও ঝর্ণা' : 'Hills & Treks',
         icon: Icons.terrain_rounded,
         color: AppColors.mintGreen,
       ),
@@ -1341,18 +1365,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Segmented Tabs
   // ---------------------------------------------------------------------------
 
-  /// The tabs a swipe moves through, in the order of the segmented row.
-  static const _tabKeys = ['tours', 'games', 'vault', 'settings'];
+  /// The own profile's tabs (see profileTabKeys).
+  List<String> get _ownTabKeys => profileTabKeys(groupsV2: kGroupsV2);
 
   /// Moves to the next or previous tab. The first and last tabs stop the swipe.
   /// Only the active tab's content is built, so a tab loads its data only while
   /// it is shown.
   void _stepTab(int by) {
-    final index = _tabKeys.indexOf(_activeTab);
-    if (index < 0) return;
-    final next = (index + by).clamp(0, _tabKeys.length - 1);
-    if (next == index) return;
-    setState(() => _activeTab = _tabKeys[next]);
+    final next = stepProfileTab(_ownTabKeys, _activeTab, by);
+    if (next == _activeTab) return;
+    setState(() => _activeTab = next);
   }
 
   Widget _buildSegmentedTabs() {
@@ -1366,11 +1388,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _buildTabItem(
-            'tours',
-            Icons.explore_rounded,
-            _isBn ? 'ট্যুরসমূহ' : 'My Tours',
-          ),
+          if (!kGroupsV2)
+            _buildTabItem(
+              'tours',
+              Icons.explore_rounded,
+              _isBn ? 'গ্রুপসমূহ' : 'My Groups',
+            ),
           _buildTabItem(
             'games',
             Icons.emoji_events_rounded,
@@ -1430,6 +1453,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Tab Content
   // ---------------------------------------------------------------------------
 
+  /// The game analytics at a height of its own. The view fills the height it is given,
+  /// and the profile scrolls, so without a height its layout has no bounds to fill.
+  Widget _gameAnalyticsSection() {
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.75,
+      child: const GameAnalyticsView(),
+    );
+  }
+
   Widget _buildActiveTabContent(
     ExplorerProfile profile,
     List<TourGroup> groups,
@@ -1440,7 +1472,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       case 'vault':
         return _buildKeepsakesTab(groups);
       case 'games':
-        return const GameAnalyticsView();
+        return kGroupsV2 ? _buildGamesTabV2() : _gameAnalyticsSection();
       case 'settings':
         return _buildPreferencesTab(profile);
       case 'tours':
@@ -1452,6 +1484,34 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
   // Tab 1: My Tours
   // ---------------------------------------------------------------------------
+
+  /// The Games tab with the Game zone and News cards (D-8). Both are global, so they
+  /// belong to the person, not to a group.
+  Widget _buildGamesTabV2() {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GamesLinkCard(
+          icon: Icons.sports_esports_rounded,
+          color: const Color(0xFFF59E0B),
+          title: l10n.translate('hub_module_games'),
+          subtitle: l10n.translate('hub_module_games_sub'),
+          onTap: () => context.push('/game-zone'),
+        ),
+        const SizedBox(height: 10),
+        GamesLinkCard(
+          icon: Icons.article_rounded,
+          color: const Color(0xFF0EA5E9),
+          title: l10n.translate('hub_module_news'),
+          subtitle: l10n.translate('hub_module_news_sub'),
+          onTap: () => context.push('/newspaper-hub'),
+        ),
+        const SizedBox(height: 16),
+        _gameAnalyticsSection(),
+      ],
+    );
+  }
 
   Widget _buildMyToursTab(List<TourGroup> groups, bool isOwnProfile) {
     if (groups.isEmpty && !isOwnProfile) {
@@ -1496,8 +1556,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(height: 6),
             Text(
               _isBn
-                  ? 'নতুন ট্যুর তৈরি করুন অথবা কোড দিয়ে বন্ধুর ট্যুরে যোগ দিন।'
-                  : 'Create a new tour or join with an invite code.',
+                  ? 'নতুন গ্রুপ তৈরি করুন অথবা কোড দিয়ে বন্ধুর গ্রুপে যোগ দিন।'
+                  : 'Create a new group or join with an invite code.',
               style: TextStyle(color: context.forest.text54, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -1508,7 +1568,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _showCreateGroupDialog(context),
                   icon: const Icon(Icons.add, size: 16),
-                  label: Text(_isBn ? 'ট্যুর তৈরি' : 'Create'),
+                  label: Text(_isBn ? 'গ্রুপ তৈরি' : 'Create'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.midGreen,
                     foregroundColor: Colors.white,
@@ -1572,8 +1632,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             Text(
               isOwnProfile
                   ? (_isBn
-                      ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
-                      : 'Active & Past Tours (${displayGroups.length})')
+                      ? 'সক্রিয় ও পূর্বের গ্রুপ (${displayGroups.length})'
+                      : 'Active & Past Groups (${displayGroups.length})')
                   : (_isBn
                       ? 'শেয়ার করা গ্রুপ (${displayGroups.length})'
                       : 'Groups in common (${displayGroups.length})'),
@@ -1589,7 +1649,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 icon:
                     Icon(Icons.add, size: 15, color: context.forest.accentText),
                 label: Text(
-                  _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
+                  _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
                   style: TextStyle(
                       color: context.forest.accentText,
                       fontSize: 12,
@@ -1739,7 +1799,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             SnackBar(
                               content: Text(
                                 _isBn
-                                    ? 'ইনভাইট কোড কপি হয়েছে: ${group.inviteCode}'
+                                    ? 'ইনভাইট কোড কপি হয়েছে: ${group.inviteCode}'
                                     : 'Invite code copied: ${group.inviteCode}',
                               ),
                               backgroundColor: AppColors.midGreen,
@@ -1870,7 +1930,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           title:
               _isBn ? 'ফ্যামিলি সেফটি হাব ও এসওএস' : 'Family Safety Hub & SOS',
           subtitle: _isBn
-              ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও ট্যুর সদস্যদের লোকেশন নোটিশ।'
+              ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও গ্রুপ সদস্যদের লোকেশন নোটিশ।'
               : 'Emergency siren alerts, coastal tide advisories, and member safety.',
           icon: Icons.shield_rounded,
           color: Colors.redAccent,
@@ -1889,7 +1949,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         _buildKeepsakeCard(
           title: _isBn ? 'গেম জোন' : 'Game Zone',
           subtitle: _isBn
-              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
+              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
               : 'Play Card 29, Carrom, Chess AI, Ludo, and Teen Patti on the bus or train.',
           icon: Icons.sports_esports_rounded,
           color: Colors.lightBlueAccent,
@@ -2251,7 +2311,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       (label: "সাজেক ভ্যালি", dest: 'Sajek Valley', type: TourType.hill),
       (label: "শ্রীমঙ্গল / সিলেট", dest: 'Sylhet', type: TourType.nature),
       (label: "বান্দরবান", dest: 'Bandarban', type: TourType.hill),
-      (label: "কুয়াকাটা", dest: 'Kuakata', type: TourType.beach),
+      (label: "কুয়াকাটা", dest: 'Kuakata', type: TourType.beach),
       (label: "সুন্দরবন", dest: 'Sundarbans', type: TourType.nature),
     ];
 
@@ -2290,8 +2350,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         style: TextStyle(color: context.forest.text),
                         decoration: InputDecoration(
                           labelText: _isBn
-                              ? 'ট্যুরের নাম (যেমন: সাজেক ট্যুর ২০২৬)'
-                              : 'Tour Name',
+                              ? 'গ্রুপের নাম (যেমন: সাজেক ট্যুর ২০২৬)'
+                              : 'Group Name',
                           labelStyle: TextStyle(
                               color: context.forest.text70, fontSize: 13),
                           filled: true,
@@ -2305,7 +2365,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       // Presets
                       Text(
                         _isBn
-                            ? 'জনপ্রিয় গন্তব্যসমূহ (Quick Select):'
+                            ? 'জনপ্রিয় গন্তব্যসমূহ (Quick Select):'
                             : 'Popular Destinations:',
                         style: TextStyle(
                           color: context.forest.text70,
@@ -2459,8 +2519,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 SnackBar(
                                   content: Text(
                                     _isBn
-                                        ? 'গ্রুপ তৈরি হয়েছে: ${newGroup.name}'
-                                        : 'Created tour: ${newGroup.name}',
+                                        ? 'গ্রুপ তৈরি হয়েছে: ${newGroup.name}'
+                                        : 'Created group: ${newGroup.name}',
                                   ),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
@@ -2491,7 +2551,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               color: context.forest.text, strokeWidth: 2),
                         )
                       : Text(
-                          _isBn ? 'ট্যুর তৈরি করুন' : 'Create Tour',
+                          _isBn ? 'গ্রুপ তৈরি করুন' : 'Create Group',
                           style: TextStyle(color: context.forest.text),
                         ),
                 ),
@@ -2529,8 +2589,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 children: [
                   Text(
                     _isBn
-                        ? 'ট্যুরের ৮ অক্ষরের আমন্ত্রণ কোড লিখুন:'
-                        : 'Enter the 8-character tour invite code:',
+                        ? 'গ্রুপের ৮ অক্ষরের আমন্ত্রণ কোড লিখুন:'
+                        : 'Enter the 8-character group invite code:',
                     style:
                         TextStyle(color: context.forest.text70, fontSize: 13),
                   ),
@@ -2589,7 +2649,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 SnackBar(
                                   content: Text(
                                     _isBn
-                                        ? '${joinedGroup.name} ট্যুরে যুক্ত হয়েছেন!'
+                                        ? '${joinedGroup.name} গ্রুপে যুক্ত হয়েছেন!'
                                         : 'Joined ${joinedGroup.name}!',
                                   ),
                                   backgroundColor: AppColors.midGreen,
@@ -2641,7 +2701,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   void _showEditProfileBottomSheet(ExplorerProfile profile) {
     final nameController = TextEditingController(text: profile.displayName);
-    final rawData = _rawProfileDoc?.data() as Map<String, dynamic>?;
+    final rawData = _rawProfileData;
     final rawBn = rawData?['bioBangla'] as String? ?? '';
     final rawEn = rawData?['bioEnglish'] as String? ?? '';
     final bioBanglaController = TextEditingController(text: rawBn);
@@ -2962,7 +3022,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           const SizedBox(height: 16),
 
                           // Bio Bangla
-                          Text(_isBn ? 'বায়ো (বাংলা)' : 'BIO (BANGLA)',
+                          Text(_isBn ? 'বায়ো (বাংলা)' : 'BIO (BANGLA)',
                               style: TextStyle(
                                   color: context.forest.text54,
                                   fontSize: 10,
@@ -2978,7 +3038,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               fillColor:
                                   context.forest.text.withValues(alpha: 0.04),
                               filled: true,
-                              hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
+                              hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 14),
                               border: OutlineInputBorder(
@@ -2989,7 +3049,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           const SizedBox(height: 16),
 
                           // Bio English
-                          Text(_isBn ? 'বায়ো (ইংরেজি)' : 'BIO (ENGLISH)',
+                          Text(_isBn ? 'বায়ো (ইংরেজি)' : 'BIO (ENGLISH)',
                               style: TextStyle(
                                   color: context.forest.text54,
                                   fontSize: 10,
@@ -3345,7 +3405,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 10),
               Text(
                 _isBn
-                    ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
+                    ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
                     : 'Sign in to manage your groups, split expenses, and share moments.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.forest.text70, fontSize: 13),
@@ -3414,7 +3474,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         content: Text(
           _isBn
-              ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
+              ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
               : 'Your offline data stays safely on this device. You can sign back in anytime.',
           style: TextStyle(color: context.forest.text70, fontSize: 13),
         ),

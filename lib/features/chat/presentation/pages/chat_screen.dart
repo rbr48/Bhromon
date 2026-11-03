@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bhromon/core/widgets/swipe_pager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/shared_latest_stream.dart';
@@ -48,6 +49,7 @@ import '../widgets/chat_delete_dialogs.dart';
 import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../domain/call_log_entry.dart';
+import '../widgets/chat_calls_page.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -143,6 +145,11 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _hasMoreMessages = true; // false once all pages loaded
   bool _isLoadingMore = false; // prevents duplicate fetches
   final List<QueryDocumentSnapshot> _allMessages = [];
+
+  /// The two pages of the chat: messages (0) and calls (1). A swipe changes page only
+  /// when it comes to rest; the composer and the header stay outside the pager.
+  final PageController _chatPages = PageController();
+  int _chatPage = 0;
 
   // The header (online/typing) and the typing overlay both watch the chat
   // document: one shared listener, created once instead of in build().
@@ -463,6 +470,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _chatPages.dispose();
     _vpsTypingSub?.cancel();
     _messageController.removeListener(_onTextChanged);
     _scrollController.removeListener(_onScroll);
@@ -694,6 +702,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// A finished call, centred in the conversation: the direction or outcome,
   /// and the length when the call connected.
+  /// The call records among [docs], newest first, as rows for the calls page.
+  List<ChatCallRow> _callRowsFor(List<QueryDocumentSnapshot> docs) {
+    final rows = <ChatCallRow>[];
+    for (final doc in docs) {
+      final data = doc.data();
+      if (data is! Map<String, dynamic>) continue;
+      if ((data['type'] as String?) != 'call') continue;
+      final timestamp = data['timestamp'] as Timestamp?;
+      rows.add(ChatCallRow(
+        entry: CallLogEntry.fromData(data),
+        at: timestamp?.toDate(),
+      ));
+    }
+    return rows;
+  }
+
   Widget _buildCallLogEntry(
     Map<String, dynamic> data,
     String currentUid, {
@@ -2736,6 +2760,10 @@ class _ChatScreenState extends State<ChatScreen> {
             body: WhatsappWallpaper(
               child: Column(
                 children: [
+                  ChatPageSwitch(
+                    selected: _chatPage,
+                    onSelected: (page) => setState(() => _chatPage = page),
+                  ),
                   // Pinned message & disappearing messages banner
                   StreamBuilder<DocumentSnapshot>(
                     stream: _chatDocStream,
@@ -2882,578 +2910,319 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   Expanded(
-                    child: RepaintBoundary(
-                      child: () {
-                        final docs = _visibleMessages;
-                        final hasAnyMessages = docs.isNotEmpty ||
-                            _pendingUploads.isNotEmpty ||
-                            _pendingTextMessages.isNotEmpty;
-                        if (!hasAnyMessages && _messagesSub == null) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                                  color: Color(0xFF00A884)));
-                        }
-                        if (!hasAnyMessages) {
-                          return Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: context.chat.bar,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                context.l10n.translate(
-                                    'chat_start_conversation',
-                                    args: {'name': otherName}),
-                                style: TextStyle(
-                                    color: context.chat.text70, fontSize: 12),
-                              ),
-                            ),
+                    child: SwipePager(
+                      controller: _chatPages,
+                      count: 2,
+                      selectedIndex: _chatPage,
+                      enabled: !_isSearchingInChat,
+                      nextLabel: context.l10n.translate('chat_view_calls'),
+                      previousLabel:
+                          context.l10n.translate('chat_view_messages'),
+                      onSettled: (page) => setState(() => _chatPage = page),
+                      itemBuilder: (context, index) {
+                        if (index == 1) {
+                          void callThem({required bool isVideo}) =>
+                              _initiateCall(
+                                isVideo: isVideo,
+                                currentUid: currentUid,
+                                otherUid: resolvedOtherUid,
+                                otherName: otherName,
+                                avatarUrl: avatarUrl,
+                                localUserName: currentName,
+                                localAvatarUrl: currentAvatarUrl,
+                              );
+                          return ChatCallsPage(
+                            otherName: otherName,
+                            currentUid: currentUid,
+                            rows: _callRowsFor(_visibleMessages),
+                            onVoiceCall: () => callThem(isVideo: false),
+                            onVideoCall: () => callThem(isVideo: true),
+                            onCallBack: (isVideo) => callThem(isVideo: isVideo),
                           );
                         }
-
-                        return ListView.builder(
-                          reverse: true,
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
-                          itemCount: docs.length +
-                              _pendingUploads.length +
-                              _pendingTextMessages.length +
-                              (_isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            // ── Loading more indicator at the bottom (oldest end) ──
-                            if (index ==
-                                docs.length +
-                                    _pendingUploads.length +
-                                    _pendingTextMessages.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFF00A884),
-                                      strokeWidth: 2,
-                                    ),
+                        return RepaintBoundary(
+                          child: () {
+                            final docs = _visibleMessages;
+                            final hasAnyMessages = docs.isNotEmpty ||
+                                _pendingUploads.isNotEmpty ||
+                                _pendingTextMessages.isNotEmpty;
+                            if (!hasAnyMessages && _messagesSub == null) {
+                              return const Center(
+                                  child: CircularProgressIndicator(
+                                      color: Color(0xFF00A884)));
+                            }
+                            if (!hasAnyMessages) {
+                              return Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: context.chat.bar,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                ),
-                              );
-                            }
-
-                            // ── Pending text message bubbles (newest outgoing) ──
-                            if (index < _pendingTextMessages.length) {
-                              final pending = _pendingTextMessages[
-                                  _pendingTextMessages.length - 1 - index];
-                              return _buildPendingTextMessageBubble(pending);
-                            }
-
-                            // ── Pending upload bubbles ──────────────────────
-                            final uploadIndex =
-                                index - _pendingTextMessages.length;
-                            if (uploadIndex < _pendingUploads.length) {
-                              final pending = _pendingUploads[
-                                  _pendingUploads.length - 1 - uploadIndex];
-                              return Semantics(
-                                label: context.l10n
-                                    .translate('chat_uploading', args: {
-                                  'type': pending.type,
-                                  'percent': ((pending.progress) * 100).toInt()
-                                }),
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                        bottom: 8, left: 48),
-                                    child: ChatMediaBubble(
-                                      localFile: pending.file,
-                                      bytes: pending.bytes,
-                                      type: pending.type,
-                                      uploadProgress: pending.progress,
-                                      isMe: true,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            // ── Real Firestore messages ─────────────────────
-                            final realIndex =
-                                uploadIndex - _pendingUploads.length;
-                            final doc = docs[realIndex];
-                            final data = doc.data() as Map<String, dynamic>;
-                            final String msgType =
-                                (data['type'] as String?) ?? 'text';
-                            // A call log is a record, not a message: it sits
-                            // centred in the conversation.
-                            if (msgType == 'call') {
-                              return _buildCallLogEntry(
-                                data,
-                                currentUid,
-                                onCallBack: () => _initiateCall(
-                                  isVideo: CallLogEntry.fromData(data).isVideo,
-                                  currentUid: currentUid,
-                                  otherUid: resolvedOtherUid,
-                                  otherName: otherName,
-                                  avatarUrl: avatarUrl,
-                                  localUserName: currentName,
-                                  localAvatarUrl: currentAvatarUrl,
-                                ),
-                              );
-                            }
-                            final String text = (data['text'] as String?) ?? '';
-                            final String mediaUrl =
-                                (data['mediaUrl'] as String?) ?? '';
-                            final senderId = data['senderId'] ?? '';
-                            final isMe = senderId == currentUid;
-                            final bool seen = data['seen'] as bool? ?? false;
-                            // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
-                            final bool hasPendingWrites =
-                                doc.metadata.hasPendingWrites;
-                            final String status = hasPendingWrites
-                                ? 'pending'
-                                : ((data['status'] as String?) ??
-                                    (seen ? 'read' : 'sent'));
-                            final timestamp = data['timestamp'] as Timestamp?;
-
-                            // Locale-aware time string
-                            String timeStr = '';
-                            if (timestamp != null) {
-                              final date = timestamp.toDate();
-                              try {
-                                timeStr = _formatTime(date);
-                              } catch (_) {
-                                timeStr =
-                                    localizedDateFormat('h:mm a').format(date);
-                              }
-                            }
-
-                            // Delivery tick icon: a clock while pending, a single check
-                            // when sent, double grey when delivered, double blue when read.
-                            Widget deliveryIcon() {
-                              switch (
-                                  receiptStateFor(status: status, seen: seen)) {
-                                case ReceiptState.pending:
-                                  return Icon(Icons.access_time,
-                                      size: 11, color: context.chat.text54);
-                                case ReceiptState.read:
-                                  return const Icon(Icons.done_all,
-                                      size: 13, color: Color(0xFF53BDEB));
-                                case ReceiptState.delivered:
-                                  return Icon(Icons.done_all,
-                                      size: 13, color: context.chat.text54);
-                                case ReceiptState.sent:
-                                  return Icon(Icons.done,
-                                      size: 13, color: context.chat.text54);
-                              }
-                            }
-
-                            final isSelected =
-                                _selectedMessageIds.contains(doc.id);
-                            final isHighlighted =
-                                _highlightedMessageId == doc.id;
-                            final replyData =
-                                data['replyTo'] as Map<String, dynamic>?;
-                            final replyModel = replyData != null
-                                ? ReplyMessageInfo.fromMap(replyData)
-                                : null;
-                            final reactions =
-                                (data['reactions'] as Map<String, dynamic>?) ??
-                                    {};
-                            final starredBy =
-                                (data['starredBy'] as Map<String, dynamic>?) ??
-                                    {};
-                            final isStarred = starredBy[currentUid] == true;
-                            final isEdited = data['isEdited'] == true;
-                            final isForwarded = data['isForwarded'] == true;
-
-                            Widget metaRow() {
-                              return Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isEdited) ...[
-                                    Text(context.l10n.translate('chat_edited'),
-                                        style: TextStyle(
-                                            color: context.chat.text38,
-                                            fontSize: 9)),
-                                    const SizedBox(width: 3),
-                                  ],
-                                  Text(
-                                    timeStr,
+                                  child: Text(
+                                    context.l10n.translate(
+                                        'chat_start_conversation',
+                                        args: {'name': otherName}),
                                     style: TextStyle(
-                                        color: context.chat.text54,
-                                        fontSize: 9.5),
-                                  ),
-                                  if (isStarred) ...[
-                                    const SizedBox(width: 3),
-                                    Icon(Icons.star,
-                                        size: 10, color: context.chat.text60),
-                                  ],
-                                  if (isMe) ...[
-                                    const SizedBox(width: 4),
-                                    deliveryIcon(),
-                                  ],
-                                ],
-                              );
-                            }
-
-                            Widget bubbleBody;
-
-                            // ── Deleted Message Tombstone (WhatsApp Style) ──
-                            if (msgType == 'deleted' ||
-                                data['isDeleted'] == true) {
-                              bubbleBody = Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: context.chat.bar,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: context.chat.divider10,
-                                    width: 1,
+                                        color: context.chat.text70,
+                                        fontSize: 12),
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.block_flipped,
-                                      size: 14,
-                                      color: context.chat.text38,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      isMe
-                                          ? context.l10n
-                                              .translate('chat_deleted_by_me')
-                                          : context.l10n.translate(
-                                              'chat_deleted_message'),
-                                      style: TextStyle(
-                                        fontStyle: FontStyle.italic,
-                                        color: context.chat.text54,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      timeStr,
-                                      style: TextStyle(
-                                        color: context.chat.text30,
-                                        fontSize: 9.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               );
                             }
-                            // ── Document Message ──────────────────────────────
-                            else if (msgType == 'document') {
-                              bubbleBody = Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    ChatQuotedBubble(
-                                      reply: replyModel,
-                                      isMe: isMe,
-                                      onTap: () => _scrollToMessage(
-                                          replyModel.messageId),
-                                    ),
-                                  ChatDocumentBubble(
-                                    documentUrl:
-                                        (data['documentUrl'] as String?) ?? '',
-                                    fileName: (data['fileName'] as String?) ??
-                                        context.l10n
-                                            .translate('chat_attach_document'),
-                                    fileSizeBytes:
-                                        (data['fileSizeBytes'] as num?)
-                                                ?.toInt() ??
-                                            0,
-                                    isMe: isMe,
-                                    timeStr: timeStr,
-                                    deliveryIcon: isMe ? deliveryIcon() : null,
-                                  ),
-                                ],
-                              );
-                            }
-                            // ── Location Message ──────────────────────────────
-                            else if (msgType == 'location') {
-                              bubbleBody = Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    ChatQuotedBubble(
-                                      reply: replyModel,
-                                      isMe: isMe,
-                                      onTap: () => _scrollToMessage(
-                                          replyModel.messageId),
-                                    ),
-                                  ChatLocationBubble(
-                                    latitude: (data['latitude'] as num?)
-                                            ?.toDouble() ??
-                                        0.0,
-                                    longitude: (data['longitude'] as num?)
-                                            ?.toDouble() ??
-                                        0.0,
-                                    title: (data['title'] as String?) ??
-                                        context.l10n
-                                            .translate('chat_location_title'),
-                                    address: (data['address'] as String?) ?? '',
-                                    isMe: isMe,
-                                    timeStr: timeStr,
-                                    deliveryIcon: isMe ? deliveryIcon() : null,
-                                  ),
-                                ],
-                              );
-                            }
-                            // ── Travel Expense / Split Message ────────────────
-                            else if (msgType == 'expense') {
-                              bubbleBody = Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    ChatQuotedBubble(
-                                      reply: replyModel,
-                                      isMe: isMe,
-                                      onTap: () => _scrollToMessage(
-                                          replyModel.messageId),
-                                    ),
-                                  ChatExpenseBubble(
-                                    title: (data['expenseTitle'] as String?) ??
-                                        context.l10n.translate(
-                                            'chat_expense_split_title'),
-                                    amount:
-                                        (data['amount'] as num?)?.toDouble() ??
-                                            0.0,
-                                    paidByName: (data['paidByName']
-                                            as String?) ??
-                                        context.l10n.translate('chats_member'),
-                                    isPaidByMe: data['paidById'] == currentUid,
-                                    isSettled: data['isSettled'] == true,
-                                    timeStr: timeStr,
-                                    deliveryIcon: isMe ? deliveryIcon() : null,
-                                    onSettle: data['isSettled'] == true
-                                        ? null
-                                        : () {
-                                            doc.reference
-                                                .update({'isSettled': true});
-                                          },
-                                  ),
-                                ],
-                              );
-                            }
-                            // ── Media Message (Photo / Video with Caption) ───
-                            else if (msgType == 'image' || msgType == 'video') {
-                              final bool isViewOnce =
-                                  data['isViewOnce'] == true;
-                              final bool isOpened = data['isOpened'] == true;
 
-                              if (isViewOnce) {
-                                if (isOpened) {
-                                  bubbleBody = Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: isMe
-                                          ? context.chat.outgoing
-                                          : context.chat.panel,
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.looks_one_outlined,
-                                            color: context.chat.text54,
-                                            size: 18),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                            context.l10n
-                                                .translate('chat_opened'),
-                                            style: TextStyle(
-                                                color: context.chat.text54,
-                                                fontStyle: FontStyle.italic,
-                                                fontSize: 13)),
-                                        const SizedBox(width: 8),
-                                        Text(timeStr,
-                                            style: TextStyle(
-                                                color: context.chat.text38,
-                                                fontSize: 10)),
-                                        if (isMe) ...[
-                                          const SizedBox(width: 4),
-                                          deliveryIcon(),
-                                        ],
-                                      ],
-                                    ),
-                                  );
-                                } else {
-                                  bubbleBody = InkWell(
-                                    onTap: () {
-                                      if (isMe) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text(context.l10n
-                                                  .translate(
-                                                      'chat_view_once_sent'))),
-                                        );
-                                        return;
-                                      }
-                                      Navigator.of(context)
-                                          .push(
-                                        MaterialPageRoute<void>(
-                                          builder: (ctx) => Scaffold(
-                                            backgroundColor: Colors.black,
-                                            appBar: AppBar(
-                                              backgroundColor: Colors.black,
-                                              iconTheme: const IconThemeData(
-                                                  color: Colors.white),
-                                              title: Text(
-                                                  msgType == 'video'
-                                                      ? context.l10n.translate(
-                                                          'chat_view_once_video')
-                                                      : context.l10n.translate(
-                                                          'chat_view_once_photo'),
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 16)),
-                                            ),
-                                            body: Center(
-                                              child: InteractiveViewer(
-                                                child: kIsWeb
-                                                    ? Image.network(
-                                                        signedMediaUrl(
-                                                            mediaUrl),
-                                                        fit: BoxFit.contain,
-                                                      )
-                                                    : CachedNetworkImage(
-                                                        imageUrl:
-                                                            signedMediaUrl(
-                                                                mediaUrl),
-                                                        fit: BoxFit.contain,
-                                                        errorWidget:
-                                                            (_, __, ___) =>
-                                                                Image.network(
-                                                          signedMediaUrl(
-                                                              mediaUrl),
-                                                          fit: BoxFit.contain,
-                                                        ),
-                                                      ),
-                                              ),
-                                            ),
-                                          ),
+                            return ListView.builder(
+                              reverse: true,
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 16),
+                              itemCount: docs.length +
+                                  _pendingUploads.length +
+                                  _pendingTextMessages.length +
+                                  (_isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                // ── Loading more indicator at the bottom (oldest end) ──
+                                if (index ==
+                                    docs.length +
+                                        _pendingUploads.length +
+                                        _pendingTextMessages.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF00A884),
+                                          strokeWidth: 2,
                                         ),
-                                      )
-                                          .then((_) {
-                                        doc.reference.update({
-                                          'isOpened': true,
-                                          'openedAt':
-                                              FieldValue.serverTimestamp(),
-                                        });
-                                      });
-                                    },
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: isMe
-                                            ? context.chat.outgoing
-                                            : context.chat.panel,
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 22,
-                                            height: 22,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color:
-                                                      const Color(0xFF00A884),
-                                                  width: 1.5),
-                                            ),
-                                            child: Center(
-                                              child: Text('1',
-                                                  style: TextStyle(
-                                                      color: context
-                                                          .chat.accentText,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11)),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                              msgType == 'video'
-                                                  ? context.l10n.translate(
-                                                      'chat_video_label')
-                                                  : context.l10n.translate(
-                                                      'chat_label_photo'),
-                                              style: TextStyle(
-                                                  color: context.chat.text,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 13)),
-                                          const SizedBox(width: 8),
-                                          Text(timeStr,
-                                              style: TextStyle(
-                                                  color: context.chat.text54,
-                                                  fontSize: 10)),
-                                          if (isMe) ...[
-                                            const SizedBox(width: 4),
-                                            deliveryIcon(),
-                                          ],
-                                        ],
                                       ),
                                     ),
                                   );
                                 }
-                              } else {
-                                bubbleBody = Container(
-                                  decoration: BoxDecoration(
-                                    color: isMe
-                                        ? context.chat.outgoing
-                                        : context.chat.panel,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.all(4),
-                                  child: Column(
+
+                                // ── Pending text message bubbles (newest outgoing) ──
+                                if (index < _pendingTextMessages.length) {
+                                  final pending = _pendingTextMessages[
+                                      _pendingTextMessages.length - 1 - index];
+                                  return _buildPendingTextMessageBubble(
+                                      pending);
+                                }
+
+                                // ── Pending upload bubbles ──────────────────────
+                                final uploadIndex =
+                                    index - _pendingTextMessages.length;
+                                if (uploadIndex < _pendingUploads.length) {
+                                  final pending = _pendingUploads[
+                                      _pendingUploads.length - 1 - uploadIndex];
+                                  return Semantics(
+                                    label: context.l10n
+                                        .translate('chat_uploading', args: {
+                                      'type': pending.type,
+                                      'percent':
+                                          ((pending.progress) * 100).toInt()
+                                    }),
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            bottom: 8, left: 48),
+                                        child: ChatMediaBubble(
+                                          localFile: pending.file,
+                                          bytes: pending.bytes,
+                                          type: pending.type,
+                                          uploadProgress: pending.progress,
+                                          isMe: true,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                // ── Real Firestore messages ─────────────────────
+                                final realIndex =
+                                    uploadIndex - _pendingUploads.length;
+                                final doc = docs[realIndex];
+                                final data = doc.data() as Map<String, dynamic>;
+                                final String msgType =
+                                    (data['type'] as String?) ?? 'text';
+                                // A call log is a record, not a message: it sits
+                                // centred in the conversation.
+                                if (msgType == 'call') {
+                                  return _buildCallLogEntry(
+                                    data,
+                                    currentUid,
+                                    onCallBack: () => _initiateCall(
+                                      isVideo:
+                                          CallLogEntry.fromData(data).isVideo,
+                                      currentUid: currentUid,
+                                      otherUid: resolvedOtherUid,
+                                      otherName: otherName,
+                                      avatarUrl: avatarUrl,
+                                      localUserName: currentName,
+                                      localAvatarUrl: currentAvatarUrl,
+                                    ),
+                                  );
+                                }
+                                final String text =
+                                    (data['text'] as String?) ?? '';
+                                final String mediaUrl =
+                                    (data['mediaUrl'] as String?) ?? '';
+                                final senderId = data['senderId'] ?? '';
+                                final isMe = senderId == currentUid;
+                                final bool seen =
+                                    data['seen'] as bool? ?? false;
+                                // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
+                                final bool hasPendingWrites =
+                                    doc.metadata.hasPendingWrites;
+                                final String status = hasPendingWrites
+                                    ? 'pending'
+                                    : ((data['status'] as String?) ??
+                                        (seen ? 'read' : 'sent'));
+                                final timestamp =
+                                    data['timestamp'] as Timestamp?;
+
+                                // Locale-aware time string
+                                String timeStr = '';
+                                if (timestamp != null) {
+                                  final date = timestamp.toDate();
+                                  try {
+                                    timeStr = _formatTime(date);
+                                  } catch (_) {
+                                    timeStr = localizedDateFormat('h:mm a')
+                                        .format(date);
+                                  }
+                                }
+
+                                // Delivery tick icon: a clock while pending, a single check
+                                // when sent, double grey when delivered, double blue when read.
+                                Widget deliveryIcon() {
+                                  switch (receiptStateFor(
+                                      status: status, seen: seen)) {
+                                    case ReceiptState.pending:
+                                      return Icon(Icons.access_time,
+                                          size: 11, color: context.chat.text54);
+                                    case ReceiptState.read:
+                                      return const Icon(Icons.done_all,
+                                          size: 13, color: Color(0xFF53BDEB));
+                                    case ReceiptState.delivered:
+                                      return Icon(Icons.done_all,
+                                          size: 13, color: context.chat.text54);
+                                    case ReceiptState.sent:
+                                      return Icon(Icons.done,
+                                          size: 13, color: context.chat.text54);
+                                  }
+                                }
+
+                                final isSelected =
+                                    _selectedMessageIds.contains(doc.id);
+                                final isHighlighted =
+                                    _highlightedMessageId == doc.id;
+                                final replyData =
+                                    data['replyTo'] as Map<String, dynamic>?;
+                                final replyModel = replyData != null
+                                    ? ReplyMessageInfo.fromMap(replyData)
+                                    : null;
+                                final reactions = (data['reactions']
+                                        as Map<String, dynamic>?) ??
+                                    {};
+                                final starredBy = (data['starredBy']
+                                        as Map<String, dynamic>?) ??
+                                    {};
+                                final isStarred = starredBy[currentUid] == true;
+                                final isEdited = data['isEdited'] == true;
+                                final isForwarded = data['isForwarded'] == true;
+
+                                Widget metaRow() {
+                                  return Row(
                                     mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isEdited) ...[
+                                        Text(
+                                            context.l10n
+                                                .translate('chat_edited'),
+                                            style: TextStyle(
+                                                color: context.chat.text38,
+                                                fontSize: 9)),
+                                        const SizedBox(width: 3),
+                                      ],
+                                      Text(
+                                        timeStr,
+                                        style: TextStyle(
+                                            color: context.chat.text54,
+                                            fontSize: 9.5),
+                                      ),
+                                      if (isStarred) ...[
+                                        const SizedBox(width: 3),
+                                        Icon(Icons.star,
+                                            size: 10,
+                                            color: context.chat.text60),
+                                      ],
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        deliveryIcon(),
+                                      ],
+                                    ],
+                                  );
+                                }
+
+                                Widget bubbleBody;
+
+                                // ── Deleted Message Tombstone (WhatsApp Style) ──
+                                if (msgType == 'deleted' ||
+                                    data['isDeleted'] == true) {
+                                  bubbleBody = Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: context.chat.bar,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: context.chat.divider10,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.block_flipped,
+                                          size: 14,
+                                          color: context.chat.text38,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          isMe
+                                              ? context.l10n.translate(
+                                                  'chat_deleted_by_me')
+                                              : context.l10n.translate(
+                                                  'chat_deleted_message'),
+                                          style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                            color: context.chat.text54,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          timeStr,
+                                          style: TextStyle(
+                                            color: context.chat.text30,
+                                            fontSize: 9.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                // ── Document Message ──────────────────────────────
+                                else if (msgType == 'document') {
+                                  bubbleBody = Column(
                                     crossAxisAlignment: isMe
                                         ? CrossAxisAlignment.end
                                         : CrossAxisAlignment.start,
                                     children: [
-                                      if (isForwarded)
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              6, 4, 6, 2),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.forward,
-                                                  size: 11,
-                                                  color: context.chat.text54),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                  context.l10n.translate(
-                                                      'chat_forwarded_label'),
-                                                  style: TextStyle(
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                      color:
-                                                          context.chat.text54,
-                                                      fontSize: 10)),
-                                            ],
-                                          ),
-                                        ),
                                       if (replyModel != null)
                                         ChatQuotedBubble(
                                           reply: replyModel,
@@ -3461,218 +3230,541 @@ class _ChatScreenState extends State<ChatScreen> {
                                           onTap: () => _scrollToMessage(
                                               replyModel.messageId),
                                         ),
-                                      ChatMediaBubble(
-                                        mediaUrl: mediaUrl,
-                                        type: msgType,
+                                      ChatDocumentBubble(
+                                        documentUrl:
+                                            (data['documentUrl'] as String?) ??
+                                                '',
+                                        fileName:
+                                            (data['fileName'] as String?) ??
+                                                context.l10n.translate(
+                                                    'chat_attach_document'),
+                                        fileSizeBytes:
+                                            (data['fileSizeBytes'] as num?)
+                                                    ?.toInt() ??
+                                                0,
                                         isMe: isMe,
+                                        timeStr: timeStr,
+                                        deliveryIcon:
+                                            isMe ? deliveryIcon() : null,
                                       ),
-                                      if (text.isNotEmpty)
+                                    ],
+                                  );
+                                }
+                                // ── Location Message ──────────────────────────────
+                                else if (msgType == 'location') {
+                                  bubbleBody = Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      ChatLocationBubble(
+                                        latitude: (data['latitude'] as num?)
+                                                ?.toDouble() ??
+                                            0.0,
+                                        longitude: (data['longitude'] as num?)
+                                                ?.toDouble() ??
+                                            0.0,
+                                        title: (data['title'] as String?) ??
+                                            context.l10n.translate(
+                                                'chat_location_title'),
+                                        address:
+                                            (data['address'] as String?) ?? '',
+                                        isMe: isMe,
+                                        timeStr: timeStr,
+                                        deliveryIcon:
+                                            isMe ? deliveryIcon() : null,
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // ── Travel Expense / Split Message ────────────────
+                                else if (msgType == 'expense') {
+                                  bubbleBody = Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      ChatExpenseBubble(
+                                        title:
+                                            (data['expenseTitle'] as String?) ??
+                                                context.l10n.translate(
+                                                    'chat_expense_split_title'),
+                                        amount: (data['amount'] as num?)
+                                                ?.toDouble() ??
+                                            0.0,
+                                        paidByName:
+                                            (data['paidByName'] as String?) ??
+                                                context.l10n
+                                                    .translate('chats_member'),
+                                        isPaidByMe:
+                                            data['paidById'] == currentUid,
+                                        isSettled: data['isSettled'] == true,
+                                        timeStr: timeStr,
+                                        deliveryIcon:
+                                            isMe ? deliveryIcon() : null,
+                                        onSettle: data['isSettled'] == true
+                                            ? null
+                                            : () {
+                                                doc.reference.update(
+                                                    {'isSettled': true});
+                                              },
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // ── Media Message (Photo / Video with Caption) ───
+                                else if (msgType == 'image' ||
+                                    msgType == 'video') {
+                                  final bool isViewOnce =
+                                      data['isViewOnce'] == true;
+                                  final bool isOpened =
+                                      data['isOpened'] == true;
+
+                                  if (isViewOnce) {
+                                    if (isOpened) {
+                                      bubbleBody = Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isMe
+                                              ? context.chat.outgoing
+                                              : context.chat.panel,
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.looks_one_outlined,
+                                                color: context.chat.text54,
+                                                size: 18),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                                context.l10n
+                                                    .translate('chat_opened'),
+                                                style: TextStyle(
+                                                    color: context.chat.text54,
+                                                    fontStyle: FontStyle.italic,
+                                                    fontSize: 13)),
+                                            const SizedBox(width: 8),
+                                            Text(timeStr,
+                                                style: TextStyle(
+                                                    color: context.chat.text38,
+                                                    fontSize: 10)),
+                                            if (isMe) ...[
+                                              const SizedBox(width: 4),
+                                              deliveryIcon(),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    } else {
+                                      bubbleBody = InkWell(
+                                        onTap: () {
+                                          if (isMe) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(context.l10n
+                                                      .translate(
+                                                          'chat_view_once_sent'))),
+                                            );
+                                            return;
+                                          }
+                                          Navigator.of(context)
+                                              .push(
+                                            MaterialPageRoute<void>(
+                                              builder: (ctx) => Scaffold(
+                                                backgroundColor: Colors.black,
+                                                appBar: AppBar(
+                                                  backgroundColor: Colors.black,
+                                                  iconTheme:
+                                                      const IconThemeData(
+                                                          color: Colors.white),
+                                                  title: Text(
+                                                      msgType == 'video'
+                                                          ? context.l10n.translate(
+                                                              'chat_view_once_video')
+                                                          : context.l10n.translate(
+                                                              'chat_view_once_photo'),
+                                                      style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 16)),
+                                                ),
+                                                body: Center(
+                                                  child: InteractiveViewer(
+                                                    child: kIsWeb
+                                                        ? Image.network(
+                                                            signedMediaUrl(
+                                                                mediaUrl),
+                                                            fit: BoxFit.contain,
+                                                          )
+                                                        : CachedNetworkImage(
+                                                            imageUrl:
+                                                                signedMediaUrl(
+                                                                    mediaUrl),
+                                                            fit: BoxFit.contain,
+                                                            errorWidget: (_, __,
+                                                                    ___) =>
+                                                                Image.network(
+                                                              signedMediaUrl(
+                                                                  mediaUrl),
+                                                              fit: BoxFit
+                                                                  .contain,
+                                                            ),
+                                                          ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                              .then((_) {
+                                            doc.reference.update({
+                                              'isOpened': true,
+                                              'openedAt':
+                                                  FieldValue.serverTimestamp(),
+                                            });
+                                          });
+                                        },
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isMe
+                                                ? context.chat.outgoing
+                                                : context.chat.panel,
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 22,
+                                                height: 22,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: const Color(
+                                                          0xFF00A884),
+                                                      width: 1.5),
+                                                ),
+                                                child: Center(
+                                                  child: Text('1',
+                                                      style: TextStyle(
+                                                          color: context
+                                                              .chat.accentText,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 11)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                  msgType == 'video'
+                                                      ? context.l10n.translate(
+                                                          'chat_video_label')
+                                                      : context.l10n.translate(
+                                                          'chat_label_photo'),
+                                                  style: TextStyle(
+                                                      color: context.chat.text,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13)),
+                                              const SizedBox(width: 8),
+                                              Text(timeStr,
+                                                  style: TextStyle(
+                                                      color:
+                                                          context.chat.text54,
+                                                      fontSize: 10)),
+                                              if (isMe) ...[
+                                                const SizedBox(width: 4),
+                                                deliveryIcon(),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    bubbleBody = Container(
+                                      decoration: BoxDecoration(
+                                        color: isMe
+                                            ? context.chat.outgoing
+                                            : context.chat.panel,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                        children: [
+                                          if (isForwarded)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      6, 4, 6, 2),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.forward,
+                                                      size: 11,
+                                                      color:
+                                                          context.chat.text54),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                      context.l10n.translate(
+                                                          'chat_forwarded_label'),
+                                                      style: TextStyle(
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                          color: context
+                                                              .chat.text54,
+                                                          fontSize: 10)),
+                                                ],
+                                              ),
+                                            ),
+                                          if (replyModel != null)
+                                            ChatQuotedBubble(
+                                              reply: replyModel,
+                                              isMe: isMe,
+                                              onTap: () => _scrollToMessage(
+                                                  replyModel.messageId),
+                                            ),
+                                          ChatMediaBubble(
+                                            mediaUrl: mediaUrl,
+                                            type: msgType,
+                                            isMe: isMe,
+                                          ),
+                                          if (text.isNotEmpty)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      6, 6, 6, 2),
+                                              child: Text(
+                                                text,
+                                                style: TextStyle(
+                                                    color: context.chat.text,
+                                                    fontSize: 13.5),
+                                              ),
+                                            ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                6, 2, 6, 4),
+                                            child: metaRow(),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                }
+                                // ── Voice / Audio message ────────────────────────
+                                else if (msgType == 'audio') {
+                                  bubbleBody = Container(
+                                    decoration: BoxDecoration(
+                                      color: isMe
+                                          ? context.chat.outgoing
+                                          : context.chat.panel,
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: const Radius.circular(12),
+                                        topRight: const Radius.circular(12),
+                                        bottomLeft: isMe
+                                            ? const Radius.circular(12)
+                                            : Radius.zero,
+                                        bottomRight: isMe
+                                            ? Radius.zero
+                                            : const Radius.circular(12),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: isMe
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
+                                      children: [
+                                        if (replyModel != null)
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                8, 8, 8, 0),
+                                            child: ChatQuotedBubble(
+                                              reply: replyModel,
+                                              isMe: isMe,
+                                              onTap: () => _scrollToMessage(
+                                                  replyModel.messageId),
+                                            ),
+                                          ),
+                                        VoiceMessageBubble(
+                                          audioUrl: mediaUrl,
+                                          durationSeconds:
+                                              (data['durationSeconds'] as num?)
+                                                  ?.toInt(),
+                                          isMe: isMe,
+                                        ),
                                         Padding(
                                           padding: const EdgeInsets.fromLTRB(
-                                              6, 6, 6, 2),
-                                          child: Text(
+                                              10, 0, 10, 6),
+                                          child: metaRow(),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                // ── Text bubble ─────────────────────────────────
+                                else {
+                                  bubbleBody = PhysicalShape(
+                                    clipper: isMe
+                                        ? SenderBubbleClipper()
+                                        : ReceiverBubbleClipper(),
+                                    color: isMe
+                                        ? context.chat.outgoing
+                                        : context.chat.panel,
+                                    elevation: 1,
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                          isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                        children: [
+                                          if (isForwarded)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 2),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.forward,
+                                                      size: 11,
+                                                      color:
+                                                          context.chat.text54),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                      context.l10n.translate(
+                                                          'chat_forwarded_label'),
+                                                      style: TextStyle(
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                          color: context
+                                                              .chat.text54,
+                                                          fontSize: 10)),
+                                                ],
+                                              ),
+                                            ),
+                                          if (replyModel != null)
+                                            ChatQuotedBubble(
+                                              reply: replyModel,
+                                              isMe: isMe,
+                                              onTap: () => _scrollToMessage(
+                                                  replyModel.messageId),
+                                            ),
+                                          Text(
                                             text,
                                             style: TextStyle(
                                                 color: context.chat.text,
                                                 fontSize: 13.5),
                                           ),
-                                        ),
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                            6, 2, 6, 4),
-                                        child: metaRow(),
+                                          const SizedBox(height: 2),
+                                          metaRow(),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            }
-                            // ── Voice / Audio message ────────────────────────
-                            else if (msgType == 'audio') {
-                              bubbleBody = Container(
-                                decoration: BoxDecoration(
-                                  color: isMe
-                                      ? context.chat.outgoing
-                                      : context.chat.panel,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: const Radius.circular(12),
-                                    topRight: const Radius.circular(12),
-                                    bottomLeft: isMe
-                                        ? const Radius.circular(12)
-                                        : Radius.zero,
-                                    bottomRight: isMe
-                                        ? Radius.zero
-                                        : const Radius.circular(12),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: isMe
-                                      ? CrossAxisAlignment.end
-                                      : CrossAxisAlignment.start,
-                                  children: [
-                                    if (replyModel != null)
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                            8, 8, 8, 0),
-                                        child: ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ),
-                                    VoiceMessageBubble(
-                                      audioUrl: mediaUrl,
-                                      durationSeconds:
-                                          (data['durationSeconds'] as num?)
-                                              ?.toInt(),
-                                      isMe: isMe,
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          10, 0, 10, 6),
-                                      child: metaRow(),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            // ── Text bubble ─────────────────────────────────
-                            else {
-                              bubbleBody = PhysicalShape(
-                                clipper: isMe
-                                    ? SenderBubbleClipper()
-                                    : ReceiverBubbleClipper(),
-                                color: isMe
-                                    ? context.chat.outgoing
-                                    : context.chat.panel,
-                                elevation: 1,
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                      isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      if (isForwarded)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 2),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.forward,
-                                                  size: 11,
-                                                  color: context.chat.text54),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                  context.l10n.translate(
-                                                      'chat_forwarded_label'),
-                                                  style: TextStyle(
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                      color:
-                                                          context.chat.text54,
-                                                      fontSize: 10)),
-                                            ],
-                                          ),
-                                        ),
-                                      if (replyModel != null)
-                                        ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      Text(
-                                        text,
-                                        style: TextStyle(
-                                            color: context.chat.text,
-                                            fontSize: 13.5),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      metaRow(),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
+                                  );
+                                }
 
-                            return SwipeToReply(
-                              isMe: isMe,
-                              onReply: () => _setReplyToMessage(doc),
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (_selectedMessageIds.isNotEmpty) {
-                                    setState(() {
-                                      if (isSelected) {
-                                        _selectedMessageIds.remove(doc.id);
-                                      } else {
-                                        _selectedMessageIds.add(doc.id);
+                                return SwipeToReply(
+                                  isMe: isMe,
+                                  onReply: () => _setReplyToMessage(doc),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (_selectedMessageIds.isNotEmpty) {
+                                        setState(() {
+                                          if (isSelected) {
+                                            _selectedMessageIds.remove(doc.id);
+                                          } else {
+                                            _selectedMessageIds.add(doc.id);
+                                          }
+                                        });
+                                      } else if (_reactionTargetDoc != null) {
+                                        setState(
+                                            () => _reactionTargetDoc = null);
                                       }
-                                    });
-                                  } else if (_reactionTargetDoc != null) {
-                                    setState(() => _reactionTargetDoc = null);
-                                  }
-                                },
-                                onLongPress: () {
-                                  HapticFeedback.mediumImpact();
-                                  setState(() {
-                                    _selectedMessageIds.add(doc.id);
-                                    _reactionTargetDoc = doc;
-                                  });
-                                },
-                                child: Container(
-                                  color: isSelected
-                                      ? const Color(0xFF00A884)
-                                          .withValues(alpha: 0.18)
-                                      : isHighlighted
+                                    },
+                                    onLongPress: () {
+                                      HapticFeedback.mediumImpact();
+                                      setState(() {
+                                        _selectedMessageIds.add(doc.id);
+                                        _reactionTargetDoc = doc;
+                                      });
+                                    },
+                                    child: Container(
+                                      color: isSelected
                                           ? const Color(0xFF00A884)
-                                              .withValues(alpha: 0.28)
-                                          : Colors.transparent,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 2),
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      Align(
-                                        alignment: isMe
-                                            ? Alignment.centerRight
-                                            : Alignment.centerLeft,
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            bottom: 8,
-                                            left: isMe ? 48 : 0,
-                                            right: isMe ? 0 : 48,
-                                          ),
-                                          child: bubbleBody,
-                                        ),
-                                      ),
-                                      if (reactions.isNotEmpty)
-                                        Positioned(
-                                          bottom: 0,
-                                          right: isMe ? 8 : null,
-                                          left: isMe ? null : 8,
-                                          child: ChatReactionBadge(
-                                            reactions: reactions,
-                                            onTap: () =>
-                                                showReactionDetailsSheet(
-                                              context,
-                                              reactions: reactions,
-                                              currentUid: currentUid,
+                                              .withValues(alpha: 0.18)
+                                          : isHighlighted
+                                              ? const Color(0xFF00A884)
+                                                  .withValues(alpha: 0.28)
+                                              : Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2),
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Align(
+                                            alignment: isMe
+                                                ? Alignment.centerRight
+                                                : Alignment.centerLeft,
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                bottom: 8,
+                                                left: isMe ? 48 : 0,
+                                                right: isMe ? 0 : 48,
+                                              ),
+                                              child: bubbleBody,
                                             ),
                                           ),
-                                        ),
-                                    ],
+                                          if (reactions.isNotEmpty)
+                                            Positioned(
+                                              bottom: 0,
+                                              right: isMe ? 8 : null,
+                                              left: isMe ? null : 8,
+                                              child: ChatReactionBadge(
+                                                reactions: reactions,
+                                                onTap: () =>
+                                                    showReactionDetailsSheet(
+                                                  context,
+                                                  reactions: reactions,
+                                                  currentUid: currentUid,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
-                          },
+                          }(),
                         );
-                      }(),
+                      },
                     ),
                   ),
 

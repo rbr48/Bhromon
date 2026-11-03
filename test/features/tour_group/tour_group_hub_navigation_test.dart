@@ -89,7 +89,7 @@ void main() {
 
     // Empty state should be visible since 0 groups were emitted
     expect(find.text('No groups yet'), findsOneWidget);
-    expect(find.text('Create tour'), findsOneWidget);
+    expect(find.text('Create group'), findsOneWidget);
     expect(find.text('Enter code'), findsOneWidget);
 
     // The menu lists each way to start, with its label.
@@ -97,7 +97,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(PopupMenuItem<String>, 'Create a family circle'),
         findsOneWidget);
-    expect(find.widgetWithText(PopupMenuItem<String>, 'Create a new tour'),
+    expect(find.widgetWithText(PopupMenuItem<String>, 'Create a new group'),
         findsOneWidget);
     expect(find.widgetWithText(PopupMenuItem<String>, 'Join with a code'),
         findsOneWidget);
@@ -150,7 +150,7 @@ void main() {
     expect(find.textContaining('SJ8K2026'), findsOneWidget);
 
     // Verify Tour Modules Grid
-    expect(find.text('Tour modules & operations'), findsOneWidget);
+    expect(find.text('Group modules & operations'), findsOneWidget);
     expect(find.text('Moments 📸'), findsOneWidget);
     expect(find.text('Shared fund & ledger'), findsOneWidget);
     expect(find.text('Highway roadmap 🛣️'), findsOneWidget);
