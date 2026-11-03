@@ -12,6 +12,7 @@ import 'package:local_auth/local_auth.dart';
 import 'dart:math' as math;
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/services/battery_guidance.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -64,6 +65,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     super.initState();
     _loadOfflineConversations();
     _listenToVpsConversations();
+    // The battery guidance waits until the list is on screen, so it never
+    // covers a call that is connecting.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(BatteryGuidance.maybeShowDue(context));
+    });
   }
 
   @override

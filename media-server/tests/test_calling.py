@@ -480,7 +480,12 @@ def test_an_iphone_pushkit_token_gets_a_voip_push_not_an_fcm_one(monkeypatch, tm
     assert count == 2
     assert [message.token for message in fcm] == ["android-token"]
     voip.assert_called_once_with(
-        "voip-token", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=True
+        "voip-token",
+        call_id="c1",
+        caller_id="uid-alice",
+        caller_name="Alice",
+        is_video=True,
+        language="en",
     )
 
 

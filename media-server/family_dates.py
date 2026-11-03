@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from push_strings import localized_number, push_text
+
 logger = logging.getLogger("bhromon.family_dates")
 
 # Asia/Dhaka is UTC+6 all year, with no daylight saving, so a fixed offset is exact.
@@ -153,15 +155,30 @@ def plan_family_date_reminders(record: Dict[str, Any], today: str) -> Optional[R
     return ReminderPlan(days_left=reminders, next_on=current, remind_on=None)  # Unreachable.
 
 
-def family_date_reminder_text(record: Dict[str, Any], days_left: int) -> Tuple[str, str]:
-    """The title and the body a member sees for a date that is `days_left` days away."""
+def family_date_reminder_text(
+    record: Dict[str, Any], days_left: int, language: Optional[str] = None
+) -> Tuple[str, str]:
+    """The title and the body a member sees for a date that is `days_left` days away.
+
+    The text is in the member's language. An unknown language gets English.
+    """
     raw_title = record.get("title")
     title = raw_title.strip() if isinstance(raw_title, str) else ""
     kind = record.get("kind")
     emoji = KIND_EMOJI.get(kind if isinstance(kind, str) else "custom", KIND_EMOJI["custom"])
-    when = "Today" if days_left <= 0 else "Tomorrow" if days_left == 1 else f"In {days_left} days"
-    head = f"{emoji} {title}" if title else f"{emoji} Family date"
-    return head, when
+    if days_left <= 0:
+        when = push_text(language, "family.today")
+    elif days_left == 1:
+        when = push_text(language, "family.tomorrow")
+    else:
+        when = push_text(language, "family.in_days", days=localized_number(language, days_left))
+    name = title or push_text(language, "family.untitled")
+    return f"{emoji} {name}", when
+
+
+def _reminder_for(record: Dict[str, Any], days_left: int) -> Callable[[Optional[str]], Tuple[str, str]]:
+    """The text for one reminder, as a function of the recipient's language."""
+    return lambda language: family_date_reminder_text(record, days_left, language)
 
 
 def claim_due_family_date(
@@ -227,11 +244,9 @@ def run_family_date_reminders(
                 continue
             stats["reminded"] += 1
             for days_left in plan.days_left:
-                title, body = family_date_reminder_text(record, days_left)
-                stats["pushes"] += engine.send_multicast(
+                stats["pushes"] += engine.send_localized(
                     targets_by_tour[tour_id],
-                    title,
-                    body,
+                    _reminder_for(record, days_left),
                     {"action": "family_date", "tourId": tour_id, "dateId": doc.id},
                     high_priority=True,
                 )

@@ -26,6 +26,7 @@ class MainActivity: FlutterFragmentActivity() {
 
     private val CHANNEL = "com.bhromon.app/integrity"
     private val CALL_AUDIO_CHANNEL = "com.bhromon.app/call_audio"
+    private val BATTERY_CHANNEL = "com.bhromon.app/battery"
     private var callAudioChannel: MethodChannel? = null
     private var proximityLock: PowerManager.WakeLock? = null
     private var pipAllowed = false
@@ -71,6 +72,16 @@ class MainActivity: FlutterFragmentActivity() {
             when (call.method) {
                 "isRooted" -> result.success(checkRooted())
                 "isDeveloperMode" -> result.success(checkDeveloperMode())
+                else -> result.notImplemented()
+            }
+        }
+        // Battery guidance: whether the system lets the app run unrestricted, and
+        // the battery settings page for the user to change it.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BATTERY_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isIgnoringBatteryOptimizations" -> result.success(isIgnoringBatteryOptimizations())
+                "openBatterySettings" -> result.success(openBatterySettings())
+                "manufacturer" -> result.success(Build.MANUFACTURER)
                 else -> result.notImplemented()
             }
         }
@@ -135,6 +146,23 @@ class MainActivity: FlutterFragmentActivity() {
 
     private fun applyOverLockScreen() {
         showOverLockScreen(callScreenOverLock || acceptOverLock)
+    }
+
+    /** Whether the system already lets this app run in the background without limits. */
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        val power = getSystemService(Context.POWER_SERVICE) as PowerManager
+        return power.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    /** Opens the battery settings list. Returns false when the phone has no such page. */
+    private fun openBatterySettings(): Boolean {
+        return try {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /** Lets the call screen show over the lock screen and wake the display. */
