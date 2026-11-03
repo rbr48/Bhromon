@@ -11,6 +11,7 @@ import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../domain/services/chat_markdown.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import 'groups/member_avatar.dart';
 import '../../../chat/presentation/widgets/chat_document_bubble.dart';
 import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -32,6 +33,10 @@ class ChannelMessageBubble extends StatefulWidget {
 
   /// Seat and room of the sender, already formatted. Empty when none.
   final String badge;
+
+  /// The sender's photo link, when they have one. Shown beside the name on other
+  /// people's messages.
+  final String? senderPhotoUrl;
   final VoidCallback onLongPress;
   final ValueChanged<String> onReact;
   final ValueChanged<int> onVote;
@@ -45,6 +50,7 @@ class ChannelMessageBubble extends StatefulWidget {
     required this.mentionsMe,
     required this.myEmail,
     required this.badge,
+    this.senderPhotoUrl,
     required this.onLongPress,
     required this.onReact,
     required this.onVote,
@@ -168,6 +174,16 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // The name beside the avatar says who this is, so the avatar is excluded from
+        // semantics and the name is read once.
+        ExcludeSemantics(
+          child: MemberAvatar(
+            name: widget.message.senderName,
+            photoUrl: widget.senderPhotoUrl,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 6),
         Flexible(
           child: Text(
             widget.message.senderName,
