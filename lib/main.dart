@@ -430,14 +430,28 @@ class MyApp extends StatelessWidget {
           builder: (context, child) {
             final isDark = Theme.of(context).brightness == Brightness.dark;
             final navBg = isDark ? const Color(0xFF161616) : Colors.white;
-            return Container(
-              color: navBg,
-              child: SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                bottom: true,
-                child: OtaListenerWrapper(child: child ?? const SizedBox()),
+            // The icons follow the theme. Without this, Android picks dark icons
+            // on a dark scrim, which is what hid the light-theme bottom bar.
+            // Screens with their own app bar still set the status bar themselves.
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarColor: navBg,
+                systemNavigationBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarContrastEnforced: false,
+              ),
+              child: Container(
+                color: navBg,
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  right: false,
+                  bottom: true,
+                  child: OtaListenerWrapper(child: child ?? const SizedBox()),
+                ),
               ),
             );
           },

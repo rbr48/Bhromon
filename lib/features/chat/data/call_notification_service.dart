@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:bhromon/core/media/media_access.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,15 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
+import '../../../core/localization/locale_controller.dart';
 import '../../../core/audio/call_audio_session.dart';
-import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../core/utils/image_sizing.dart';
 import '../../../firebase_options.dart';
-import '../domain/call_display.dart';
+import '../presentation/widgets/incoming_call_dialog.dart';
 import 'call_signaling_service.dart';
 import 'system_call_bridge.dart';
 import 'vps_chat_service.dart';
@@ -288,7 +285,11 @@ class CallNotificationService {
     try {
       final token = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
       if (token is String && token.isNotEmpty) {
-        await VpsChatService().registerDeviceToken(token, platform: 'ios-voip');
+        await VpsChatService().registerDeviceToken(
+          token,
+          platform: 'ios-voip',
+          language: LocaleController.instance.locale.languageCode,
+        );
       }
     } catch (e, st) {
       logWarning('[CallNotificationService] VoIP token not registered', e, st);
@@ -724,129 +725,31 @@ class CallNotificationService {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: const Color(0xFF00A884),
-              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                  ? CachedNetworkImageProvider(signedMediaUrl(avatarUrl),
-                      maxWidth: kMaxDecodeDimension)
-                  : null,
-              child: (avatarUrl == null || avatarUrl.isEmpty)
-                  ? Text(
-                      callInitial(callerName),
-                      style: const TextStyle(
-                          fontSize: 32,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              callerName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isVideo ? Icons.videocam : Icons.call,
-                  color: const Color(0xFF00A884),
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  ctx.l10n.translate(
-                      isVideo ? 'call_incoming_video' : 'call_incoming_voice'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Decline button
-                GestureDetector(
-                  onTap: () async {
-                    Navigator.of(ctx).pop();
-                    _isCallDialogShowing = false;
-                    await _declineCall(
-                      callId,
-                      callerId: callerId,
-                      isVideo: isVideo,
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.call_end,
-                            color: Colors.white, size: 26),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(ctx.l10n.translate('call_decline'),
-                          style: const TextStyle(
-                              color: Colors.redAccent, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                // Accept button
-                GestureDetector(
-                  onTap: () async {
-                    Navigator.of(ctx).pop();
-                    _isCallDialogShowing = false;
-                    await _acceptCall(
-                      callId: callId,
-                      callerId: callerId,
-                      callerName: callerName,
-                      avatarUrl: avatarUrl,
-                      isVideo: isVideo,
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF00A884),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.call,
-                            color: Colors.white, size: 26),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                          ctx.l10n.translate(
-                              waiting ? 'call_end_and_answer' : 'call_accept'),
-                          style: const TextStyle(
-                              color: Color(0xFF00A884), fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      builder: (ctx) => IncomingCallDialog(
+        callerName: callerName,
+        avatarUrl: avatarUrl,
+        isVideo: isVideo,
+        waiting: waiting,
+        onDecline: () async {
+          Navigator.of(ctx).pop();
+          _isCallDialogShowing = false;
+          await _declineCall(
+            callId,
+            callerId: callerId,
+            isVideo: isVideo,
+          );
+        },
+        onAccept: () async {
+          Navigator.of(ctx).pop();
+          _isCallDialogShowing = false;
+          await _acceptCall(
+            callId: callId,
+            callerId: callerId,
+            callerName: callerName,
+            avatarUrl: avatarUrl,
+            isVideo: isVideo,
+          );
+        },
       ),
     ).then((_) {
       _isCallDialogShowing = false;

@@ -16,6 +16,7 @@ import '../../domain/services/notice_engine.dart';
 import '../../domain/services/notice_speech.dart';
 import '../widgets/notice/notice_composer.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/widgets/swipe_step.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -532,17 +533,24 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             )
           : null,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: [
-            if (next != null) _nextUp(l10n, next),
-            _meetingPoint(l10n),
-            if (today.isNotEmpty) _todaySchedule(l10n, today),
-            const SizedBox(height: 4),
-            _filters(l10n, needsMe),
-            const SizedBox(height: 8),
-            ..._list(l10n),
-          ],
+        // A swipe moves to the next or previous filter. It only changes which
+        // notices of the stream already on screen are shown.
+        child: SwipeStep(
+          onStep: _stepFilter,
+          nextLabel: l10n.translate('notice_next_filter'),
+          previousLabel: l10n.translate('notice_previous_filter'),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            children: [
+              if (next != null) _nextUp(l10n, next),
+              _meetingPoint(l10n),
+              if (today.isNotEmpty) _todaySchedule(l10n, today),
+              const SizedBox(height: 4),
+              _filters(l10n, needsMe),
+              const SizedBox(height: 8),
+              ..._list(l10n),
+            ],
+          ),
         ),
       ),
     );
@@ -728,6 +736,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         ],
       ),
     );
+  }
+
+  /// Moves the filter by [by]. The first and last filters stop the swipe.
+  void _stepFilter(int by) {
+    final next = NoticeEngine.stepFilter(_filter, by);
+    if (next == _filter) return;
+    setState(() => _filter = next);
   }
 
   Widget _filters(AppLocalizations l10n, int needsMe) {

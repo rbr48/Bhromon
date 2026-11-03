@@ -1,4 +1,7 @@
+import 'package:bhromon/app/di/injection.dart';
+import 'package:bhromon/core/security/hive_encryption_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/utils/app_logger.dart';
 
@@ -10,7 +13,22 @@ import '../../../../core/utils/app_logger.dart';
 class ChatLocalCache {
   static final ChatLocalCache _instance = ChatLocalCache._internal();
   factory ChatLocalCache() => _instance;
-  ChatLocalCache._internal();
+  ChatLocalCache._internal() : _encryption = null;
+
+  /// A cache that opens its boxes with [encryption] instead of the app's
+  /// service. For tests.
+  @visibleForTesting
+  ChatLocalCache.withEncryption(HiveEncryptionService encryption)
+      : _encryption = encryption;
+
+  final HiveEncryptionService? _encryption;
+
+  /// Every box holds the chat history, so it is opened encrypted. A box left
+  /// over from an older version without encryption is re-encrypted on the way.
+  Future<Box<T>> _openBox<T>(String name) {
+    final service = _encryption ?? getIt<HiveEncryptionService>();
+    return service.openEncryptedBox<T>(name);
+  }
 
   static const String _kMessagesBoxPrefix = 'chat_cache_msgs_';
   static const String _kConversationsBox = 'chat_cache_conversations';
@@ -23,8 +41,8 @@ class ChatLocalCache {
   Future<void> init() async {
     if (_initialized) return;
     try {
-      _convBox = await Hive.openBox<Map<dynamic, dynamic>>(_kConversationsBox);
-      _lockedBox = await Hive.openBox<bool>(_kLockedChatsBox);
+      _convBox = await _openBox<Map<dynamic, dynamic>>(_kConversationsBox);
+      _lockedBox = await _openBox<bool>(_kLockedChatsBox);
       _initialized = true;
     } catch (e, st) {
       logWarning('Error initializing ChatLocalCache', e, st);
@@ -60,8 +78,8 @@ class ChatLocalCache {
   Future<void> cacheMessages(
       String chatId, List<Map<String, dynamic>> messages) async {
     try {
-      final box = await Hive.openBox<Map<dynamic, dynamic>>(
-          '$_kMessagesBoxPrefix$chatId');
+      final box =
+          await _openBox<Map<dynamic, dynamic>>('$_kMessagesBoxPrefix$chatId');
       final Map<String, Map<String, dynamic>> mapToStore = {};
       for (final msg in messages) {
         final id = msg['id'] as String?;
@@ -78,8 +96,8 @@ class ChatLocalCache {
   /// Retrieves cached messages for [chatId].
   Future<List<Map<String, dynamic>>> getCachedMessages(String chatId) async {
     try {
-      final box = await Hive.openBox<Map<dynamic, dynamic>>(
-          '$_kMessagesBoxPrefix$chatId');
+      final box =
+          await _openBox<Map<dynamic, dynamic>>('$_kMessagesBoxPrefix$chatId');
       final list = <Map<String, dynamic>>[];
       for (final val in box.values) {
         list.add(Map<String, dynamic>.from(val));

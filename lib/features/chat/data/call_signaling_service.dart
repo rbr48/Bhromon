@@ -7,7 +7,10 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../core/audio/call_audio_session.dart';
 import '../../../core/utils/app_logger.dart';
 import '../domain/call_quality.dart';
+import '../domain/call_summary.dart';
+import '../domain/sdp_diagnostics.dart';
 import 'call_ice_config.dart';
+import 'call_telemetry.dart';
 import 'call_log_repository.dart';
 import 'call_media.dart';
 import 'vps_chat_service.dart';
@@ -316,6 +319,7 @@ class CallSignalingService {
   CallLinkSample? _linkSample;
   final OutboundBitrateMeter _bitrateMeter = OutboundBitrateMeter();
   final PacketLossMeter _lossMeter = PacketLossMeter();
+  final CallSummaryRecorder _summary = CallSummaryRecorder();
 
   final ValueNotifier<CallNetworkQuality> networkQuality =
       ValueNotifier(CallNetworkQuality.good);
@@ -439,6 +443,7 @@ class CallSignalingService {
       }
 
       await _peerConnection!.setLocalDescription(offer);
+      _logOpus(offer.sdp);
       VpsChatService().sendCallSignal(
         recipientId: remoteUid,
         signalType: 'offer',
@@ -449,7 +454,7 @@ class CallSignalingService {
         avatarUrl: callerAvatar,
       );
 
-      onCallStateChange?.call('calling');
+      _emitState('calling');
       _watchCallDocument(callId);
       _watchCalleeCandidates(callId);
       _ringTimer = Timer(
@@ -514,6 +519,7 @@ class CallSignalingService {
         'offerToReceiveVideo': 1,
       });
       await _peerConnection!.setLocalDescription(answer);
+      _logOpus(answer.sdp);
 
       final accepted = await _writeAnswer(callId, answer);
       if (!accepted) {
@@ -529,7 +535,7 @@ class CallSignalingService {
         );
       }
 
-      onCallStateChange?.call('answered');
+      _emitState('answered');
       _startConnectTimer();
       _watchCallDocument(callId);
       _watchCallerCandidates(callId);
@@ -698,6 +704,21 @@ class CallSignalingService {
 
   // ── Call lifecycle ─────────────────────────────────────────────────────────
 
+  /// Reports a state to the UI, and to Crashlytics as the call's stage.
+  void _emitState(String state) {
+    unawaited(CallTelemetry.stage(state));
+    onCallStateChange?.call(state);
+  }
+
+  /// Debug builds log the Opus lines of each local description, so the audio
+  /// settings can be checked on a real call.
+  void _logOpus(String? sdp) {
+    if (!kDebugMode || sdp == null) return;
+    for (final line in opusFmtpLines(sdp)) {
+      logInfo('[CallSDP] $line');
+    }
+  }
+
   void _begin(String callId, String? remoteUid, {required bool isCaller}) {
     if (_cancelled) {
       // The user hung up or left while the call was being prepared.
@@ -714,6 +735,8 @@ class CallSignalingService {
     _connectedAt = null;
     _reconnecting = false;
     _activeCallId = callId;
+    _summary.reset();
+    _summary.start(DateTime.now());
   }
 
   /// Ends this call once. Later calls do nothing. [remoteSignal] goes to the
@@ -737,6 +760,17 @@ class CallSignalingService {
     // Read before the release clears the connection time.
     final seconds = connectedSeconds;
     final durationSeconds = seconds > 0 ? seconds : null;
+    if (callId != null) {
+      final summary = _summary.finish(
+        callId: callId,
+        isCaller: isCaller,
+        isVideo: isVideo,
+        reason: callEndReasonFor(documentStatus ?? state),
+        at: DateTime.now(),
+        networkType: await CallTelemetry.networkType(),
+      );
+      unawaited(CallTelemetry.summary(summary));
+    }
     await _releaseResources();
 
     if (callId != null && remoteUid != null && remoteSignal != null) {
@@ -775,7 +809,7 @@ class CallSignalingService {
       }
     }
 
-    onCallStateChange?.call(state);
+    _emitState(state);
     onCallEnded?.call();
   }
 
@@ -860,11 +894,12 @@ class CallSignalingService {
       _relay('camera', payload: {'on': _hasLocalVideo && _videoEnabled});
     }
     _connectedAt ??= DateTime.now();
+    _summary.connected(_connectedAt!);
     _stableTimer?.cancel();
     _stableTimer = Timer(_stableLinkPeriod, _reconnectPolicy.reset);
     _startStatsMonitoring();
     _updateNetworkQuality(CallNetworkQuality.good);
-    onCallStateChange?.call('connected');
+    _emitState('connected');
   }
 
   /// Starts a rebuild of a dropped link. The caller offers. The callee asks.
@@ -911,7 +946,8 @@ class CallSignalingService {
       ));
     });
     _updateNetworkQuality(CallNetworkQuality.poor);
-    onCallStateChange?.call('reconnecting');
+    _summary.reconnect();
+    _emitState('reconnecting');
   }
 
   bool get _isLinkUp =>
@@ -1184,7 +1220,7 @@ class CallSignalingService {
       _ringTimer?.cancel();
       _ringTimer = null;
       _startConnectTimer();
-      onCallStateChange?.call('answered');
+      _emitState('answered');
     } catch (e, st) {
       // Let the other channel try again.
       _remoteAnswerApplied = false;
@@ -1432,13 +1468,16 @@ class CallSignalingService {
     if (pc == null || _finished || _reconnecting) return;
     try {
       final reports = await pc.getStats();
-      final raw = callLinkSampleFromStats(
-        reports.map((report) => <String, dynamic>{
-              for (final entry in report.values.entries)
-                entry.key.toString(): entry.value,
-              'type': report.type,
-            }),
-      );
+      final mapped = reports
+          .map((report) => <String, dynamic>{
+                for (final entry in report.values.entries)
+                  entry.key.toString(): entry.value,
+                'type': report.type,
+                'id': report.id,
+              })
+          .toList();
+      final raw = callLinkSampleFromStats(mapped);
+      _summary.path(pathTypeFromStats(mapped));
       final sentBytes = raw.sentBytes;
       final lost = raw.packetsLost;
       final received = raw.packetsReceived;
@@ -1456,6 +1495,7 @@ class CallSignalingService {
           .withLossRatio(intervalLoss ?? raw.lossRatio);
       if (!sample.hasIncomingMedia) return;
       _linkSample = sample;
+      _summary.link(sample);
       final quality = classifyCallLink(sample);
       _updateNetworkQuality(quality);
       await _applyVideoBitrateCap(quality);

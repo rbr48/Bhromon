@@ -288,7 +288,11 @@ class VpsChatService {
 
   // ── Device Token Registration (Push Notifications) ─────────────────────────
 
-  Future<void> registerDeviceToken(String token, {String? platform}) async {
+  Future<void> registerDeviceToken(
+    String token, {
+    String? platform,
+    String? language,
+  }) async {
     try {
       final idToken = await _getIdToken();
       if (idToken == null) return;
@@ -298,6 +302,8 @@ class VpsChatService {
         data: {
           'token': token,
           'platform': platform ?? (kIsWeb ? 'web' : 'mobile'),
+          // The server sends the push text in this language.
+          if (language != null) 'language': language,
         },
         options: _authHeader(idToken),
       );
