@@ -103,6 +103,24 @@ def test_the_text_names_the_notice_and_counts_who_is_waiting():
     )
 
 
+def test_the_answer_reminder_is_in_bengali_with_bengali_digits():
+    assert ar.ack_reminder_text(_notice(title="Bazar"), 3, "bn") == (
+        "উত্তর দিন: Bazar",
+        "৩ জন সদস্য এখনও উত্তর দেয়নি। উত্তর দিতে ট্যাপ করুন।",
+    )
+    assert ar.ack_reminder_text(_notice(title="  "), 1, "bn") == (
+        "একটি বিজ্ঞপ্তিতে উত্তর দিন",
+        "একজন সদস্য এখনও উত্তর দেয়নি। উত্তর দিতে ট্যাপ করুন।",
+    )
+
+
+def test_an_unknown_language_gets_the_answer_reminder_in_english():
+    assert ar.ack_reminder_text(_notice(title="Bazar"), 2, "fr") == (
+        "Please answer: Bazar",
+        "2 members have not answered yet. Tap to answer.",
+    )
+
+
 # --- a run, against fake Firestore and a fake push engine ----------------------------
 
 
@@ -171,8 +189,9 @@ class FakeDB:
 
 
 class FakeEngine:
-    def __init__(self, members_by_tour):
+    def __init__(self, members_by_tour, languages=None):
         self._members = members_by_tour
+        self._languages = dict(languages or {})
         self.pushes = []
 
     def get_active_tour_members(self, tour_id, except_email=""):
@@ -182,15 +201,18 @@ class FakeEngine:
         return [f"uid-{email.split('@')[0]}" for email in emails]
 
     def get_push_targets_for_uids(self, uids):
-        return [(f"tok-{uid}", None) for uid in uids]
+        return [(f"tok-{uid}", None, self._languages.get(uid, "en")) for uid in uids]
 
-    def send_multicast(self, targets, title, body, data, high_priority=False):
-        self.pushes.append({
-            "targets": [token for token, _ in targets],
-            "title": title,
-            "body": body,
-            "data": data,
-        })
+    def send_localized(self, targets, make_text, data, high_priority=False):
+        # The server's contract: one text per language, sent to that language's devices.
+        for language in sorted({lang for _, _, lang in targets}):
+            title, body = make_text(language)
+            self.pushes.append({
+                "targets": [token for token, _, lang in targets if lang == language],
+                "title": title,
+                "body": body,
+                "data": data,
+            })
         return len(targets)
 
 
@@ -213,6 +235,27 @@ def test_a_run_reminds_only_the_members_who_have_not_answered():
     again = ar.run_ack_reminders(db, engine, NOW + timedelta(hours=1), transactional=_no_transaction)
     assert again["reminded"] == 0
     assert len(engine.pushes) == 1
+
+
+def test_a_member_who_uses_bengali_gets_the_answer_reminder_in_bengali():
+    notice = _notice(ackBy=["alice@x.com"])
+    db = FakeDB([FakeDocument("t1", "n1", notice)])
+    engine = FakeEngine(
+        {"t1": ["alice@x.com", "bob@x.com", "carol@x.com"]}, languages={"uid-bob": "bn"}
+    )
+
+    stats = ar.run_ack_reminders(db, engine, NOW, transactional=_no_transaction)
+
+    assert stats == {"due": 1, "reminded": 1, "pushes": 2, "errors": 0}
+    # Bengali first (sorted by language), then the English devices.
+    assert engine.pushes[0] == {
+        "targets": ["tok-uid-bob"],
+        "title": "উত্তর দিন: Bazar on Friday",
+        "body": "২ জন সদস্য এখনও উত্তর দেয়নি। উত্তর দিতে ট্যাপ করুন।",
+        "data": {"action": "notice", "tourId": "t1", "noticeId": "n1"},
+    }
+    assert engine.pushes[1]["targets"] == ["tok-uid-carol"]
+    assert engine.pushes[1]["title"] == "Please answer: Bazar on Friday"
 
 
 def test_a_notice_is_reminded_twice_at_most_and_then_left_alone():

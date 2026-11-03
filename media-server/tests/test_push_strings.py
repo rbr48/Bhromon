@@ -6,6 +6,7 @@ from push_strings import (
     _TEXTS,
     call_alert,
     chat_preview,
+    localized_number,
     normalize_language,
     push_text,
 )
@@ -70,3 +71,11 @@ def test_call_alert_in_both_languages():
         "আসছে ভয়েস কল",
         "Rahim Bhromon-এ আপনাকে কল করছেন...",
     )
+
+
+def test_numbers_use_bengali_digits_only_in_bengali():
+    assert localized_number("bn", 12) == "১২"
+    assert localized_number("bn-BD", 0) == "০"
+    assert localized_number("en", 12) == "12"
+    assert localized_number(None, 7) == "7"
+    assert localized_number("fr", 3) == "3"

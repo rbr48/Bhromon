@@ -28,6 +28,16 @@ _TEXTS = {
         "call.title": "Incoming {kind} Call",
         "call.kind.voice": "Voice",
         "call.kind.video": "Video",
+        "call.handle.voice": "Bhromon Voice Call",
+        "call.handle.video": "Bhromon Video Call",
+        "family.untitled": "Family date",
+        "family.today": "Today",
+        "family.tomorrow": "Tomorrow",
+        "family.in_days": "In {days} days",
+        "ack.title": "Please answer: {title}",
+        "ack.untitled": "Please answer a notice",
+        "ack.waiting_one": "1 member has not answered yet. Tap to answer.",
+        "ack.waiting_many": "{count} members have not answered yet. Tap to answer.",
         "call.body": "{caller} is calling you on Bhromon...",
         "sender.default": "Explorer",
         "caller.default": "Member",
@@ -48,6 +58,16 @@ _TEXTS = {
         "call.title": "আসছে {kind} কল",
         "call.kind.voice": "ভয়েস",
         "call.kind.video": "ভিডিও",
+        "call.handle.voice": "Bhromon ভয়েস কল",
+        "call.handle.video": "Bhromon ভিডিও কল",
+        "family.untitled": "পারিবারিক তারিখ",
+        "family.today": "আজ",
+        "family.tomorrow": "আগামীকাল",
+        "family.in_days": "{days} দিন পরে",
+        "ack.title": "উত্তর দিন: {title}",
+        "ack.untitled": "একটি বিজ্ঞপ্তিতে উত্তর দিন",
+        "ack.waiting_one": "একজন সদস্য এখনও উত্তর দেয়নি। উত্তর দিতে ট্যাপ করুন।",
+        "ack.waiting_many": "{count} জন সদস্য এখনও উত্তর দেয়নি। উত্তর দিতে ট্যাপ করুন।",
         "call.body": "{caller} Bhromon-এ আপনাকে কল করছেন...",
         "sender.default": "সদস্য",
         "caller.default": "সদস্য",
@@ -70,6 +90,17 @@ def push_text(language: Optional[str], key: str, **params: str) -> str:
     table = _TEXTS[normalize_language(language)]
     template = table.get(key) or _TEXTS[DEFAULT_LANGUAGE][key]
     return template.format(**params)
+
+
+_BENGALI_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
+
+
+def localized_number(language: Optional[str], number: int) -> str:
+    """The number written in the language's digits: Bengali digits in Bengali."""
+    text = str(number)
+    if normalize_language(language) == "bn":
+        return text.translate(_BENGALI_DIGITS)
+    return text
 
 
 def chat_preview(language: Optional[str], text: Optional[str], message_type: Optional[str]) -> str:

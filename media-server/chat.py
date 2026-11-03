@@ -828,9 +828,8 @@ class PushNotificationDispatcher:
         for entry in tokens:
             token = entry["token"]
             # Each device rings in its own language.
-            entry_title, entry_body = call_alert(
-                normalize_language(entry.get("language")), is_video, caller_name
-)
+            language = normalize_language(entry.get("language"))
+            entry_title, entry_body = call_alert(language, is_video, caller_name)
             if entry.get("platform") == VOIP_PLATFORM:
                 # A closed iPhone shows the system call screen only for a VoIP push.
                 result = voip_sender.send_call(
@@ -839,6 +838,7 @@ class PushNotificationDispatcher:
                     caller_id=caller_id,
                     caller_name=caller_name,
                     is_video=is_video,
+                    language=language,
                 )
                 if result == "sent":
                     sent_count += 1
