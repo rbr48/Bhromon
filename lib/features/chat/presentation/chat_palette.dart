@@ -80,7 +80,9 @@ class ChatPalette {
   Color get text60 => isDark ? Colors.white60 : const Color(0xFF54656F);
 
   /// Secondary text at the old white54 strength.
-  Color get text54 => isDark ? Colors.white54 : const Color(0xFF667781);
+  // Light: 4.98:1 on the pale own bubble and 5.6:1 on white. It was 4.19:1 on the
+  // own bubble.
+  Color get text54 => isDark ? Colors.white54 : const Color(0xFF5C6B73);
 
   /// Hints and disabled text at the old white38 strength.
   Color get text38 => isDark ? Colors.white38 : const Color(0xFF8696A0);

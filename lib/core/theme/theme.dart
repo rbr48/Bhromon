@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'colors.dart';
 
 /// Bhromon design system.
@@ -170,10 +169,8 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle:
             textTheme.titleLarge?.copyWith(color: AppColors.offWhite),
-        systemOverlayStyle: isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.light
-                .copyWith(statusBarColor: Colors.transparent),
+        // No fixed style: each AppBar takes its status-bar icons from its own
+        // background, so light screens get dark icons and dark ones light icons.
       ),
 
       cardTheme: CardThemeData(
