@@ -40,6 +40,7 @@ import '../widgets/chat_media_caption_screen.dart';
 import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
+import '../../data/chat_draft_store.dart';
 import '../../data/chat_deletion_service.dart';
 import '../../domain/chat_deletion.dart';
 import '../widgets/chat_delete_dialogs.dart';
@@ -105,6 +106,7 @@ class _PendingTextMessage {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ChatDraftStore _draftStore = ChatDraftStore();
   final FocusNode _messageFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   bool _isBlocked = false;
@@ -186,6 +188,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _startOnlinePolling();
     _initVpsTypingListener();
     _messageController.addListener(_onTextChanged);
+    unawaited(_restoreDraft());
     _messageFocusNode.addListener(() {
       if (_messageFocusNode.hasFocus && _showEmojiPicker) {
         setState(() => _showEmojiPicker = false);
@@ -332,7 +335,23 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Puts back the saved draft, unless the user has already typed something.
+  Future<void> _restoreDraft() async {
+    final saved = await _draftStore.read(chatDraftScope(widget.chatId));
+    if (!mounted || _messageController.text.isNotEmpty || saved.isEmpty) {
+      return;
+    }
+    _messageController.text = saved;
+  }
+
   void _onTextChanged() {
+    // Every change is saved as a draft, after a short pause. An edit's text is
+    // not a draft, so nothing is saved while one is open.
+    _draftStore.save(
+      chatDraftScope(widget.chatId),
+      () => _messageController.text,
+      shouldSave: () => _editingMessage == null,
+    );
     final authState = context.read<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
     if (currentUid.isEmpty) return;
@@ -454,6 +473,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _updateTypingStatus(authState.profile.uid, false);
     }
     _onlinePoll?.cancel();
+    _draftStore.dispose();
     _messageController.dispose();
     _messageFocusNode.dispose();
     _searchController.dispose();
