@@ -36,8 +36,9 @@ class HolidayCalendarScreen extends StatefulWidget {
 
 class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
-  late final Stream<TourGroup?> _groupStream =
-      _repository.watchGroup(widget.tourId);
+  late final Stream<TourGroup?> _groupStream = widget.tourId.isNotEmpty
+      ? _repository.watchGroup(widget.tourId)
+      : Stream.value(null);
 
   HolidayView _view = HolidayView.month;
   int _lunarShift = 0;

@@ -32,6 +32,15 @@ class GameStatItem {
     return 'Rookie';
   }
 
+  String localizedRankBadge(bool isBn) {
+    if (!isBn) return rankBadge;
+    if (matchesWon >= 50) return 'কিংবদন্তি';
+    if (matchesWon >= 25) return 'গ্র্যান্ডমাস্টার';
+    if (matchesWon >= 10) return 'মাস্টার';
+    if (matchesWon >= 3) return 'প্রতিদ্বন্দ্বী';
+    return 'শিক্ষানবিস';
+  }
+
   IconData get rankIcon {
     if (matchesWon >= 50) return Icons.military_tech_rounded;
     if (matchesWon >= 25) return Icons.emoji_events_rounded;
@@ -160,6 +169,15 @@ class PlayerGameAnalytics {
     if (totalWins >= 20) return 'Board Master';
     if (totalWins >= 5) return 'Active Contender';
     return 'Casual Explorer';
+  }
+
+  String localizedPlayerTitle(bool isBn) {
+    if (!isBn) return playerTitle;
+    if (totalWins >= 100) return 'গেম জোন গ্র্যান্ডমাস্টার';
+    if (totalWins >= 50) return 'ট্যুর চ্যাম্পিয়ন';
+    if (totalWins >= 20) return 'বোর্ড মাস্টার';
+    if (totalWins >= 5) return 'সক্রিয় প্রতিযোগী';
+    return 'নৈমিত্তিক অভিযাত্রী';
   }
 
   OnlineGameType? get favoriteGame {

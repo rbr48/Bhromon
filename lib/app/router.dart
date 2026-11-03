@@ -369,6 +369,11 @@ class AppRouter {
             _customPageTransition(state, const NewspaperHubScreen()),
       ),
       GoRoute(
+        path: '/holiday-calendar',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const HolidayCalendarScreen(tourId: '')),
+      ),
+      GoRoute(
         path: '/newspaper-reader',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};

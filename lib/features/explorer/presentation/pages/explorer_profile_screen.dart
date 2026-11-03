@@ -1453,13 +1453,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Tab Content
   // ---------------------------------------------------------------------------
 
-  /// The game analytics at a height of its own. The view fills the height it is given,
-  /// and the profile scrolls, so without a height its layout has no bounds to fill.
+  /// The game analytics embedded into the profile scroll view with shrinkWrap enabled.
   Widget _gameAnalyticsSection() {
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height * 0.75,
-      child: const GameAnalyticsView(),
-    );
+    return const GameAnalyticsView(shrinkWrap: true);
   }
 
   Widget _buildActiveTabContent(
@@ -1485,7 +1481,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Tab 1: My Tours
   // ---------------------------------------------------------------------------
 
-  /// The Games tab with the Game zone and News cards (D-8). Both are global, so they
+  /// The Games tab with the Game zone, News, and Holiday Calendar cards (D-8). All are global, so they
   /// belong to the person, not to a group.
   Widget _buildGamesTabV2() {
     final l10n = context.l10n;
@@ -1506,6 +1502,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           title: l10n.translate('hub_module_news'),
           subtitle: l10n.translate('hub_module_news_sub'),
           onTap: () => context.push('/newspaper-hub'),
+        ),
+        const SizedBox(height: 10),
+        GamesLinkCard(
+          icon: Icons.calendar_month_rounded,
+          color: const Color(0xFF10B981),
+          title: l10n.translate('hub_module_calendar'),
+          subtitle: l10n.translate('hub_module_calendar_sub'),
+          onTap: () => context.push('/holiday-calendar'),
         ),
         const SizedBox(height: 16),
         _gameAnalyticsSection(),

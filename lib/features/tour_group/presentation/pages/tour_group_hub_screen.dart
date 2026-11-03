@@ -889,7 +889,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               else if (groups.isEmpty)
                 _buildEmptyState(context)
               else ...[
-                if (groups.length > 1) ...[
+                if (groups.length > 2) ...[
                   SwitcherChips(
                     groups: groups,
                     selectedId: selectedId,
@@ -904,9 +904,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       group: group,
                       selected: group.id == selectedId,
                       onTap: () => _openGroup(group),
-                      members: group.id == selectedId
-                          ? _memberStripFor(context, group)
-                          : null,
                     ),
                   ),
               ],
@@ -991,7 +988,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _buildModulesGrid(context, group, excludeGamesAndNews: true),
+                _buildModulesGrid(context, group,
+                    excludeGamesAndNews: true, isGroupPage: true),
                 const SizedBox(height: 20),
               ],
             ),
@@ -2064,13 +2062,16 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   Widget _buildModulesGrid(BuildContext context, TourGroup group,
-      {bool excludeGamesAndNews = false}) {
+      {bool excludeGamesAndNews = false, bool isGroupPage = false}) {
     final l10n = context.l10n;
     // Which tools apply, and in what order, comes from hubModulesFor. This only builds
     // the tile for each id.
     final ids = [
       for (final id in hubModulesFor(group))
-        if (!(excludeGamesAndNews && (id == 'games' || id == 'news'))) id,
+        if (!(excludeGamesAndNews && (id == 'games' || id == 'news')))
+          if (!(isGroupPage && id == 'safety'))
+            if (!(isGroupPage && id == 'calendar' && !group.isFamily))
+              id,
     ];
     final builders = <String, _ModuleItem Function()>{
       'feed': () => _ModuleItem(

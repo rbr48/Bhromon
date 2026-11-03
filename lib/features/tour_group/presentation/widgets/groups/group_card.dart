@@ -81,17 +81,42 @@ class GroupCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            kind,
-                            style: TextStyle(
-                              color: context.forest.text54,
-                              fontSize: 12,
-                            ),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 2,
+                            children: [
+                              Text(
+                                kind,
+                                style: TextStyle(
+                                  color: context.forest.text54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (selected)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.mintGreen
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    l10n.translate('group_active_badge'),
+                                    style: const TextStyle(
+                                      color: AppColors.mintGreen,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    if (roleLabel != null)
+                    if (roleLabel != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
@@ -108,6 +133,15 @@ class GroupCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                    ],
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: selected
+                          ? AppColors.mintGreen
+                          : context.forest.text54,
+                    ),
                   ],
                 ),
                 if (selected && members != null) ...[
