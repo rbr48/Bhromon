@@ -141,9 +141,11 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
         children: [
           _buildPill(0, isBn ? 'পরিসংখ্যান' : 'Stats', Icons.insights_rounded),
           const SizedBox(width: 8),
-          _buildPill(1, isBn ? 'ম্যাচ হিস্ট্রি' : 'History', Icons.history_rounded),
+          _buildPill(
+              1, isBn ? 'ম্যাচ হিস্ট্রি' : 'History', Icons.history_rounded),
           const SizedBox(width: 8),
-          _buildPill(2, isBn ? 'লিডারবোর্ড' : 'Leaderboard', Icons.leaderboard_rounded),
+          _buildPill(2, isBn ? 'লিডারবোর্ড' : 'Leaderboard',
+              Icons.leaderboard_rounded),
         ],
       ),
     );

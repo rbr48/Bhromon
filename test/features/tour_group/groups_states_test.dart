@@ -159,8 +159,7 @@ void main() {
     expect(find.text(_offline), findsOneWidget);
   });
 
-  testWidgets(
-      'a viewer removed while viewing a group sees a notice',
+  testWidgets('a viewer removed while viewing a group sees a notice',
       (tester) async {
     final membership = StreamController<bool>.broadcast();
     addTearDown(membership.close);

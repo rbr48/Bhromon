@@ -56,9 +56,8 @@ class GroupCard extends StatelessWidget {
             color: context.forest.card,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isHighlighted
-                  ? AppColors.midGreen
-                  : context.forest.divider10,
+              color:
+                  isHighlighted ? AppColors.midGreen : context.forest.divider10,
               width: isHighlighted ? 2 : 1,
             ),
             boxShadow: isExpanded
