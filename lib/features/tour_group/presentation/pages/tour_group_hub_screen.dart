@@ -7,9 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/hub_modules.dart';
 import '../../domain/services/tour_choice.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/active_group.dart';
 import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -44,8 +46,11 @@ class TourGroupHubScreen extends StatefulWidget {
 class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   late final TourGroupRepository _repository =
       widget.repository ?? TourGroupRepository();
-  late final TourHubPreference _preference =
-      widget.preference ?? TourHubPreference();
+
+  /// The group the hub is on. Tests pass their own preference, and get their own instance.
+  late final ActiveGroup _active = widget.preference == null
+      ? ActiveGroup.instance
+      : ActiveGroup(preference: widget.preference);
   // The tour picked, created or joined during this visit. It is kept even
   // before the membership list includes it.
   TourGroup? _selectedGroup;
@@ -57,9 +62,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   void initState() {
     super.initState();
     _groupsStream = _repository.watchMyGroups();
-    _rememberedTourId = _preference.read();
+    _rememberedTourId = _active.current;
     final routeTourId = widget.initialTourId;
-    if (routeTourId != null) unawaited(_preference.remember(routeTourId));
+    if (routeTourId != null) unawaited(_active.select(routeTourId));
   }
 
   Stream<List<TourMember>> _membersOf(String tourId) =>
@@ -85,7 +90,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   void _selectTour(TourGroup group) {
-    unawaited(_preference.remember(group.id));
+    unawaited(_active.select(group.id));
     setState(() => _selectedGroup = group);
   }
 
@@ -586,7 +591,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.leaveTour(group.id);
-          unawaited(_preference.forget(group.id));
+          unawaited(_active.clearIf(group.id));
           if (mounted) {
             setState(() {
               _selectedGroup = null;
@@ -648,7 +653,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
-          unawaited(_preference.forget(group.id));
+          unawaited(_active.clearIf(group.id));
           if (mounted) {
             setState(() {
               _selectedGroup = null;
@@ -904,7 +909,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       _buildActiveTourBanner(context, current, groups),
                       const SizedBox(height: 18),
                       if (current.isHousehold) ...[
-                        FamilyHomeCard(tourId: current.id),
+                        FamilyHomeCard(
+                            tourId: current.id, repository: _repository),
                         const SizedBox(height: 18),
                       ],
 
@@ -1699,198 +1705,171 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   Widget _buildModulesGrid(BuildContext context, TourGroup group) {
-    // Family circles have no trip, so the trip-only tiles stay hidden.
-    final isTrip = !group.isFamily;
     final l10n = context.l10n;
-    final entries = <String, _ModuleItem>{
-      if (group.momentsOpen)
-        'feed': _ModuleItem(
-          title: l10n.translate('hub_module_feed'),
-          subtitle: l10n.translate('hub_module_feed_sub'),
-          icon: Icons.camera_alt_rounded,
-          color: const Color(0xFFF43F5E),
-          onTap: () => context.push('/group/${group.id}/feed'),
-        ),
-      'ledger': _ModuleItem(
-        title: l10n.translate('hub_module_ledger'),
-        subtitle: l10n.translate('hub_module_ledger_sub'),
-        icon: Icons.account_balance_wallet_rounded,
-        color: const Color(0xFF52B788),
-        onTap: () => context.push('/group/${group.id}/ledger'),
-      ),
-      if (isTrip && group.modules.seatsRooms)
-        'seats': _ModuleItem(
-          title: l10n.translate('hub_module_seats'),
-          subtitle: l10n.translate('hub_module_seats_sub'),
-          icon: Icons.airline_seat_recline_extra_rounded,
-          color: const Color(0xFF6366F1),
-          onTap: () => context.push('/group/${group.id}/logistics'),
-        ),
-      if (!group.isManaged &&
-          !group.isMess &&
-          !group.isSociety &&
-          !group.isSamity)
-        'calendar': group.isFamily
-            ? _ModuleItem(
-                title: l10n.translate('hub_module_family_dates'),
-                subtitle: l10n.translate('hub_module_family_dates_sub'),
-                icon: Icons.event_repeat_rounded,
-                color: const Color(0xFF84CC16),
-                onTap: () => context.push('/group/${group.id}/family-dates'),
-              )
-            : _ModuleItem(
-                title: l10n.translate('hub_module_calendar'),
-                subtitle: l10n.translate('hub_module_calendar_sub'),
-                icon: Icons.calendar_month_rounded,
-                color: const Color(0xFF84CC16),
-                onTap: () => context.push('/group/${group.id}/calendar'),
-              ),
-      if (group.isFamily && !group.isManaged)
-        'family_tasks': _ModuleItem(
-          title: l10n.translate('hub_module_family_tasks'),
-          subtitle: l10n.translate('hub_module_family_tasks_sub'),
-          icon: Icons.checklist_rounded,
-          color: const Color(0xFF22D3EE),
-          onTap: () => context.push('/group/${group.id}/family-tasks'),
-        ),
-      if (group.isMess)
-        'meals': _ModuleItem(
-          title: l10n.translate('mess_module_meals'),
-          subtitle: l10n.translate('mess_module_meals_sub'),
-          icon: Icons.restaurant_rounded,
-          color: const Color(0xFFF59E0B),
-          onTap: () => context.push('/group/${group.id}/meals'),
-        ),
-      if (group.isSociety || group.isCommittee)
-        'requests': _ModuleItem(
-          title: l10n.translate('society_module_requests'),
-          subtitle: l10n.translate('society_module_requests_sub'),
-          icon: Icons.build_circle_rounded,
-          color: const Color(0xFFEA580C),
-          onTap: () => context.push('/group/${group.id}/requests'),
-        ),
-      if (group.isSamity)
-        'samity': _ModuleItem(
-          title: l10n.translate('samity_module_samity'),
-          subtitle: l10n.translate('samity_module_samity_sub'),
-          icon: Icons.savings_rounded,
-          color: const Color(0xFF65A30D),
-          onTap: () => context.push('/group/${group.id}/samity'),
-        ),
-      if (group.isHousehold)
-        'dependents': _ModuleItem(
-          title: l10n.translate('hub_module_dependents'),
-          subtitle: l10n.translate('hub_module_dependents_sub'),
-          icon: Icons.family_restroom_rounded,
-          color: const Color(0xFFF472B6),
-          onTap: () => context.push('/group/${group.id}/dependents'),
-        ),
-      if (group.isHousehold)
-        'album': _ModuleItem(
-          title: l10n.translate('hub_module_album'),
-          subtitle: l10n.translate('hub_module_album_sub'),
-          icon: Icons.photo_album_rounded,
-          color: const Color(0xFFFBBF24),
-          onTap: () => context.push('/group/${group.id}/album'),
-        ),
-      if (isTrip && group.modules.tideSafety)
-        'tide': _ModuleItem(
-          title: group.tourType == TourType.beach
-              ? l10n.translate('hub_module_tide')
-              : l10n.translate('hub_module_weather'),
-          subtitle: group.tourType == TourType.beach
-              ? l10n.translate('hub_module_tide_sub')
-              : l10n.translate('hub_module_weather_sub'),
-          icon: group.tourType == TourType.beach
-              ? Icons.waves_rounded
-              : Icons.wb_sunny_rounded,
-          color: const Color(0xFF38BDF8),
-          onTap: () => context.push('/group/${group.id}/tide'),
-        ),
-      'notices': _ModuleItem(
-        title: l10n.translate('hub_module_notices'),
-        subtitle: l10n.translate('hub_module_notices_sub'),
-        icon: Icons.campaign_rounded,
-        color: const Color(0xFFEAB308),
-        onTap: () => context.push('/group/${group.id}/notices'),
-      ),
-      if (isTrip)
-        'journey': _ModuleItem(
-          title: l10n.translate('hub_module_journey'),
-          subtitle: l10n.translate('hub_journey_sub', args: {
-            'origin': group.originCity,
-            'destination': group.destination
-          }),
-          icon: Icons.alt_route_rounded,
-          color: const Color(0xFF10B981),
-          onTap: () => context.push('/group/${group.id}/journey'),
-        ),
-      if (!group.isManaged)
-        'safety': _ModuleItem(
-          title: l10n.translate('hub_module_safety'),
-          subtitle: l10n.translate('hub_module_safety_sub'),
-          icon: Icons.shield_rounded,
-          color: const Color(0xFFEF4444),
-          onTap: () => context.push('/group/${group.id}/safety'),
-        ),
-      if (group.modules.games)
-        'games': _ModuleItem(
-          title: l10n.translate('hub_module_games'),
-          subtitle: l10n.translate('hub_module_games_sub'),
-          icon: Icons.sports_esports_rounded,
-          color: const Color(0xFFF59E0B),
-          onTap: () => context.push('/game-zone'),
-        ),
-      if (isTrip)
-        'quiz': _ModuleItem(
-          title: l10n.translate('hub_module_quiz'),
-          subtitle: l10n.translate('hub_quiz_sub',
-              args: {'destination': group.destination}),
-          icon: Icons.quiz_rounded,
-          color: const Color(0xFF8B5CF6),
-          onTap: () => context.push('/group/${group.id}/quiz'),
-        ),
-      if (isTrip)
-        'scrapbook': _ModuleItem(
-          title: l10n.translate('hub_module_scrapbook'),
-          subtitle: l10n.translate('hub_module_scrapbook_sub'),
-          icon: Icons.auto_stories_rounded,
-          color: const Color(0xFFD97706),
-          onTap: () => context.push('/group/${group.id}/scrapbook'),
-        ),
-      if (isTrip)
-        'checklist': _ModuleItem(
-          title: l10n.translate('hub_module_checklist'),
-          subtitle: l10n.translate('hub_module_checklist_sub'),
-          icon: Icons.checklist_rtl_rounded,
-          color: const Color(0xFF14B8A6),
-          onTap: () => context.push('/group/${group.id}/checklist'),
-        ),
-      if (group.modules.chat)
-        'channels': _ModuleItem(
-          title: l10n.translate('hub_module_channels'),
-          subtitle: l10n.translate('hub_module_channels_sub'),
-          icon: Icons.forum_rounded,
-          color: const Color(0xFFEC4899),
-          onTap: () => context.push('/group/${group.id}/channels'),
-        ),
-      'news': _ModuleItem(
-        title: l10n.translate('hub_module_news'),
-        subtitle: l10n.translate('hub_module_news_sub'),
-        icon: Icons.article_rounded,
-        color: const Color(0xFF0EA5E9),
-        onTap: () => context.push('/newspaper-hub'),
-      ),
+    // Which tools apply, and in what order, comes from hubModulesFor. This only builds
+    // the tile for each id.
+    final ids = hubModulesFor(group);
+    final builders = <String, _ModuleItem Function()>{
+      'feed': () => _ModuleItem(
+            title: l10n.translate('hub_module_feed'),
+            subtitle: l10n.translate('hub_module_feed_sub'),
+            icon: Icons.camera_alt_rounded,
+            color: const Color(0xFFF43F5E),
+            onTap: () => context.push('/group/${group.id}/feed'),
+          ),
+      'ledger': () => _ModuleItem(
+            title: l10n.translate('hub_module_ledger'),
+            subtitle: l10n.translate('hub_module_ledger_sub'),
+            icon: Icons.account_balance_wallet_rounded,
+            color: const Color(0xFF52B788),
+            onTap: () => context.push('/group/${group.id}/ledger'),
+          ),
+      'seats': () => _ModuleItem(
+            title: l10n.translate('hub_module_seats'),
+            subtitle: l10n.translate('hub_module_seats_sub'),
+            icon: Icons.airline_seat_recline_extra_rounded,
+            color: const Color(0xFF6366F1),
+            onTap: () => context.push('/group/${group.id}/logistics'),
+          ),
+      'calendar': () => group.isFamily
+          ? _ModuleItem(
+              title: l10n.translate('hub_module_family_dates'),
+              subtitle: l10n.translate('hub_module_family_dates_sub'),
+              icon: Icons.event_repeat_rounded,
+              color: const Color(0xFF84CC16),
+              onTap: () => context.push('/group/${group.id}/family-dates'),
+            )
+          : _ModuleItem(
+              title: l10n.translate('hub_module_calendar'),
+              subtitle: l10n.translate('hub_module_calendar_sub'),
+              icon: Icons.calendar_month_rounded,
+              color: const Color(0xFF84CC16),
+              onTap: () => context.push('/group/${group.id}/calendar'),
+            ),
+      'family_tasks': () => _ModuleItem(
+            title: l10n.translate('hub_module_family_tasks'),
+            subtitle: l10n.translate('hub_module_family_tasks_sub'),
+            icon: Icons.checklist_rounded,
+            color: const Color(0xFF22D3EE),
+            onTap: () => context.push('/group/${group.id}/family-tasks'),
+          ),
+      'meals': () => _ModuleItem(
+            title: l10n.translate('mess_module_meals'),
+            subtitle: l10n.translate('mess_module_meals_sub'),
+            icon: Icons.restaurant_rounded,
+            color: const Color(0xFFF59E0B),
+            onTap: () => context.push('/group/${group.id}/meals'),
+          ),
+      'requests': () => _ModuleItem(
+            title: l10n.translate('society_module_requests'),
+            subtitle: l10n.translate('society_module_requests_sub'),
+            icon: Icons.build_circle_rounded,
+            color: const Color(0xFFEA580C),
+            onTap: () => context.push('/group/${group.id}/requests'),
+          ),
+      'samity': () => _ModuleItem(
+            title: l10n.translate('samity_module_samity'),
+            subtitle: l10n.translate('samity_module_samity_sub'),
+            icon: Icons.savings_rounded,
+            color: const Color(0xFF65A30D),
+            onTap: () => context.push('/group/${group.id}/samity'),
+          ),
+      'dependents': () => _ModuleItem(
+            title: l10n.translate('hub_module_dependents'),
+            subtitle: l10n.translate('hub_module_dependents_sub'),
+            icon: Icons.family_restroom_rounded,
+            color: const Color(0xFFF472B6),
+            onTap: () => context.push('/group/${group.id}/dependents'),
+          ),
+      'album': () => _ModuleItem(
+            title: l10n.translate('hub_module_album'),
+            subtitle: l10n.translate('hub_module_album_sub'),
+            icon: Icons.photo_album_rounded,
+            color: const Color(0xFFFBBF24),
+            onTap: () => context.push('/group/${group.id}/album'),
+          ),
+      'tide': () => _ModuleItem(
+            title: group.tourType == TourType.beach
+                ? l10n.translate('hub_module_tide')
+                : l10n.translate('hub_module_weather'),
+            subtitle: group.tourType == TourType.beach
+                ? l10n.translate('hub_module_tide_sub')
+                : l10n.translate('hub_module_weather_sub'),
+            icon: group.tourType == TourType.beach
+                ? Icons.waves_rounded
+                : Icons.wb_sunny_rounded,
+            color: const Color(0xFF38BDF8),
+            onTap: () => context.push('/group/${group.id}/tide'),
+          ),
+      'notices': () => _ModuleItem(
+            title: l10n.translate('hub_module_notices'),
+            subtitle: l10n.translate('hub_module_notices_sub'),
+            icon: Icons.campaign_rounded,
+            color: const Color(0xFFEAB308),
+            onTap: () => context.push('/group/${group.id}/notices'),
+          ),
+      'journey': () => _ModuleItem(
+            title: l10n.translate('hub_module_journey'),
+            subtitle: l10n.translate('hub_journey_sub', args: {
+              'origin': group.originCity,
+              'destination': group.destination,
+            }),
+            icon: Icons.alt_route_rounded,
+            color: const Color(0xFF10B981),
+            onTap: () => context.push('/group/${group.id}/journey'),
+          ),
+      'safety': () => _ModuleItem(
+            title: l10n.translate('hub_module_safety'),
+            subtitle: l10n.translate('hub_module_safety_sub'),
+            icon: Icons.shield_rounded,
+            color: const Color(0xFFEF4444),
+            onTap: () => context.push('/group/${group.id}/safety'),
+          ),
+      'games': () => _ModuleItem(
+            title: l10n.translate('hub_module_games'),
+            subtitle: l10n.translate('hub_module_games_sub'),
+            icon: Icons.sports_esports_rounded,
+            color: const Color(0xFFF59E0B),
+            onTap: () => context.push('/game-zone'),
+          ),
+      'quiz': () => _ModuleItem(
+            title: l10n.translate('hub_module_quiz'),
+            subtitle: l10n.translate('hub_quiz_sub',
+                args: {'destination': group.destination}),
+            icon: Icons.quiz_rounded,
+            color: const Color(0xFF8B5CF6),
+            onTap: () => context.push('/group/${group.id}/quiz'),
+          ),
+      'scrapbook': () => _ModuleItem(
+            title: l10n.translate('hub_module_scrapbook'),
+            subtitle: l10n.translate('hub_module_scrapbook_sub'),
+            icon: Icons.auto_stories_rounded,
+            color: const Color(0xFFD97706),
+            onTap: () => context.push('/group/${group.id}/scrapbook'),
+          ),
+      'checklist': () => _ModuleItem(
+            title: l10n.translate('hub_module_checklist'),
+            subtitle: l10n.translate('hub_module_checklist_sub'),
+            icon: Icons.checklist_rtl_rounded,
+            color: const Color(0xFF14B8A6),
+            onTap: () => context.push('/group/${group.id}/checklist'),
+          ),
+      'channels': () => _ModuleItem(
+            title: l10n.translate('hub_module_channels'),
+            subtitle: l10n.translate('hub_module_channels_sub'),
+            icon: Icons.forum_rounded,
+            color: const Color(0xFFEC4899),
+            onTap: () => context.push('/group/${group.id}/channels'),
+          ),
+      'news': () => _ModuleItem(
+            title: l10n.translate('hub_module_news'),
+            subtitle: l10n.translate('hub_module_news_sub'),
+            icon: Icons.article_rounded,
+            color: const Color(0xFF0EA5E9),
+            onTap: () => context.push('/newspaper-hub'),
+          ),
     };
-    // Trips keep the trip order. A family circle leads with what the family uses
-    // every day. Any tile missing from the order is still shown, at the end.
-    final order = isTrip ? _tripModuleOrder : _familyModuleOrder;
-    final modules = [
-      for (final id in order)
-        if (entries.containsKey(id)) entries[id]!,
-      for (final entry in entries.entries)
-        if (!order.contains(entry.key)) entry.value,
-    ];
+    final modules = [for (final id in ids) builders[id]!()];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -3678,43 +3657,6 @@ Widget _menuRow(
     ],
   );
 }
-
-/// The order of the hub's tiles for a trip.
-const List<String> _tripModuleOrder = [
-  'feed',
-  'ledger',
-  'seats',
-  'calendar',
-  'tide',
-  'notices',
-  'journey',
-  'safety',
-  'games',
-  'quiz',
-  'scrapbook',
-  'checklist',
-  'channels',
-  'news',
-];
-
-/// The order of the hub's tiles for a family circle: the day-to-day tools first,
-/// and the shared news last.
-const List<String> _familyModuleOrder = [
-  'channels',
-  'notices',
-  'requests',
-  'samity',
-  'family_tasks',
-  'meals',
-  'dependents',
-  'album',
-  'calendar',
-  'safety',
-  'feed',
-  'ledger',
-  'games',
-  'news',
-];
 
 class _ModuleItem {
   final String title;

@@ -35,6 +35,7 @@ import '../domain/services/emergency_numbers.dart';
 import '../domain/services/media_references.dart';
 import '../domain/services/media_rules.dart';
 import '../domain/services/member_profile_sync.dart';
+import 'active_group.dart';
 import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
@@ -1181,6 +1182,7 @@ class TourGroupRepository {
     _sessionTourDocs.clear();
     await _sharedMembers.clear();
     await _sharedMyGroups?.close();
+    await ActiveGroup.instance.clear();
   }
 
   /// The upstream of [watchMembers]. It only reads: a member's own row is brought up to
