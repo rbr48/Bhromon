@@ -97,7 +97,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(PopupMenuItem<String>, 'Create a family circle'),
         findsOneWidget);
-    expect(find.widgetWithText(PopupMenuItem<String>, 'Create a new tour group'),
+    expect(
+        find.widgetWithText(PopupMenuItem<String>, 'Create a new tour group'),
         findsOneWidget);
     expect(find.widgetWithText(PopupMenuItem<String>, 'Join with a code'),
         findsOneWidget);
