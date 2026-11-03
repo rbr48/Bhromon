@@ -27,6 +27,8 @@ from pydantic import BaseModel
 
 from voip_push import VOIP_PLATFORM, voip_sender
 
+from push_strings import call_alert, chat_preview, normalize_language, push_text
+
 logger = logging.getLogger("bhromon.chat")
 
 DEAD_TOKEN_CODES = {
@@ -80,6 +82,10 @@ class ChatDatabase:
 
     def _init_schema(self) -> None:
         conn = self._get_conn()
+        # Databases from before the language column get it here.
+        device_columns = {row[1] for row in conn.execute("PRAGMA table_info(device_tokens)")}
+        if device_columns and "language" not in device_columns:
+            conn.execute("ALTER TABLE device_tokens ADD COLUMN language TEXT NOT NULL DEFAULT 'en'")
         with conn:
             conn.executescript(
                 """
@@ -89,6 +95,7 @@ class ChatDatabase:
                     token TEXT NOT NULL,
                     email TEXT,
                     platform TEXT,
+                    language TEXT NOT NULL DEFAULT 'en',
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY (uid, device_id)
                 );
@@ -141,6 +148,7 @@ class ChatDatabase:
         device_id: Optional[str] = None,
         email: Optional[str] = None,
         platform: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> None:
         clean_uid = uid.strip()
         clean_token = token.strip()
@@ -153,24 +161,40 @@ class ChatDatabase:
         with conn:
             conn.execute(
                 """
-                INSERT INTO device_tokens (uid, device_id, token, email, platform, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO device_tokens (uid, device_id, token, email, platform, language, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(uid, device_id) DO UPDATE SET
                     token=excluded.token,
                     email=coalesce(excluded.email, device_tokens.email),
                     platform=coalesce(excluded.platform, device_tokens.platform),
+                    language=excluded.language,
                     updated_at=excluded.updated_at;
                 """,
-                (clean_uid, dev_id, clean_token, (email or "").strip().lower(), platform or "unknown", now),
+                (
+                    clean_uid,
+                    dev_id,
+                    clean_token,
+                    (email or "").strip().lower(),
+                    platform or "unknown",
+                    normalize_language(language),
+                    now,
+                ),
             )
 
     def get_device_tokens(self, uid: str) -> List[Dict[str, str]]:
         conn = self._get_conn()
         cursor = conn.execute(
-            "SELECT token, platform FROM device_tokens WHERE uid = ?",
+            "SELECT token, platform, language FROM device_tokens WHERE uid = ?",
             (uid.strip(),),
         )
-        return [{"token": row["token"], "platform": row["platform"]} for row in cursor.fetchall()]
+        return [
+            {
+                "token": row["token"],
+                "platform": row["platform"],
+                "language": normalize_language(row["language"]),
+            }
+            for row in cursor.fetchall()
+        ]
 
     def delete_device_token(self, token: str) -> None:
         conn = self._get_conn()
@@ -703,6 +727,7 @@ class PushNotificationDispatcher:
         body: str,
         data: Dict[str, str],
         image_url: Optional[str] = None,
+        localize: Any = None,
     ) -> int:
         tokens = self.db.get_device_tokens(recipient_uid)
         if not tokens:
@@ -721,12 +746,17 @@ class PushNotificationDispatcher:
             if entry.get("platform") == VOIP_PLATFORM:
                 continue  # An iPhone's PushKit token takes call pushes only.
             token = entry["token"]
+            entry_title, entry_body = (
+                localize(normalize_language(entry.get("language")))
+                if localize
+                else (title, body)
+            )
             try:
                 android_config = messaging.AndroidConfig(
                     priority="high",
                     notification=messaging.AndroidNotification(
-                        title=title,
-                        body=body,
+                        title=entry_title,
+                        body=entry_body,
                         sound="default",
                         channel_id="bhromon_general",
                         image=image_url,
@@ -735,8 +765,8 @@ class PushNotificationDispatcher:
                 web_config = messaging.WebpushConfig(
                     headers={"Urgency": "high"},
                     notification=messaging.WebpushNotification(
-                        title=title,
-                        body=body,
+                        title=entry_title,
+                        body=entry_body,
                         icon="/icons/Icon-192.png",
                         image=image_url,
                     ),
@@ -744,7 +774,7 @@ class PushNotificationDispatcher:
 
                 msg = messaging.Message(
                     token=token,
-                    notification=messaging.Notification(title=title, body=body, image=image_url),
+                    notification=messaging.Notification(title=entry_title, body=entry_body, image=image_url),
                     data=data,
                     android=android_config,
                     webpush=web_config,
@@ -786,9 +816,6 @@ class PushNotificationDispatcher:
             logger.warning("Firebase Admin SDK not initialized; skipping call push.")
             return 0
 
-        kind = "Video" if is_video else "Voice"
-        title = f"Incoming {kind} Call"
-        body = f"{caller_name} is calling you on Bhromon..."
         data = {
             "action": "call",
             "callId": call_id,
@@ -800,6 +827,9 @@ class PushNotificationDispatcher:
         sent_count = 0
         for entry in tokens:
             token = entry["token"]
+            # Each device rings in its own language.
+            language = normalize_language(entry.get("language"))
+            entry_title, entry_body = call_alert(language, is_video, caller_name)
             if entry.get("platform") == VOIP_PLATFORM:
                 # A closed iPhone shows the system call screen only for a VoIP push.
                 result = voip_sender.send_call(
@@ -808,6 +838,7 @@ class PushNotificationDispatcher:
                     caller_id=caller_id,
                     caller_name=caller_name,
                     is_video=is_video,
+                    language=language,
                 )
                 if result == "sent":
                     sent_count += 1
@@ -823,7 +854,7 @@ class PushNotificationDispatcher:
                         webpush=messaging.WebpushConfig(
                             headers={"Urgency": "high", "TTL": str(CALL_RING_SECONDS)},
                             notification=messaging.WebpushNotification(
-                                title=title, body=body, icon="/icons/Icon-192.png"
+                                title=entry_title, body=entry_body, icon="/icons/Icon-192.png"
                             ),
                         ),
                     )
@@ -839,7 +870,7 @@ class PushNotificationDispatcher:
                             },
                             payload=messaging.APNSPayload(
                                 aps=messaging.Aps(
-                                    alert=messaging.ApsAlert(title=title, body=body),
+                                    alert=messaging.ApsAlert(title=entry_title, body=entry_body),
                                     sound="default",
                                     content_available=True,
                                 )
@@ -932,6 +963,7 @@ class TokenRegistrationRequest(BaseModel):
     deviceId: Optional[str] = None
     email: Optional[str] = None
     platform: Optional[str] = None
+    language: Optional[str] = None
 
 
 class SendMessageRequest(BaseModel):
@@ -980,6 +1012,7 @@ async def register_device_token(
         device_id=req.deviceId,
         email=req.email,
         platform=req.platform,
+        language=req.language,
     )
     return {"status": "success"}
 
@@ -1070,6 +1103,10 @@ async def send_message(
         "recipient_uid": req.recipientId,
         "title": req.senderName or "New Message",
         "body": preview,
+        "localize": lambda lang: (
+            req.senderName or push_text(lang, "vps.title"),
+            chat_preview(lang, req.text, req.type),
+        ),
         "data": {
             "action": "chat",
             "chatId": req.chatId,

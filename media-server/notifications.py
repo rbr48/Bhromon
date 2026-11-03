@@ -13,6 +13,8 @@ from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from push_strings import DEFAULT_LANGUAGE, normalize_language, push_text
+
 logger = logging.getLogger("bhromon.notifications")
 
 AUTH_LOOKUP_LIMIT = 100
@@ -31,24 +33,29 @@ DEAD_TOKEN_CODES = {
 }
 
 
-def _preview_of(text: Optional[str], attachments: Optional[list] = None, kind: str = "text") -> str:
-    """Format push notification preview text."""
+def _preview_of(
+    text: Optional[str],
+    attachments: Optional[list] = None,
+    kind: str = "text",
+    language: str = DEFAULT_LANGUAGE,
+) -> str:
+    """Format push notification preview text, in the recipient's language."""
     body = (text or "").strip()
     if not body:
         if attachments:
             first = attachments[0] if isinstance(attachments[0], dict) else {}
             if first.get("kind") == "audio":
-                body = "🎤 Voice message"
+                body = push_text(language, "preview.voice")
             elif first.get("isVideo") is True or first.get("kind") == "video":
-                body = "🎬 Video"
+                body = push_text(language, "preview.video")
             else:
-                body = "📷 Photo"
+                body = push_text(language, "preview.photo")
         elif kind == "poll":
-            body = "📊 Poll"
+            body = push_text(language, "preview.poll")
         elif kind == "expense":
-            body = "💸 Expense"
+            body = push_text(language, "preview.expense")
         else:
-            body = "New message"
+            body = push_text(language, "preview.text")
 
     if len(body) > PREVIEW_LIMIT:
         return body[: PREVIEW_LIMIT - 1] + "…"
@@ -166,7 +173,7 @@ class NotificationEngine:
                         pass
         return uids
 
-    def get_push_targets_for_uids(self, uids: List[str]) -> List[Tuple[str, Any]]:
+    def get_push_targets_for_uids(self, uids: List[str]) -> List[Tuple[str, Any, str]]:
         """Fetch registered FCM device tokens and document refs for users."""
         db = self._get_db()
         targets: List[Tuple[str, Any]] = []
@@ -178,18 +185,28 @@ class NotificationEngine:
                 # Multi-device subcollection
                 devices = user_ref.collection("devices").stream()
                 for d in devices:
-                    tok = (d.to_dict() or {}).get("token")
+                    device = d.to_dict() or {}
+                    tok = device.get("token")
                     if tok and tok not in seen_tokens:
                         seen_tokens.add(tok)
-                        targets.append((tok, d.reference))
+                        targets.append(
+                            (tok, d.reference, normalize_language(device.get("language")))
+                        )
 
                 # Legacy single token
                 legacy = user_ref.get()
                 if legacy.exists:
-                    legacy_tok = (legacy.to_dict() or {}).get("token")
+                    legacy_doc = legacy.to_dict() or {}
+                    legacy_tok = legacy_doc.get("token")
                     if legacy_tok and legacy_tok not in seen_tokens:
                         seen_tokens.add(legacy_tok)
-                        targets.append((legacy_tok, user_ref))
+                        targets.append(
+                            (
+                                legacy_tok,
+                                user_ref,
+                                normalize_language(legacy_doc.get("language")),
+                            )
+                        )
             except Exception as e:
                 logger.error("Error reading fcm_tokens for uid %s: %s", uid, e)
 
@@ -248,6 +265,36 @@ class NotificationEngine:
 
         return sent_count
 
+    def get_language_for_uid(self, uid: str) -> str:
+        """The language the user's latest device registered with, or English."""
+        try:
+            doc = self._get_db().collection("fcm_tokens").document(uid).get()
+            if doc.exists:
+                return normalize_language((doc.to_dict() or {}).get("language"))
+        except Exception as e:
+            logger.debug("Could not read the push language for %s: %s", uid, e)
+        return DEFAULT_LANGUAGE
+
+    def send_localized(
+        self,
+        targets: List[Tuple[str, Any, str]],
+        make_text,
+        data: Dict[str, str],
+        high_priority: bool = False,
+    ) -> int:
+        """Send one push per language. make_text(language) returns (title, body).
+
+        Each device gets the text in the language it registered with.
+        """
+        groups: Dict[str, List[Tuple[str, Any]]] = {}
+        for token, ref, language in targets:
+            groups.setdefault(normalize_language(language), []).append((token, ref))
+        sent = 0
+        for language, group in groups.items():
+            title, body = make_text(language)
+            sent += self.send_multicast(group, title, body, data, high_priority=high_priority)
+        return sent
+
     def send_sos_alert(
         self,
         tour_id: str,
@@ -265,8 +312,6 @@ class NotificationEngine:
             uids = self.get_uids_for_emails(emails)
             targets = self.get_push_targets_for_uids(uids)
 
-            title = f"🚨 SOS from {sender_name}"
-            body = "Open Bhromon and check the Family Safety Hub."
             data = {
                 "action": "sos",
                 "type": "sos",
@@ -274,7 +319,15 @@ class NotificationEngine:
                 "alertId": alert_id,
             }
 
-            count = self.send_multicast(targets, title, body, data, high_priority=True)
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "sos.title", sender=sender_name),
+                    push_text(lang, "sos.body"),
+                ),
+                data,
+                high_priority=True,
+            )
             self.stats["sos_sent"] += 1
             return {"status": "success", "recipients": len(emails), "devices_sent": count}
         except Exception as e:
@@ -322,8 +375,6 @@ class NotificationEngine:
             uids = self.get_uids_for_emails(recipients)
             targets = self.get_push_targets_for_uids(uids)
 
-            preview = _preview_of(text, attachments, kind)
-            title = f"{sender_name} in #{channel_name}"
             data = {
                 "action": "channel",
                 "tourId": tour_id,
@@ -332,7 +383,15 @@ class NotificationEngine:
             }
 
             is_high = channel_id == EVERYONE_CHANNEL_ID
-            count = self.send_multicast(targets, title, preview, data, high_priority=is_high)
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "channel.title", sender=sender_name, channel=channel_name),
+                    _preview_of(text, attachments, kind, language=lang),
+                ),
+                data,
+                high_priority=is_high,
+            )
             self.stats["channel_pushes_sent"] += count
             return {"status": "success", "recipients": len(recipients), "devices_sent": count}
         except Exception as e:
@@ -368,12 +427,13 @@ class NotificationEngine:
             except Exception:
                 pass
 
-            preview = _preview_of(text, kind=message_type)
+            recipient_language = self.get_language_for_uid(recipient_id)
+            preview = _preview_of(text, kind=message_type, language=recipient_language)
 
             # In-app notification
             try:
                 db.collection("users").document(recipient_id).collection("notifications").add({
-                    "title": f"New message from {sender_name}",
+                    "title": push_text(recipient_language, "chat.title", sender=sender_name),
                     "body": preview,
                     "action": "chat",
                     "uid": sender_id,
@@ -387,11 +447,13 @@ class NotificationEngine:
             # Push notification
             targets = self.get_push_targets_for_uids([recipient_id])
             data = {"action": "chat", "chatId": chat_id, "senderId": sender_id}
-            count = self.send_multicast(
+            count = self.send_localized(
                 targets,
-                title=f"New message from {sender_name}",
-                body=preview,
-                data=data,
+                lambda lang: (
+                    push_text(lang, "chat.title", sender=sender_name),
+                    _preview_of(text, kind=message_type, language=lang),
+                ),
+                data,
                 high_priority=False,
             )
             self.stats["chat_pushes_sent"] += count
@@ -462,7 +524,6 @@ class NotificationEngine:
 
             messaging_mod = self._get_messaging()
             now_epoch = int(time.time())
-            kind = "Video" if is_video else "Voice"
 
             data_payload = {
                 "action": "call",
@@ -479,54 +540,64 @@ class NotificationEngine:
                     ttl=CALL_RING_SECONDS,
                 )
 
-            apns_config = None
-            if hasattr(messaging_mod, "APNSConfig"):
-                apns_config = messaging_mod.APNSConfig(
-                    headers={
-                        "apns-priority": "10",
-                        "apns-expiration": str(now_epoch + CALL_RING_SECONDS),
-                    },
-                    payload=messaging_mod.APNSPayload(
-                        aps=messaging_mod.Aps(
-                            alert=messaging_mod.ApsAlert(
-                                title=f"Incoming {kind} Call",
-                                body=f"{c_name} is calling you on Bhromon...",
-                            ),
-                            sound="default",
-                            content_available=True,
-                        ),
-                    ),
-                )
+            groups: Dict[str, List[Tuple[str, Any]]] = {}
+            for token, ref, language in targets:
+                groups.setdefault(normalize_language(language), []).append((token, ref))
 
             sent_count = 0
-            for i in range(0, len(targets), FCM_BATCH_LIMIT):
-                batch = targets[i : i + FCM_BATCH_LIMIT]
-                tokens = [t[0] for t in batch]
+            for language, group in groups.items():
+                # The alert shows on iOS only, in the language of the callee's device.
+                apns_config = None
+                if hasattr(messaging_mod, "APNSConfig"):
+                    kind_label = push_text(
+                        language,
+                        "call.kind.video" if is_video else "call.kind.voice",
+                    )
+                    apns_config = messaging_mod.APNSConfig(
+                        headers={
+                            "apns-priority": "10",
+                            "apns-expiration": str(now_epoch + CALL_RING_SECONDS),
+                        },
+                        payload=messaging_mod.APNSPayload(
+                            aps=messaging_mod.Aps(
+                                alert=messaging_mod.ApsAlert(
+                                    title=push_text(language, "call.title", kind=kind_label),
+                                    body=push_text(language, "call.body", caller=c_name),
+                                ),
+                                sound="default",
+                                content_available=True,
+                            ),
+                        ),
+                    )
 
-                multicast = messaging_mod.MulticastMessage(
-                    tokens=tokens,
-                    data=data_payload,  # DATA-ONLY for Android!
-                    android=android_config,
-                    apns=apns_config,
-                )
+                for i in range(0, len(group), FCM_BATCH_LIMIT):
+                    batch = group[i : i + FCM_BATCH_LIMIT]
+                    tokens = [t[0] for t in batch]
 
-                try:
-                    response = messaging_mod.send_each_for_multicast(multicast)
-                    sent_count += response.success_count
+                    multicast = messaging_mod.MulticastMessage(
+                        tokens=tokens,
+                        data=data_payload,  # DATA-ONLY for Android!
+                        android=android_config,
+                        apns=apns_config,
+                    )
 
-                    for idx, resp in enumerate(response.responses):
-                        if not resp.success and resp.exception:
-                            err_code = getattr(resp.exception, "code", "") or str(resp.exception)
-                            if any(code in err_code for code in DEAD_TOKEN_CODES):
-                                try:
-                                    batch[idx][1].delete()
-                                    self.stats["dead_tokens_purged"] += 1
-                                    logger.info("Purged dead FCM token: %s", err_code)
-                                except Exception as ex:
-                                    logger.warning("Could not delete dead token doc: %s", ex)
-                except Exception as e:
-                    self.stats["errors"] += 1
-                    logger.error("Failed to send call multicast batch: %s", e)
+                    try:
+                        response = messaging_mod.send_each_for_multicast(multicast)
+                        sent_count += response.success_count
+
+                        for idx, resp in enumerate(response.responses):
+                            if not resp.success and resp.exception:
+                                err_code = getattr(resp.exception, "code", "") or str(resp.exception)
+                                if any(code in err_code for code in DEAD_TOKEN_CODES):
+                                    try:
+                                        batch[idx][1].delete()
+                                        self.stats["dead_tokens_purged"] += 1
+                                        logger.info("Purged dead FCM token: %s", err_code)
+                                    except Exception as ex:
+                                        logger.warning("Could not delete dead token doc: %s", ex)
+                    except Exception as e:
+                        self.stats["errors"] += 1
+                        logger.error("Failed to send call multicast batch: %s", e)
 
             self.stats["call_pushes_sent"] += sent_count
             logger.info("Sent call push for call %s to %d devices", call_id, sent_count)

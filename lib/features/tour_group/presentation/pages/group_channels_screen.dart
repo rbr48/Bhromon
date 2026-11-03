@@ -25,6 +25,8 @@ import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../../chat/data/chat_draft_store.dart';
+import '../../domain/services/channel_draft_rules.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
 import '../../domain/services/fund_analytics.dart';
@@ -91,6 +93,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   final Map<String, Stream<List<ChannelMessage>>> _mentionStreams = {};
   final Map<String, Stream<List<TypingMember>>> _typingStreams = {};
   final Map<String, TextEditingController> _drafts = {};
+  final ChatDraftStore _draftStore = ChatDraftStore();
   final FocusNode _focus = FocusNode();
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchText = '';
@@ -203,6 +206,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       unawaited(s.cancel());
     }
     _focus.dispose();
+    _draftStore.dispose();
     _searchCtrl.dispose();
     for (final c in _drafts.values) {
       c.dispose();
@@ -261,6 +265,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   }
 
   void _selectChannel(String channelId) {
+    if (shouldClearEditDraftOnSwitch(
+      isEditing: _editing != null,
+      fromChannelId: _selectedId,
+      toChannelId: channelId,
+    )) {
+      _draftFor(_selectedId).clear();
+    }
     _update(() {
       _selectedId = channelId;
       _divider[channelId] = _lastRead[channelId];
@@ -389,7 +400,27 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       id, () => _repo.watchTyping(widget.tourId, id));
 
   TextEditingController _draftFor(String channelId) =>
-      _drafts.putIfAbsent(channelId, TextEditingController.new);
+      _drafts.putIfAbsent(channelId, () {
+        final controller = TextEditingController();
+        final scope = channelDraftScope(widget.tourId, channelId);
+        // Every change is saved after a short pause. An edit's text is not a
+        // draft, so nothing is saved while an edit is open.
+        controller.addListener(() => _draftStore.save(
+              scope,
+              () => controller.text,
+              shouldSave: () => _editing == null,
+            ));
+        unawaited(_restoreDraft(scope, controller));
+        return controller;
+      });
+
+  /// Puts back the saved draft, unless the user has already typed something.
+  Future<void> _restoreDraft(
+      String scope, TextEditingController controller) async {
+    final saved = await _draftStore.read(scope);
+    if (!mounted || controller.text.isNotEmpty || saved.isEmpty) return;
+    controller.text = saved;
+  }
 
   void _snack(String text, {bool error = false}) {
     if (!mounted) return;

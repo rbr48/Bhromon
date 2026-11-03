@@ -173,7 +173,7 @@ class ChannelComposer extends StatelessWidget {
                         hintStyle: TextStyle(
                             color: context.forest.text54, fontSize: 13),
                         filled: true,
-                        fillColor: Colors.black26,
+                        fillColor: context.forest.inset26,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20),
                           borderSide: BorderSide.none,

@@ -199,7 +199,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                         Text(
                           '${_formatFileSize(widget.fileSizeBytes)} • $ext',
                           style: TextStyle(
-                            color: context.chat.text54,
+                            color: context.chat.text70,
                             fontSize: 10.5,
                           ),
                         ),
