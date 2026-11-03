@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bhromon/features/chat/domain/message_paging.dart';
+import 'package:bhromon/features/chat/domain/message_receipts.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/localized_date.dart';
 import 'dart:io';
@@ -962,6 +963,8 @@ class _ChatScreenState extends State<ChatScreen> {
             type: 'text',
             senderName: currentName,
             replyTo: replyPayload,
+            // The same id on a retry, so the server saves the message once.
+            clientMessageId: pending.id,
           )
         : Future<Map<String, dynamic>?>.value(null);
 
@@ -3027,24 +3030,23 @@ class _ChatScreenState extends State<ChatScreen> {
                               }
                             }
 
-                            // Delivery tick icon: WhatsApp 4-phase delivery status
+                            // Delivery tick icon: a clock while pending, a single check
+                            // when sent, double grey when delivered, double blue when read.
                             Widget deliveryIcon() {
-                              if (status == 'pending') {
-                                return Icon(Icons.access_time,
-                                    size: 11,
-                                    color:
-                                        context.chat.text54); // pending / clock
-                              } else if (status == 'read' || seen) {
-                                return const Icon(Icons.done_all,
-                                    size: 13, color: Color(0xFF53BDEB)); // blue
-                              } else if (status == 'delivered') {
-                                return Icon(Icons.done_all,
-                                    size: 13,
-                                    color: context.chat.text54); // grey
-                              } else {
-                                return Icon(Icons.done,
-                                    size: 13,
-                                    color: context.chat.text54); // single
+                              switch (
+                                  receiptStateFor(status: status, seen: seen)) {
+                                case ReceiptState.pending:
+                                  return Icon(Icons.access_time,
+                                      size: 11, color: context.chat.text54);
+                                case ReceiptState.read:
+                                  return const Icon(Icons.done_all,
+                                      size: 13, color: Color(0xFF53BDEB));
+                                case ReceiptState.delivered:
+                                  return Icon(Icons.done_all,
+                                      size: 13, color: context.chat.text54);
+                                case ReceiptState.sent:
+                                  return Icon(Icons.done,
+                                      size: 13, color: context.chat.text54);
                               }
                             }
 

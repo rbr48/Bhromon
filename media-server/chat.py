@@ -68,6 +68,8 @@ class ChatDatabase:
         self.db_path = str(db_path)
         os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
         self._local = threading.local()
+        # Serialises the check and the insert in save_message_once.
+        self._write_lock = threading.Lock()
         self._init_schema()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -132,11 +134,23 @@ class ChatDatabase:
                     status TEXT DEFAULT 'sent',
                     metadata TEXT,
                     created_at INTEGER NOT NULL,
-                    deleted_for TEXT
+                    deleted_for TEXT,
+                    client_id TEXT
                 );
                 CREATE INDEX IF NOT EXISTS idx_messages_chat_created ON messages(chat_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
                 """
+            )
+        # Messages from before the client id column get it here. The unique index
+        # lets save_message_once answer a repeated send with the message already saved.
+        message_columns = {row[1] for row in conn.execute("PRAGMA table_info(messages)")}
+        if "client_id" not in message_columns:
+            with conn:
+                conn.execute("ALTER TABLE messages ADD COLUMN client_id TEXT")
+        with conn:
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_client_id "
+                "ON messages(sender_id, client_id) WHERE client_id IS NOT NULL"
             )
 
     # ── Device Tokens ─────────────────────────────────────────────────────────
@@ -372,8 +386,8 @@ class ChatDatabase:
                     id, chat_id, sender_id, sender_name, sender_avatar,
                     text, type, media_url, media_path, thumbnail_url,
                     reply_to, reactions, read_by, status, metadata,
-                    created_at, deleted_for
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    created_at, deleted_for, client_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     msg_id,
@@ -393,6 +407,7 @@ class ChatDatabase:
                     json.dumps(msg.get("metadata")) if msg.get("metadata") else None,
                     created_at,
                     json.dumps(msg.get("deletedFor") or []),
+                    msg.get("clientMessageId"),
                 ),
             )
 
@@ -425,6 +440,29 @@ class ChatDatabase:
         msg["id"] = msg_id
         msg["createdAt"] = created_at
         return msg
+
+    def find_message_by_client_id(self, sender_id: str, client_id: str) -> Optional[Dict[str, Any]]:
+        row = self._get_conn().execute(
+            "SELECT * FROM messages WHERE sender_id = ? AND client_id = ?",
+            (sender_id, client_id),
+        ).fetchone()
+        return self._row_to_message(row) if row else None
+
+    def save_message_once(self, msg: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
+        """Saves a message unless its sender already sent it with the same client id.
+
+        Returns the message and whether this call saved it. A phone that retries
+        after a dropped connection gets the message it already sent back, and
+        nothing is delivered or pushed a second time.
+        """
+        client_id = msg.get("clientMessageId")
+        if not client_id:
+            return self.save_message(msg), True
+        with self._write_lock:
+            existing = self.find_message_by_client_id(msg["senderId"], client_id)
+            if existing is not None:
+                return existing, False
+            return self.save_message(msg), True
 
     def get_messages(
         self,
@@ -611,6 +649,7 @@ class ChatDatabase:
             "metadata": metadata,
             "createdAt": row["created_at"],
             "deletedFor": deleted_for,
+            **({"clientMessageId": row["client_id"]} if "client_id" in row.keys() and row["client_id"] else {}),
         }
 
 
@@ -978,6 +1017,8 @@ class SendMessageRequest(BaseModel):
     thumbnailUrl: Optional[str] = None
     replyTo: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
+    # The phone's id for the message. A retry sends the same id.
+    clientMessageId: Optional[str] = None
 
 
 class MarkReadRequest(BaseModel):
@@ -1069,6 +1110,7 @@ async def send_message(
         participants=participants,
     )
 
+    client_id = (req.clientMessageId or "").strip()[:128] or None
     msg_dict = {
         "chatId": req.chatId,
         "senderId": uid,
@@ -1083,9 +1125,14 @@ async def send_message(
         "metadata": req.metadata,
         "status": "sent",
         "createdAt": _now_ms(),
+        "clientMessageId": client_id,
     }
 
-    saved = await run_in_threadpool(chat_db.save_message, msg_dict)
+    saved, created = await run_in_threadpool(chat_db.save_message_once, msg_dict)
+    if not created:
+        # A retry of a message that is already saved: answer with that message,
+        # and do not broadcast or push it again.
+        return {"status": "success", "message": saved, "duplicate": True}
     message_id = saved["id"]
 
     # A socket that accepted the write is not proof that the phone showed the
