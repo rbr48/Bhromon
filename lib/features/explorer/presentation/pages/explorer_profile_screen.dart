@@ -34,6 +34,10 @@ import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 import '../widgets/server_patron_card.dart';
+import 'package:bhromon/core/config/feature_flags.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/explorer/presentation/widgets/games_link_card.dart';
+import 'package:bhromon/features/explorer/domain/profile_tabs.dart';
 
 /// The modern, Tour Group-Centric Profile Screen for Bhromon Travelers.
 /// Replaces the legacy public social/YouTube architecture with live
@@ -77,7 +81,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   String _activeCategory = 'all';
 
   // Active tab: 'tours' | 'vault' | 'settings'
-  String _activeTab = 'tours';
+  String _activeTab = defaultProfileTab(groupsV2: kGroupsV2);
 
   // On someone else's profile: the groups you share with them, null until
   // known, and their email as their membership row in a shared group gives it.
@@ -1345,18 +1349,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Segmented Tabs
   // ---------------------------------------------------------------------------
 
-  /// The tabs a swipe moves through, in the order of the segmented row.
-  static const _tabKeys = ['tours', 'games', 'vault', 'settings'];
+  /// The own profile's tabs (see profileTabKeys).
+  List<String> get _ownTabKeys => profileTabKeys(groupsV2: kGroupsV2);
 
   /// Moves to the next or previous tab. The first and last tabs stop the swipe.
   /// Only the active tab's content is built, so a tab loads its data only while
   /// it is shown.
   void _stepTab(int by) {
-    final index = _tabKeys.indexOf(_activeTab);
-    if (index < 0) return;
-    final next = (index + by).clamp(0, _tabKeys.length - 1);
-    if (next == index) return;
-    setState(() => _activeTab = _tabKeys[next]);
+    final next = stepProfileTab(_ownTabKeys, _activeTab, by);
+    if (next == _activeTab) return;
+    setState(() => _activeTab = next);
   }
 
   Widget _buildSegmentedTabs() {
@@ -1370,11 +1372,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _buildTabItem(
-            'tours',
-            Icons.explore_rounded,
-            _isBn ? 'গ্রুপসমূহ' : 'My Groups',
-          ),
+          if (!kGroupsV2)
+            _buildTabItem(
+              'tours',
+              Icons.explore_rounded,
+              _isBn ? 'গ্রুপসমূহ' : 'My Groups',
+            ),
           _buildTabItem(
             'games',
             Icons.emoji_events_rounded,
@@ -1444,7 +1447,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       case 'vault':
         return _buildKeepsakesTab(groups);
       case 'games':
-        return const GameAnalyticsView();
+        return kGroupsV2 ? _buildGamesTabV2() : const GameAnalyticsView();
       case 'settings':
         return _buildPreferencesTab(profile);
       case 'tours':
@@ -1456,6 +1459,34 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
   // Tab 1: My Tours
   // ---------------------------------------------------------------------------
+
+  /// The Games tab with the Game zone and News cards (D-8). Both are global, so they
+  /// belong to the person, not to a group.
+  Widget _buildGamesTabV2() {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GamesLinkCard(
+          icon: Icons.sports_esports_rounded,
+          color: const Color(0xFFF59E0B),
+          title: l10n.translate('hub_module_games'),
+          subtitle: l10n.translate('hub_module_games_sub'),
+          onTap: () => context.push('/game-zone'),
+        ),
+        const SizedBox(height: 10),
+        GamesLinkCard(
+          icon: Icons.article_rounded,
+          color: const Color(0xFF0EA5E9),
+          title: l10n.translate('hub_module_news'),
+          subtitle: l10n.translate('hub_module_news_sub'),
+          onTap: () => context.push('/newspaper-hub'),
+        ),
+        const SizedBox(height: 16),
+        const GameAnalyticsView(),
+      ],
+    );
+  }
 
   Widget _buildMyToursTab(List<TourGroup> groups, bool isOwnProfile) {
     if (groups.isEmpty && !isOwnProfile) {

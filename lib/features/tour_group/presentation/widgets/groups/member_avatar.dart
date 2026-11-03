@@ -25,6 +25,14 @@ class MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Semantics(
+      label: name,
+      image: true,
+      child: _avatar(context),
+    );
+  }
+
+  Widget _avatar(BuildContext context) {
     final placeholder = Container(
       width: size,
       height: size,
@@ -51,6 +59,8 @@ class MemberAvatar extends StatelessWidget {
           imageUrl: signedMediaUrl(url),
           fit: BoxFit.cover,
           fadeInDuration: const Duration(milliseconds: 120),
+          // Decode at about twice the size shown, not at full photo size (P6.5).
+          memCacheWidth: (size * 2).round(),
           placeholder: (_, __) => placeholder,
           errorWidget: (_, __, ___) => placeholder,
         ),

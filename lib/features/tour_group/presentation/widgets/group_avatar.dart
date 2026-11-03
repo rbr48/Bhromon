@@ -46,6 +46,8 @@ class GroupAvatar extends StatelessWidget {
           imageUrl: signedMediaUrl(url),
           fit: BoxFit.cover,
           fadeInDuration: const Duration(milliseconds: 120),
+          // Decode at about twice the size shown, not at full photo size (P6.5).
+          memCacheWidth: (size * 2).round(),
           placeholder: (_, __) => icon,
           errorWidget: (_, __, ___) => icon,
         ),

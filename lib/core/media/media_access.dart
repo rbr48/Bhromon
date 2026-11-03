@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'media_signing.dart';
+import 'package:flutter/foundation.dart';
 
 /// [url] signed for the signed-in person, so the media server serves a private file to them.
 /// Until the key is known, [url] comes back unchanged and the server refuses it.
@@ -31,11 +32,34 @@ class MediaAccess {
   String? _key;
 
   /// [url] signed with the key, or [url] itself while no key is known.
+  /// The signed link for [url]. A link is worked out once per URL, for the key in use, so
+  /// a list of avatars does not sign them again on every build (P6.5). The memo is cleared
+  /// whenever the key or the uid changes.
   String sign(String url) {
     final uid = _uid;
     final key = _key;
     if (uid == null || key == null) return url;
-    return signMediaUrl(url, uid: uid, key: key);
+    final cached = _signedMemo[url];
+    if (cached != null) return cached;
+    if (_signedMemo.length >= _maxSignedMemo) _signedMemo.clear();
+    final signed = signMediaUrl(url, uid: uid, key: key);
+    _signedMemo[url] = signed;
+    return signed;
+  }
+
+  static const int _maxSignedMemo = 400;
+  final Map<String, String> _signedMemo = <String, String>{};
+
+  /// Sets the credentials directly, for tests. The app sets them when someone signs in.
+  @visibleForTesting
+  void debugSetCredentials(String? uid, String? key) =>
+      _setCredentials(uid, key);
+
+  /// Sets the uid and key in use, and forgets every link signed with the old ones.
+  void _setCredentials(String? uid, String? key) {
+    _uid = uid;
+    _key = key;
+    _signedMemo.clear();
   }
 
   /// Loads the saved key, and when someone is signed in, refreshes it. The refresh waits at
@@ -52,8 +76,7 @@ class MediaAccess {
       final uid = await _storage.read(key: _uidName);
       final key = await _storage.read(key: _keyName);
       if (uid != null && key != null) {
-        _uid = uid;
-        _key = key;
+        _setCredentials(uid, key);
       }
     } catch (_) {
       // Storage can be unavailable (a private browser window, for one). The key is fetched again.
@@ -82,24 +105,21 @@ class MediaAccess {
       final Object? uidValue = data?['uid'];
       final Object? keyValue = data?['key'];
       if (uidValue is String && keyValue is String && uidValue == user.uid) {
-        _uid = uidValue;
-        _key = keyValue;
+        _setCredentials(uidValue, keyValue);
         await _storage.write(key: _uidName, value: uidValue);
         await _storage.write(key: _keyName, value: keyValue);
       }
     } catch (_) {
       // Offline, or the server is busy. A key held for this same person still works.
       if (_uid != user.uid) {
-        _uid = null;
-        _key = null;
+        _setCredentials(null, null);
       }
     }
   }
 
   /// Forgets the key, when the person signs out.
   Future<void> clear() async {
-    _uid = null;
-    _key = null;
+    _setCredentials(null, null);
     try {
       await _storage.delete(key: _uidName);
       await _storage.delete(key: _keyName);

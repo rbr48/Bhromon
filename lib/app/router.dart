@@ -369,13 +369,6 @@ class AppRouter {
             _customPageTransition(state, const NewspaperHubScreen()),
       ),
       GoRoute(
-        path: '/group/:tourId/news',
-        pageBuilder: (context, state) => _tripPage(
-          state,
-          const NewspaperHubScreen(),
-        ),
-      ),
-      GoRoute(
         path: '/newspaper-reader',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
