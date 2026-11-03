@@ -326,7 +326,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 }
               },
               children: [
-                Column(
+                _KeepAlivePage(
+                  child: Column(
                     children: [
                       // WhatsApp styled Search Bar
                       Container(
@@ -601,7 +602,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                       ),
                     ],
                   ),
-                _buildCallsView(currentUid),
+                ),
+                _KeepAlivePage(child: _buildCallsView(currentUid)),
               ],
             ),
           ),
@@ -1810,5 +1812,25 @@ class ChatTile extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
     );
+  }
+}
+
+class _KeepAlivePage extends StatefulWidget {
+  final Widget child;
+  const _KeepAlivePage({required this.child});
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

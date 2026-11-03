@@ -88,5 +88,29 @@ void main() {
       expect(first.hasListener, isFalse);
       expect(second.hasListener, isFalse);
     });
+
+    test(
+        'permits multiple listeners and replays the latest list to new listener',
+        () async {
+      final mergedStream = mergeLatestLists<_Item>(
+        [first.stream, second.stream],
+        idOf: (item) => item.id,
+      );
+      final sub1 = mergedStream.listen(sent.add);
+      first.add([(id: 'a', what: 'made')]);
+      second.add([(id: 'b', what: 'received')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(sent, hasLength(1));
+
+      // Second listener attaches after initial emission
+      final secondSent = <List<_Item>>[];
+      final sub2 = mergedStream.listen(secondSent.add);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, hasLength(1));
+      expect(secondSent.single.map((i) => i.id).toSet(), {'a', 'b'});
+
+      await sub1.cancel();
+      await sub2.cancel();
+    });
   });
 }

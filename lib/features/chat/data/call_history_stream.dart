@@ -10,9 +10,10 @@ Stream<List<T>> mergeLatestLists<T>(
   List<Stream<List<T>>> sources, {
   required Object Function(T item) idOf,
 }) {
-  late final StreamController<List<T>> controller;
+  final listeners = <MultiStreamController<List<T>>>{};
   final latest = List<List<T>?>.filled(sources.length, null);
   final subscriptions = <StreamSubscription<List<T>>>[];
+  List<T>? lastMerged;
 
   void send() {
     if (latest.any((list) => list == null)) return;
@@ -22,26 +23,48 @@ Stream<List<T>> mergeLatestLists<T>(
         byId[idOf(item)] = item;
       }
     }
-    controller.add(byId.values.toList());
+    lastMerged = byId.values.toList();
+    for (final listener in listeners.toList()) {
+      listener.add(lastMerged!);
+    }
   }
 
-  controller = StreamController<List<T>>(
-    onListen: () {
-      for (var i = 0; i < sources.length; i++) {
-        subscriptions.add(sources[i].listen(
-          (list) {
-            latest[i] = list;
-            send();
-          },
-          onError: controller.addError,
-        ));
+  void start() {
+    for (var i = 0; i < sources.length; i++) {
+      subscriptions.add(sources[i].listen(
+        (list) {
+          latest[i] = list;
+          send();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          for (final listener in listeners.toList()) {
+            listener.addError(error, stackTrace);
+          }
+        },
+      ));
+    }
+  }
+
+  void stop() {
+    for (final sub in subscriptions) {
+      sub.cancel();
+    }
+    subscriptions.clear();
+  }
+
+  return Stream<List<T>>.multi((controller) {
+    if (lastMerged != null) {
+      controller.add(lastMerged!);
+    }
+    listeners.add(controller);
+    if (subscriptions.isEmpty) {
+      start();
+    }
+    controller.onCancel = () {
+      listeners.remove(controller);
+      if (listeners.isEmpty) {
+        stop();
       }
-    },
-    onCancel: () async {
-      for (final subscription in subscriptions) {
-        await subscription.cancel();
-      }
-    },
-  );
-  return controller.stream;
+    };
+  }, isBroadcast: true);
 }

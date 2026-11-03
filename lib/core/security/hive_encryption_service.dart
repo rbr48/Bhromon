@@ -142,7 +142,22 @@ class HiveEncryptionService {
     if (kIsWeb) {
       final key = await _deviceKey();
       if (key == null) return _openInMemory<T>(boxName);
-      return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+      try {
+        return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+      } catch (e, st) {
+        logWarning(
+            '[HiveEncryption] Corrupted or unreadable box on web ($boxName), recreating',
+            e,
+            st);
+        try {
+          await Hive.deleteBoxFromDisk(boxName);
+        } catch (_) {}
+        try {
+          return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+        } catch (_) {
+          return _openInMemory<T>(boxName);
+        }
+      }
     }
 
     final key = await _deviceKey();
