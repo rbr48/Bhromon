@@ -155,7 +155,13 @@ class CallNotificationService {
   }
 
   void _onAppLifecycleChanged(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed || kIsWeb) return;
+    if (state == AppLifecycleState.resumed) {
+      if (!kIsWeb) {
+        unawaited(checkPendingAcceptedCall());
+      }
+      return;
+    }
+    if (kIsWeb) return;
     final pending = _inAppCall;
     if (pending == null || !_isCallDialogShowing) return;
     // The native screen rings from here on, so the in-app ringtone stops to
@@ -199,6 +205,7 @@ class CallNotificationService {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _startListening(user.uid);
+        unawaited(checkPendingAcceptedCall());
       } else {
         _stopListening();
       }
@@ -206,6 +213,7 @@ class CallNotificationService {
 
     if (!kIsWeb) {
       _initCallkitEvents();
+      unawaited(checkPendingAcceptedCall());
       unawaited(_registerVoipToken());
       unawaited(ensureFullScreenIntentPermission());
       try {
@@ -279,7 +287,48 @@ class CallNotificationService {
     ));
   }
 
+  /// Checks whether a call was accepted while the app was backgrounded or locked,
+  /// and opens its call screen if it is not already being displayed.
+  Future<void> checkPendingAcceptedCall() async {
+    if (kIsWeb) return;
+    try {
+      final active = await FlutterCallkitIncoming.activeCalls();
+      for (final call in active) {
+        if (!call.isAccepted) continue;
+        final extra = call.extra ?? {};
+        final callId = extra['callId']?.toString() ?? call.id;
+        if (callId.isEmpty) continue;
+        if (ActiveCallControls.callId == callId ||
+            CallSignalingService.activeCallId == callId) {
+          continue;
+        }
+
+        await _acceptCall(
+          callId: callId,
+          callerId: extra['callerId']?.toString() ?? '',
+          callerName: extra['callerName']?.toString() ??
+              (call.nameCaller ?? 'Member'),
+          avatarUrl: extra['avatarUrl']?.toString() ?? call.avatar,
+          isVideo: extra['isVideo'] == true || call.type == 1,
+          fromSystem: true,
+        );
+        break;
+      }
+    } catch (e, st) {
+      logWarning(
+          '[CallNotificationService] checkPendingAcceptedCall error', e, st);
+    }
+  }
+
   void _initCallkitEvents() {
+    try {
+      FlutterCallkitIncoming.acceptCallHandle((data) {
+        unawaited(checkPendingAcceptedCall());
+      });
+    } catch (e, st) {
+      logWarning(
+          '[CallNotificationService] Failed to set acceptCallHandle', e, st);
+    }
     _callkitSub?.cancel();
     _callkitSub = FlutterCallkitIncoming.onEvent.listen((event) async {
       if (event == null) return;
@@ -750,7 +799,19 @@ class CallNotificationService {
     bool fromSystem = false,
   }) async {
     // Native and in-app buttons can both report the same Accept.
-    if (!_settled.claim('accept:$callId', DateTime.now())) return;
+    if (!_settled.claim('accept:$callId', DateTime.now())) {
+      if (ActiveCallControls.callId != callId &&
+          CallSignalingService.activeCallId != callId) {
+        _openCall(
+          callId: callId,
+          callerId: callerId,
+          callerName: callerName,
+          avatarUrl: avatarUrl,
+          isVideo: isVideo,
+        );
+      }
+      return;
+    }
     _activeIncomingCallId = null;
     _closeInAppDialog();
     // A call answered on the phone's own screen stays in its call system until
@@ -789,6 +850,12 @@ class CallNotificationService {
     required String? avatarUrl,
     required bool isVideo,
   }) {
+    if (ActiveCallControls.callId == callId ||
+        CallSignalingService.activeCallId == callId) {
+      _pendingAcceptTimer?.cancel();
+      return;
+    }
+
     final context = AppRouter.navigatorKey.currentContext;
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (context != null && context.mounted && uid.isNotEmpty) {

@@ -196,7 +196,10 @@ class _CallScreenState extends State<CallScreen> {
     // call into an audio call instead of failing it.
     var videoEnabled = widget.isVideoCall;
     if (!kIsWeb) {
-      final micStatus = await Permission.microphone.request();
+      var micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        micStatus = await Permission.microphone.request();
+      }
       // Left while the prompt was open: the call must not start.
       if (!mounted) return;
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
@@ -207,7 +210,11 @@ class _CallScreenState extends State<CallScreen> {
         return;
       }
       if (widget.isVideoCall) {
-        videoEnabled = (await Permission.camera.request()).isGranted;
+        var camStatus = await Permission.camera.status;
+        if (!camStatus.isGranted) {
+          camStatus = await Permission.camera.request();
+        }
+        videoEnabled = camStatus.isGranted;
         if (!mounted) return;
       }
       _applyAudioRouting();

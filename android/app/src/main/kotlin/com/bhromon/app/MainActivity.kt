@@ -1,9 +1,12 @@
 package com.bhromon.app
 
+import android.app.KeyguardManager
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
+import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Rational
@@ -20,6 +23,33 @@ class MainActivity: FlutterFragmentActivity() {
     private var callAudioChannel: MethodChannel? = null
     private var proximityLock: PowerManager.WakeLock? = null
     private var pipAllowed = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handleCallIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleCallIntent(intent)
+    }
+
+    private fun handleCallIntent(intent: Intent?) {
+        if (intent == null) return
+        val action = intent.action ?: ""
+        val isCall = action.endsWith("ACTION_CALL_ACCEPT") ||
+            action.endsWith("ACTION_CALL_START") ||
+            intent.hasExtra("EXTRA_CALLKIT_CALL_DATA") ||
+            intent.hasExtra("data")
+        if (isCall) {
+            showOverLockScreen(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                keyguard?.requestDismissKeyguard(this, null)
+            }
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
