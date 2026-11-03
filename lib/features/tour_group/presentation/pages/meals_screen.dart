@@ -5,6 +5,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../../core/widgets/swipe_step.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/meal_log.dart';
 import '../../domain/models/tour_group.dart';
@@ -56,6 +57,14 @@ class _MealsScreenState extends State<MealsScreen> {
     });
   }
 
+  /// Moves the selected day by [by] within the month. The ends stop the swipe.
+  void _stepDay(int by) {
+    final days = DateUtils.getDaysInMonth(_month.year, _month.month);
+    final next = _day + by;
+    if (next < 1 || next > days) return;
+    setState(() => _day = next);
+  }
+
   Future<void> _save(MealLog log) async {
     try {
       await _repository.saveMeal(widget.tourId, log);
@@ -97,7 +106,12 @@ class _MealsScreenState extends State<MealsScreen> {
                     child:
                         CircularProgressIndicator(color: AppColors.mintGreen));
               }
-              return _body(members, logs, l10n);
+              return SwipeStep(
+                onStep: _stepDay,
+                nextLabel: l10n.translate('meals_next_day'),
+                previousLabel: l10n.translate('meals_prev_day'),
+                child: _body(members, logs, l10n),
+              );
             },
           ),
         );
