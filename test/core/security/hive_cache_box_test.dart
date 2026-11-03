@@ -9,7 +9,9 @@ import 'package:bhromon/core/security/hive_encryption_service.dart';
 import '../../helpers/perf_fixtures.dart';
 
 /// What happens to a box whose file cannot be opened. A directory where the box
-/// file belongs makes every open fail, and Hive leaves it alone when it deletes.
+/// file belongs makes every open fail for a reason that is not a key, so the box
+/// must fail to open and stay where it is. Cache boxes get no memory fallback
+/// either: a cache that cannot be opened is reported, and its caller carries on.
 void main() {
   late Directory dir;
 
@@ -47,10 +49,7 @@ void main() {
       () async {
     final service = HiveEncryptionService.withStorage(FailingSecureStorage());
 
-    final box = await service.openEncryptedBox<dynamic>(
-      'chat_cache_msgs_a',
-      rebuildable: true,
-    );
+    final box = await service.openEncryptedBox<dynamic>('chat_cache_msgs_a');
     await box.put('message', 'hello');
 
     expect(box.path, isNull);
@@ -58,23 +57,21 @@ void main() {
     expect(service.usedInMemoryFallback, isTrue);
   });
 
-  test('a cache that cannot be opened falls back to memory, never to a file',
+  test('a cache that cannot be opened is reported, never kept in memory',
       () async {
     final service = HiveEncryptionService.withStorage(CountingSecureStorage());
     breakBox('chat_cache_msgs_b');
 
-    final box = await guarded(() => service.openEncryptedBox<dynamic>(
-          'chat_cache_msgs_b',
-          rebuildable: true,
-        ));
-    await box.put('message', 'hello');
+    await expectLater(
+      guarded(() => service.openEncryptedBox<dynamic>('chat_cache_msgs_b')),
+      throwsA(anything),
+    );
 
-    expect(box.path, isNull);
     // The entry that could not be opened is still there, untouched: nothing
-    // replaced it with a plain box file.
+    // replaced it with a plain box file, and nothing was kept in memory.
     expect(
         Directory('${dir.path}/chat_cache_msgs_b.hive').existsSync(), isTrue);
-    expect(service.usedInMemoryFallback, isTrue);
+    expect(service.usedInMemoryFallback, isFalse);
   });
 
   test('a user box that cannot be opened is reported and left on disk',

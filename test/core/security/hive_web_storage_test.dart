@@ -95,19 +95,20 @@ void main() {
     expect(box.get('k'), 'v');
   });
 
-  test('a box written under another key is refused and left as it was',
+  test(
+      'a box no key can read is recreated empty, and what is saved next is kept',
       () async {
     await writeBox(
         'drafts', _strangerCipher, {'d1': 'draft one', 'd2': 'draft two'});
     final service = webService();
 
-    await expectLater(
-      guarded(() => service.openEncryptedBox<dynamic>('drafts')),
-      throwsA(anything),
-    );
+    final box = await service.openEncryptedBox<dynamic>('drafts');
+    expect(box.isEmpty, isTrue);
+    await box.put('d3', 'draft three');
+    await box.close();
 
-    expect(await readBox('drafts', _strangerCipher),
-        {'d1': 'draft one', 'd2': 'draft two'});
+    expect(await readBox('drafts', await service.getCipher()),
+        {'d3': 'draft three'});
   });
 
   test('a box written with the older fixed key is migrated to the device key',
@@ -157,10 +158,7 @@ void main() {
     await writeBox('chat_cache_msgs_x', _strangerCipher, {'m1': 'old'});
     final service = webService();
 
-    final box = await service.openEncryptedBox<dynamic>(
-      'chat_cache_msgs_x',
-      rebuildable: true,
-    );
+    final box = await service.openEncryptedBox<dynamic>('chat_cache_msgs_x');
     await box.put('m2', 'new');
 
     expect(await readBox('chat_cache_msgs_x', await service.getCipher()),
@@ -179,5 +177,68 @@ void main() {
 
     expect(box.path, isNull);
     expect(boxFile('quiet').existsSync(), isFalse);
+  });
+
+  test('a folder in the way of a box fails the open and is left alone',
+      () async {
+    Directory('${dir.path}/drafts.hive').createSync();
+    final service = webService();
+
+    await expectLater(
+      guarded(() => service.openEncryptedBox<dynamic>('drafts')),
+      throwsA(anything),
+    );
+
+    expect(Directory('${dir.path}/drafts.hive').existsSync(), isTrue);
+  });
+
+  test(
+      'an interrupted copy that neither key reads is dropped, and the original '
+      'is moved to the device key', () async {
+    await writeBox('settings', _legacyCipher, {'lang': 'bn'});
+    await writeBox('settings__rekey', _strangerCipher, {'lang': 'en'});
+    final service = webService();
+
+    final box = await service.openEncryptedBox<dynamic>('settings');
+
+    expect(box.get('lang'), 'bn');
+    await box.close();
+    expect(boxFile('settings__rekey').existsSync(), isFalse);
+  });
+
+  test('a later launch reopens a box the device key wrote, with its values',
+      () async {
+    final storage = CountingSecureStorage();
+    final first = HiveEncryptionService.withStorage(storage, webStorage: true);
+    final box = await first.openEncryptedBox<dynamic>('notes');
+    await box.put('k', 'v');
+    await box.close();
+
+    // A new launch with the same keystore.
+    await Hive.close();
+    Hive.init(dir.path);
+    final second = HiveEncryptionService.withStorage(storage, webStorage: true);
+    final reopened = await second.openEncryptedBox<dynamic>('notes');
+
+    expect(reopened.get('k'), 'v');
+  });
+
+  test('a box the device key wrote that is no longer readable is recreated',
+      () async {
+    final storage = CountingSecureStorage();
+    final first = HiveEncryptionService.withStorage(storage, webStorage: true);
+    final box = await first.openEncryptedBox<dynamic>('notes');
+    await box.put('k', 'v');
+    await box.close();
+    // The box is replaced by one written under another key, while the marks still
+    // say the device key opened it last.
+    await writeBox('notes', _strangerCipher, {'k': 'other'});
+
+    await Hive.close();
+    Hive.init(dir.path);
+    final second = HiveEncryptionService.withStorage(storage, webStorage: true);
+    final recreated = await second.openEncryptedBox<dynamic>('notes');
+
+    expect(recreated.isEmpty, isTrue);
   });
 }

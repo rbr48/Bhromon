@@ -89,16 +89,19 @@ void main() {
     expect(box.get('k'), 'v');
   });
 
-  test('a box written under another key is refused and left as it was',
+  test(
+      'a box no key can read is recreated empty, and what is saved next is kept',
       () async {
     await writeBox('web_drafts', _strangerCipher, {'d1': 'draft one'});
+    final s = service();
 
-    await expectLater(
-      guarded(() => service().openEncryptedBox<dynamic>('web_drafts')),
-      throwsA(anything),
-    );
+    final box = await s.openEncryptedBox<dynamic>('web_drafts');
+    expect(box.isEmpty, isTrue);
+    await box.put('d2', 'draft two');
+    await box.close();
 
-    expect(await readBox('web_drafts', _strangerCipher), {'d1': 'draft one'});
+    expect(
+        await readBox('web_drafts', await s.getCipher()), {'d2': 'draft two'});
   });
 
   test('a box written with the older fixed key is migrated to the device key',
@@ -139,12 +142,24 @@ void main() {
     await writeBox('web_cache', _strangerCipher, {'m1': 'old'});
     final s = service();
 
-    final box = await s.openEncryptedBox<dynamic>(
-      'web_cache',
-      rebuildable: true,
-    );
+    final box = await s.openEncryptedBox<dynamic>('web_cache');
     await box.put('m2', 'new');
 
     expect(await readBox('web_cache', await s.getCipher()), {'m2': 'new'});
+  });
+
+  test('a later launch reopens a box the device key wrote, with its values',
+      () async {
+    final storage = _MemorySecureStorage();
+    final first = HiveEncryptionService.withStorage(storage, webStorage: true);
+    final box = await first.openEncryptedBox<dynamic>('web_notes_again');
+    await box.put('k', 'v');
+    await box.close();
+
+    await Hive.close();
+    final second = HiveEncryptionService.withStorage(storage, webStorage: true);
+    final reopened = await second.openEncryptedBox<dynamic>('web_notes_again');
+
+    expect(reopened.get('k'), 'v');
   });
 }
