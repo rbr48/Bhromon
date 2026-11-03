@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bhromon/features/chat/domain/message_paging.dart';
 import 'package:bhromon/features/chat/domain/message_receipts.dart';
+import 'package:bhromon/features/chat/domain/chat_messages_listener_state.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/localized_date.dart';
 import 'dart:io';
@@ -176,6 +177,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   StreamSubscription<QuerySnapshot>? _messagesSub;
+  // Whether the messages listener is delivering. A listener that was refused
+  // before the chat existed is opened again once the chat appears.
+  final ChatMessagesListenerState _messagesListener =
+      ChatMessagesListenerState();
   StreamSubscription<Map<String, dynamic>>? _vpsTypingSub;
   bool _otherOnline = false;
   Timer? _onlinePoll;
@@ -207,6 +212,15 @@ class _ChatScreenState extends State<ChatScreen> {
     _subscribeToLatestMessages();
     _chatDocSub = _chatDocStream.listen((snap) {
       if (!mounted) return;
+      // The first message creates the chat. A messages listener opened before
+      // that was refused by the rules, so it is opened again as soon as the chat
+      // appears on the server.
+      if (_messagesListener.documentSnapshot(
+        exists: snap.exists,
+        hasPendingWrites: snap.metadata.hasPendingWrites,
+      )) {
+        _subscribeToLatestMessages();
+      }
       final data = snap.data() as Map<String, dynamic>?;
       final secs = (data?['disappearingTimerSeconds'] as num?)?.toInt() ?? 0;
       final authState = context.read<AuthCubit>().state;
@@ -247,6 +261,7 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Subscribes to the latest [_pageSize] messages in real-time.
   void _subscribeToLatestMessages() {
     _messagesSub?.cancel();
+    _messagesListener.opened();
     _messagesSub = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
@@ -256,6 +271,7 @@ class _ChatScreenState extends State<ChatScreen> {
         .snapshots()
         .listen((snap) {
       if (!mounted) return;
+      _messagesListener.delivered();
       final incoming = snap.docs;
       // Cache messages locally for offline viewing
       final cacheList = <Map<String, dynamic>>[];
@@ -297,7 +313,12 @@ class _ChatScreenState extends State<ChatScreen> {
       } catch (error, stackTrace) {
         logSkipped(error, stackTrace);
       }
-    }, onError: _logStreamError);
+    }, onError: (Object error, StackTrace stackTrace) {
+      // Firestore closes a listener after an error, so it stays closed until it
+      // is opened again.
+      _messagesListener.failed();
+      _logStreamError(error, stackTrace);
+    });
   }
 
   /// Called when the user scrolls near the top (oldest messages end).
@@ -540,7 +561,8 @@ class _ChatScreenState extends State<ChatScreen> {
   /// written. The rules refuse a message in a chat that does not exist yet, and a
   /// chat between two people must name the tour they share. The write is queued
   /// rather than awaited; Firestore applies one client's writes in order, so the
-  /// message follows the chat.
+  /// message follows the chat. Once the server confirms the write, a messages
+  /// listener that the rules refused before the chat existed is opened again.
   void _ensureChatDocument(String currentUid) {
     final otherUid = _resolveOtherUid(currentUid);
     if (otherUid == null || otherUid.isEmpty) return;
@@ -552,7 +574,11 @@ class _ChatScreenState extends State<ChatScreen> {
     FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
       'participants': FieldValue.arrayUnion([currentUid, otherUid]),
       ...tour,
-    }, SetOptions(merge: true)).catchError((Object e) {
+    }, SetOptions(merge: true)).then((_) {
+      if (mounted && _messagesListener.documentWriteConfirmed()) {
+        _subscribeToLatestMessages();
+      }
+    }).catchError((Object e) {
       logWarning('Chat document write error: $e');
     });
   }
