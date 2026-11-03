@@ -82,9 +82,7 @@ Future<void> showMembersSheet(
                                         ? l10n.translate('hub_role_admin')
                                         : l10n.translate('hub_role_member');
                                 return ListTile(
-                                  onTap: viewerIsAdmin
-                                      ? () => onMemberTap(member)
-                                      : null,
+                                  onTap: () => onMemberTap(member),
                                   leading: MemberAvatar(
                                     name: member.displayName,
                                     photoUrl: member.photoUrl,

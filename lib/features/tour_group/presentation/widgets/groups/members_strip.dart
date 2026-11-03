@@ -1,26 +1,27 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:flutter/material.dart';
 
 import 'member_avatar.dart';
 
-/// The members of a group at a glance: up to [maxAvatars] faces, "+N" for the rest, the
-/// number in each role, and a button to see them all (page B2, decision D-2).
+/// The members of a group at a glance: avatars shown side by side in a swipeable row,
+/// tapping an avatar views their details/photo, with "+N" for the rest, the number in each
+/// role, and a top corner button to see them all (page B2, decision D-2).
 class MembersStrip extends StatelessWidget {
   const MembersStrip({
     super.key,
     required this.members,
     required this.onSeeAll,
+    this.onMemberTap,
     this.maxAvatars = 8,
   });
 
   final List<TourMember> members;
   final VoidCallback onSeeAll;
+  final void Function(TourMember member)? onMemberTap;
   final int maxAvatars;
-
-  static const double avatarSize = 40;
-  static const double _step = 28;
 
   @override
   Widget build(BuildContext context) {
@@ -41,16 +42,13 @@ class MembersStrip extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final maxW = constraints.maxWidth;
-          final count = shown.length + (extra > 0 ? 1 : 0);
-          final dynamicStep = count > 1
-              ? ((maxW - avatarSize) / (count - 1)).clamp(12.0, _step)
-              : _step;
-          final actualStackWidth =
-              shown.isEmpty ? 0.0 : avatarSize + (count - 1) * dynamicStep;
+          final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+          final rowHeight = (50.0 + 26.0 * textScale).clamp(76.0, 110.0);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top header row: Title + count badge on left, top-corner icon to open list on right
               Wrap(
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -99,78 +97,74 @@ class MembersStrip extends StatelessWidget {
                   ),
                   ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: maxW),
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                      ),
-                      onPressed: onSeeAll,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              l10n.translate('group_members_see_all'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: onSeeAll,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                l10n.translate('group_members_see_all'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: context.forest.accentText,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          const Icon(Icons.chevron_right_rounded, size: 16),
-                        ],
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_new_rounded,
+                              size: 14,
+                              color: context.forest.accentText,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: actualStackWidth.clamp(0.0, maxW),
-                height: avatarSize,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    for (var i = 0; i < shown.length; i++)
-                      Positioned(
-                        left: i * dynamicStep,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: context.forest.card, width: 2),
-                          ),
-                          child: MemberAvatar(
-                            name: shown[i].displayName,
-                            photoUrl: shown[i].photoUrl,
-                            size: avatarSize,
-                          ),
-                        ),
-                      ),
-                    if (extra > 0)
-                      Positioned(
-                        left: shown.length * dynamicStep,
-                        child: Container(
-                          width: avatarSize,
-                          height: avatarSize,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: context.forest.divider10,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '+${l10n.number(extra)}',
-                            style: TextStyle(
-                              color: context.forest.text70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 10),
+
+              // Avatars row: displayed side by side, swipeable if many members
+              if (shown.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    l10n.translate('group_members_none'),
+                    style:
+                        TextStyle(color: context.forest.text54, fontSize: 13),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: rowHeight,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        for (final member in shown)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: _buildMemberItem(context, member, l10n),
+                          ),
+                        if (extra > 0) _buildExtraItem(context, extra, l10n),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+
+              // Role summary pills
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -186,6 +180,163 @@ class MembersStrip extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildMemberItem(
+    BuildContext context,
+    TourMember member,
+    AppLocalizations l10n,
+  ) {
+    final isOwner = member.role == TourRole.owner;
+    final isAdmin = member.role == TourRole.admin;
+    final firstName = member.displayName.trim().split(' ').first;
+    return Semantics(
+      button: true,
+      label: member.displayName,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => onMemberTap != null ? onMemberTap!(member) : onSeeAll(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isOwner
+                            ? AppColors.gold
+                            : isAdmin
+                                ? AppColors.mintGreen
+                                : context.forest.divider10,
+                        width: isOwner || isAdmin ? 2 : 1.5,
+                      ),
+                    ),
+                    child: MemberAvatar(
+                      name: member.displayName,
+                      photoUrl: member.photoUrl,
+                      size: 42,
+                    ),
+                  ),
+                  if (isOwner)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: AppColors.gold,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.star_rounded,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  else if (isAdmin)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: AppColors.midGreen,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.shield_rounded,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 52,
+                child: Text(
+                  firstName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.forest.text70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExtraItem(
+    BuildContext context,
+    int extra,
+    AppLocalizations l10n,
+  ) {
+    return Semantics(
+      button: true,
+      label: l10n.translate('group_members_see_all'),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onSeeAll,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: context.forest.divider10,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: context.forest.divider10,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  '+${l10n.number(extra)}',
+                  style: TextStyle(
+                    color: context.forest.text70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 52,
+                child: Text(
+                  l10n.translate('group_members_see_all'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.forest.text54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
