@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/widgets/swipe_pager.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
@@ -38,6 +39,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
   List<TourMember> _members = const [];
   TourRole? _myRole;
   String? _hotel;
+  final PageController _hotelPager = PageController();
   bool _busy = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -61,6 +63,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
   @override
   void dispose() {
     _memberSub?.cancel();
+    _hotelPager.dispose();
     super.dispose();
   }
 
@@ -99,8 +102,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         hotels.sort();
         final hotel =
             _hotel != null && hotels.contains(_hotel) ? _hotel! : hotels.first;
-        final inHotel = rooms.where((r) => r.hotelName == hotel).toList();
-        return _hotelView(l10n, rooms, hotels, hotel, inHotel);
+        return _hotelPages(l10n, rooms, hotels, hotel);
       },
     );
 
@@ -144,6 +146,72 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     );
   }
 
+  /// The hotel chips, shown above the rooms of the selected hotel.
+  Widget _hotelChips(AppLocalizations l10n, List<String> hotels, String hotel) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final h in hotels)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                avatar: Icon(Icons.apartment_rounded,
+                    size: 18,
+                    color: h == hotel
+                        ? AppColors.darkGreen
+                        : context.forest.accentText),
+                label: Text(_hotelLabel(l10n, h)),
+                selected: h == hotel,
+                selectedColor: AppColors.mintGreen,
+                backgroundColor:
+                    context.forest.surfaceFor(const Color(0xFF14241B)),
+                labelStyle: TextStyle(
+                    color:
+                        h == hotel ? AppColors.darkGreen : context.forest.text),
+                onSelected: (_) => setState(() => _hotel = h),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The rooms of the selected hotel. With two or more hotels, a swipe moves to
+  /// the next or previous one, and the chips stay above the pages. Only the
+  /// selected page takes taps; the rooms come from the stream already on screen.
+  Widget _hotelPages(AppLocalizations l10n, List<HotelRoom> rooms,
+      List<String> hotels, String hotel) {
+    List<HotelRoom> roomsOf(String name) =>
+        rooms.where((r) => r.hotelName == name).toList();
+    if (hotels.length < 2) {
+      return _hotelView(l10n, rooms, hotels, hotel, roomsOf(hotel));
+    }
+    final index = hotels.indexOf(hotel);
+    return Column(
+      children: [
+        _hotelChips(l10n, hotels, hotel),
+        Expanded(
+          child: SwipePager(
+            controller: _hotelPager,
+            count: hotels.length,
+            selectedIndex: index,
+            onSettled: (i) => setState(() => _hotel = hotels[i]),
+            itemBuilder: (context, i) {
+              if (!isWithinPageWindow(i, index)) return const SizedBox.shrink();
+              final name = hotels[i];
+              return IgnorePointer(
+                ignoring: i != index,
+                child: _hotelView(l10n, rooms, hotels, name, roomsOf(name)),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _hotelView(AppLocalizations l10n, List<HotelRoom> all,
       List<String> hotels, String hotel, List<HotelRoom> rooms) {
     final sizes = _familySizes;
@@ -163,36 +231,6 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
       children: [
-        if (hotels.length > 1)
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (final h in hotels)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      avatar: Icon(Icons.apartment_rounded,
-                          size: 18,
-                          color: h == hotel
-                              ? AppColors.darkGreen
-                              : context.forest.accentText),
-                      label: Text(_hotelLabel(l10n, h)),
-                      selected: h == hotel,
-                      selectedColor: AppColors.mintGreen,
-                      backgroundColor:
-                          context.forest.surfaceFor(const Color(0xFF14241B)),
-                      labelStyle: TextStyle(
-                          color: h == hotel
-                              ? AppColors.darkGreen
-                              : context.forest.text),
-                      onSelected: (_) => setState(() => _hotel = h),
-                    ),
-                  ),
-              ],
-            ),
-          ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(14),
