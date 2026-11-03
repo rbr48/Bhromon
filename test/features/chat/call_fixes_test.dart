@@ -171,8 +171,8 @@ void main() {
       final registry = IncomingCallRegistry();
       final now = DateTime(2026, 3, 1, 12);
       expect(registry.claim('call-1', now), isTrue);
-      expect(
-          registry.claim('call-1', now.add(const Duration(seconds: 10))), isFalse);
+      expect(registry.claim('call-1', now.add(const Duration(seconds: 10))),
+          isFalse);
     });
 
     test('re-claims after window expires', () {
@@ -180,8 +180,8 @@ void main() {
           IncomingCallRegistry(window: const Duration(seconds: 30));
       final now = DateTime(2026, 3, 1, 12);
       expect(registry.claim('call-1', now), isTrue);
-      expect(
-          registry.claim('call-1', now.add(const Duration(seconds: 31))), isTrue);
+      expect(registry.claim('call-1', now.add(const Duration(seconds: 31))),
+          isTrue);
     });
   });
 }
