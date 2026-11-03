@@ -131,6 +131,60 @@ Future<AuthCubit> _signedInCubit() async {
   return cubit;
 }
 
+/// Pumps the own profile in the given layout, with a counting groups list, and returns
+/// that list so a test can read how many streams the screen started.
+Future<_CountingGroups> _pumpProfile(
+  WidgetTester tester, {
+  required bool groupsV2,
+}) async {
+  tester.view.physicalSize = const Size(900, 2000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  final repo = _CountingGroups([_trip]);
+  addTearDown(repo.close);
+  final auth = await _signedInCubit();
+  addTearDown(auth.close);
+
+  // The profile reads the router (its back button checks whether it can pop).
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => BlocProvider<AuthCubit>.value(
+          value: auth,
+          child: ExplorerProfileScreen(
+            uid: _profile.uid,
+            repository: repo,
+            readProfileData: (uid) async => null,
+            groupsV2: groupsV2,
+          ),
+        ),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    MaterialApp.router(
+      locale: const Locale('en'),
+      supportedLocales: const [Locale('en'), Locale('bn')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        DefaultMaterialLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
+      routerConfig: router,
+    ),
+  );
+  // The profile and the groups load over a few frames. The screen has animations, so
+  // the frames are pumped by hand rather than settled.
+  for (var i = 0; i < 20; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  return repo;
+}
+
 void main() {
   setUp(() {
     getIt.registerSingleton<GetExplorerProfileUseCase>(
@@ -144,50 +198,7 @@ void main() {
   testWidgets(
       'twenty tab taps start no new groups stream, and the groups never empty',
       (tester) async {
-    tester.view.physicalSize = const Size(900, 2000);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final repo = _CountingGroups([_trip]);
-    addTearDown(repo.close);
-    final auth = await _signedInCubit();
-    addTearDown(auth.close);
-
-    // The profile reads the router (its back button checks whether it can pop).
-    final router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => BlocProvider<AuthCubit>.value(
-            value: auth,
-            child: ExplorerProfileScreen(
-              uid: _profile.uid,
-              repository: repo,
-              readProfileData: (uid) async => null,
-            ),
-          ),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    await tester.pumpWidget(
-      MaterialApp.router(
-        locale: const Locale('en'),
-        supportedLocales: const [Locale('en'), Locale('bn')],
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          DefaultMaterialLocalizations.delegate,
-          DefaultWidgetsLocalizations.delegate,
-        ],
-        routerConfig: router,
-      ),
-    );
-    // The profile and the groups load over a few frames. The screen has animations, so
-    // the frames are pumped by hand rather than settled.
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    final repo = await _pumpProfile(tester, groupsV2: false);
 
     expect(find.text(_trip.name), findsWidgets,
         reason: 'the groups list is the default tab');
@@ -204,6 +215,35 @@ void main() {
             reason:
                 'tap $tap: the groups list emptied while it was shown again');
       }
+    }
+
+    expect((repo.watchCalls, repo.upstreamOpens), baseline,
+        reason: 'twenty tab taps must not start a new groups stream');
+  });
+
+  testWidgets(
+      'with groupsV2 there is no groups tab, and twenty tab taps start no new groups stream',
+      (tester) async {
+    final repo = await _pumpProfile(tester, groupsV2: true);
+
+    expect(find.text('গ্রুপসমূহ'), findsNothing,
+        reason: 'the groups-V2 profile has no groups tab');
+
+    const tabs = ['গেমিং', 'স্মৃতি', 'সেটিংস'];
+    // Each tab loads once first. The budget is what the taps add after that.
+    for (final label in tabs) {
+      await tester.tap(find.text(label).first);
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+    final baseline = (repo.watchCalls, repo.upstreamOpens);
+    expect(baseline.$1, lessThanOrEqualTo(1),
+        reason: 'the screen creates its groups stream once');
+
+    for (var tap = 0; tap < 20; tap++) {
+      await tester.tap(find.text(tabs[tap % tabs.length]).first);
+      await tester.pump();
     }
 
     expect((repo.watchCalls, repo.upstreamOpens), baseline,

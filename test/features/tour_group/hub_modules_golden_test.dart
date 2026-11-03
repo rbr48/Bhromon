@@ -189,8 +189,12 @@ void main() {
             DefaultWidgetsLocalizations.delegate,
           ],
           // A new key gives each case a new hub, so no state carries over.
-          home:
-              TourGroupHubScreen(key: UniqueKey(), repository: _Repo([group])),
+          home: TourGroupHubScreen(
+            key: UniqueKey(),
+            repository: _Repo([group]),
+            // The module grid belongs to the hub's original layout.
+            groupsV2: false,
+          ),
         ));
         await tester.pumpAndSettle();
         // A family card builds its own repository, which needs Firebase; in this test

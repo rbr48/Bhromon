@@ -87,6 +87,8 @@ Future<void> _pumpHub(
         ),
         preference: preference,
         initialTourId: initialTourId,
+        // The selection rules here belong to the hub's original layout.
+        groupsV2: false,
       ),
     ),
   );
