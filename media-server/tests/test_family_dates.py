@@ -170,6 +170,23 @@ def test_the_reminder_text_falls_back_for_a_blank_title_or_an_unknown_kind():
     assert fd.family_date_reminder_text({"title": "Trip", "kind": "other"}, 2)[0] == "📅 Trip"
 
 
+def test_the_reminder_text_is_in_bengali_for_a_bengali_member():
+    record = {"title": "Asha's birthday", "kind": "birthday"}
+    assert fd.family_date_reminder_text(record, 0, "bn") == ("🎂 Asha's birthday", "আজ")
+    assert fd.family_date_reminder_text(record, 1, "bn") == ("🎂 Asha's birthday", "আগামীকাল")
+    assert fd.family_date_reminder_text(record, 12, "bn") == ("🎂 Asha's birthday", "১২ দিন পরে")
+    assert fd.family_date_reminder_text({"title": " ", "kind": "bill"}, 2, "bn") == (
+        "🧾 পারিবারিক তারিখ",
+        "২ দিন পরে",
+    )
+
+
+def test_an_unknown_language_gets_the_reminder_in_english():
+    record = {"title": "Asha's birthday", "kind": "birthday"}
+    assert fd.family_date_reminder_text(record, 5, "fr") == ("🎂 Asha's birthday", "In 5 days")
+    assert fd.family_date_reminder_text(record, 5) == ("🎂 Asha's birthday", "In 5 days")
+
+
 # ── When the daily run is due ─────────────────────────────────────────────────
 
 
@@ -310,9 +327,10 @@ def _fake_transactional(function):
 
 
 class _FakeEngine:
-    def __init__(self, members_by_tour, failing_tours=()):
+    def __init__(self, members_by_tour, failing_tours=(), languages=None):
         self._members = members_by_tour
         self._failing = set(failing_tours)
+        self._languages = dict(languages or {})
         self.sent = []
         self.member_reads = []
 
@@ -326,10 +344,13 @@ class _FakeEngine:
         return [f"uid:{email}" for email in emails]
 
     def get_push_targets_for_uids(self, uids):
-        return [(f"token:{uid}", None) for uid in uids]
+        return [(f"token:{uid}", None, self._languages.get(uid, "en")) for uid in uids]
 
-    def send_multicast(self, targets, title, body, data, high_priority=False):
-        self.sent.append((title, body, dict(data), high_priority))
+    def send_localized(self, targets, make_text, data, high_priority=False):
+        # The server's contract: one text per language, sent to that language's devices.
+        for language in sorted({lang for _, _, lang in targets}):
+            title, body = make_text(language)
+            self.sent.append((title, body, dict(data), high_priority))
         return len(targets)
 
 
@@ -346,6 +367,21 @@ def test_a_due_reminder_is_pushed_to_each_device_and_the_date_moves_on():
     ]
     assert store["tours/t1/family_dates/d1"]["nextOn"] == "2027-11-03"
     assert store["tours/t1/family_dates/d1"]["remindOn"] == "2027-10-27"
+
+
+def test_each_member_gets_the_reminder_in_their_own_language():
+    store = {"tours/t1/family_dates/d1": _record(createdByEmail="asha@x.com")}
+    engine = _FakeEngine({"t1": ["asha@x.com", "babu@x.com"]}, languages={"uid:babu@x.com": "bn"})
+
+    stats = fd.run_family_date_reminders(_FakeDB(store), engine, "2026-10-27", transactional=_fake_transactional)
+
+    assert stats == {"due": 1, "reminded": 1, "pushes": 2, "errors": 0}
+    data = {"action": "family_date", "tourId": "t1", "dateId": "d1"}
+    # Bengali first (sorted by language), then the English devices.
+    assert engine.sent == [
+        ("🎂 Asha's birthday", "৭ দিন পরে", data, True),
+        ("🎂 Asha's birthday", "In 7 days", data, True),
+    ]
 
 
 def test_a_second_run_on_the_same_day_sends_nothing():

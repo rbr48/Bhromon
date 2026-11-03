@@ -9,6 +9,7 @@ import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:go_router/go_router.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
+import '../../../core/localization/locale_controller.dart';
 import '../../../core/audio/call_audio_session.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../firebase_options.dart';
@@ -284,7 +285,11 @@ class CallNotificationService {
     try {
       final token = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
       if (token is String && token.isNotEmpty) {
-        await VpsChatService().registerDeviceToken(token, platform: 'ios-voip');
+        await VpsChatService().registerDeviceToken(
+          token,
+          platform: 'ios-voip',
+          language: LocaleController.instance.locale.languageCode,
+        );
       }
     } catch (e, st) {
       logWarning('[CallNotificationService] VoIP token not registered', e, st);
