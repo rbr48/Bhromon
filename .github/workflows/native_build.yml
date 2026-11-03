@@ -45,6 +45,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # android/gradle.properties sets org.gradle.java.home to a Windows JDK path,
+      # which makes Gradle fail on Linux before it compiles anything. The runner
+      # supplies JDK 17 through JAVA_HOME, so the line is dropped for this job
+      # only. The file itself is unchanged for the maintainer's Windows builds.
+      - name: Drop the Windows-only JDK path for this job
+        run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
+
       - name: Build debug APK
         run: flutter build apk --debug
 
