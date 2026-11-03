@@ -291,6 +291,74 @@ void main() {
     });
   });
 
+  group('showChannelEditor', () {
+    Future<void> openEditor(
+      WidgetTester tester, {
+      TourChannel? existing,
+      required void Function(ChannelDraft?) onResult,
+    }) async {
+      await tester.pumpWidget(_app(Builder(
+        builder: (ctx) => ElevatedButton(
+          onPressed: () async => onResult(await showChannelEditor(
+            ctx,
+            title: 'Edit channel',
+            nameEditable: true,
+            existing: existing,
+          )),
+          child: const Text('Open'),
+        ),
+      )));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+    }
+
+    final saveButton = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(ElevatedButton),
+    );
+
+    testWidgets(
+        'a built-in title can be cleared to get the standard title back',
+        (tester) async {
+      ChannelDraft? result;
+      var closed = false;
+      await openEditor(
+        tester,
+        existing: const TourChannel(id: 'food', name: 'Dinner plans'),
+        onResult: (d) {
+          closed = true;
+          result = d;
+        },
+      );
+
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.controller?.text, 'Dinner plans');
+      expect(
+          find.text('Leave empty to use the standard name.'), findsOneWidget);
+      expect(find.byType(SegmentedButton<ChannelKind>), findsNothing,
+          reason: 'a built-in channel keeps its kind');
+
+      await tester.enterText(find.byType(TextField).first, '');
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(closed, isTrue);
+      expect(result?.name, '');
+    });
+
+    testWidgets('a custom channel still needs a name', (tester) async {
+      var closed = false;
+      await openEditor(tester, onResult: (_) => closed = true);
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Give the channel a name.'), findsOneWidget);
+      expect(closed, isFalse);
+    });
+  });
+
   group('showChannelMembersSheet', () {
     testWidgets('shows audio and video call buttons for other members',
         (tester) async {

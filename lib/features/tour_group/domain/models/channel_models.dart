@@ -231,6 +231,10 @@ class TourChannel {
   final String createdByEmail;
   final ChannelKind kind;
 
+  /// Whether an admin has hidden this built-in channel. A hidden channel is not listed
+  /// or offered as a share target, and its messages were deleted with it.
+  final bool hidden;
+
   const TourChannel({
     required this.id,
     this.name = '',
@@ -238,10 +242,18 @@ class TourChannel {
     this.adminOnly = false,
     this.createdByEmail = '',
     this.kind = ChannelKind.text,
+    this.hidden = false,
   });
 
   bool get isBuiltIn => kAllBuiltInChannelIds.contains(id);
   bool get isVoice => kind == ChannelKind.voice || id == kBuiltInVoiceChannelId;
+
+  /// The voice lounge keeps its own title and cannot be hidden or renamed.
+  bool get isVoiceLounge => id == kBuiltInVoiceChannelId;
+
+  /// The title an admin set for a built-in channel, which replaces the standard one for
+  /// everyone. Empty means the standard title. A custom channel has no override.
+  String get titleOverride => isBuiltIn && !isVoiceLounge ? name : '';
 
   factory TourChannel.fromMap(String id, Map<String, dynamic> map) {
     final rawKind = map['kind'] as String?;
@@ -253,6 +265,7 @@ class TourChannel {
       adminOnly: map['adminOnly'] == true,
       createdByEmail: normalizeEmail(map['createdByEmail'] as String? ?? ''),
       kind: isVoice ? ChannelKind.voice : ChannelKind.text,
+      hidden: map['hidden'] == true,
     );
   }
 
@@ -263,8 +276,46 @@ class TourChannel {
       'adminOnly': adminOnly,
       'createdByEmail': createdByEmail,
       'kind': kind == ChannelKind.voice ? 'voice' : 'text',
+      'hidden': hidden,
     };
   }
+}
+
+/// The fields a write to a built-in channel must carry. The rules need the name, topic
+/// and posting rule on every write to a channel, so hiding or restoring sends them too.
+Map<String, dynamic> builtInChannelFields(
+  TourChannel channel, {
+  required bool hidden,
+}) =>
+    {
+      'name': channel.name,
+      'topic': channel.topic,
+      'adminOnly': channel.adminOnly,
+      'hidden': hidden,
+    };
+
+/// The ids of the built-in channels an admin has hidden. The voice lounge is never in
+/// this set, because it cannot be hidden.
+Set<String> hiddenBuiltInChannelIds(List<TourChannel> docs) => {
+      for (final c in docs)
+        if (c.hidden && c.isBuiltIn && !c.isVoiceLounge) c.id,
+    };
+
+/// The channels to list, in order: the built-in channels for this group that are not
+/// hidden, then the custom channels by name. The voice lounge is always listed.
+List<TourChannel> channelsForList({
+  required List<String> builtInIds,
+  required List<TourChannel> docs,
+}) {
+  final byId = {for (final c in docs) c.id: c};
+  final hidden = hiddenBuiltInChannelIds(docs);
+  final builtIns = [
+    for (final id in builtInIds)
+      if (!hidden.contains(id)) byId[id] ?? TourChannel(id: id),
+  ];
+  final custom = docs.where((c) => !c.isBuiltIn).toList()
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return [...builtIns, ...custom];
 }
 
 /// A photo or video attached to a message. The file lives on the media server.

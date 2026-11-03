@@ -116,8 +116,8 @@ class TourChannelRepository {
     return id;
   }
 
-  /// Saves a channel's topic and posting rule. Admins only. A built-in channel
-  /// keeps its (empty) name, so its title still comes from the translations.
+  /// Saves a channel's name, topic and posting rule. Admins only. For a built-in
+  /// channel the name is its title; an empty name means the standard title.
   Future<void> updateChannel(
     String tourId, {
     required String channelId,
@@ -137,6 +137,38 @@ class TourChannelRepository {
   /// only. The uploads are removed on a best-effort basis.
   Future<void> deleteChannel(String tourId, String channelId) async {
     _groups.requireEmail();
+    await _deleteMessages(tourId, channelId);
+    await _channels(tourId).doc(channelId).delete();
+  }
+
+  /// Hides a built-in channel for everyone and permanently deletes its messages, photos
+  /// and videos. Admins only. The messages go first, so a retry is safe if the hide
+  /// fails. A hidden channel can be restored, but its messages cannot.
+  Future<void> hideBuiltInChannel(String tourId, TourChannel channel) async {
+    _groups.requireEmail();
+    if (!channel.isBuiltIn || channel.isVoiceLounge) {
+      throw ArgumentError.value(channel.id, 'channel',
+          'Only a built-in channel other than the voice lounge can be hidden.');
+    }
+    await _deleteMessages(tourId, channel.id);
+    await _channels(tourId).doc(channel.id).set(
+          builtInChannelFields(channel, hidden: true),
+          SetOptions(merge: true),
+        );
+  }
+
+  /// Shows a hidden built-in channel again, empty. Admins only.
+  Future<void> restoreBuiltInChannel(String tourId, TourChannel channel) async {
+    _groups.requireEmail();
+    await _channels(tourId).doc(channel.id).set(
+          builtInChannelFields(channel, hidden: false),
+          SetOptions(merge: true),
+        );
+  }
+
+  /// Deletes every message in a channel, with its photos and videos. The uploads are
+  /// removed on a best-effort basis.
+  Future<void> _deleteMessages(String tourId, String channelId) async {
     final snapshot = await _messages(tourId, channelId).get();
     for (var i = 0; i < snapshot.docs.length; i += _batchLimit) {
       final batch = _firestore.batch();
@@ -154,7 +186,6 @@ class TourChannelRepository {
         }
       }
     }
-    await _channels(tourId).doc(channelId).delete();
   }
 
   // ---------------------------------------------------------------------------

@@ -44,7 +44,13 @@ import '../widgets/cached_channel_messages.dart';
 import '../widgets/channel_message_listener.dart';
 import '../widgets/channel_sheets.dart';
 
-enum _ChannelMenu { newChannel, editChannel, deleteChannel, toggleMute }
+enum _ChannelMenu {
+  newChannel,
+  editChannel,
+  deleteChannel,
+  restoreChannels,
+  toggleMute,
+}
 
 class GroupChannelsScreen extends StatefulWidget {
   final String tourId;
@@ -251,28 +257,28 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   // Channels and per-device state
   // ---------------------------------------------------------------------------
 
-  /// The built-in channels, then the ones admins added, by name.
-  List<TourChannel> get _channels {
-    final byId = {for (final c in _channelDocs) c.id: c};
-    final builtIns = [
-      for (final id in builtInChannelIdsFor(
-        family: _isFamily,
-        office: _isOffice,
-        campus: _isCampus,
-        mess: _isMess,
-        society: _isSociety,
-        samity: _isSamity,
-        school: _isSchool,
-        sports: _isSports,
-        study: _isStudy,
-        committee: _isCommittee,
-      ))
-        byId[id] ?? TourChannel(id: id),
-    ];
-    final custom = _channelDocs.where((c) => !c.isBuiltIn).toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    return [...builtIns, ...custom];
-  }
+  /// The built-in channels that are not hidden, then the ones admins added, by name.
+  List<TourChannel> get _channels => channelsForList(
+        builtInIds: builtInChannelIdsFor(
+          family: _isFamily,
+          office: _isOffice,
+          campus: _isCampus,
+          mess: _isMess,
+          society: _isSociety,
+          samity: _isSamity,
+          school: _isSchool,
+          sports: _isSports,
+          study: _isStudy,
+          committee: _isCommittee,
+        ),
+        docs: _channelDocs,
+      );
+
+  /// The built-in channels an admin has hidden, which the restore dialog offers.
+  List<TourChannel> get _hiddenBuiltIns => [
+        for (final c in _channelDocs)
+          if (c.isBuiltIn && c.hidden && !c.isVoiceLounge) c,
+      ];
 
   TourChannel _selectedOf(List<TourChannel> channels) {
     return channels.firstWhere(
@@ -331,6 +337,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     if (channel.id == kBuiltInVoiceChannelId) {
       return l10n.translate('chan_voice_lounge');
     }
+    // An admin's title for a built-in channel replaces the standard one for everyone.
+    final override = channel.titleOverride;
+    if (override.isNotEmpty) return override;
     if (channel.kind == ChannelKind.voice) {
       return channel.name.isEmpty ? '🔊 Voice' : '🔊 ${channel.name}';
     }
@@ -596,13 +605,19 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       child: Text(l10n.translate('chan_edit_channel'),
                           style: TextStyle(color: context.forest.text)),
                     ),
-                    if (!selected.isBuiltIn)
+                    if (!selected.isVoiceLounge)
                       PopupMenuItem(
                         value: _ChannelMenu.deleteChannel,
                         child: Text(l10n.translate('chan_delete_channel'),
                             style: TextStyle(
                                 color:
                                     context.forest.readable(Colors.redAccent))),
+                      ),
+                    if (_hiddenBuiltIns.isNotEmpty)
+                      PopupMenuItem(
+                        value: _ChannelMenu.restoreChannels,
+                        child: Text(l10n.translate('chan_restore_channels'),
+                            style: TextStyle(color: context.forest.text)),
                       ),
                   ],
                 ],
@@ -876,6 +891,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         await _editChannel(selected);
       case _ChannelMenu.deleteChannel:
         await _deleteChannel(selected);
+      case _ChannelMenu.restoreChannels:
+        await _showRestoreChannels();
     }
   }
 
@@ -921,14 +938,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final draft = await showChannelEditor(
       context,
       title: l10n.translate('chan_edit_channel'),
-      nameEditable: !channel.isBuiltIn,
+      nameEditable: !channel.isVoiceLounge,
       existing: channel,
     );
     if (draft == null || !mounted) return;
     await _guard(() => _repo.updateChannel(
           widget.tourId,
           channelId: channel.id,
-          name: channel.isBuiltIn ? channel.name : draft.name,
+          name: channel.isVoiceLounge ? channel.name : draft.name,
           topic: draft.topic,
           adminOnly: draft.adminOnly,
         ));
@@ -943,7 +960,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
         title: Text(l10n.translate('chan_delete_channel'),
             style: TextStyle(color: context.forest.text)),
-        content: Text(l10n.translate('chan_delete_channel_body'),
+        content: Text(
+            l10n.translate(channel.isBuiltIn
+                ? 'chan_delete_builtin_body'
+                : 'chan_delete_channel_body'),
             style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
@@ -960,9 +980,70 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    await _guard(() => _repo.deleteChannel(widget.tourId, channel.id));
+    // A built-in channel is hidden, with its messages deleted; a custom one is removed.
+    await _guard(() => channel.isBuiltIn
+        ? _repo.hideBuiltInChannel(widget.tourId, channel)
+        : _repo.deleteChannel(widget.tourId, channel.id));
     if (!mounted) return;
-    _selectChannel(kBuiltInChannelIds.first);
+    // The first channel left, so the one just removed is never the one shown.
+    final next = _channels.firstWhere((c) => c.id != channel.id,
+        orElse: () => _channels.first);
+    _selectChannel(next.id);
+  }
+
+  /// Lists the hidden built-in channels, each with a restore button.
+  Future<void> _showRestoreChannels() async {
+    final l10n = context.l10n;
+    final restored = <String>{};
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) {
+          final hidden = [
+            for (final c in _hiddenBuiltIns)
+              if (!restored.contains(c.id)) c,
+          ];
+          return AlertDialog(
+            backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+            title: Text(l10n.translate('chan_restore_title'),
+                style: TextStyle(color: context.forest.text)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hidden.isEmpty)
+                    Text(l10n.translate('chan_none_hidden'),
+                        style: TextStyle(color: context.forest.text70)),
+                  for (final c in hidden)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(_titleOf(c),
+                          style: TextStyle(color: context.forest.text)),
+                      trailing: TextButton(
+                        onPressed: () async {
+                          await _guard(() =>
+                              _repo.restoreBuiltInChannel(widget.tourId, c));
+                          restored.add(c.id);
+                          if (!mounted) return;
+                          _snack(l10n.translate('chan_restored'));
+                          setDialog(() {});
+                        },
+                        child: Text(l10n.translate('chan_restore')),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.translate('chan_close')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _toggleSearch() {
