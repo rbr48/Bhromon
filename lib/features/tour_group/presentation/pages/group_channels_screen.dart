@@ -38,6 +38,7 @@ import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/channel_composer.dart';
 import '../widgets/channel_media_viewer.dart';
 import '../widgets/channel_message_bubble.dart';
+import '../widgets/channel_message_listener.dart';
 import '../widgets/channel_sheets.dart';
 
 enum _ChannelMenu { newChannel, editChannel, deleteChannel, toggleMute }
@@ -1439,7 +1440,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   Widget _buildMessages(TourChannel channel) {
     final l10n = context.l10n;
-    return StreamBuilder<List<ChannelMessage>>(
+    return ChannelMessageListener(
       stream: _messagesOf(channel.id),
       builder: (context, snapshot) {
         if (snapshot.hasError && !snapshot.hasData) {
