@@ -113,4 +113,47 @@ void main() {
       await sub2.cancel();
     });
   });
+
+  // Own group: the group above closes its controllers in tearDown, and these
+  // controllers were never listened to, so closing them would never finish.
+  group('mergeLatestLists restart', () {
+    test('after the last listener left, only fresh lists are merged', () async {
+      // Broadcast sources, as Firestore snapshot streams are, so they can be
+      // listened to again after a cancel.
+      final a = StreamController<List<_Item>>.broadcast();
+      final b = StreamController<List<_Item>>.broadcast();
+      final merged = mergeLatestLists<_Item>(
+        [a.stream, b.stream],
+        idOf: (item) => item.id,
+      );
+
+      final firstSent = <List<_Item>>[];
+      final firstSub = merged.listen(firstSent.add);
+      a.add([(id: 'a', what: 'made')]);
+      b.add([(id: 'b', what: 'received')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(firstSent, hasLength(1));
+      await firstSub.cancel();
+
+      // Nothing from before the cancel is replayed to the new listener.
+      final secondSent = <List<_Item>>[];
+      final secondSub = merged.listen(secondSent.add);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, isEmpty);
+
+      // One source alone is not a merged list: the other has to send again.
+      a.add([(id: 'c', what: 'made')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, isEmpty);
+
+      b.add([(id: 'd', what: 'received')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, hasLength(1));
+      expect(secondSent.single.map((i) => i.id).toSet(), {'c', 'd'});
+
+      await secondSub.cancel();
+      await a.close();
+      await b.close();
+    });
+  });
 }

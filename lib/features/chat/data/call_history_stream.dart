@@ -50,6 +50,11 @@ Stream<List<T>> mergeLatestLists<T>(
       sub.cancel();
     }
     subscriptions.clear();
+    // A restart must not merge or replay what the old subscriptions sent.
+    for (var i = 0; i < latest.length; i++) {
+      latest[i] = null;
+    }
+    lastMerged = null;
   }
 
   return Stream<List<T>>.multi((controller) {
