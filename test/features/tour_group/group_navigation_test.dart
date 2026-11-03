@@ -140,7 +140,7 @@ void main() {
         reason: 'the double tap opened the feed page twice');
   });
 
-  testWidgets('going back from a group page keeps the groups list where it was',
+  testWidgets('a trip to a tool and back keeps the groups list where it was',
       (tester) async {
     final groups = [for (var i = 0; i < 14; i++) _trip('g$i')];
     final repo = _Repo(groups: groups);
@@ -154,17 +154,25 @@ void main() {
     expect(before, greaterThan(0),
         reason: 'the list must scroll for this test');
 
+    // Tapping a card expands it in place. Its Moments tile opens the feed route.
     await tester.tap(find.text('Sajek g4'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Back to groups'), findsOneWidget);
+    await tester.ensureVisible(find.text('Moments 📸'));
+    await tester.pumpAndSettle();
+    final beforeTool = _listOffset(tester);
 
-    await tester.tap(find.byTooltip('Back to groups'));
+    await tester.tap(find.text('Moments 📸'));
+    await tester.pumpAndSettle();
+    expect(find.text('Feed page'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
-    expect(_listOffset(tester), closeTo(before, 1.0));
+    expect(find.text('Feed page'), findsNothing);
+    expect(_listOffset(tester), closeTo(beforeTool, 1.0));
   });
 
-  testWidgets('the members sheet closes on back, and the group page stays',
+  testWidgets('the members sheet closes on back, and the group stays expanded',
       (tester) async {
     final repo = _Repo(
       groups: [_trip('t1')],
@@ -187,7 +195,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsNothing);
-    expect(find.byTooltip('Back to groups'), findsOneWidget,
-        reason: 'back closed the sheet, not the group page');
+    expect(find.text('See all'), findsOneWidget,
+        reason: 'back closed the sheet, and the group is still expanded');
   });
 }

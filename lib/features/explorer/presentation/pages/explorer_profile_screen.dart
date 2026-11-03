@@ -61,6 +61,10 @@ class ExplorerProfileScreen extends StatefulWidget {
   /// null and reads Firestore; tests pass a fake.
   final Future<Map<String, dynamic>?> Function(String uid)? readProfileData;
 
+  /// Which tabs the own profile shows. Null follows kGroupsV2; tests pass it to try both
+  /// layouts.
+  final bool? groupsV2;
+
   const ExplorerProfileScreen({
     super.key,
     required this.uid,
@@ -68,6 +72,7 @@ class ExplorerProfileScreen extends StatefulWidget {
     this.emailHint,
     this.repository,
     this.readProfileData,
+    this.groupsV2,
   });
 
   @override
@@ -89,8 +94,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   String? _statusNote;
   String _activeCategory = 'all';
 
-  // Active tab: 'tours' | 'vault' | 'settings'
-  String _activeTab = defaultProfileTab(groupsV2: kGroupsV2);
+  // Active tab: 'tours' | 'vault' | 'settings' | 'games'. Set in initState, once the
+  // layout is known.
+  late String _activeTab;
+
+  /// Whether the groups-V2 tabs show (see [ExplorerProfileScreen.groupsV2]).
+  bool get _useGroupsV2 => widget.groupsV2 ?? kGroupsV2;
 
   // On someone else's profile: the groups you share with them, null until
   // known, and their email as their membership row in a shared group gives it.
@@ -110,6 +119,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     LocaleController.instance.addListener(_onLocaleChanged);
     _getExplorerProfile = getIt<GetExplorerProfileUseCase>();
     _tourId = widget.tourId;
+    _activeTab = defaultProfileTab(groupsV2: _useGroupsV2);
     _loadProfile();
   }
 
@@ -1366,7 +1376,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
 
   /// The own profile's tabs (see profileTabKeys).
-  List<String> get _ownTabKeys => profileTabKeys(groupsV2: kGroupsV2);
+  List<String> get _ownTabKeys => profileTabKeys(groupsV2: _useGroupsV2);
 
   /// Moves to the next or previous tab. The first and last tabs stop the swipe.
   /// Only the active tab's content is built, so a tab loads its data only while
@@ -1388,7 +1398,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          if (!kGroupsV2)
+          if (!_useGroupsV2)
             _buildTabItem(
               'tours',
               Icons.explore_rounded,
@@ -1468,7 +1478,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       case 'vault':
         return _buildKeepsakesTab(groups);
       case 'games':
-        return kGroupsV2 ? _buildGamesTabV2() : _gameAnalyticsSection();
+        return _useGroupsV2 ? _buildGamesTabV2() : _gameAnalyticsSection();
       case 'settings':
         return _buildPreferencesTab(profile);
       case 'tours':

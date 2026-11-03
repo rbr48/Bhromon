@@ -75,6 +75,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   TourGroup? _selectedGroup;
   // The tour the hub showed last time, read once when the hub opens.
   String? _rememberedTourId;
+
   /// The currently expanded group id on the groups list. Empty string means explicitly collapsed.
   String? _expandedGroupId;
   late Stream<List<TourGroup>> _groupsStream;
@@ -2115,8 +2116,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       for (final id in hubModulesFor(group))
         if (!(excludeGamesAndNews && (id == 'games' || id == 'news')))
           if (!(isGroupPage && id == 'safety'))
-            if (!(isGroupPage && id == 'calendar' && !group.isFamily))
-              id,
+            if (!(isGroupPage && id == 'calendar' && !group.isFamily)) id,
     ];
     final builders = <String, _ModuleItem Function()>{
       'feed': () => _ModuleItem(

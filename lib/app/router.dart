@@ -370,8 +370,8 @@ class AppRouter {
       ),
       GoRoute(
         path: '/holiday-calendar',
-        pageBuilder: (context, state) =>
-            _customPageTransition(state, const HolidayCalendarScreen(tourId: '')),
+        pageBuilder: (context, state) => _customPageTransition(
+            state, const HolidayCalendarScreen(tourId: '')),
       ),
       GoRoute(
         path: '/newspaper-reader',
