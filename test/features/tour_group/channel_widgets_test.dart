@@ -1,4 +1,5 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_composer.dart';
@@ -8,13 +9,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pumps [child] once the localizations have loaded, which takes a few frames.
-Future<void> _pump(WidgetTester tester, Widget child) async {
-  await tester.pumpWidget(_app(child));
+Future<void> _pump(WidgetTester tester, Widget child,
+    {ThemeData? theme}) async {
+  await tester.pumpWidget(_app(child, theme: theme));
   await tester.pumpAndSettle();
 }
 
-Widget _app(Widget child) {
+Widget _app(Widget child, {ThemeData? theme}) {
   return MaterialApp(
+    theme: theme,
     locale: const Locale('en'),
     supportedLocales: const [Locale('en'), Locale('bn')],
     localizationsDelegates: const [
@@ -514,4 +517,75 @@ void main() {
       expect(result?.kind, ChannelKind.voice);
     });
   });
+
+  group('readability of own bubbles', () {
+    Finder timeFinder() => find
+        .byWidgetPredicate((w) => w is Text && (w.data ?? '').contains(':'));
+
+    Finder bodyFinder() => find.byWidgetPredicate((w) =>
+        w is Text &&
+        (w.textSpan?.toPlainText() ?? w.data ?? '').contains('hello'));
+
+    Color? bodyColor(WidgetTester tester) {
+      final text = tester.widget<Text>(bodyFinder());
+      final root =
+          text.textSpan ?? TextSpan(text: text.data, style: text.style);
+      return _colorOfText(root, 'hello', text.style?.color);
+    }
+
+    testWidgets(
+        'the time on a light-theme own bubble is readable on pale green',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
+      expect(timeFinder(), findsOneWidget);
+      final color = tester.widget<Text>(timeFinder()).style?.color;
+      expect(color, AppColors.grayText);
+      expect(_contrast(color!, kOwnBubbleLight), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('the message text on a light-theme own bubble is dark',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
+      expect(bodyFinder(), findsOneWidget);
+      final color = bodyColor(tester);
+      expect(color, AppColors.darkText);
+      expect(_contrast(color!, kOwnBubbleLight), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('a dark-theme own bubble has white text and a readable time',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true),
+          theme: ThemeData.dark());
+      expect(bodyFinder(), findsOneWidget);
+      final body = bodyColor(tester);
+      expect(body, Colors.white);
+      expect(_contrast(body!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
+
+      final time = tester.widget<Text>(timeFinder()).style?.color;
+      expect(time, kOwnBubbleMetaColor);
+      expect(_contrast(time!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
+    });
+  });
+}
+
+/// WCAG contrast ratio between two colours.
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/// The colour the text containing [needle] is painted with, following the span
+/// tree and inheriting colours from the spans above it.
+Color? _colorOfText(InlineSpan span, String needle, Color? inherited) {
+  final color = (span is TextSpan ? span.style?.color : null) ?? inherited;
+  if (span is TextSpan && (span.text ?? '').contains(needle)) return color;
+  Color? found;
+  span.visitChildren((child) {
+    found ??= _colorOfText(child, needle, color);
+    return found == null;
+  });
+  return found;
 }
