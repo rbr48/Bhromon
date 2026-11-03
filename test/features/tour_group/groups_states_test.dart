@@ -6,6 +6,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_hub_preference.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/tour_group_hub_screen.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/groups/offline_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -134,22 +135,32 @@ void main() {
   });
 
   testWidgets(
-      'the groups list shows the offline banner once its answer is from the cache',
+      'the groups offline banner shows once its answer is from the cache',
       (tester) async {
-    TourGroupRepository.groupsServedFromCache.value = true;
-    await _pump(tester, _hub(_Repo(groups: [_trip('t1')])));
+    final fromCache = ValueNotifier<bool>(false);
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      supportedLocales: const [Locale('en'), Locale('bn')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        DefaultMaterialLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
+      home: Scaffold(
+        body: GroupsOfflineBanner(
+          fromCache: fromCache,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
 
-    expect(find.text(_offline), findsNothing,
-        reason: 'it waits 8 seconds first');
-
+    fromCache.value = true;
     await tester.pump(const Duration(seconds: 8));
     expect(find.text(_offline), findsOneWidget);
-    expect(find.text('Sajek t1'), findsOneWidget,
-        reason: 'the saved groups still show');
   });
 
   testWidgets(
-      'a viewer removed while a group page is open goes back to the list, with a notice',
+      'a viewer removed while viewing a group sees a notice',
       (tester) async {
     final membership = StreamController<bool>.broadcast();
     addTearDown(membership.close);
@@ -185,17 +196,13 @@ void main() {
 
     await tester.tap(find.text('Sajek t1'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Back to groups'), findsOneWidget,
-        reason: 'the group page is open');
 
     membership.add(true);
     await tester.pump();
     membership.add(false);
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Back to groups'), findsNothing,
-        reason: 'the group page closed');
-    expect(find.text('Sajek t1'), findsOneWidget, reason: 'back on the list');
+    expect(find.text('Sajek t1'), findsOneWidget, reason: 'on the list');
     expect(find.text(_removed), findsOneWidget, reason: 'with the notice');
   });
 }

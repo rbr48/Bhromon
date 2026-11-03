@@ -55,7 +55,7 @@ void main() {
   });
 
   testWidgets(
-      'a switcher chip expands that group inline and makes it the active group',
+      'tapping a group card expands that group inline and makes it the active group',
       (tester) async {
     final repo = _Repo(groups: [_trip('a', 'Sajek'), _trip('b', 'Bandarban')]);
     final router = GoRouter(
@@ -89,7 +89,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Bandarban'));
+    await tester.tap(find.text('Bandarban'));
     await tester.pumpAndSettle();
 
     // The selection is written asynchronously; give the write time to land.

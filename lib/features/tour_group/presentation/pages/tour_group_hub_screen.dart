@@ -22,10 +22,10 @@ import '../widgets/groups/group_card.dart';
 import '../widgets/groups/members_sheet.dart';
 import '../widgets/groups/members_strip.dart';
 import '../widgets/groups/next_step_card.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/groups/group_skeleton.dart';
-import '../widgets/groups/offline_banner.dart';
+import '../widgets/groups/member_avatar.dart';
 import '../widgets/groups/sos_row.dart';
-import '../widgets/groups/switcher_chips.dart';
 import '../widgets/tour_membership_guard.dart';
 import '../widgets/group_avatar.dart';
 import '../widgets/group_photo_sheet.dart';
@@ -84,11 +84,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     _groupsStream = _repository.watchMyGroups();
     _rememberedTourId = _active.current;
     final routeTourId = widget.initialTourId;
-    if (routeTourId != null) {
+    if (routeTourId != null && routeTourId.isNotEmpty) {
       unawaited(_active.select(routeTourId));
       _expandedGroupId = routeTourId;
     } else {
-      _expandedGroupId = _rememberedTourId;
+      _expandedGroupId = null;
     }
   }
 
@@ -795,7 +795,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     setState(() {
       if (_expandedGroupId == group.id) {
         // Tapping currently expanded group toggles collapse
-        _expandedGroupId = '';
+        _expandedGroupId = null;
       } else {
         // Tapping collapsed group expands it inline
         _expandedGroupId = group.id;
@@ -858,7 +858,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  /// The groups list: switcher chips, and expandable group cards showing members and tools inline.
+  /// The clean groups list: expandable group cards showing members and tools inline.
   Widget _buildGroupsList(
     BuildContext context,
     AsyncSnapshot<List<TourGroup>> snapshot,
@@ -868,11 +868,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final loading = snapshot.connectionState == ConnectionState.waiting &&
         !snapshot.hasData;
     final selectedId = _active.current;
-    final effectiveExpandedId = _expandedGroupId == ''
-        ? null
-        : (_expandedGroupId ??
-            selectedId ??
-            (groups.isNotEmpty ? groups.first.id : null));
+    final effectiveExpandedId = _expandedGroupId;
     return Scaffold(
       backgroundColor: context.forest.background,
       appBar: _hubAppBar(context),
@@ -899,9 +895,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   style: TextStyle(color: context.forest.text70, fontSize: 13),
                 ),
               ],
-              GroupsOfflineBanner(
-                fromCache: TourGroupRepository.groupsServedFromCache,
-              ),
               const SizedBox(height: 12),
               if (loading)
                 const GroupSkeleton()
@@ -910,14 +903,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               else if (groups.isEmpty)
                 _buildEmptyState(context)
               else ...[
-                if (groups.length >= 2) ...[
-                  SwitcherChips(
-                    groups: groups,
-                    selectedId: effectiveExpandedId ?? selectedId,
-                    onSelected: _openGroup,
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 for (final group in groups)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -1058,9 +1043,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         final members = snapshot.data;
         // Never "0 members" while the members load (section 5.2).
         if (members == null) return const GroupSkeleton(cards: 1);
+        final isAdmin = _viewerIsAdmin(members);
+        final isOwner = _viewerIsOwner(group, members);
         return MembersStrip(
           members: members,
           onSeeAll: () => _openMembers(context, group, members),
+          onMemberTap: (member) => _showManageMemberSheet(
+            context,
+            group.id,
+            member,
+            viewerIsOwner: isOwner,
+            viewerIsAdmin: isAdmin,
+          ),
         );
       },
     );
@@ -3738,23 +3732,45 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ),
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: AppColors.midGreen,
-                    backgroundImage: member.photoUrl != null
-                        ? NetworkImage(signedMediaUrl(member.photoUrl!))
-                        : null,
-                    child: member.photoUrl == null
-                        ? Text(
-                            member.displayName.isNotEmpty
-                                ? member.displayName[0].toUpperCase()
-                                : 'M',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18),
-                          )
-                        : null,
+                  InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => _showAvatarViewer(
+                        context, member.displayName, member.photoUrl),
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.midGreen,
+                          backgroundImage: member.photoUrl != null
+                              ? NetworkImage(signedMediaUrl(member.photoUrl!))
+                              : null,
+                          child: member.photoUrl == null
+                              ? Text(
+                                  member.displayName.isNotEmpty
+                                      ? member.displayName[0].toUpperCase()
+                                      : 'M',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18),
+                                )
+                              : null,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: context.forest.card,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.zoom_in_rounded,
+                            size: 12,
+                            color: context.forest.accentText,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -3771,7 +3787,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          member.email,
+                          viewerIsAdmin || isMe
+                              ? member.email
+                              : member.role.toValue().toUpperCase(),
                           style: TextStyle(
                               color: context.forest.text54, fontSize: 12),
                         ),
@@ -4052,6 +4070,75 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Displays the full member avatar picture in a high-res dialog for all members.
+  void _showAvatarViewer(BuildContext context, String name, String? photoUrl) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.85),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                tooltip: context.l10n.translate('group_close'),
+                icon: const Icon(Icons.close_rounded,
+                    color: Colors.white, size: 28),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: photoUrl != null && photoUrl.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.sizeOf(ctx).width * 0.85,
+                          maxHeight: MediaQuery.sizeOf(ctx).height * 0.6,
+                        ),
+                        child: CachedNetworkImage(
+                          imageUrl: signedMediaUrl(photoUrl),
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => const SizedBox(
+                            width: 140,
+                            height: 140,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                  color: AppColors.mintGreen),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => MemberAvatar(
+                            name: name,
+                            size: 160,
+                          ),
+                        ),
+                      ),
+                    )
+                  : MemberAvatar(
+                      name: name,
+                      size: 160,
+                    ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }

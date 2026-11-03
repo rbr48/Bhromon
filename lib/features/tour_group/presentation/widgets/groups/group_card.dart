@@ -42,7 +42,7 @@ class GroupCard extends StatelessWidget {
     final kind = group.isFamily
         ? l10n.translate('hub_section_family')
         : l10n.translate('hub_section_trips');
-    final isHighlighted = selected || isExpanded;
+    final isHighlighted = isExpanded;
     return Semantics(
       button: true,
       selected: selected,
