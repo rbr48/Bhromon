@@ -57,52 +57,68 @@ class MembersStrip extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 4,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.people_alt_rounded,
-                          size: 18, color: context.forest.accentText),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.translate('group_members_title_loading'),
-                        style: TextStyle(
-                          color: context.forest.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: context.forest.text.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          l10n.number(members.length),
-                          style: TextStyle(
-                            color: context.forest.accentText,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    ),
-                    onPressed: onSeeAll,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxW),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(l10n.translate('group_members_see_all')),
-                        const SizedBox(width: 2),
-                        const Icon(Icons.chevron_right_rounded, size: 16),
+                        Icon(Icons.people_alt_rounded,
+                            size: 18, color: context.forest.accentText),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            l10n.translate('group_members_title_loading'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: context.forest.text,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: context.forest.text.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            l10n.number(members.length),
+                            style: TextStyle(
+                              color: context.forest.accentText,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ],
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxW),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      onPressed: onSeeAll,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              l10n.translate('group_members_see_all'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.chevron_right_rounded, size: 16),
+                        ],
+                      ),
                     ),
                   ),
                 ],

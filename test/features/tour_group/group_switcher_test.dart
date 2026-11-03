@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 
-// A switcher chip opens its group page and makes that group the active one (plan P3.5),
+// A switcher chip expands that group inline and makes that group the active one,
 // the same as a tap on its card.
 
 class _Repo extends TourGroupRepository {
@@ -55,7 +55,7 @@ void main() {
   });
 
   testWidgets(
-      'a switcher chip opens its group page and makes it the active group',
+      'a switcher chip expands that group inline and makes it the active group',
       (tester) async {
     final repo = _Repo(groups: [_trip('a', 'Sajek'), _trip('b', 'Bandarban')]);
     final router = GoRouter(
@@ -92,8 +92,6 @@ void main() {
     await tester.tap(find.widgetWithText(ChoiceChip, 'Bandarban'));
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Back to groups'), findsOneWidget,
-        reason: 'the chip opened the group page');
     // The selection is written asynchronously; give the write time to land.
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 100)));

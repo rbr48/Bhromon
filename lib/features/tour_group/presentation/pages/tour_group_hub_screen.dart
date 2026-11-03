@@ -27,7 +27,6 @@ import '../widgets/groups/offline_banner.dart';
 import '../widgets/groups/sos_row.dart';
 import '../widgets/groups/switcher_chips.dart';
 import '../widgets/tour_membership_guard.dart';
-import '../tour_routes.dart';
 import '../widgets/group_avatar.dart';
 import '../widgets/group_photo_sheet.dart';
 import '../widgets/family/family_home_card.dart';
@@ -75,6 +74,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   TourGroup? _selectedGroup;
   // The tour the hub showed last time, read once when the hub opens.
   String? _rememberedTourId;
+  /// The currently expanded group id on the groups list. Empty string means explicitly collapsed.
+  String? _expandedGroupId;
   late Stream<List<TourGroup>> _groupsStream;
 
   @override
@@ -83,7 +84,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     _groupsStream = _repository.watchMyGroups();
     _rememberedTourId = _active.current;
     final routeTourId = widget.initialTourId;
-    if (routeTourId != null) unawaited(_active.select(routeTourId));
+    if (routeTourId != null) {
+      unawaited(_active.select(routeTourId));
+      _expandedGroupId = routeTourId;
+    } else {
+      _expandedGroupId = _rememberedTourId;
+    }
   }
 
   Stream<List<TourMember>> _membersOf(String tourId) =>
@@ -786,11 +792,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   void _openGroup(TourGroup group) {
     unawaited(_active.select(group.id));
-    context.go(tourHubPath(group.id));
+    setState(() {
+      if (_expandedGroupId == group.id) {
+        // Tapping currently expanded group toggles collapse
+        _expandedGroupId = '';
+      } else {
+        // Tapping collapsed group expands it inline
+        _expandedGroupId = group.id;
+        _selectedGroup = group;
+      }
+    });
   }
 
-  /// Behind kGroupsV2: the groups list when the route names no group, and the group page
-  /// when it names one.
+  /// Behind kGroupsV2: the groups list with inline expandable group details.
   Widget _buildGroupsV2(
     BuildContext context,
     AsyncSnapshot<List<TourGroup>> snapshot,
@@ -804,7 +818,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     for (final candidate in groups) {
       if (candidate.id == routeId) group = candidate;
     }
-    if (group != null) return _buildGroupPage(context, group);
+    if (group != null) {
+      _expandedGroupId ??= routeId;
+      return _buildGroupsList(context, snapshot, groups);
+    }
     final loading = snapshot.connectionState == ConnectionState.waiting &&
         !snapshot.hasData;
     return _buildGroupShell(
@@ -841,8 +858,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  /// The groups list (B1): the switcher, one card per group, and the members of the
-  /// selected group. Empty and loading states follow section 5.2.
+  /// The groups list: switcher chips, and expandable group cards showing members and tools inline.
   Widget _buildGroupsList(
     BuildContext context,
     AsyncSnapshot<List<TourGroup>> snapshot,
@@ -852,6 +868,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final loading = snapshot.connectionState == ConnectionState.waiting &&
         !snapshot.hasData;
     final selectedId = _active.current;
+    final effectiveExpandedId = _expandedGroupId == ''
+        ? null
+        : (_expandedGroupId ??
+            selectedId ??
+            (groups.isNotEmpty ? groups.first.id : null));
     return Scaffold(
       backgroundColor: context.forest.background,
       appBar: _hubAppBar(context),
@@ -859,7 +880,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 960),
           child: ListView(
-            // Keeps the scroll position across the trip to a group page and back.
+            // Keeps the scroll position across toggling group cards.
             key: const PageStorageKey<String>('groups-list'),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
@@ -889,21 +910,25 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               else if (groups.isEmpty)
                 _buildEmptyState(context)
               else ...[
-                if (groups.length > 2) ...[
+                if (groups.length >= 2) ...[
                   SwitcherChips(
                     groups: groups,
-                    selectedId: selectedId,
+                    selectedId: effectiveExpandedId ?? selectedId,
                     onSelected: _openGroup,
                   ),
                   const SizedBox(height: 12),
                 ],
                 for (final group in groups)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: GroupCard(
                       group: group,
                       selected: group.id == selectedId,
+                      isExpanded: group.id == effectiveExpandedId,
                       onTap: () => _openGroup(group),
+                      expandedContent: group.id == effectiveExpandedId
+                          ? _buildExpandedGroupDetail(context, group)
+                          : null,
                     ),
                   ),
               ],
@@ -915,88 +940,113 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  /// The group page (B2): the members strip, the next step, the safety row, and the group
-  /// tools without Game zone and News (decisions D-1, D-2 and D-8).
-  Widget _buildGroupPage(BuildContext context, TourGroup group) {
+  /// The inline expanded details for [group]: quick action bar, members strip, next step,
+  /// SOS siren row, and the modules grid without Game zone and News.
+  Widget _buildExpandedGroupDetail(BuildContext context, TourGroup group) {
     final l10n = context.l10n;
-    final kind = group.isFamily
-        ? l10n.translate('hub_section_family')
-        : l10n.translate('hub_section_trips');
-    final subtitle = group.isFamily
-        ? kind
-        : '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – '
-            '${localizedDateFormat('d MMM yyyy').format(group.endDate)}';
-    return Scaffold(
-      backgroundColor: context.forest.background,
-      appBar: AppBar(
-        backgroundColor: context.forest.background,
-        elevation: 0,
-        leading: IconButton(
-          tooltip: l10n.translate('group_back_to_list'),
-          icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
-          onPressed: () => context.go('/group-hub'),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              group.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.forest.text,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+    return TourMembershipGuard(
+      tourId: group.id,
+      repository: _repository,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Group info & actions bar: Invite Code + Share + Group Menu
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: context.forest.inset26,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.forest.divider10),
             ),
-            Text(
-              subtitle,
-              style: TextStyle(color: context.forest.text54, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [_groupMenuButton(context, group)],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: TourMembershipGuard(
-            tourId: group.id,
-            repository: _repository,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            child: Row(
               children: [
-                _memberStripFor(context, group),
-                const SizedBox(height: 14),
-                NextStepCard(group: group, now: DateTime.now()),
-                if (!group.isManaged) ...[
-                  SosRow(
-                    title: l10n.translate('hub_module_safety'),
-                    subtitle: l10n.translate('group_sos_sub'),
-                    onTap: () => context.push('/group/${group.id}/safety'),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                Text(
-                  l10n.translate('hub_modules_heading'),
-                  style: TextStyle(
-                    color: context.forest.text,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    letterSpacing: 0.5,
+                // Invite code pill
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _copyInviteCode(group.inviteCode),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.midGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.copy_rounded,
+                              size: 13, color: AppColors.mintGreen),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              l10n.translate('hub_invite_line',
+                                  args: {'code': group.inviteCode}),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.mintGreen,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                _buildModulesGrid(context, group,
-                    excludeGamesAndNews: true, isGroupPage: true),
-                const SizedBox(height: 20),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: Icon(Icons.share_rounded,
+                      size: 20, color: context.forest.text70),
+                  tooltip: l10n.translate('hub_share_invite'),
+                  onPressed: () => _shareInvite(group),
+                  visualDensity: VisualDensity.compact,
+                ),
+                _groupMenuButton(context, group),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+
+          // 2. Members strip
+          _memberStripFor(context, group),
+          const SizedBox(height: 14),
+
+          // 3. Next step (for trips)
+          NextStepCard(group: group, now: DateTime.now()),
+
+          // 4. Safety SOS row (if not managed)
+          if (!group.isManaged) ...[
+            SosRow(
+              title: l10n.translate('hub_module_safety'),
+              subtitle: l10n.translate('group_sos_sub'),
+              onTap: () => context.push('/group/${group.id}/safety'),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          // 5. Tools heading
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 8),
+            child: Text(
+              l10n.translate('hub_modules_heading'),
+              style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+
+          // 6. Tools grid
+          _buildModulesGrid(context, group,
+              excludeGamesAndNews: true, isGroupPage: true),
+          const SizedBox(height: 4),
+        ],
       ),
-      bottomNavigationBar: BhromonBottomNav(selectedIndex: 0, tourId: group.id),
     );
   }
 
@@ -2251,7 +2301,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           childAspectRatio = 2.1;
         } else {
           crossAxisCount = 2;
-          childAspectRatio = 2.35;
+          childAspectRatio = 2.0;
         }
 
         return GridView.builder(
