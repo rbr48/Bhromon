@@ -266,6 +266,11 @@ static session while the user visits other screens, and asks before discarding a
   - Video stories render a styled `▶ ভিডিও` pill badge instead of attempting to decode raw `.mp4` video bytes into image widgets.
   - Section headings omit `pw.NewPage()` when the section has no entries, preventing blank pages. Unicode arrows (`→`) are converted to em-dashes (`—`) to prevent fallback glyph corruption.
 
+### I. Local Encrypted Storage (Hive, `HiveEncryptionService`)
+- **Boxes open through `openEncryptedBox`** (`lib/core/security/hive_encryption_service.dart`), with the device key kept in the platform keystore. The fixed key that older versions fell back to is only ever read, to move a box to the device key. Without a device key, boxes live in memory for the session and nothing is written to disk.
+- **A box is checked before it is opened.** The device key must read it, or an older key must, and then its entries move to the device key. Native checks a copy of the file and web checks the box in IndexedDB; a box the device key opened last time (`hive_key_marks`) opens directly on both. Hive lower-cases box names, and the service looks for the same files. A box that no known key can read (a wrong key, or a damaged file) is recreated empty under the device key. Any other failure (a file that cannot be read, a folder in the way, a storage error) throws to the caller and leaves the file as it is. Do not add a memory fallback for an unreadable box: its data would be lost when the session ends.
+- **Tests:** `test/performance/hive_encryption_test.dart` (native), `test/core/security/hive_web_storage_test.dart` (the web path, run on files) and `test/core/security/hive_web_storage_browser_test.dart` (Chrome: `flutter test --platform chrome <file>`).
+
 ---
 
 ## 5. Testing & Quality Verification Checklist

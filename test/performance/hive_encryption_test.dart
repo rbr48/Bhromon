@@ -12,6 +12,23 @@ import '../helpers/perf_fixtures.dart';
 final _legacyCipher =
     HiveAesCipher(List<int>.generate(32, (i) => (i * 7 + 13) % 256));
 
+/// A key this device never has.
+final _strangerCipher = HiveAesCipher(List<int>.generate(32, (i) => 255 - i));
+
+/// Runs [body] in a guarded zone, so the stray errors of a failed Hive open do not
+/// fail the test. The result of [body] is what the test checks.
+Future<T> _guarded<T>(Future<T> Function() body) {
+  final result = Completer<T>();
+  runZonedGuarded(() async {
+    try {
+      result.complete(await body());
+    } catch (error, stackTrace) {
+      if (!result.isCompleted) result.completeError(error, stackTrace);
+    }
+  }, (error, stackTrace) {});
+  return result.future;
+}
+
 void main() {
   late Directory dir;
 
@@ -233,5 +250,65 @@ void main() {
     ]);
     expect(boxes.toSet(), hasLength(1));
     expect(boxes.first.length, 12);
+  });
+
+  test('a folder in the way of a box fails the open and is left alone',
+      () async {
+    final service = HiveEncryptionService.withStorage(CountingSecureStorage());
+    Directory('${dir.path}/drafts.hive').createSync();
+
+    await expectLater(
+      _guarded(() => service.openEncryptedBox<dynamic>('drafts')),
+      throwsA(anything),
+    );
+
+    expect(Directory('${dir.path}/drafts.hive').existsSync(), isTrue);
+    expect(service.usedInMemoryFallback, isFalse);
+  });
+
+  test('a box left in its compacted form is found and moved to the device key',
+      () async {
+    await writeBox('ledger', _legacyCipher, 9);
+    // A compaction cut short leaves the compacted file in place of the box file.
+    boxFile('ledger').renameSync('${dir.path}/ledger.hivec');
+    final service = HiveEncryptionService.withStorage(CountingSecureStorage());
+
+    final box = await service.openEncryptedBox<dynamic>('ledger');
+
+    expect(box.length, 9);
+    expect(box.get('k8'), 'v8');
+    await box.close();
+    expect(File('${dir.path}/ledger.hivec').existsSync(), isFalse);
+    expect(await opensWith('ledger', _legacyCipher), isFalse);
+  });
+
+  test('a box whose name has capitals is read under the file Hive writes',
+      () async {
+    // Hive lower-cases box names. Channel and chat caches use names with capitals.
+    await writeBox('chat_cache_msgs_AbC', _legacyCipher, 6);
+    final service = HiveEncryptionService.withStorage(CountingSecureStorage());
+
+    final box = await service.openEncryptedBox<dynamic>('chat_cache_msgs_AbC');
+
+    expect(box.length, 6);
+    await box.close();
+    expect(await opensWith('chat_cache_msgs_abc', _legacyCipher), isFalse);
+    expect(await opensWith('chat_cache_msgs_abc', null), isFalse);
+  });
+
+  test(
+      'an interrupted copy that neither key reads is dropped, and the original '
+      'is moved to the device key', () async {
+    await writeBox('settings', _legacyCipher, 4);
+    // A copy cut short while it was written: the original was not touched yet.
+    await writeBox('settings__rekey', _strangerCipher, 2);
+    final service = HiveEncryptionService.withStorage(CountingSecureStorage());
+
+    final box = await service.openEncryptedBox<dynamic>('settings');
+
+    expect(box.length, 4);
+    await box.close();
+    expect(File('${dir.path}/settings__rekey.hive').existsSync(), isFalse);
+    expect(await opensWith('settings', _legacyCipher), isFalse);
   });
 }

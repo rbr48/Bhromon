@@ -12,25 +12,24 @@ import '../utils/app_logger.dart';
 
 /// Opens Hive boxes encrypted with a key kept in the platform keystore.
 ///
-/// Two things this guards against:
-/// - It never encrypts with a key anyone can read. Earlier versions fell back
-///   to a fixed key, compiled into the app, whenever secure storage failed.
-///   Without a key now, boxes are kept in memory for the session and nothing
-///   is written to disk.
-/// - It never opens a box with a key that might be wrong. With Hive's default
-///   crash recovery a wrong key makes every frame look corrupt and the file is
-///   truncated to nothing; with recovery off a failed open leaves stray async
-///   errors behind. So readability is probed on a throwaway copy, and a box
-///   written with the old fixed key (or unencrypted) is re-encrypted with the
-///   device key through a temporary copy, so a crash can't lose it.
+/// What it guarantees:
+/// - It never encrypts with a key anyone can read. Earlier versions fell back to a
+///   fixed key, compiled into the app, whenever secure storage failed. Without a key
+///   now, boxes are kept in memory for the session and nothing is written to disk.
+/// - A box is checked before it is opened: the device key must read it, or an older
+///   key must, and then its entries move to the device key through a temporary copy,
+///   so a crash can't lose them. A box the device key opened last time
+///   (marked in `hive_key_marks`) opens directly.
+/// - A box that no known key can read (a wrong key, a damaged file) is recreated
+///   empty under the device key. Any other failure, such as a file that cannot be
+///   read or a storage error, throws to the caller and leaves the file as it is.
 @lazySingleton
 class HiveEncryptionService {
   final FlutterSecureStorage _secureStorage;
   final String _keyName = 'hive_encryption_key';
 
-  // On web, boxes live in IndexedDB, which cannot be copied to be probed, so they
-  // are checked with direct opens instead (see _openWeb). Tests run that path on
-  // files through `webStorage`.
+  // On web, boxes live in IndexedDB, which cannot be copied, so they are probed
+  // where they are (see _probe). Tests run that path on files through `webStorage`.
   final bool _webStorage;
 
   HiveEncryptionService()
@@ -61,6 +60,10 @@ class HiveEncryptionService {
   final Map<String, Future<Box<dynamic>>> _boxes = {};
 
   final Set<String> _inMemoryBoxes = {};
+
+  int _probes = 0;
+
+  String? _hiveHome;
 
   /// True once any box was kept in memory because there was no device key.
   @visibleForTesting
@@ -113,8 +116,8 @@ class HiveEncryptionService {
   ];
 
   /// Opens each box the app uses, so one that still depends on the old fixed key is
-  /// re-encrypted at launch rather than whenever it is next used. A box that cannot be
-  /// opened is logged and left as it is.
+  /// re-encrypted at launch rather than whenever it is next used. A box that cannot
+  /// be opened is logged and left as it is.
   Future<void> migrateEncryptedBoxes() async {
     for (final name in encryptedBoxNames) {
       try {
@@ -125,24 +128,18 @@ class HiveEncryptionService {
     }
   }
 
-  /// Opens an encrypted Hive box safely.
-  ///
-  /// A [rebuildable] box is a cache, fetched again when it is missing. If it cannot
-  /// be opened it is deleted and created afresh, and if that fails too it is kept
-  /// in memory for the session. Any other box is never deleted here: a failure
-  /// reaches the caller and the data stays on disk.
-  Future<Box<T>> openEncryptedBox<T>(
-    String boxName, {
-    bool rebuildable = false,
-  }) async {
+  /// Opens an encrypted Hive box. A box no known key can read is recreated empty
+  /// under the device key; any other failure throws and leaves the box on disk as it
+  /// was. A box is never kept in memory for a lack of a readable key, because that
+  /// would lose what it holds at the end of the session.
+  Future<Box<T>> openEncryptedBox<T>(String boxName) async {
     final cached = _boxes[boxName];
     if (cached != null) {
       final box = await cached;
       if (box.isOpen) return box as Box<T>;
       _boxes.remove(boxName);
     }
-    final opening =
-        rebuildable ? _openRebuildable<T>(boxName) : _open<T>(boxName);
+    final opening = _open<T>(boxName);
     _boxes[boxName] = opening;
     try {
       return await opening;
@@ -152,177 +149,219 @@ class HiveEncryptionService {
     }
   }
 
-  /// Opens a cache box. If the first open fails, the box is deleted and opened
-  /// again; if that fails too, it is kept in memory. The file is never replaced
-  /// with an unencrypted one.
-  Future<Box<T>> _openRebuildable<T>(String boxName) async {
-    try {
-      return await _open<T>(boxName);
-    } catch (error, stackTrace) {
-      logWarning(
-          '[HiveEncryption] Cache $boxName could not be opened, recreating it',
-          error,
-          stackTrace);
-    }
-    try {
-      await Hive.deleteBoxFromDisk(boxName);
-    } catch (error, stackTrace) {
-      logWarning('[HiveEncryption] Could not delete cache $boxName', error,
-          stackTrace);
-    }
-    try {
-      return await _open<T>(boxName);
-    } catch (error, stackTrace) {
-      logWarning(
-          '[HiveEncryption] Cache $boxName still cannot be opened; keeping it in memory this session',
-          error,
-          stackTrace);
-      return _openInMemory<T>(boxName);
-    }
-  }
-
   Future<Box<T>> _open<T>(String boxName) async {
     if (Hive.isBoxOpen(boxName)) return Hive.box<T>(boxName);
 
     final key = await _deviceKey();
     if (key == null) return _openInMemory<T>(boxName);
 
-    if (_webStorage) {
-      await _finishInterruptedMigration(boxName, key);
-      return _openWeb<T>(boxName, key);
-    }
-
     await _finishInterruptedMigration(boxName, key);
+    if (_webStorage) return _openWeb<T>(boxName, key);
 
     final marks = await Hive.openBox<dynamic>(_keyMarksBox);
     await _resolveHome();
     final knownGood = marks.get(boxName) == key.fingerprint;
     if (knownGood || !await Hive.boxExists(boxName)) {
+      // Opened with the device key directly: it was the last key that opened this
+      // box, or there is no file yet.
       final box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
       await marks.put(boxName, key.fingerprint);
       return box;
     }
 
-    // First open of an existing box since it was last marked: find out which
-    // key it was written with, without touching the file itself.
+    // First open of an existing box since it was last marked: find out which key
+    // reads it before opening it with one.
     final Box<T> box;
-    if (await _readableWith(boxName, key.cipher) != null) {
+    if (await _probe(boxName, key.cipher) != null) {
       box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
     } else {
-      final legacy = await _readableWith(boxName, _legacyFallbackCipher) ??
-          await _readableWith(boxName, null);
-      if (legacy != null) {
-        box = await _reencrypt<T>(boxName, key, legacy);
-      } else {
-        // Unreadable with every key we know (genuinely corrupt, or encrypted
-        // with a keystore key that no longer exists): let Hive recover it.
-        logWarning('[HiveEncryption] $boxName is unreadable; recovering');
-        box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
-      }
+      box = await _moveOrRecreate<T>(boxName, key);
     }
     await marks.put(boxName, key.fingerprint);
     return box;
   }
 
-  /// Opens a box on web. Web storage cannot be copied, so the box is probed
-  /// directly: a failed open writes nothing, and the box stays as it was. The
-  /// device key is tried first, then the older keys (migrating what they read);
-  /// a box that none of them can read is never emptied or replaced, and the open
-  /// fails so the caller can see it.
+  /// Opens a box on web. Web storage cannot be copied, so the box is probed where it
+  /// is: a probe that fails writes nothing.
   Future<Box<T>> _openWeb<T>(String boxName, _DeviceKey key) async {
     final marks = await Hive.openBox<dynamic>(_keyMarksBox);
     final knownGood = marks.get(boxName) == key.fingerprint;
-    final Box<T> box;
+    Box<T>? box;
     if (knownGood) {
+      // Opened with the device key last time, so it is opened directly. A failed
+      // open falls through to the same checks as any other box.
+      box = await _openIfReadable<T>(boxName, key.cipher);
+    } else if (await _probe(boxName, key.cipher) != null) {
       box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
-    } else if (await _readableWith(boxName, key.cipher) != null) {
-      box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
-      // Text and numbers saved before encryption were stored as they were, and
-      // open with any key. Writing them back encrypts them.
+      // Text and numbers saved before encryption open with any key. Writing them
+      // back encrypts them.
       await box.putAll(box.toMap().cast<dynamic, T>());
-    } else {
-      final legacy = await _readableWith(boxName, _legacyFallbackCipher) ??
-          await _readableWith(boxName, null);
-      if (legacy == null) {
-        throw HiveError(
-            '[HiveEncryption] $boxName cannot be read with the device key or an older key; it is left as it is');
-      }
-      box = await _reencrypt<T>(boxName, key, legacy);
     }
+    box ??= await _moveOrRecreate<T>(boxName, key);
     await marks.put(boxName, key.fingerprint);
     return box;
   }
 
-  /// The entries of [boxName] if they can be read with [cipher], else null. On web
-  /// nothing is copied: the box is opened directly. A box that does not exist yet
-  /// is created empty and reads as empty. Stray errors from a failed open stay in
-  /// the zone, as they do for the copy on native.
-  Future<Map<dynamic, dynamic>?> _readDirectly(
-      String boxName, HiveCipher? cipher) async {
-    final result = Completer<Map<dynamic, dynamic>?>();
+  /// Opens [boxName] with [cipher] without reading it first. Null when [cipher]
+  /// cannot read it; any other failure throws. The open runs in a zone of its own,
+  /// for the same reason as [_readEntries].
+  Future<Box<T>?> _openIfReadable<T>(String boxName, HiveCipher cipher) {
+    final result = Completer<Box<T>?>();
     runZonedGuarded(() async {
       try {
-        final box = await Hive.openBox<dynamic>(boxName,
-            encryptionCipher: cipher, crashRecovery: false);
-        final entries = box.toMap();
-        await box.close();
-        if (!result.isCompleted) result.complete(entries);
-      } catch (_) {
-        if (!result.isCompleted) result.complete(null);
+        result.complete(await Hive.openBox<T>(boxName,
+            encryptionCipher: cipher, crashRecovery: false));
+      } catch (error, stackTrace) {
+        if (result.isCompleted) return;
+        if (_isDecodeFailure(error)) {
+          result.complete(null);
+        } else {
+          result.completeError(error, stackTrace);
+        }
       }
-    }, (_, __) {
-      if (!result.isCompleted) result.complete(null);
-    });
+    }, (error, stackTrace) => logSkipped(error, stackTrace));
     return result.future;
   }
 
-  int _probes = 0;
+  /// The box is not readable with the device key. If an older key reads it, its
+  /// entries move to the device key; if none does, no known key can read it and it
+  /// is recreated empty.
+  Future<Box<T>> _moveOrRecreate<T>(String boxName, _DeviceKey key) async {
+    final older = await _readWithOlderKey(boxName);
+    if (older != null) return _reencrypt<T>(boxName, key, older);
+    return _recreate<T>(boxName, key);
+  }
 
-  /// Every entry of [boxName] if it can be read with [cipher] (null = no
-  /// encryption), else null. Works on a copy of the file: a failed Hive open
-  /// leaves an unawaited close and an unlistened error behind, which must
-  /// not reach the real box or the app's error reporting.
-  Future<Map<dynamic, dynamic>?> _readableWith(
+  /// The entries of [boxName] read with the fixed key that older versions used, or
+  /// else with no key (the box was never encrypted). Null when neither reads it.
+  Future<Map<dynamic, dynamic>?> _readWithOlderKey(String boxName) async =>
+      await _probe(boxName, _legacyFallbackCipher) ??
+      await _probe(boxName, null);
+
+  /// Recreates a box that no known key can read: empty, under the device key. On web
+  /// the old box is deleted first. On native, Hive's crash recovery empties it and
+  /// keeps the valid frames of a partly damaged file.
+  Future<Box<T>> _recreate<T>(String boxName, _DeviceKey key) async {
+    logWarning(
+        '[HiveEncryption] $boxName cannot be read with the device key or an '
+        'older key; recreating it empty');
+    if (_webStorage) await _deleteBox(boxName);
+    return Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+  }
+
+  /// The entries of [boxName] if [cipher] reads it (null = no encryption), else
+  /// null. A box with no file reads as empty.
+  ///
+  /// The whole box is read, so a value that does not decode counts as unreadable
+  /// too. A failure that is not a decoding error (a file that cannot be read, a
+  /// storage error) throws, and nothing is changed. Native reads a copy of the file,
+  /// so a failed open leaves the real one alone.
+  Future<Map<dynamic, dynamic>?> _probe(
       String boxName, HiveCipher? cipher) async {
-    if (_webStorage) return _readDirectly(boxName, cipher);
-    final source = _boxFile(boxName);
-    if (source == null || !source.existsSync()) return null;
-    final probe = '$boxName$_probeSuffix${_probes++}';
-    final probeFile = File('${source.parent.path}/$probe.hive');
-    source.copySync(probeFile.path);
+    if (_webStorage) return _readEntries(boxName, cipher);
+    await _resolveHome();
+    final source = _sourceFile(boxName);
+    if (source == null) return const {};
+    final copyName = '$boxName$_probeSuffix${_probes++}';
+    try {
+      source.copySync(_fileFor(copyName).path);
+      return await _readEntries(copyName, cipher);
+    } finally {
+      await _discardProbe(copyName);
+    }
+  }
 
+  /// Opens [name] with [cipher] and reads every entry. The open runs in a zone of
+  /// its own: a failed Hive open leaves an unawaited close and an unlistened error
+  /// behind, and those must not reach the app's error reporting. The awaited result
+  /// decides, so the zone only logs what it catches.
+  Future<Map<dynamic, dynamic>?> _readEntries(String name, HiveCipher? cipher) {
+    // An open box would be handed back as it is, and closed here: never probe one.
+    assert(!Hive.isBoxOpen(name));
     final result = Completer<Map<dynamic, dynamic>?>();
     runZonedGuarded(() async {
       try {
-        final box = await Hive.openBox<dynamic>(probe,
-            encryptionCipher: cipher, crashRecovery: false);
-        final entries = box.toMap();
-        await box.close();
-        if (!result.isCompleted) result.complete(entries);
-      } on HiveError {
-        if (!result.isCompleted) result.complete(null);
+        result.complete(await _readOpened(name, cipher));
+      } catch (error, stackTrace) {
+        if (result.isCompleted) return;
+        if (_isDecodeFailure(error)) {
+          result.complete(null);
+        } else {
+          result.completeError(error, stackTrace);
+        }
       }
-    }, (_, __) {
-      // Stray errors from Hive's failed open of the probe copy.
-      if (!result.isCompleted) result.complete(null);
-    });
-    final entries = await result.future;
+    }, (error, stackTrace) => logSkipped(error, stackTrace));
+    return result.future;
+  }
+
+  /// Reads every entry of [name] with crash recovery off, so a damaged file fails
+  /// the open instead of being truncated, and closes the box again.
+  Future<Map<dynamic, dynamic>> _readOpened(
+      String name, HiveCipher? cipher) async {
+    final box = await Hive.openBox<dynamic>(name,
+        encryptionCipher: cipher, crashRecovery: false);
     try {
-      if (probeFile.existsSync()) probeFile.deleteSync();
+      return box.toMap();
+    } finally {
+      await box.close();
+    }
+  }
+
+  /// Whether [error] says the bytes do not decode with the key or format tried: a
+  /// checksum or format error from Hive, a bad padding block, or a short read. Any
+  /// other error is a failure to read, not a verdict on the key.
+  bool _isDecodeFailure(Object error) =>
+      error is HiveError || error is ArgumentError || error is FormatException;
+
+  Future<void> _discardProbe(String copyName) async {
+    try {
+      await _deleteBox(copyName);
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
     }
-    return entries;
   }
 
-  /// The .hive file Hive uses for [boxName], once Hive has been initialised.
-  File? _boxFile(String boxName) {
+  /// Deletes [name] from disk. A failed open is closed by Hive in the background,
+  /// and that close deletes the box's lock file: a delete that runs in the same
+  /// moment finds the file gone. The delete is then run again once that close has
+  /// finished, which removes whatever is left.
+  Future<void> _deleteBox(String name) async {
+    var attempts = 0;
+    while (true) {
+      try {
+        await Hive.deleteBoxFromDisk(name);
+        return;
+      } on PathNotFoundException {
+        attempts++;
+        if (attempts >= 3) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    }
+  }
+
+  /// The file Hive reads for [boxName]: the box file, or a compacted file that Hive
+  /// renames into place when it opens. Null when neither exists. A folder in the way
+  /// is a failure, not a missing file.
+  File? _sourceFile(String boxName) {
+    for (final extension in const ['.hive', '.hivec']) {
+      final file = _fileFor(boxName, extension: extension);
+      final type = FileSystemEntity.typeSync(file.path);
+      if (type == FileSystemEntityType.notFound) continue;
+      if (type == FileSystemEntityType.file) return file;
+      throw FileSystemException(
+          'Not a file, so the box cannot be read', file.path);
+    }
+    return null;
+  }
+
+  /// The file Hive uses for [name]. Hive lower-cases box names, and so does this.
+  File _fileFor(String name, {String extension = '.hive'}) {
     final home = _hiveHome;
-    if (home == null) return null;
-    return File('$home/${boxName.toLowerCase()}.hive');
+    if (home == null) {
+      throw StateError('[HiveEncryption] Hive has no folder for $name yet');
+    }
+    return File('$home/${name.toLowerCase()}$extension');
   }
-
-  String? _hiveHome;
 
   /// Records where Hive keeps its files (`Hive.init` / `Hive.initFlutter`).
   Future<void> _resolveHome() async {
@@ -342,16 +381,19 @@ class HiveEncryptionService {
     await copy.putAll(entries);
     await copy.close();
     // 2. ...then replace the original with it...
-    await Hive.deleteBoxFromDisk(boxName);
+    await _deleteBox(boxName);
     final box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
     await box.putAll(entries.cast<dynamic, T>());
     // 3. ...and drop the copy.
-    await Hive.deleteBoxFromDisk(temp);
+    await _deleteBox(temp);
     logInfo('[HiveEncryption] Re-encrypted $boxName with the device key');
     return box;
   }
 
-  /// Completes a re-encryption that was cut short after step 1.
+  /// Completes a re-encryption that was cut short. A copy the device key reads is
+  /// restored over the original. A copy it cannot read was cut short before the
+  /// original was replaced, so it is dropped. A copy that cannot be read for another
+  /// reason throws, and nothing is changed.
   Future<void> _finishInterruptedMigration(
       String boxName, _DeviceKey key) async {
     final temp = '$boxName$_migrationSuffix';
@@ -359,10 +401,9 @@ class HiveEncryptionService {
     // would block the deletes below. There, a missing copy reads as empty, and an
     // empty copy restores nothing.
     if (!_webStorage && !await Hive.boxExists(temp)) return;
-    await _resolveHome();
-    final entries = await _readableWith(temp, key.cipher);
+    final entries = await _probe(temp, key.cipher);
     if (entries != null && entries.isNotEmpty) {
-      await Hive.deleteBoxFromDisk(boxName);
+      await _deleteBox(boxName);
       final box =
           await Hive.openBox<dynamic>(boxName, encryptionCipher: key.cipher);
       await box.putAll(entries);
@@ -370,11 +411,12 @@ class HiveEncryptionService {
       final marks = await Hive.openBox<dynamic>(_keyMarksBox);
       await marks.put(boxName, key.fingerprint);
     }
-    await Hive.deleteBoxFromDisk(temp);
+    await _deleteBox(temp);
   }
 
-  /// A session-only box when there's no device key. Data readable with the
-  /// old fixed key (or unencrypted) is loaded into it; the file isn't touched.
+  /// A session-only box when there's no device key. Data readable with the old
+  /// fixed key (or unencrypted) is loaded into it; the file isn't touched. A box
+  /// nothing can read opens empty, and its file is still left as it was.
   Future<Box<T>> _openInMemory<T>(String boxName) async {
     logWarning(
         '[HiveEncryption] No device key; keeping $boxName in memory this session');
@@ -386,9 +428,7 @@ class HiveEncryptionService {
     }
     Map<dynamic, dynamic>? existing;
     if (await Hive.boxExists(boxName)) {
-      await _resolveHome();
-      existing = await _readableWith(boxName, _legacyFallbackCipher) ??
-          await _readableWith(boxName, null);
+      existing = await _readWithOlderKey(boxName);
     }
     final box = await Hive.openBox<T>(boxName, bytes: Uint8List(0));
     if (existing != null) await box.putAll(existing.cast<dynamic, T>());
