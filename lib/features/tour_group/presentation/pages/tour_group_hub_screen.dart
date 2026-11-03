@@ -62,10 +62,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     if (routeTourId != null) unawaited(_preference.remember(routeTourId));
   }
 
-  final Map<String, Stream<List<TourMember>>> _memberStreams = {};
-
-  Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
-      .putIfAbsent(tourId, () => _repository.watchMembers(tourId));
+  Stream<List<TourMember>> _membersOf(String tourId) =>
+      _repository.watchMembers(tourId);
 
   bool _viewerIsOwner(TourGroup group, List<TourMember> members) =>
       group.ownerEmail == _repository.currentEmail ||
@@ -592,8 +590,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           if (mounted) {
             setState(() {
               _selectedGroup = null;
-              _memberStreams.remove(group.id);
-              _groupsStream = _repository.watchMyGroups();
             });
             if (nav.canPop()) {
               nav.pop();
@@ -656,8 +652,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           if (mounted) {
             setState(() {
               _selectedGroup = null;
-              _memberStreams.remove(group.id);
-              _groupsStream = _repository.watchMyGroups();
             });
             if (nav.canPop()) {
               nav.pop();
@@ -888,7 +882,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.midGreen),
                               onPressed: () => setState(() {
-                                _groupsStream = _repository.watchMyGroups();
+                                _groupsStream = _repository.restartMyGroups();
                               }),
                               child:
                                   Text(context.l10n.translate('hub_try_again')),
@@ -2325,9 +2319,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             );
                             if (mounted) {
                               _selectTour(newGroup);
-                              setState(() {
-                                _groupsStream = _repository.watchMyGroups();
-                              });
+                              setState(() {});
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -2787,9 +2779,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             );
                             if (mounted) {
                               _selectTour(newGroup);
-                              setState(() {
-                                _groupsStream = _repository.watchMyGroups();
-                              });
+                              setState(() {});
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -3267,11 +3257,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 await _repository.joinGroupWithCode(code);
                             if (mounted) {
                               _selectTour(joinedGroup);
-                              setState(() {
-                                _memberStreams[joinedGroup.id] =
-                                    _repository.watchMembers(joinedGroup.id);
-                                _groupsStream = _repository.watchMyGroups();
-                              });
+                              setState(() {});
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(

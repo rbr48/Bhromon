@@ -19,6 +19,21 @@ class SharedLatestStream<T> {
   /// Number of live upstream subscriptions (0 or 1). For tests.
   int get upstreamSubscriptions => _subscription == null ? 0 : 1;
 
+  /// Drops the upstream subscription and the cached value, and closes every
+  /// listener. A later listen starts a fresh upstream.
+  Future<void> close() async {
+    final subscription = _subscription;
+    _subscription = null;
+    _latest = null;
+    _hasLatest = false;
+    final listeners = _listeners.toList();
+    _listeners.clear();
+    for (final listener in listeners) {
+      await listener.close();
+    }
+    await subscription?.cancel();
+  }
+
   late final Stream<T> stream = Stream<T>.multi((controller) {
     if (_hasLatest) controller.add(_latest as T);
     _listeners.add(controller);

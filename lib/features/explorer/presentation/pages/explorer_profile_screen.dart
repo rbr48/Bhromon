@@ -65,6 +65,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   late final GetExplorerProfileUseCase _getExplorerProfile;
   final TourGroupRepository _tourRepo = TourGroupRepository();
 
+  /// The signed-in person's groups, created once in [initState] (BUG-1).
+  late final Stream<List<TourGroup>> _myGroupsStream;
+
   ExplorerProfile? _profile;
   bool _isLoading = false;
   String? _error;
@@ -89,6 +92,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _myGroupsStream = _tourRepo.watchMyGroups();
     LocaleController.instance.addListener(_onLocaleChanged);
     _getExplorerProfile = getIt<GetExplorerProfileUseCase>();
     _tourId = widget.tourId;
@@ -541,7 +545,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return StreamBuilder<List<TourGroup>>(
-      stream: _tourRepo.watchMyGroups(),
+      stream: _myGroupsStream,
       builder: (context, groupsSnap) {
         final myGroups = groupsSnap.data ?? [];
         if (!isOwnProfile && groupsSnap.hasData) _ensureSharedGroups(myGroups);
