@@ -490,6 +490,35 @@ class ChannelMessage {
     ];
   }
 
+  /// The message as a plain map for the on-device cache. Dates are ISO-8601
+  /// strings, which [ChannelMessage.fromMap] reads back. A message still waiting
+  /// for the server is not cached, so `isPending` is not written.
+  Map<String, dynamic> toCacheMap() {
+    return {
+      'id': id,
+      'senderEmail': senderEmail,
+      'senderName': senderName,
+      'text': text,
+      'timestamp': timestamp.toIso8601String(),
+      'kind': kind.name,
+      if (replyTo != null) 'replyTo': replyTo!.toMap(),
+      if (attachments.isNotEmpty)
+        'attachments': [for (final a in attachments) a.toMap()],
+      if (reactions.isNotEmpty) 'reactions': reactions,
+      if (mentions.isNotEmpty) 'mentions': mentions,
+      if (pollOptions.isNotEmpty) 'pollOptions': pollOptions,
+      if (votes.isNotEmpty) 'votes': votes,
+      'isPinned': isPinned,
+      if (editedAt != null) 'editedAt': editedAt!.toIso8601String(),
+      if (expenseId != null) 'expenseId': expenseId,
+      'expenseTitle': expenseTitle,
+      'expenseAmountPaisa': expenseAmountPaisa,
+      if (locationLatitude != null) 'locationLatitude': locationLatitude,
+      if (locationLongitude != null) 'locationLongitude': locationLongitude,
+      if (locationTitle != null) 'locationTitle': locationTitle,
+    };
+  }
+
   factory ChannelMessage.fromMap(
     String id,
     Map<String, dynamic> map, {

@@ -17,6 +17,7 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/widgets/swipe_pager.dart';
 import '../../data/channel_read_store.dart';
+import '../../data/channel_message_cache.dart';
 import '../../data/channel_swipe_controller.dart';
 import '../../data/tour_channel_repository.dart';
 import '../../data/tour_group_repository.dart';
@@ -39,6 +40,7 @@ import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/channel_composer.dart';
 import '../widgets/channel_media_viewer.dart';
 import '../widgets/channel_message_bubble.dart';
+import '../widgets/cached_channel_messages.dart';
 import '../widgets/channel_message_listener.dart';
 import '../widgets/channel_sheets.dart';
 
@@ -64,6 +66,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   final PageController _channelPager = PageController();
   final ScrollController _stripController = ScrollController();
   final Map<String, GlobalKey> _chipKeys = {};
+  // Per channel: the newest messages waiting to be written to this device's cache,
+  // and the timer that writes them once the list has been still for a moment.
+  final Map<String, List<ChannelMessage>> _cacheScheduled = {};
+  final Map<String, Timer> _cacheTimers = {};
   // Rough width of one chip with its gap, used to reach a chip that the strip
   // has not built yet.
   static const double _chipSlotWidth = 120;
@@ -219,6 +225,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       unawaited(s.cancel());
     }
     _focus.dispose();
+    for (final timer in _cacheTimers.values) {
+      timer.cancel();
+    }
     _channelPager.dispose();
     _stripController.dispose();
     _draftStore.dispose();
@@ -1461,87 +1470,111 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   // Messages
   // ---------------------------------------------------------------------------
 
+  /// Writes the channel's newest messages to this device's cache once the list has
+  /// been still for two seconds. A list that has not changed is not written again.
+  void _scheduleCacheWrite(String channelId, List<ChannelMessage> messages) {
+    if (identical(_cacheScheduled[channelId], messages)) return;
+    _cacheScheduled[channelId] = messages;
+    _cacheTimers[channelId]?.cancel();
+    _cacheTimers[channelId] = Timer(const Duration(seconds: 2), () {
+      unawaited(
+          ChannelMessageCache().write(widget.tourId, channelId, messages));
+    });
+  }
+
   Widget _buildMessages(TourChannel channel) {
     final l10n = context.l10n;
-    return ChannelMessageListener(
-      stream: _messagesOf(channel.id),
-      builder: (context, snapshot) {
-        if (snapshot.hasError && !snapshot.hasData) {
-          return Center(
-            child: Text(l10n.translate('tour_messages_load_failed'),
-                style: TextStyle(color: context.forest.text54)),
-          );
-        }
-        if (!snapshot.hasData) {
-          return const Center(
-              child: CircularProgressIndicator(color: AppColors.midGreen));
-        }
-        final all = snapshot.data!;
-        // Only the settled channel's messages count as read.
-        if (all.isNotEmpty && channel.id == _selectedId) {
-          _markReadSoon(channel.id, all.first.timestamp);
-        }
-
-        final query = _searchText.trim().toLowerCase();
-        final messages = query.isEmpty
-            ? all
-            : all
-                .where((m) =>
-                    m.text.toLowerCase().contains(query) ||
-                    m.senderName.toLowerCase().contains(query))
-                .toList();
-        if (messages.isEmpty) {
-          return Center(
-            child: Text(
-              l10n.translate(query.isEmpty
-                  ? 'tour_no_messages'
-                  : 'chan_no_search_results'),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.forest.text54),
-            ),
-          );
-        }
-
-        final divider = _divider[channel.id];
-        return ListView.builder(
-          key: PageStorageKey<String>('channel-messages-${channel.id}'),
-          reverse: true,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          itemCount: messages.length,
-          itemBuilder: (context, i) {
-            final m = messages[i];
-            final bubble = ChannelMessageBubble(
-              key: ValueKey(m.id),
-              message: m,
-              isMine: m.isSentBy(_me),
-              mentionsMe: m.mentionsEmail(_me),
-              myEmail: _me,
-              badge: _badgeFor(m.senderEmail),
-              onLongPress: () => _onMessageLongPress(channel, m),
-              onReact: (emoji) => _react(channel, m, emoji),
-              onVote: (option) => _vote(channel, m, option),
-              onOpenMedia: (index) =>
-                  showChannelMediaViewer(context, m.visualAttachments[index]),
-              onOpenLedger: () =>
-                  context.push('/group/${widget.tourId}/ledger'),
+    return CachedChannelMessages(
+      tourId: widget.tourId,
+      channelId: channel.id,
+      builder: (context, cached) => ChannelMessageListener(
+        stream: _messagesOf(channel.id),
+        builder: (context, snapshot) {
+          if (snapshot.hasError && !snapshot.hasData && cached == null) {
+            return Center(
+              child: Text(l10n.translate('tour_messages_load_failed'),
+                  style: TextStyle(color: context.forest.text54)),
             );
-            // The divider sits under the last message read before this visit,
-            // when newer messages have arrived since.
-            final endsRead = divider != null &&
-                i > 0 &&
-                !m.timestamp.isAfter(divider) &&
-                messages[i - 1].timestamp.isAfter(divider);
-            if (!endsRead) return bubble;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                bubble,
-                _NewMessagesDivider(label: l10n.translate('chan_new_messages'))
-              ],
+          }
+          // The live query wins. Until it answers, the messages this device cached
+          // show, so the channel opens with its messages in place.
+          final live = snapshot.data;
+          final all = live ?? cached;
+          if (all == null || (live == null && all.isEmpty)) {
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.midGreen));
+          }
+          if (live != null) {
+            _scheduleCacheWrite(channel.id, live);
+            // Only the settled channel's messages count as read, and only ones the
+            // live query has confirmed.
+            if (live.isNotEmpty && channel.id == _selectedId) {
+              _markReadSoon(channel.id, live.first.timestamp);
+            }
+          }
+
+          final query = _searchText.trim().toLowerCase();
+          final messages = query.isEmpty
+              ? all
+              : all
+                  .where((m) =>
+                      m.text.toLowerCase().contains(query) ||
+                      m.senderName.toLowerCase().contains(query))
+                  .toList();
+          if (messages.isEmpty) {
+            return Center(
+              child: Text(
+                l10n.translate(query.isEmpty
+                    ? 'tour_no_messages'
+                    : 'chan_no_search_results'),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.forest.text54),
+              ),
             );
-          },
-        );
-      },
+          }
+
+          final divider = _divider[channel.id];
+          return ListView.builder(
+            key: PageStorageKey<String>('channel-messages-${channel.id}'),
+            reverse: true,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            itemCount: messages.length,
+            itemBuilder: (context, i) {
+              final m = messages[i];
+              final bubble = ChannelMessageBubble(
+                key: ValueKey(m.id),
+                message: m,
+                isMine: m.isSentBy(_me),
+                mentionsMe: m.mentionsEmail(_me),
+                myEmail: _me,
+                badge: _badgeFor(m.senderEmail),
+                onLongPress: () => _onMessageLongPress(channel, m),
+                onReact: (emoji) => _react(channel, m, emoji),
+                onVote: (option) => _vote(channel, m, option),
+                onOpenMedia: (index) =>
+                    showChannelMediaViewer(context, m.visualAttachments[index]),
+                onOpenLedger: () =>
+                    context.push('/group/${widget.tourId}/ledger'),
+              );
+              // The divider sits under the last message read before this visit,
+              // when newer messages have arrived since.
+              final endsRead = divider != null &&
+                  i > 0 &&
+                  !m.timestamp.isAfter(divider) &&
+                  messages[i - 1].timestamp.isAfter(divider);
+              if (!endsRead) return bubble;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  bubble,
+                  _NewMessagesDivider(
+                      label: l10n.translate('chan_new_messages'))
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 

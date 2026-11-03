@@ -33,6 +33,7 @@ import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
+import 'channel_message_cache.dart';
 import 'channel_read_store.dart';
 import 'tour_hub_preference.dart';
 import 'tour_media_journal.dart';
@@ -271,6 +272,7 @@ class TourGroupRepository {
     await ChannelReadStore().clearTour(tourId);
     await TourMediaJournal.instance.dropTour(tourId);
     await TourHubPreference().forget(tourId);
+    await ChannelMessageCache().clearTour(tourId);
     try {
       // Photos and videos the tour loaded sit in the image cache, which cannot
       // tell one tour's files from another's, so the whole cache is emptied.
