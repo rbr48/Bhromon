@@ -295,6 +295,15 @@ class TourTranslationKeys {
       'chan_online_count': '{count} online',
       'chan_call_offline': 'Cannot call this member right now.',
       'chan_call_video': 'Video call',
+      'chan_close': 'Close',
+      'chan_delete_builtin_body':
+          'This hides the channel for everyone and permanently deletes all its messages, photos and videos. You can restore the channel later, but its messages will not come back.',
+      'chan_none_hidden': 'No hidden channels.',
+      'chan_restore': 'Restore',
+      'chan_restore_channels': 'Restore hidden channels',
+      'chan_restore_title': 'Restore channels',
+      'chan_restored': 'Channel restored.',
+      'chan_title_default_hint': 'Leave empty to use the standard name.',
       'chan_delete_channel': 'Delete channel',
       'chan_delete_channel_body':
           'The channel and all its messages will be removed for everyone. This cannot be undone.',
@@ -2617,6 +2626,15 @@ class TourTranslationKeys {
       'chan_online_count': '{count} জন অনলাইন',
       'chan_call_offline': 'এই সদস্যকে এই মুহূর্তে কল করা যাচ্ছে না।',
       'chan_call_video': 'ভিডিও কল',
+      'chan_close': 'বন্ধ করুন',
+      'chan_delete_builtin_body':
+          'এটি চ্যানেলটি সবার কাছ থেকে লুকাবে এবং এর সব বার্তা, ছবি ও ভিডিও স্থায়ীভাবে মুছে ফেলবে। পরে চ্যানেলটি ফিরিয়ে আনা যাবে, কিন্তু বার্তাগুলো আর ফিরবে না।',
+      'chan_none_hidden': 'কোনো লুকানো চ্যানেল নেই।',
+      'chan_restore': 'ফিরিয়ে আনুন',
+      'chan_restore_channels': 'লুকানো চ্যানেল ফিরিয়ে আনুন',
+      'chan_restore_title': 'চ্যানেল ফিরিয়ে আনুন',
+      'chan_restored': 'চ্যানেল ফিরিয়ে আনা হয়েছে।',
+      'chan_title_default_hint': 'খালি রাখলে আদর্শ নাম ব্যবহার হবে।',
       'chan_delete_channel': 'চ্যানেল মুছুন',
       'chan_delete_channel_body':
           'চ্যানেলটি ও এর সব বার্তা সবার জন্য মুছে যাবে। এটি ফেরানো যাবে না।',
