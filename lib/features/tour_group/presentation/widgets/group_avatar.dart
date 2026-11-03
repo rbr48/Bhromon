@@ -4,18 +4,18 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-/// A group's picture: its photo when it has one, otherwise the icon its type uses (a
-/// family or a trip). Drawn as a circle [size] pixels across.
+/// A group's picture: its photo when it has one, otherwise the icon of its type (see
+/// groupTypeIcon). Drawn as a circle [size] pixels across.
 class GroupAvatar extends StatelessWidget {
   const GroupAvatar({
     super.key,
-    required this.isFamily,
+    required this.typeIcon,
     this.photoUrl,
     this.size = 40,
   });
 
-  /// Whether the group is a family circle (its icon differs from a trip's).
-  final bool isFamily;
+  /// The icon shown when there is no photo: the group's own type's icon.
+  final IconData typeIcon;
 
   /// The group's photo URL, as stored on the group. Null or empty shows the icon.
   final String? photoUrl;
@@ -33,7 +33,7 @@ class GroupAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Icon(
-        isFamily ? Icons.family_restroom_rounded : Icons.card_travel_rounded,
+        typeIcon,
         size: size * 0.5,
         color: context.forest.text54,
       ),

@@ -3,6 +3,7 @@ import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/group_avatar.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/group_type.dart';
 import 'package:flutter/material.dart';
 
 /// One group on the groups list (B1). When collapsed, only the photo, name and badges
@@ -39,9 +40,8 @@ class GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final kind = group.isFamily
-        ? l10n.translate('hub_section_family')
-        : l10n.translate('hub_section_trips');
+    // The type's own name: a housing society says so, not "Family circles".
+    final kind = l10n.translate(groupTypeKey(group));
     final isHighlighted = isExpanded;
     return Semantics(
       button: true,
@@ -81,7 +81,7 @@ class GroupCard extends StatelessWidget {
                   child: Row(
                     children: [
                       GroupAvatar(
-                        isFamily: group.isFamily,
+                        typeIcon: groupTypeIcon(group),
                         photoUrl: group.photoUrl,
                         size: 44,
                       ),

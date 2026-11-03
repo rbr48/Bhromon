@@ -29,6 +29,7 @@ import '../widgets/groups/member_avatar.dart';
 import '../widgets/groups/sos_row.dart';
 import '../widgets/tour_membership_guard.dart';
 import '../widgets/group_avatar.dart';
+import '../widgets/group_type.dart';
 import '../widgets/group_photo_sheet.dart';
 import '../widgets/family/family_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
@@ -135,9 +136,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     List<TourGroup> allGroups,
     TourGroup current,
   ) {
+    // A housing society or a gym is a family-kind circle, but not a family circle.
     final families = [
       for (final g in allGroups)
-        if (g.isFamily) g
+        if (g.isHousehold) g
+    ];
+    final circles = [
+      for (final g in allGroups)
+        if (g.isFamily && !g.isHousehold) g
     ];
     final trips = [
       for (final g in allGroups)
@@ -160,7 +166,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           final selected = g.id == current.id;
           return ListTile(
             leading: GroupAvatar(
-                isFamily: g.isFamily, photoUrl: g.photoUrl, size: 40),
+                typeIcon: groupTypeIcon(g), photoUrl: g.photoUrl, size: 40),
             title: Text(g.name,
                 style: TextStyle(
                     color: selected
@@ -183,6 +189,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               if (families.isNotEmpty) ...[
                 header(l10n.translate('hub_section_family')),
                 for (final g in families) tile(g),
+              ],
+              if (circles.isNotEmpty) ...[
+                header(l10n.translate('hub_section_groups')),
+                for (final g in circles) tile(g),
               ],
               if (trips.isNotEmpty) ...[
                 header(l10n.translate('hub_section_trips')),
@@ -755,8 +765,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             child: _menuRow(
                 context,
                 Icons.delete_outline_rounded,
-                context.l10n.translate(
-                    group.isFamily ? 'hub_delete_family' : 'hub_delete_tour'),
+                context.l10n.translate(group.isHousehold
+                    ? 'hub_delete_family'
+                    : 'hub_delete_tour'),
                 color: Colors.redAccent,
                 iconColor: Colors.redAccent),
           ),
@@ -767,7 +778,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 context,
                 Icons.logout_rounded,
                 context.l10n.translate(
-                    group.isFamily ? 'hub_leave_family' : 'hub_leave_tour'),
+                    group.isHousehold ? 'hub_leave_family' : 'hub_leave_tour'),
                 iconColor: context.forest.text70),
           ),
       ],
@@ -1728,7 +1739,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   onTap: () => showGroupPhotoSheet(context,
                       group: group, repository: _repository),
                   child: GroupAvatar(
-                      isFamily: group.isFamily,
+                      typeIcon: groupTypeIcon(group),
                       photoUrl: group.photoUrl,
                       size: 52),
                 ),
