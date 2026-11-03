@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/relistenable_stream.dart';
+import '../../../../core/widgets/swipe_pager.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
@@ -47,8 +50,9 @@ class _TransportScreenState extends State<TransportScreen> {
   TourRole? _myRole;
 
   String? _selected;
-  Stream<List<BusSeat>>? _seatStream;
-  String? _seatStreamFor;
+  // One seat stream per vehicle, so a page that is shown again needs no new query.
+  final Map<String, Stream<List<BusSeat>>> _seatStreams = {};
+  final PageController _vehiclePager = PageController();
   bool _busy = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -84,6 +88,7 @@ class _TransportScreenState extends State<TransportScreen> {
     for (final s in _subs) {
       unawaited(s.cancel());
     }
+    _vehiclePager.dispose();
     super.dispose();
   }
 
@@ -100,10 +105,11 @@ class _TransportScreenState extends State<TransportScreen> {
     return tabs.isEmpty ? _coachId : tabs.first;
   }
 
-  TourVehicle? get _vehicle {
-    final id = _current;
+  TourVehicle? get _vehicle => _vehicleById(_current);
+
+  TourVehicle? _vehicleById(String tabId) {
     for (final v in _vehicles) {
-      if (v.id == id) return v;
+      if (v.id == tabId) return v;
     }
     return null;
   }
@@ -111,13 +117,14 @@ class _TransportScreenState extends State<TransportScreen> {
   /// The vehicle id stored on seats: null for the original coach.
   String? get _vehicleId => _current == _coachId ? null : _current;
 
-  Stream<List<BusSeat>> _seatsFor(String id) {
-    if (_seatStreamFor != id || _seatStream == null) {
-      _seatStreamFor = id;
-      _seatStream =
-          _repository.watchSeatsOf(widget.tourId, id == _coachId ? null : id);
-    }
-    return _seatStream!;
+  Stream<List<BusSeat>> _seatsFor(String tabId) {
+    return _seatStreams.putIfAbsent(
+      tabId,
+      () => relistenableStream(
+        () => _repository.watchSeatsOf(
+            widget.tourId, tabId == _coachId ? null : tabId),
+      ),
+    );
   }
 
   bool _canEditSeats(TourVehicle? v) => _isAdmin || !(v?.locked ?? false);
@@ -157,12 +164,12 @@ class _TransportScreenState extends State<TransportScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF14241B),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
         title: Text(
             l10n.translate('veh_delete_confirm', args: {'name': v.name}),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('veh_delete_note'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -170,7 +177,8 @@ class _TransportScreenState extends State<TransportScreen> {
           TextButton(
               onPressed: () => Navigator.pop(c, true),
               child: Text(l10n.translate('veh_delete'),
-                  style: const TextStyle(color: Colors.redAccent))),
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent)))),
         ],
       ),
     );
@@ -197,13 +205,13 @@ class _TransportScreenState extends State<TransportScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF14241B),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
         title: Text(l10n.translate('veh_auto_title'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(
             l10n.translate('veh_auto_body',
                 args: {'n': l10n.number(plan.length)}),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -229,9 +237,9 @@ class _TransportScreenState extends State<TransportScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF14241B),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
         title: Text(l10n.translate('veh_clear_confirm'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -239,7 +247,8 @@ class _TransportScreenState extends State<TransportScreen> {
           TextButton(
               onPressed: () => Navigator.pop(c, true),
               child: Text(l10n.translate('veh_clear'),
-                  style: const TextStyle(color: Colors.redAccent))),
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent)))),
         ],
       ),
     );
@@ -280,7 +289,7 @@ class _TransportScreenState extends State<TransportScreen> {
     final manifestText = lines.join('\n');
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF14241B),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -292,14 +301,14 @@ class _TransportScreenState extends State<TransportScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.description_outlined,
-                    color: AppColors.mintGreen, size: 20),
+                Icon(Icons.description_outlined,
+                    color: context.forest.accentText, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     v?.name ?? l10n.translate('veh_manifest'),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -307,7 +316,7 @@ class _TransportScreenState extends State<TransportScreen> {
                 ),
                 IconButton(
                   icon:
-                      const Icon(Icons.close, color: Colors.white54, size: 20),
+                      Icon(Icons.close, color: context.forest.text54, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -320,13 +329,13 @@ class _TransportScreenState extends State<TransportScreen> {
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: context.forest.divider10),
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
                   manifestText,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: context.forest.text70,
                     fontFamily: 'monospace',
                     fontSize: 12,
                     height: 1.4,
@@ -340,8 +349,8 @@ class _TransportScreenState extends State<TransportScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white24),
+                      foregroundColor: context.forest.text,
+                      side: BorderSide(color: context.forest.text24),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -396,7 +405,7 @@ class _TransportScreenState extends State<TransportScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF14241B),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => _SeatSheet(
@@ -438,22 +447,43 @@ class _TransportScreenState extends State<TransportScreen> {
         : Column(
             children: [
               _vehicleTabs(l10n),
-              Expanded(child: _vehicleBody(l10n)),
+              Expanded(child: _vehiclePages(l10n)),
             ],
           );
     if (widget.embedded) return body;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(l10n.translate('veh_title'),
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: context.forest.text,
                 fontWeight: FontWeight.bold,
                 fontSize: 18)),
       ),
       body: body,
+    );
+  }
+
+  /// The seat map of the selected vehicle. With two or more vehicles, a swipe
+  /// moves to the next or previous one. Only the selected page takes taps.
+  Widget _vehiclePages(AppLocalizations l10n) {
+    final tabs = _tabs;
+    if (tabs.length < 2) return _vehicleBody(l10n, _current);
+    final index = tabs.indexOf(_current);
+    return SwipePager(
+      controller: _vehiclePager,
+      count: tabs.length,
+      selectedIndex: index,
+      onSettled: (i) => setState(() => _selected = tabs[i]),
+      itemBuilder: (context, i) {
+        if (!isWithinPageWindow(i, index)) return const SizedBox.shrink();
+        return IgnorePointer(
+          ignoring: i != index,
+          child: _vehicleBody(l10n, tabs[i]),
+        );
+      },
     );
   }
 
@@ -474,27 +504,34 @@ class _TransportScreenState extends State<TransportScreen> {
                       ? null
                       : _vehicles.firstWhere((v) => v.id == id).kind),
                   size: 18,
-                  color:
-                      id == current ? AppColors.darkGreen : AppColors.mintGreen,
+                  color: id == current
+                      ? AppColors.darkGreen
+                      : context.forest.accentText,
                 ),
                 label: Text(id == _coachId
                     ? l10n.translate('veh_coach')
                     : _vehicles.firstWhere((v) => v.id == id).name),
                 selected: id == current,
                 selectedColor: AppColors.mintGreen,
-                backgroundColor: const Color(0xFF14241B),
+                backgroundColor:
+                    context.forest.surfaceFor(const Color(0xFF14241B)),
                 labelStyle: TextStyle(
-                    color: id == current ? AppColors.darkGreen : Colors.white,
+                    color: id == current
+                        ? AppColors.darkGreen
+                        : context.forest.text,
                     fontWeight: FontWeight.w600),
                 onSelected: (_) => setState(() => _selected = id),
               ),
             ),
           if (_isAdmin)
             ActionChip(
-              avatar: const Icon(Icons.add, size: 18, color: AppColors.gold),
+              avatar: Icon(Icons.add,
+                  size: 18, color: context.forest.readable(AppColors.gold)),
               label: Text(l10n.translate('veh_add')),
-              backgroundColor: const Color(0xFF14241B),
-              labelStyle: const TextStyle(color: AppColors.gold),
+              backgroundColor:
+                  context.forest.surfaceFor(const Color(0xFF14241B)),
+              labelStyle:
+                  TextStyle(color: context.forest.readable(AppColors.gold)),
               side: const BorderSide(color: AppColors.gold),
               onPressed: _busy ? null : () => _addOrEdit(),
             ),
@@ -503,12 +540,11 @@ class _TransportScreenState extends State<TransportScreen> {
     );
   }
 
-  Widget _vehicleBody(AppLocalizations l10n) {
-    final current = _current;
-    final v = _vehicle;
+  Widget _vehicleBody(AppLocalizations l10n, String tabId) {
+    final v = _vehicleById(tabId);
     final layout = v == null ? legacyCoachLayout() : buildLayout(v);
     return StreamBuilder<List<BusSeat>>(
-      stream: _seatsFor(current),
+      stream: _seatsFor(tabId),
       builder: (context, snapshot) {
         if (snapshot.hasError && !snapshot.hasData) {
           return Center(
@@ -516,7 +552,7 @@ class _TransportScreenState extends State<TransportScreen> {
               padding: const EdgeInsets.all(24),
               child: Text(l10n.translate('tour_seats_unavailable'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
             ),
           );
         }
@@ -550,7 +586,7 @@ class _TransportScreenState extends State<TransportScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFF14241B),
+                color: context.forest.surfaceFor(const Color(0xFF14241B)),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                     color: AppColors.mintGreen.withValues(alpha: 0.3),
@@ -575,9 +611,9 @@ class _TransportScreenState extends State<TransportScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,15 +621,15 @@ class _TransportScreenState extends State<TransportScreen> {
           Row(
             children: [
               Icon(vehicleKindIcon(v?.kind),
-                  color: AppColors.mintGreen, size: 26),
+                  color: context.forest.accentText, size: 26),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(v?.name ?? l10n.translate('veh_coach'),
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 16)),
                     Text(
@@ -604,7 +640,7 @@ class _TransportScreenState extends State<TransportScreen> {
                         if (v != null && v.number.isNotEmpty) v.number,
                       ].join(' · '),
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -612,12 +648,12 @@ class _TransportScreenState extends State<TransportScreen> {
               if (v?.locked ?? false)
                 Tooltip(
                   message: l10n.translate('veh_locked_note'),
-                  child: const Icon(Icons.lock_rounded,
-                      color: AppColors.gold, size: 18),
+                  child: Icon(Icons.lock_rounded,
+                      color: context.forest.readable(AppColors.gold), size: 18),
                 ),
               if (_isAdmin && v != null)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white54),
+                  icon: Icon(Icons.more_vert, color: context.forest.text54),
                   color: const Color(0xFF1B4332),
                   onSelected: (choice) {
                     switch (choice) {
@@ -640,7 +676,9 @@ class _TransportScreenState extends State<TransportScreen> {
                     PopupMenuItem(
                         value: 'delete',
                         child: Text(l10n.translate('veh_delete'),
-                            style: const TextStyle(color: Colors.redAccent))),
+                            style: TextStyle(
+                                color: context.forest
+                                    .readable(Colors.redAccent)))),
                   ],
                 ),
             ],
@@ -653,13 +691,13 @@ class _TransportScreenState extends State<TransportScreen> {
                 if (v.departure != null)
                   localizedDateFormat('d MMM, h:mm a').format(v.departure!),
               ].join(' · '),
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: context.forest.text70, fontSize: 13),
             ),
           ],
           if (v != null && v.notes.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(v.notes,
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
           ],
           const SizedBox(height: 10),
           ClipRRect(
@@ -667,7 +705,7 @@ class _TransportScreenState extends State<TransportScreen> {
             child: LinearProgressIndicator(
               value: total == 0 ? 0 : booked / total,
               minHeight: 6,
-              backgroundColor: Colors.white10,
+              backgroundColor: context.forest.divider10,
               valueColor: const AlwaysStoppedAnimation(AppColors.mintGreen),
             ),
           ),
@@ -678,7 +716,8 @@ class _TransportScreenState extends State<TransportScreen> {
               'total': l10n.number(total),
               'people': l10n.number(needed),
             }),
-            style: const TextStyle(color: AppColors.gold, fontSize: 12),
+            style: TextStyle(
+                color: context.forest.readable(AppColors.gold), fontSize: 12),
           ),
           if (mine.isNotEmpty)
             Padding(
@@ -717,10 +756,11 @@ class _TransportScreenState extends State<TransportScreen> {
         if (_isAdmin && seats.any((s) => s.isOccupied))
           TextButton.icon(
             onPressed: _busy ? null : _clear,
-            icon:
-                const Icon(Icons.layers_clear_rounded, color: Colors.redAccent),
+            icon: Icon(Icons.layers_clear_rounded,
+                color: context.forest.readable(Colors.redAccent)),
             label: Text(l10n.translate('veh_clear'),
-                style: const TextStyle(color: Colors.redAccent)),
+                style: TextStyle(
+                    color: context.forest.readable(Colors.redAccent))),
           ),
       ],
     );
@@ -741,7 +781,7 @@ class _TransportScreenState extends State<TransportScreen> {
             ),
             const SizedBox(width: 6),
             Text(label,
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: TextStyle(color: context.forest.text70, fontSize: 12)),
           ],
         );
     return Wrap(
@@ -821,8 +861,8 @@ class _SeatSheetState extends State<_SeatSheet> {
                     child: Text(
                       l10n.translate('tour_seat_label',
                           args: {'number': widget.seatId}),
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 17,
                           fontWeight: FontWeight.bold),
                     ),
@@ -836,31 +876,36 @@ class _SeatSheetState extends State<_SeatSheet> {
                     ),
                   if (occupied && widget.canEdit)
                     TextButton.icon(
-                      icon: const Icon(Icons.clear,
-                          color: Colors.redAccent, size: 16),
+                      icon: Icon(Icons.clear,
+                          color: context.forest.readable(Colors.redAccent),
+                          size: 16),
                       label: Text(l10n.translate('tour_free_seat'),
-                          style: const TextStyle(color: Colors.redAccent)),
+                          style: TextStyle(
+                              color:
+                                  context.forest.readable(Colors.redAccent))),
                       onPressed: widget.onFree,
                     ),
                 ],
               ),
               if (occupied)
                 Text(seatOccupantName(l10n, seat!),
-                    style: const TextStyle(
-                        color: AppColors.mintGreen,
+                    style: TextStyle(
+                        color: context.forest.accentText,
                         fontWeight: FontWeight.w600)),
-              const Divider(color: Colors.white12),
+              Divider(color: context.forest.divider12),
               if (!widget.canEdit)
                 Text(l10n.translate('veh_locked_note'),
-                    style: const TextStyle(color: AppColors.gold))
+                    style: TextStyle(
+                        color: context.forest.readable(AppColors.gold)))
               else ...[
                 TextField(
                   onChanged: (v) => setState(() => _query = v),
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    prefixIcon:
+                        Icon(Icons.search, color: context.forest.text54),
                     hintText: l10n.translate('veh_search'),
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: TextStyle(color: context.forest.text38),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -885,7 +930,7 @@ class _SeatSheetState extends State<_SeatSheet> {
                           ),
                         ),
                         title: Text(m.displayName,
-                            style: const TextStyle(color: Colors.white)),
+                            style: TextStyle(color: context.forest.text)),
                         subtitle: Text(
                           isHere
                               ? l10n.translate('tour_on_this_seat')
@@ -895,12 +940,12 @@ class _SeatSheetState extends State<_SeatSheet> {
                                       'family': l10n.number(family),
                                     })
                                   : l10n.translate('veh_seat_moves'),
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 11),
                         ),
                         trailing: isHere
-                            ? const Icon(Icons.check_circle,
-                                color: AppColors.mintGreen)
+                            ? Icon(Icons.check_circle,
+                                color: context.forest.accentText)
                             : null,
                         onTap: isHere ? null : () => widget.onAssign(m),
                       );

@@ -1,6 +1,6 @@
 # Bhromon VPS Microservices Suite
 
-A unified microservices suite running on the Hostinger VPS (`148.135.137.245`) designed to eliminate Firebase Blaze billing, Firebase Cloud Functions costs, and Firebase Storage rate limits. Keeps Bhromon operating 100% free on the Firebase Spark plan.
+A unified microservices suite running on the Hostinger VPS (`bhromon.fun`) designed to eliminate Firebase Blaze billing, Firebase Cloud Functions costs, and Firebase Storage rate limits. Keeps Bhromon operating 100% free on the Firebase Spark plan.
 
 ---
 
@@ -213,3 +213,34 @@ members who have not answered yet. It runs inside the media server:
 
 The push opens the notice board, the same as a new notice's push. Tests:
 `cd media-server && pytest tests/test_ack_reminders.py`.
+
+## Calls: TURN over TLS and iPhone VoIP pushes
+
+Both are off until configured, and the server works without them.
+
+**TURN over TLS.** The relay host is `turn.sottocall.com` (`TURN_SERVER_HOST`),
+and `/api/chat/ice_servers` offers it on UDP and TCP 3478 and over TLS on 5349
+(`turns:`). coturn serves the Let's Encrypt certificate for that name, so the
+TLS handshake the app makes is checked against `turn.sottocall.com`. If the host
+ever changes, the certificate must name the new host too. Check it with
+`openssl s_client -connect turn.sottocall.com:5349 -servername turn.sottocall.com`.
+
+Some networks let only port 443 out. To offer TLS-TURN there as well, give coturn
+a second IP on 443 or let nginx pass `turn.sottocall.com` through to coturn by SNI
+(`stream` with `ssl_preread on;`), then set
+`TURN_TLS_URLS=turns:turn.sottocall.com:443?transport=tcp` for the media
+container. Extra addresses are added once; an address already offered is not
+repeated.
+
+**iPhone VoIP pushes.** A closed iPhone shows the system call screen only for an
+Apple VoIP push. The app registers its PushKit token with the platform
+`ios-voip`; offers to that token go to Apple (`voip_push.py`), never to FCM.
+
+1. In the Apple developer account, create an APNs key (.p8) and note its key id
+   and the team id. Enable Push Notifications for the app id, and add the
+   capability (an `aps-environment` entitlement) to the Runner target.
+2. Put the key on the VPS outside the repository and set `APNS_KEY_PATH`,
+   `APNS_KEY_ID`, `APNS_TEAM_ID` and `APNS_BUNDLE_ID` (`com.bhromon.bhromon`
+   today). Set `APNS_SANDBOX=1` for development builds.
+3. Rebuild the media image: Apple accepts HTTP/2 only, which `httpx[http2]`
+   in `requirements.txt` provides.

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import '../../domain/services/tide_schedule_engine.dart';
 import '../../domain/models/tour_group.dart';
@@ -61,23 +62,25 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
         _tourGroup?.destination ?? context.l10n.translate('tide_default_area');
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(
           _isBeachView
               ? context.l10n.translate('tide_title_beach')
               : context.l10n
                   .translate('tide_title_nature', args: {'dest': dest}),
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 16),
         ),
         actions: [
           IconButton(
             icon: Icon(
                 _isBeachView ? Icons.landscape_rounded : Icons.waves_rounded,
-                color: AppColors.mintGreen),
+                color: context.forest.accentText),
             tooltip: _isBeachView
                 ? context.l10n.translate('tide_view_hills')
                 : context.l10n.translate('tide_view_beach'),
@@ -157,14 +160,16 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             const SizedBox(height: 8),
             Text(
               context.l10n.translate('tide_schedule_disclaimer'),
-              style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
+              style: TextStyle(
+                  color: context.forest.readable(Colors.amberAccent),
+                  fontSize: 11),
             ),
             const SizedBox(height: 20),
 
             Text(
               context.l10n.translate('tide_today_schedule'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
@@ -175,8 +180,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
 
             Text(
               context.l10n.translate('tide_beach_safety_title'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
@@ -201,8 +206,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
 
             Text(
               context.l10n.translate('tide_sun_title'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
@@ -226,8 +231,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             Text(
               context.l10n
                   .translate('tide_mountain_title', args: {'dest': dest}),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
@@ -271,7 +276,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -292,8 +297,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(title,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 13)),
                     Text(time,
@@ -306,7 +311,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 const SizedBox(height: 4),
                 Text(desc,
                     style:
-                        const TextStyle(color: Colors.white70, fontSize: 11)),
+                        TextStyle(color: context.forest.text70, fontSize: 11)),
               ],
             ),
           ),
@@ -342,15 +347,15 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 Text(
                   context.l10n
                       .translate('tide_tracker_title', args: {'dest': dest}),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 15),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   context.l10n.translate('tide_weather_good'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12),
                 ),
               ],
             ),
@@ -420,8 +425,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 const SizedBox(height: 6),
                 Text(
                   safety.advisory,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 13, height: 1.3),
+                  style: TextStyle(
+                      color: context.forest.text, fontSize: 13, height: 1.3),
                 ),
                 if (safety.currentWindow != null) ...[
                   const SizedBox(height: 10),
@@ -431,8 +436,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                           ? context.l10n.translate('tide_high_tide')
                           : context.l10n.translate('tide_low_tide')
                     }),
-                    style: const TextStyle(
-                        color: Colors.white70,
+                    style: TextStyle(
+                        color: context.forest.text70,
                         fontSize: 12,
                         fontWeight: FontWeight.bold),
                   ),
@@ -453,11 +458,12 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color:
-            isCurrent ? color.withValues(alpha: 0.12) : const Color(0xFF14241B),
+        color: isCurrent
+            ? color.withValues(alpha: 0.12)
+            : context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isCurrent ? color : Colors.white12,
+          color: isCurrent ? color : context.forest.divider12,
           width: isCurrent ? 1.5 : 1,
         ),
       ),
@@ -486,8 +492,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                   children: [
                     Text(
                       tide.name,
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.forest.text,
                           fontWeight: FontWeight.bold,
                           fontSize: 14),
                     ),
@@ -525,7 +531,9 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 ? context.l10n.translate('tide_swim_ok')
                 : context.l10n.translate('tide_low_caution'),
             style: TextStyle(
-              color: isHigh ? AppColors.mintGreen : Colors.orangeAccent,
+              color: isHigh
+                  ? context.forest.accentText
+                  : context.forest.readable(Colors.orangeAccent),
               fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
@@ -544,7 +552,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -559,16 +567,16 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 13),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   desc,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 12, height: 1.35),
+                  style: TextStyle(
+                      color: context.forest.text70, fontSize: 12, height: 1.35),
                 ),
               ],
             ),

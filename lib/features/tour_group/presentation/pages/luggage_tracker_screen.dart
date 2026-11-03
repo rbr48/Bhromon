@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
@@ -101,9 +102,9 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF142428),
+            color: context.forest.surfaceFor(const Color(0xFF142428)),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(color: context.forest.divider12),
           ),
           child: Row(
             children: [
@@ -113,8 +114,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                   children: [
                     Text(
                       l10n.translate('luggage_title'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -123,8 +124,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                     Text(
                       '${l10n.translate('luggage_loaded_badge')}: ${l10n.number(loadedCount)} · '
                       '${l10n.translate('luggage_unloaded_badge')}: ${l10n.number(pendingCount)}',
-                      style: const TextStyle(
-                        color: Colors.white60,
+                      style: TextStyle(
+                        color: context.forest.text60,
                         fontSize: 12,
                       ),
                     ),
@@ -160,13 +161,13 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
             alignment: Alignment.center,
             child: Column(
               children: [
-                const Icon(Icons.luggage_rounded,
-                    size: 48, color: Colors.white24),
+                Icon(Icons.luggage_rounded,
+                    size: 48, color: context.forest.text24),
                 const SizedBox(height: 12),
                 Text(
                   l10n.translate('luggage_empty_title'),
-                  style: const TextStyle(
-                      color: Colors.white70,
+                  style: TextStyle(
+                      color: context.forest.text70,
                       fontWeight: FontWeight.bold,
                       fontSize: 15),
                 ),
@@ -174,7 +175,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                 Text(
                   l10n.translate('luggage_empty_sub'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: TextStyle(color: context.forest.text38, fontSize: 12),
                 ),
               ],
             ),
@@ -187,10 +188,10 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     if (widget.embedded) return content;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1A1C),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF142428),
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+        foregroundColor: context.forest.text,
         title: Text(l10n.translate('luggage_title')),
       ),
       body: content,
@@ -210,12 +211,12 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: item.isLoaded
               ? AppColors.mintGreen.withValues(alpha: 0.3)
-              : Colors.white12,
+              : context.forest.divider12,
         ),
       ),
       child: ClipRRect(
@@ -240,8 +241,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                           Expanded(
                             child: Text(
                               item.title,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -258,12 +259,13 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                                 color: item.isLoaded
                                     ? AppColors.mintGreen
                                         .withValues(alpha: 0.15)
-                                    : Colors.white.withValues(alpha: 0.05),
+                                    : context.forest.text
+                                        .withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: item.isLoaded
                                       ? AppColors.mintGreen
-                                      : Colors.white24,
+                                      : context.forest.text24,
                                 ),
                               ),
                               child: Row(
@@ -275,8 +277,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                                         : Icons.radio_button_unchecked_rounded,
                                     size: 14,
                                     color: item.isLoaded
-                                        ? AppColors.mintGreen
-                                        : Colors.white60,
+                                        ? context.forest.accentText
+                                        : context.forest.text60,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -285,8 +287,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                                         : 'luggage_unloaded_badge'),
                                     style: TextStyle(
                                       color: item.isLoaded
-                                          ? AppColors.mintGreen
-                                          : Colors.white70,
+                                          ? context.forest.accentText
+                                          : context.forest.text70,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -297,10 +299,11 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                           ),
                           if (canManage) ...[
                             PopupMenuButton<String>(
-                              icon: const Icon(Icons.more_vert_rounded,
-                                  size: 18, color: Colors.white54),
+                              icon: Icon(Icons.more_vert_rounded,
+                                  size: 18, color: context.forest.text54),
                               padding: EdgeInsets.zero,
-                              color: const Color(0xFF1E3238),
+                              color: context.forest
+                                  .surfaceFor(const Color(0xFF1E3238)),
                               onSelected: (action) {
                                 if (action == 'edit') {
                                   _openEditor(item: item);
@@ -313,12 +316,13 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                                   value: 'edit',
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.edit_rounded,
-                                          size: 16, color: Colors.white70),
+                                      Icon(Icons.edit_rounded,
+                                          size: 16,
+                                          color: context.forest.text70),
                                       const SizedBox(width: 8),
                                       Text(l10n.translate('luggage_edit'),
-                                          style: const TextStyle(
-                                              color: Colors.white)),
+                                          style: TextStyle(
+                                              color: context.forest.text)),
                                     ],
                                   ),
                                 ),
@@ -326,12 +330,15 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                                   value: 'delete',
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.delete_outline_rounded,
-                                          size: 16, color: Colors.redAccent),
+                                      Icon(Icons.delete_outline_rounded,
+                                          size: 16,
+                                          color: context.forest
+                                              .readable(Colors.redAccent)),
                                       const SizedBox(width: 8),
                                       Text(l10n.translate('luggage_delete'),
-                                          style: const TextStyle(
-                                              color: Colors.redAccent)),
+                                          style: TextStyle(
+                                              color: context.forest
+                                                  .readable(Colors.redAccent))),
                                     ],
                                   ),
                                 ),
@@ -348,7 +355,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                           _chip(
                             Icons.person_rounded,
                             '${l10n.translate('luggage_owner_label')}: ${item.ownerName}',
-                            Colors.white70,
+                            context.forest.text70,
                           ),
                           if ((item.custodianName ?? '').isNotEmpty)
                             _chip(
@@ -379,7 +386,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: context.forest.text.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -403,12 +410,12 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF142428),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         title: Text(l10n.translate('luggage_delete'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(
           l10n.translate('luggage_delete_confirm'),
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: context.forest.text70),
         ),
         actions: [
           TextButton(
@@ -482,7 +489,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF142428),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -497,8 +504,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
               children: [
                 Text(
                   l10n.translate(item == null ? 'luggage_add' : 'luggage_edit'),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -508,11 +515,11 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                 // Title
                 TextField(
                   controller: titleCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('luggage_name_label'),
                     hintText: l10n.translate('luggage_name_hint'),
-                    hintStyle: const TextStyle(color: Colors.white30),
+                    hintStyle: TextStyle(color: context.forest.text38),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -551,8 +558,9 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                 // Owner dropdown
                 DropdownButtonFormField<String>(
                   initialValue: initialOwner,
-                  dropdownColor: const Color(0xFF1E3238),
-                  style: const TextStyle(color: Colors.white),
+                  dropdownColor:
+                      context.forest.surfaceFor(const Color(0xFF1E3238)),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('luggage_owner_label'),
                   ),
@@ -581,15 +589,17 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                 // Custodian dropdown
                 DropdownButtonFormField<String?>(
                   initialValue: initialCustodian,
-                  dropdownColor: const Color(0xFF1E3238),
-                  style: const TextStyle(color: Colors.white),
+                  dropdownColor:
+                      context.forest.surfaceFor(const Color(0xFF1E3238)),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('luggage_custodian_label'),
                   ),
                   items: [
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('—', style: TextStyle(color: Colors.white54)),
+                      child: Text('—',
+                          style: TextStyle(color: context.forest.text54)),
                     ),
                     for (final m in memberList)
                       DropdownMenuItem<String?>(
@@ -614,11 +624,11 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                 // Location notes
                 TextField(
                   controller: locationCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('luggage_location_label'),
                     hintText: l10n.translate('luggage_location_hint'),
-                    hintStyle: const TextStyle(color: Colors.white30),
+                    hintStyle: TextStyle(color: context.forest.text38),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -630,7 +640,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                     l10n.translate(isLoaded
                         ? 'luggage_loaded_status'
                         : 'luggage_unloaded_status'),
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: TextStyle(color: context.forest.text, fontSize: 13),
                   ),
                   value: isLoaded,
                   activeThumbColor: AppColors.mintGreen,

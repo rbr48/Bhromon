@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../../core/utils/logger.dart';
@@ -160,10 +161,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                     shape: BoxShape.circle,
                   ),
                   child: _isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(10),
+                      ? Padding(
+                          padding: const EdgeInsets.all(10),
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: context.chat.text,
                             strokeWidth: 2,
                           ),
                         )
@@ -171,7 +172,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                           isPlaying
                               ? Icons.pause_rounded
                               : Icons.play_arrow_rounded,
-                          color: Colors.white,
+                          color: context.chat.text,
                           size: 26,
                         ),
                 ),
@@ -193,8 +194,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         activeTrackColor: widget.isMe
                             ? const Color(0xFF00A884)
                             : const Color(0xFF53BDEB),
-                        inactiveTrackColor: Colors.white24,
-                        thumbColor: Colors.white,
+                        inactiveTrackColor: context.chat.text24,
+                        thumbColor: context.chat.isDark
+                            ? Colors.white
+                            : const Color(0xFF00A884),
                       ),
                       child: Slider(
                         value: progress,
@@ -213,13 +216,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         children: [
                           Text(
                             _formatDuration(_position),
-                            style: const TextStyle(
-                                color: Colors.white60, fontSize: 10),
+                            style: TextStyle(
+                                color: context.chat.text60, fontSize: 10),
                           ),
                           Text(
                             _formatDuration(_totalDuration),
-                            style: const TextStyle(
-                                color: Colors.white60, fontSize: 10),
+                            style: TextStyle(
+                                color: context.chat.text60, fontSize: 10),
                           ),
                         ],
                       ),
@@ -235,13 +238,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
+                    color: context.chat.text.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     _speedLabel,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: context.chat.text70,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),

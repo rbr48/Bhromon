@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,13 @@ import '../../domain/services/trip_ledger_engine.dart';
 import '../../../chat/presentation/widgets/chat_document_bubble.dart';
 import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
+
+/// The own bubble in light theme: the same pale green as the 1:1 chat's own bubbles.
+const Color kOwnBubbleLight = Color(0xFFD9FDD3);
+
+/// The time on an own bubble in dark theme. White at 87% gives 5.3:1 on the dark
+/// green bubble, which meets AA for small text.
+const Color kOwnBubbleMetaColor = Color(0xDDFFFFFF);
 
 /// One message in a channel: its sender, quote, media, poll or expense card,
 /// formatted text, reactions and time.
@@ -76,7 +84,9 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
               BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
           decoration: BoxDecoration(
-            color: own ? AppColors.midGreen : const Color(0xFF1E3326),
+            color: own
+                ? (context.forest.isDark ? AppColors.midGreen : kOwnBubbleLight)
+                : context.forest.surfaceFor(const Color(0xFF1E3326)),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14),
               topRight: const Radius.circular(14),
@@ -162,8 +172,8 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
           child: Text(
             widget.message.senderName,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: AppColors.gold,
+            style: TextStyle(
+                color: context.forest.readable(AppColors.gold),
                 fontSize: 11,
                 fontWeight: FontWeight.bold),
           ),
@@ -173,12 +183,12 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: Colors.white10,
+              color: context.forest.divider10,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               widget.badge,
-              style: const TextStyle(color: AppColors.mintGreen, fontSize: 10),
+              style: TextStyle(color: context.forest.accentText, fontSize: 10),
             ),
           ),
         ],
@@ -188,27 +198,31 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
 
   Widget _footer(AppLocalizations l10n) {
     final m = widget.message;
+    final meta = widget.isMine && context.forest.isDark
+        ? kOwnBubbleMetaColor
+        : context.forest.text54;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (m.isPending) ...[
-          const Icon(Icons.schedule, size: 11, color: Colors.white54),
+          Icon(Icons.schedule, size: 11, color: meta),
           const SizedBox(width: 4),
         ],
         if (m.isPinned) ...[
-          const Icon(Icons.push_pin, size: 11, color: AppColors.gold),
+          Icon(Icons.push_pin,
+              size: 11, color: context.forest.readable(AppColors.gold)),
           const SizedBox(width: 4),
         ],
         if (m.editedAt != null) ...[
           Text(
             l10n.translate('chan_edited'),
-            style: const TextStyle(color: Colors.white54, fontSize: 10),
+            style: TextStyle(color: meta, fontSize: 10),
           ),
           const SizedBox(width: 4),
         ],
         Text(
           localizedDateFormat('hh:mm a').format(m.timestamp),
-          style: const TextStyle(color: Colors.white54, fontSize: 10),
+          style: TextStyle(color: meta, fontSize: 10),
         ),
       ],
     );
@@ -236,8 +250,8 @@ class _ReplyQuote extends StatelessWidget {
         children: [
           Text(
             reply.senderName,
-            style: const TextStyle(
-                color: AppColors.gold,
+            style: TextStyle(
+                color: context.forest.readable(AppColors.gold),
                 fontSize: 11,
                 fontWeight: FontWeight.bold),
           ),
@@ -335,7 +349,7 @@ class _ExpenseCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.receipt_long, color: AppColors.mintGreen),
+              Icon(Icons.receipt_long, color: context.forest.accentText),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -343,8 +357,8 @@ class _ExpenseCard extends StatelessWidget {
                   children: [
                     Text(
                       l10n.translate('chan_expense_card'),
-                      style: const TextStyle(
-                          color: AppColors.mintGreen, fontSize: 10),
+                      style: TextStyle(
+                          color: context.forest.accentText, fontSize: 10),
                     ),
                     Text(
                       message.expenseTitle,
@@ -355,8 +369,8 @@ class _ExpenseCard extends StatelessWidget {
                     ),
                     Text(
                       TripLedgerEngine.formatTaka(message.expenseAmountPaisa),
-                      style: const TextStyle(
-                          color: AppColors.gold,
+                      style: TextStyle(
+                          color: context.forest.readable(AppColors.gold),
                           fontSize: 13,
                           fontWeight: FontWeight.bold),
                     ),
@@ -372,7 +386,7 @@ class _ExpenseCard extends StatelessWidget {
               child: Text(
                 l10n.translate('chan_expense_view'),
                 style:
-                    const TextStyle(color: AppColors.mintGreen, fontSize: 12),
+                    TextStyle(color: context.forest.accentText, fontSize: 12),
               ),
             ),
           ),
@@ -427,27 +441,27 @@ class _PollBlock extends StatelessWidget {
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                           size: 16,
-                          color: AppColors.mintGreen,
+                          color: context.forest.accentText,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             message.pollOptions[i],
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 13),
+                            style: TextStyle(
+                                color: context.forest.text, fontSize: 13),
                           ),
                         ),
                         Text(
                           '${counts[i]}',
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
+                          style: TextStyle(
+                              color: context.forest.text70, fontSize: 12),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: total == 0 ? 0 : counts[i] / total,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: context.forest.divider10,
                       color: AppColors.mintGreen,
                       minHeight: 4,
                     ),
@@ -458,7 +472,7 @@ class _PollBlock extends StatelessWidget {
           ),
         Text(
           context.l10n.translate('chan_poll_votes', args: {'count': total}),
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          style: TextStyle(color: context.forest.text54, fontSize: 11),
         ),
       ],
     );
@@ -502,7 +516,7 @@ class _ReactionRow extends StatelessWidget {
                 ),
                 child: Text(
                   '${entry.key} ${entry.value}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  style: TextStyle(color: context.forest.text, fontSize: 12),
                 ),
               ),
             ),
@@ -553,7 +567,8 @@ class _ChannelRichTextState extends State<ChannelRichText> {
     // The recognizers belong to the spans built below, so the previous set is
     // released first.
     _disposeRecognizers();
-    const base = TextStyle(color: Colors.white, fontSize: 14, height: 1.35);
+    final base =
+        TextStyle(color: context.forest.text, fontSize: 14, height: 1.35);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -589,14 +604,14 @@ class _ChannelRichTextState extends State<ChannelRichText> {
               : null,
       fontFamily: span.code ? 'monospace' : null,
       backgroundColor: span.code ? Colors.black38 : null,
-      color: span.link != null ? AppColors.mintGreen : null,
+      color: span.link != null ? context.forest.accentText : null,
     );
 
     final spoilerId = span.spoilerId;
     if (spoilerId != null && !widget.revealed.contains(spoilerId)) {
       style = style.copyWith(
         color: Colors.transparent,
-        backgroundColor: const Color(0xFF0B1410),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0B1410)),
       );
     }
 
@@ -695,8 +710,8 @@ class _LocationCard extends StatelessWidget {
               color: AppColors.mintGreen.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.location_on_rounded,
-                color: AppColors.mintGreen, size: 20),
+            child: Icon(Icons.location_on_rounded,
+                color: context.forest.accentText, size: 20),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -715,8 +730,8 @@ class _LocationCard extends StatelessWidget {
                 ),
                 Text(
                   l10n.translate('chan_location_open_maps'),
-                  style: const TextStyle(
-                      color: AppColors.mintGreen,
+                  style: TextStyle(
+                      color: context.forest.accentText,
                       fontSize: 10,
                       fontWeight: FontWeight.w500),
                 ),

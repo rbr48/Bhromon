@@ -1,13 +1,15 @@
+import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
 
 /// WhatsApp-style emoji category definition.
 class _EmojiCategory {
-  final String title;
+  final String titleKey;
   final IconData icon;
   final List<String> emojis;
 
   const _EmojiCategory({
-    required this.title,
+    required this.titleKey,
     required this.icon,
     required this.emojis,
   });
@@ -38,7 +40,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
 
   static const List<_EmojiCategory> _categories = [
     _EmojiCategory(
-      title: 'Smileys & Emotion',
+      titleKey: 'chat_emoji_smileys',
       icon: Icons.sentiment_satisfied_alt_outlined,
       emojis: [
         '😀',
@@ -144,7 +146,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'People & Hands',
+      titleKey: 'chat_emoji_people',
       icon: Icons.waving_hand_outlined,
       emojis: [
         '👋',
@@ -220,7 +222,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Animals & Nature',
+      titleKey: 'chat_emoji_animals',
       icon: Icons.pets_outlined,
       emojis: [
         '🐶',
@@ -306,7 +308,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Food & Drink',
+      titleKey: 'chat_emoji_food',
       icon: Icons.fastfood_outlined,
       emojis: [
         '🍏',
@@ -392,7 +394,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Travel & Places',
+      titleKey: 'chat_emoji_travel',
       icon: Icons.flight_takeoff_outlined,
       emojis: [
         '🚗',
@@ -478,7 +480,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Activities & Sports',
+      titleKey: 'chat_emoji_activities',
       icon: Icons.sports_soccer_outlined,
       emojis: [
         '⚽',
@@ -554,7 +556,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Objects & Symbols',
+      titleKey: 'chat_emoji_objects',
       icon: Icons.favorite_border_rounded,
       emojis: [
         '❤️',
@@ -652,13 +654,13 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
   Widget build(BuildContext context) {
     return Container(
       height: widget.height,
-      color: const Color(0xFF1F2C34), // WhatsApp dark slate background
+      color: context.chat.bar, // WhatsApp dark slate background
       child: Column(
         children: [
           // Category selector tab bar
           Container(
             height: 44,
-            color: const Color(0xFF182229),
+            color: context.chat.recessedDeep,
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
@@ -687,8 +689,8 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
                           child: Icon(
                             _categories[idx].icon,
                             color: isSelected
-                                ? const Color(0xFF00A884)
-                                : const Color(0xFF8696A0),
+                                ? context.chat.accentText
+                                : context.chat.grey,
                             size: 20,
                           ),
                         ),
@@ -698,10 +700,10 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
                 ),
                 // Backspace button on the right of category header
                 IconButton(
-                  tooltip: 'Delete',
-                  icon: const Icon(
+                  tooltip: context.l10n.translate('chat_action_delete'),
+                  icon: Icon(
                     Icons.backspace_outlined,
-                    color: Color(0xFF8696A0),
+                    color: context.chat.grey,
                     size: 20,
                   ),
                   onPressed: widget.onBackspace,

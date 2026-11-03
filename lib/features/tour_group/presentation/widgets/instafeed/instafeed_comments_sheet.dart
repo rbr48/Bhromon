@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -201,12 +202,12 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: context.forest.feedSurface,
         title: Text(context.l10n.translate('ig_delete_comment_q'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(
           context.l10n.translate('ig_delete_comment_body'),
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: context.forest.text70),
         ),
         actions: [
           TextButton(
@@ -255,9 +256,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
         height: bottomInset > 0
             ? totalHeight - bottomInset
             : (mediaQuery.size.height * 0.78),
-        decoration: const BoxDecoration(
-          color: Color(0xFF121212),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: context.forest.feedSheet,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -267,7 +268,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: context.forest.text24,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -279,8 +280,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 children: [
                   Text(
                     context.l10n.translate('ig_comments_title'),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -302,8 +303,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           Text(
                             context.l10n.translate('ig_photo_number',
                                 args: {'n': _taggedSlideIndex! + 1}),
-                            style: const TextStyle(
-                              color: AppColors.mintGreen,
+                            style: TextStyle(
+                              color: context.forest.accentText,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -312,8 +313,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           GestureDetector(
                             onTap: () =>
                                 setState(() => _taggedSlideIndex = null),
-                            child: const Icon(Icons.close,
-                                size: 12, color: AppColors.mintGreen),
+                            child: Icon(Icons.close,
+                                size: 12, color: context.forest.accentText),
                           ),
                         ],
                       ),
@@ -322,13 +323,13 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   const Spacer(),
                   IconButton(
                     tooltip: context.l10n.translate('ig_close'),
-                    icon: const Icon(Icons.close, color: Colors.white70),
+                    icon: Icon(Icons.close, color: context.forest.text70),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: Colors.white10),
+            Divider(height: 1, color: context.forest.divider10),
 
             // Comments List
             Expanded(
@@ -341,7 +342,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                       child: Text(
                         context.l10n.translate('ig_load_failed',
                             args: {'error': '${snapshot.error}'}),
-                        style: const TextStyle(color: Colors.white54),
+                        style: TextStyle(color: context.forest.text54),
                       ),
                     );
                   }
@@ -360,13 +361,14 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         children: [
                           Icon(Icons.chat_bubble_outline,
                               size: 48,
-                              color: Colors.white.withValues(alpha: 0.2)),
+                              color:
+                                  context.forest.text.withValues(alpha: 0.2)),
                           const SizedBox(height: 12),
                           Text(
                             context.l10n.translate('ig_no_comments'),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.white54, height: 1.4),
+                            style: TextStyle(
+                                color: context.forest.text54, height: 1.4),
                           ),
                         ],
                       ),
@@ -425,7 +427,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                                       Container(
                                         width: 24,
                                         height: 1,
-                                        color: Colors.white24,
+                                        color: context.forest.text24,
                                         margin: const EdgeInsets.only(right: 8),
                                       ),
                                       Text(
@@ -437,8 +439,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                                                 args: {
                                                     'count': replies.length
                                                   }),
-                                        style: const TextStyle(
-                                          color: Colors.white54,
+                                        style: TextStyle(
+                                          color: context.forest.text54,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -448,7 +450,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                                             ? Icons.keyboard_arrow_up
                                             : Icons.keyboard_arrow_down,
                                         size: 16,
-                                        color: Colors.white54,
+                                        color: context.forest.text54,
                                       ),
                                     ],
                                   ),
@@ -479,20 +481,20 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 color: Colors.grey.shade900,
                 child: Row(
                   children: [
-                    const Icon(Icons.reply,
-                        size: 16, color: AppColors.mintGreen),
+                    Icon(Icons.reply,
+                        size: 16, color: context.forest.accentText),
                     const SizedBox(width: 8),
                     Text(
                       context.l10n.translate('ig_replying_to',
                           args: {'name': _replyingTo!.authorName}),
                       style:
-                          const TextStyle(color: Colors.white70, fontSize: 13),
+                          TextStyle(color: context.forest.text70, fontSize: 13),
                     ),
                     const Spacer(),
                     IconButton(
                       tooltip: context.l10n.translate('ig_close'),
-                      icon: const Icon(Icons.close,
-                          size: 18, color: Colors.white54),
+                      icon: Icon(Icons.close,
+                          size: 18, color: context.forest.text54),
                       onPressed: _cancelReply,
                       padding: EdgeInsets.zero,
                     ),
@@ -504,7 +506,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
             Container(
               height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              color: const Color(0xFF181818),
+              color: context.forest.feedDeep,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: _quickEmojis.map((emoji) {
@@ -527,14 +529,14 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
               bottom: bottomInset == 0,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                color: const Color(0xFF1E1E1E),
+                color: context.forest.feedSurface,
                 child: Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _commentCtrl,
                         focusNode: _focusNode,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: context.forest.text),
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _submitComment(),
                         decoration: InputDecoration(
@@ -542,9 +544,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                               ? context.l10n.translate('ig_write_comment')
                               : context.l10n.translate('ig_write_reply',
                                   args: {'name': _replyingTo!.authorName}),
-                          hintStyle: const TextStyle(color: Colors.white54),
+                          hintStyle: TextStyle(color: context.forest.text54),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: context.forest.feedField,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                           border: OutlineInputBorder(
@@ -564,8 +566,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.send_rounded,
-                              color: AppColors.mintGreen),
+                          : Icon(Icons.send_rounded,
+                              color: context.forest.accentText),
                     ),
                   ],
                 ),
@@ -631,8 +633,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   children: [
                     Text(
                       comment.authorName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -648,8 +650,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         ),
                         child: Text(
                           context.l10n.translate('ig_author_badge'),
-                          style: const TextStyle(
-                            color: AppColors.mintGreen,
+                          style: TextStyle(
+                            color: context.forest.accentText,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
@@ -678,8 +680,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 else
                   Text(
                     comment.text,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 14,
                       height: 1.3,
                     ),
@@ -694,8 +696,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         onTap: () => _startReply(comment),
                         child: Text(
                           context.l10n.translate('ig_reply'),
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: context.forest.text54,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -710,8 +712,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                             const SizedBox(width: 3),
                             Text(
                               context.l10n.translate('ig_author_liked'),
-                              style: const TextStyle(
-                                color: Colors.white54,
+                              style: TextStyle(
+                                color: context.forest.text54,
                                 fontSize: 11,
                               ),
                             ),
@@ -729,7 +731,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                             style: TextStyle(
                               color: comment.isPinned
                                   ? Colors.amber
-                                  : Colors.white54,
+                                  : context.forest.text54,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -767,7 +769,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 icon: Icon(
                   isLiked ? Icons.favorite : Icons.favorite_border,
                   size: 18,
-                  color: isLiked ? Colors.redAccent : Colors.white38,
+                  color: isLiked ? Colors.redAccent : context.forest.text38,
                 ),
                 padding: EdgeInsets.zero,
                 onPressed: () => _toggleLike(comment),
@@ -775,7 +777,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
               if (likeCount > 0)
                 Text(
                   '$likeCount',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11),
                 ),
             ],
           ),

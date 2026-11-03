@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
@@ -196,11 +197,11 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           final activeTour = pickTour(groups, [widget.initialTourId]);
 
           return Scaffold(
-            backgroundColor: const Color(0xFF0D1711),
+            backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1711)),
             appBar: AppBar(
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white70, size: 18),
+                icon: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: context.forest.text70, size: 18),
                 onPressed: () {
                   if (Navigator.of(context).canPop()) {
                     Navigator.of(context).pop();
@@ -218,8 +219,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               centerTitle: true,
-              backgroundColor: const Color(0xFF122218),
-              foregroundColor: Colors.white,
+              backgroundColor:
+                  context.forest.surfaceFor(const Color(0xFF122218)),
+              foregroundColor: context.forest.text,
               elevation: 0,
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(48),
@@ -230,7 +232,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       controller: _tabController,
                       indicatorColor: AppColors.mintGreen,
                       labelColor: AppColors.mintGreen,
-                      unselectedLabelColor: Colors.white60,
+                      unselectedLabelColor: context.forest.text60,
                       indicatorWeight: 3,
                       tabs: const [
                         Tab(
@@ -443,15 +445,18 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     label: Text(c['label'] as String),
                     selected: isSelected,
                     showCheckmark: false,
-                    backgroundColor: const Color(0xFF142017),
+                    backgroundColor:
+                        context.forest.surfaceFor(const Color(0xFF142017)),
                     selectedColor: AppColors.mintGreen.withValues(alpha: 0.22),
                     side: BorderSide(
                       color: isSelected
                           ? AppColors.mintGreen
-                          : Colors.white.withValues(alpha: 0.08),
+                          : context.forest.text.withValues(alpha: 0.08),
                     ),
                     labelStyle: TextStyle(
-                      color: isSelected ? AppColors.mintGreen : Colors.white70,
+                      color: isSelected
+                          ? context.forest.accentText
+                          : context.forest.text70,
                       fontSize: 12,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.w500,
@@ -474,7 +479,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
             _isCompactView
                 ? Icons.grid_view_rounded
                 : Icons.view_agenda_rounded,
-            color: Colors.white60,
+            color: context.forest.text60,
             size: 20,
           ),
           tooltip: _isCompactView ? 'Grid View' : 'Compact List',
@@ -522,7 +527,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF132219),
+            color: context.forest.surfaceFor(const Color(0xFF132219)),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: g.tagColor.withValues(alpha: 0.25),
@@ -564,8 +569,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                         children: [
                           Text(
                             g.title,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.forest.text,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
@@ -573,8 +578,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                           const SizedBox(height: 3),
                           Text(
                             '${g.players} • ${g.highlight}',
-                            style: const TextStyle(
-                                color: Colors.white60, fontSize: 11),
+                            style: TextStyle(
+                                color: context.forest.text60, fontSize: 11),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -835,29 +840,30 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.groups_outlined,
-                  color: Colors.white38, size: 64),
+              Icon(Icons.groups_outlined,
+                  color: context.forest.text38, size: 64),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'No Active Group',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.forest.text,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Join or create a group to unlock online multiplayer with in-game voice chat.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: context.forest.text70, fontSize: 13),
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: () => context.go('/group-hub'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.mintGreen,
-                  foregroundColor: const Color(0xFF0F1E14),
+                  foregroundColor:
+                      context.forest.surfaceFor(const Color(0xFF0F1E14)),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -948,7 +954,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mintGreen,
-                        foregroundColor: const Color(0xFF0F1E14),
+                        foregroundColor:
+                            context.forest.surfaceFor(const Color(0xFF0F1E14)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -992,10 +999,10 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         ),
 
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'ACTIVE TOUR TABLES',
           style: TextStyle(
-            color: Colors.white54,
+            color: context.forest.text54,
             fontSize: 12,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -1024,28 +1031,29 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
               return Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.03),
+                  color: context.forest.text.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10),
+                  border: Border.all(color: context.forest.divider10),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
                     Icon(Icons.table_restaurant_outlined,
-                        color: Colors.white24, size: 48),
-                    SizedBox(height: 12),
+                        color: context.forest.text24, size: 48),
+                    const SizedBox(height: 12),
                     Text(
                       'No open game tables yet',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: context.forest.text,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'Create a table above and invite your group members to play!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1070,12 +1078,12 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSeated
               ? AppColors.mintGreen.withValues(alpha: 0.6)
-              : Colors.white12,
+              : context.forest.divider12,
           width: isSeated ? 1.5 : 1.0,
         ),
       ),
@@ -1103,7 +1111,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
                   child: Icon(
                     _iconForGame(session.gameType),
-                    color: AppColors.mintGreen,
+                    color: context.forest.accentText,
                     size: 22,
                   ),
                 ),
@@ -1117,8 +1125,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                           Expanded(
                             child: Text(
                               session.tableName,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -1139,16 +1147,19 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                                         AppColors.gold.withValues(alpha: 0.5),
                                     width: 0.8),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.emoji_events_rounded,
-                                      size: 11, color: AppColors.gold),
-                                  SizedBox(width: 3),
+                                      size: 11,
+                                      color: context.forest
+                                          .readable(AppColors.gold)),
+                                  const SizedBox(width: 3),
                                   Text(
                                     'TOURNAMENT',
                                     style: TextStyle(
-                                      color: AppColors.gold,
+                                      color: context.forest
+                                          .readable(AppColors.gold),
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1169,8 +1180,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                             child: Text(
                               isPlaying ? 'IN MATCH' : 'OPEN LOBBY',
                               style: TextStyle(
-                                color:
-                                    isPlaying ? Colors.redAccent : Colors.amber,
+                                color: isPlaying
+                                    ? context.forest.readable(Colors.redAccent)
+                                    : context.forest.readable(Colors.amber),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1181,8 +1193,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       const SizedBox(height: 4),
                       Text(
                         '${session.gameType.label} • ${session.players.length}/${session.maxPlayers} Seated',
-                        style: const TextStyle(
-                            color: Colors.white60, fontSize: 12),
+                        style: TextStyle(
+                            color: context.forest.text60, fontSize: 12),
                       ),
                     ],
                   ),
@@ -1205,8 +1217,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     backgroundColor: isSeated
                         ? AppColors.mintGreen
                         : const Color(0xFF233F2E),
-                    foregroundColor:
-                        isSeated ? const Color(0xFF0F1E14) : Colors.white,
+                    foregroundColor: isSeated
+                        ? context.forest.surfaceFor(const Color(0xFF0F1E14))
+                        : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -1232,18 +1245,18 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
     showDialog<void>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF14241B),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Colors.white12),
+          side: BorderSide(color: context.forest.divider12),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.pin_rounded, color: AppColors.mintGreen),
-            SizedBox(width: 8),
+            Icon(Icons.pin_rounded, color: context.forest.accentText),
+            const SizedBox(width: 8),
             Text(
               'Join with Code',
-              style: TextStyle(color: Colors.white, fontSize: 18),
+              style: TextStyle(color: context.forest.text, fontSize: 18),
             ),
           ],
         ),
@@ -1251,27 +1264,27 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Enter the Table Code or paste the invite shared by your host:',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: context.forest.text70, fontSize: 13),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
-              style:
-                  const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+              style: TextStyle(
+                  color: context.forest.text, fontFamily: 'monospace'),
               decoration: InputDecoration(
                 hintText: 'e.g. 7kX9qLm...',
-                hintStyle: const TextStyle(color: Colors.white38),
+                hintStyle: TextStyle(color: context.forest.text38),
                 filled: true,
                 fillColor: Colors.black26,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white24),
+                  borderSide: BorderSide(color: context.forest.text24),
                 ),
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.paste_rounded,
-                      color: AppColors.mintGreen, size: 20),
+                  icon: Icon(Icons.paste_rounded,
+                      color: context.forest.accentText, size: 20),
                   onPressed: () async {
                     final data = await Clipboard.getData(Clipboard.kTextPlain);
                     if (data?.text != null && data!.text!.trim().isNotEmpty) {
@@ -1290,12 +1303,13 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                Text('Cancel', style: TextStyle(color: context.forest.text54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.mintGreen,
-              foregroundColor: const Color(0xFF0F1E14),
+              foregroundColor:
+                  context.forest.surfaceFor(const Color(0xFF0F1E14)),
             ),
             onPressed: () async {
               final code = controller.text.trim();

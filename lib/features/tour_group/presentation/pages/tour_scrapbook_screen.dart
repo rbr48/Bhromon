@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -124,12 +125,12 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
     final l10n = context.l10n;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF15110D),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
       appBar: AppBar(
         title: Text(l10n.translate('scrap_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: const Color(0xFF15110D),
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
+        foregroundColor: context.forest.text,
         elevation: 0,
         actions: [
           IconButton(
@@ -148,7 +149,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
                     padding: const EdgeInsets.all(24),
                     child: Text(l10n.translate('scrap_load_failed'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70)),
+                        style: TextStyle(color: context.forest.text70)),
                   ),
                 )
               : ScrapbookMagazine(

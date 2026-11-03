@@ -33,6 +33,7 @@ import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
+import 'channel_message_cache.dart';
 import 'channel_read_store.dart';
 import 'tour_hub_preference.dart';
 import 'tour_media_journal.dart';
@@ -271,6 +272,7 @@ class TourGroupRepository {
     await ChannelReadStore().clearTour(tourId);
     await TourMediaJournal.instance.dropTour(tourId);
     await TourHubPreference().forget(tourId);
+    await ChannelMessageCache().clearTour(tourId);
     try {
       // Photos and videos the tour loaded sit in the image cache, which cannot
       // tell one tour's files from another's, so the whole cache is emptied.
@@ -1205,6 +1207,46 @@ class TourGroupRepository {
         .where('status', isEqualTo: 'active')
         .get(const GetOptions(source: Source.server));
     return [for (final row in rows.docs) TourMember.fromMap(row.data())];
+  }
+
+  /// Which of [tourIds] (groups the signed-in person is in) the person with
+  /// [uid] is also an active member of, and that person's email from their
+  /// membership row. [email] is a hint, such as the address a chat knows; it
+  /// finds rows that have no uid yet. Each group is read with its own query,
+  /// because the rules let a member list only their own group's roster.
+  Future<({Set<String> tourIds, String? email})> sharedGroupsWith({
+    required String uid,
+    String? email,
+    required Iterable<String> tourIds,
+  }) async {
+    final shared = <String>{};
+    String? knownEmail =
+        (email == null || email.trim().isEmpty) ? null : normalizeEmail(email);
+    for (final tourId in tourIds) {
+      try {
+        final rows = await _memberships
+            .where('tourId', isEqualTo: tourId)
+            .where('status', isEqualTo: 'active')
+            .where('uid', isEqualTo: uid)
+            .limit(1)
+            .get();
+        if (rows.docs.isNotEmpty) {
+          shared.add(tourId);
+          final rowEmail = rows.docs.first.data()['email'] as String? ?? '';
+          if (rowEmail.isNotEmpty) knownEmail ??= normalizeEmail(rowEmail);
+          continue;
+        }
+        if (knownEmail != null) {
+          final row = await _memberships.doc('${tourId}__$knownEmail').get();
+          if (row.exists && row.data()?['status'] == 'active') {
+            shared.add(tourId);
+          }
+        }
+      } catch (error, stackTrace) {
+        logWarning('Could not check shared group $tourId', error, stackTrace);
+      }
+    }
+    return (tourIds: shared, email: knownEmail);
   }
 
   /// Whether the signed-in person and [partnerUid] (at [partnerEmail]) can call each
@@ -2679,6 +2721,48 @@ class TourGroupRepository {
       });
     } catch (e, st) {
       logWarning('[recordPostView] Failed to record view on $postId', e, st);
+    }
+  }
+
+  /// Records this member's view of each post in [postIds]. The posts go through
+  /// transactions of 25, and a post that already lists the member as a viewer is
+  /// left alone, so each view is counted once.
+  Future<void> recordPostViews({
+    required String tourId,
+    required List<String> postIds,
+  }) async {
+    final email = currentEmail;
+    if (email.isEmpty || postIds.isEmpty) return;
+    const batchSize = 25;
+    for (var start = 0; start < postIds.length; start += batchSize) {
+      final end = start + batchSize < postIds.length
+          ? start + batchSize
+          : postIds.length;
+      final batch = postIds.sublist(start, end);
+      try {
+        await _firestore.runTransaction((tx) async {
+          // A transaction reads everything before it writes anything.
+          final refs = [for (final id in batch) _sub(tourId, 'posts').doc(id)];
+          final snaps = <DocumentSnapshot<Map<String, dynamic>>>[];
+          for (final ref in refs) {
+            snaps.add(await tx.get(ref));
+          }
+          for (var i = 0; i < refs.length; i++) {
+            final data = snaps[i].data();
+            if (data == null) continue;
+            final viewers =
+                (data['viewers'] as List?)?.cast<Object?>() ?? const [];
+            if (viewers.contains(email)) continue;
+            tx.update(refs[i], {
+              'viewers': FieldValue.arrayUnion([email]),
+              'viewCount': FieldValue.increment(1),
+            });
+          }
+        });
+      } catch (e, st) {
+        logWarning(
+            '[recordPostViews] Failed to record ${batch.length} views', e, st);
+      }
     }
   }
 

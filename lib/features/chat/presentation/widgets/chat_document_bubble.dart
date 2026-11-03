@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -117,7 +119,10 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
         setState(() => _isDownloading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open file: $e'),
+            content: Text(
+              context.l10n
+                  .translate('chat_open_file_failed', args: {'error': '$e'}),
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -133,7 +138,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
     return Container(
       width: 260,
       decoration: BoxDecoration(
-        color: widget.isMe ? const Color(0xFF005C4B) : const Color(0xFF202C33),
+        color: widget.isMe ? context.chat.outgoing : context.chat.panel,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(8),
@@ -148,8 +153,8 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: widget.isMe
-                    ? const Color(0xFF024638)
-                    : const Color(0xFF182229),
+                    ? context.chat.outgoingRecessed
+                    : context.chat.recessedDeep,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -167,7 +172,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                     child: Text(
                       ext,
                       style: TextStyle(
-                        color: extColor,
+                        color: context.chat.text,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -182,8 +187,8 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                       children: [
                         Text(
                           widget.fileName,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: context.chat.text,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -193,8 +198,8 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                         const SizedBox(height: 3),
                         Text(
                           '${_formatFileSize(widget.fileSizeBytes)} • $ext',
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: context.chat.text70,
                             fontSize: 10.5,
                           ),
                         ),
@@ -217,12 +222,12 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: context.chat.text.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.download_rounded,
-                        color: Colors.white,
+                        color: context.chat.text,
                         size: 18,
                       ),
                     ),
@@ -243,7 +248,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                     Text(
                       widget.timeStr,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 9.5),
+                          TextStyle(color: context.chat.text54, fontSize: 9.5),
                     ),
                   if (widget.isMe && widget.deliveryIcon != null) ...[
                     const SizedBox(width: 4),

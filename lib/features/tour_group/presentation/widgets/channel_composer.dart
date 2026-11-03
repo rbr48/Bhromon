@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -115,13 +116,13 @@ class ChannelComposer extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(uploadLabel!,
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 11)),
+                            style: TextStyle(
+                                color: context.forest.text54, fontSize: 11)),
                         const SizedBox(height: 3),
                         LinearProgressIndicator(
                           value: uploadProgress,
                           color: AppColors.mintGreen,
-                          backgroundColor: Colors.white10,
+                          backgroundColor: context.forest.divider10,
                           minHeight: 3,
                         ),
                       ],
@@ -129,7 +130,7 @@ class ChannelComposer extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: l10n.translate('tour_cancel'),
-                    icon: const Icon(Icons.close, color: Colors.white54),
+                    icon: Icon(Icons.close, color: context.forest.text54),
                     onPressed: onCancelUpload,
                   ),
                 ],
@@ -152,7 +153,7 @@ class ChannelComposer extends StatelessWidget {
                 children: [
                   IconButton(
                     tooltip: l10n.translate('chan_attach_tooltip'),
-                    icon: const Icon(Icons.attach_file, color: Colors.white70),
+                    icon: Icon(Icons.attach_file, color: context.forest.text70),
                     onPressed: sending ? null : onAttach,
                   ),
                   Expanded(
@@ -165,14 +166,14 @@ class ChannelComposer extends StatelessWidget {
                       textInputAction: TextInputAction.send,
                       onChanged: onChanged,
                       onSubmitted: (_) => onSend(),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: context.forest.text),
                       decoration: InputDecoration(
                         counterText: '',
                         hintText: hint,
-                        hintStyle: const TextStyle(
-                            color: Colors.white54, fontSize: 13),
+                        hintStyle: TextStyle(
+                            color: context.forest.text54, fontSize: 13),
                         filled: true,
-                        fillColor: Colors.black26,
+                        fillColor: context.forest.inset26,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20),
                           borderSide: BorderSide.none,
@@ -193,8 +194,8 @@ class ChannelComposer extends StatelessWidget {
                       if (canRecord) {
                         return IconButton(
                           tooltip: l10n.translate('chan_voice_tooltip'),
-                          icon: const Icon(Icons.mic_rounded,
-                              color: AppColors.mintGreen),
+                          icon: Icon(Icons.mic_rounded,
+                              color: context.forest.accentText),
                           onPressed: onStartVoice,
                         );
                       }
@@ -207,8 +208,8 @@ class ChannelComposer extends StatelessWidget {
                                 child: CircularProgressIndicator(
                                     color: AppColors.mintGreen, strokeWidth: 2),
                               )
-                            : const Icon(Icons.send_rounded,
-                                color: AppColors.mintGreen),
+                            : Icon(Icons.send_rounded,
+                                color: context.forest.accentText),
                         onPressed: sending ? null : onSend,
                       );
                     },
@@ -318,7 +319,7 @@ class _MentionList extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       constraints: const BoxConstraints(maxHeight: 200),
       child: Material(
-        color: const Color(0xFF1E3326),
+        color: context.forest.surfaceFor(const Color(0xFF1E3326)),
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
         child: ListView(
@@ -328,11 +329,11 @@ class _MentionList extends StatelessWidget {
             for (final choice in choices)
               ListTile(
                 dense: true,
-                leading: const Icon(Icons.alternate_email,
-                    size: 18, color: AppColors.mintGreen),
+                leading: Icon(Icons.alternate_email,
+                    size: 18, color: context.forest.accentText),
                 title: Text(
                   choice.display,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(color: context.forest.text, fontSize: 13),
                 ),
                 onTap: () => onPick(choice),
               ),

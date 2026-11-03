@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:bhromon/core/media/media_access.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,13 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
+import '../../../core/localization/locale_controller.dart';
+import '../../../core/audio/call_audio_session.dart';
 import '../../../core/utils/app_logger.dart';
-import '../../../core/utils/image_sizing.dart';
 import '../../../firebase_options.dart';
+import '../presentation/widgets/incoming_call_dialog.dart';
 import 'call_signaling_service.dart';
+import 'system_call_bridge.dart';
 import 'vps_chat_service.dart';
 
 /// A call older than this when it is seen is not rung.
@@ -35,6 +36,43 @@ class IncomingCallRegistry {
     _seenAt[callId] = now;
     return true;
   }
+
+  /// Whether [callId] was claimed within [window], without claiming it.
+  bool isClaimed(String callId, DateTime now) {
+    final at = _seenAt[callId];
+    return at != null && now.difference(at) <= window;
+  }
+}
+
+/// A call the phone's call system holds as answered.
+typedef AcceptedSystemCall = ({
+  String callId,
+  String callerId,
+  String callerName,
+  String? avatarUrl,
+  bool isVideo,
+});
+
+/// The calls answered on the phone's own call screen, read from its list of
+/// calls. The phone marks a call answered the moment Accept is tapped, even
+/// when the app was closed or locked and never heard about it.
+List<AcceptedSystemCall> acceptedSystemCalls(Iterable<CallKitParams> calls) {
+  final accepted = <AcceptedSystemCall>[];
+  for (final call in calls) {
+    if (!call.isAccepted) continue;
+    final extra = call.extra ?? const <String, dynamic>{};
+    final callId = extra['callId']?.toString() ?? call.id;
+    if (callId.isEmpty) continue;
+    accepted.add((
+      callId: callId,
+      callerId: extra['callerId']?.toString() ?? '',
+      callerName:
+          extra['callerName']?.toString() ?? (call.nameCaller ?? 'Member'),
+      avatarUrl: extra['avatarUrl']?.toString() ?? call.avatar,
+      isVideo: extra['isVideo'] == true || call.type == 1,
+    ));
+  }
+  return accepted;
 }
 
 /// Top-level background callback invoked by flutter_callkit_incoming when
@@ -139,8 +177,24 @@ class CallNotificationService {
 
   AppLifecycleListener? _lifecycleListener;
 
+  /// Calls this app has closed in the phone's call system itself (accepted in
+  /// the app, declined, or dismissed). The phone reports those as "ended", which
+  /// must not be read as the user hanging up the call on screen.
+  final Set<String> _closedByApp = {};
+
+  /// Closes a call in the phone's call system, and remembers it was this app.
+  Future<void> _closeSystemCall(String callId) async {
+    if (kIsWeb || callId.isEmpty) return;
+    _closedByApp.add(callId);
+    await FlutterCallkitIncoming.endCall(callId);
+  }
+
   void _onAppLifecycleChanged(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed || kIsWeb) return;
+    if (kIsWeb) return;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_recoverAcceptedCalls());
+      return;
+    }
     final pending = _inAppCall;
     if (pending == null || !_isCallDialogShowing) return;
     // The native screen rings from here on, so the in-app ringtone stops to
@@ -184,6 +238,7 @@ class CallNotificationService {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _startListening(user.uid);
+        unawaited(_recoverAcceptedCalls());
       } else {
         _stopListening();
       }
@@ -191,6 +246,10 @@ class CallNotificationService {
 
     if (!kIsWeb) {
       _initCallkitEvents();
+      // An Accept tapped while the app was closed or locked can arrive before
+      // anything here listens, so the phone's own list is checked too.
+      unawaited(_recoverAcceptedCalls());
+      unawaited(_registerVoipToken());
       unawaited(ensureFullScreenIntentPermission());
       try {
         FlutterCallkitIncoming.onBackgroundMessage(callkitBackgroundCallback);
@@ -219,6 +278,24 @@ class CallNotificationService {
     }
   }
 
+  /// Registers this iPhone's PushKit token with the call server, which rings
+  /// the system call screen through Apple even when the app is closed.
+  Future<void> _registerVoipToken() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+    try {
+      final token = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+      if (token is String && token.isNotEmpty) {
+        await VpsChatService().registerDeviceToken(
+          token,
+          platform: 'ios-voip',
+          language: LocaleController.instance.locale.languageCode,
+        );
+      }
+    } catch (e, st) {
+      logWarning('[CallNotificationService] VoIP token not registered', e, st);
+    }
+  }
+
   // ── Native call screen ─────────────────────────────────────────────────────
 
   static Future<void> endNativeIncomingCall(String callId) async {
@@ -240,48 +317,84 @@ class CallNotificationService {
     final active = await FlutterCallkitIncoming.activeCalls();
     if (active.any((call) => call.id == callId)) return;
 
-    await FlutterCallkitIncoming.showCallkitIncoming(
-      CallKitParams(
-        id: callId,
-        nameCaller: callerName,
-        appName: 'Bhromon',
-        avatar: callerAvatar,
-        handle: isVideo ? 'Bhromon Video Call' : 'Bhromon Voice Call',
-        type: isVideo ? 1 : 0,
-        duration: kCallRingSeconds * 1000,
-        extra: <String, dynamic>{
-          'callId': callId,
-          'callerId': callerId,
-          'callerName': callerName,
-          'avatarUrl': callerAvatar,
-          'isVideo': isVideo,
-        },
-        android: const AndroidParams(
-          isCustomNotification: true,
-          isShowLogo: false,
-          ringtonePath: 'ringtone_default',
-          backgroundColor: '#075E54',
-          actionColor: '#00A884',
-          textColor: '#FFFFFF',
-          incomingCallNotificationChannelName: 'Bhromon Incoming Calls',
-          missedCallNotificationChannelName: 'Bhromon Missed Calls',
-          isShowFullLockedScreen: true,
-          isImportant: true,
-          isFullScreen: false,
-        ),
-        ios: const IOSParams(
-          iconName: 'AppIcon',
-          handleType: 'generic',
-          supportsVideo: true,
-          maximumCallGroups: 1,
-          maximumCallsPerCallGroup: 1,
-          audioSessionMode: 'videoChat',
-        ),
-      ),
-    );
+    await FlutterCallkitIncoming.showCallkitIncoming(buildCallKitParams(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerAvatar: callerAvatar,
+      isVideo: isVideo,
+    ));
   }
 
+  bool _recovering = false;
+
+  /// Answers a call that was accepted on the phone's call screen while the app
+  /// was not listening: a closed app opened by Accept, or a locked phone. The
+  /// phone already shows the call as answered with its timer running, so the
+  /// app answers it now; one that stopped ringing meanwhile is closed so the
+  /// phone stops showing it.
+  Future<void> _recoverAcceptedCalls() async {
+    if (kIsWeb || _recovering) return;
+    _recovering = true;
+    var opened = false;
+    try {
+      final List<CallKitParams> calls;
+      try {
+        calls = await FlutterCallkitIncoming.activeCalls();
+      } catch (e) {
+        logInfo('[CallNotificationService] active calls unavailable: $e');
+        return;
+      }
+      for (final call in acceptedSystemCalls(calls)) {
+        final callId = call.callId;
+        if (_isHandled(callId)) {
+          opened = true;
+          continue;
+        }
+        final ringing = await CallSignalingService.isStillRinging(callId);
+        // The Accept event may have arrived while the check ran.
+        if (_isHandled(callId)) {
+          opened = true;
+          continue;
+        }
+        if (!ringing) {
+          logInfo('[CallNotificationService] accepted call $callId is over');
+          await _closeSystemCall(callId);
+          continue;
+        }
+        logInfo('[CallNotificationService] answering accepted call $callId');
+        opened = true;
+        await _acceptCall(
+          callId: callId,
+          callerId: call.callerId,
+          callerName: call.callerName,
+          avatarUrl: call.avatarUrl,
+          isVideo: call.isVideo,
+          fromSystem: true,
+        );
+      }
+    } finally {
+      _recovering = false;
+      // Accept opens the app over the lock screen. With no call to show, the
+      // app goes back behind it.
+      if (!opened) unawaited(CallAudioSession.releaseAcceptLaunch());
+    }
+  }
+
+  /// Whether this app is already answering or showing [callId].
+  bool _isHandled(String callId) =>
+      CallSignalingService.activeCallId == callId ||
+      _settled.isClaimed('accept:$callId', DateTime.now());
+
   void _initCallkitEvents() {
+    try {
+      FlutterCallkitIncoming.acceptCallHandle((data) {
+        unawaited(_recoverAcceptedCalls());
+      });
+    } catch (e, st) {
+      logWarning(
+          '[CallNotificationService] Failed to set acceptCallHandle', e, st);
+    }
     _callkitSub?.cancel();
     _callkitSub = FlutterCallkitIncoming.onEvent.listen((event) async {
       if (event == null) return;
@@ -297,6 +410,9 @@ class CallNotificationService {
                 (callKitParams.nameCaller ?? 'Member'),
             avatarUrl: extra['avatarUrl']?.toString() ?? callKitParams.avatar,
             isVideo: extra['isVideo'] == true || callKitParams.type == 1,
+            // Answered on the phone's own screen: the phone keeps the call,
+            // so it is treated as a real call until it ends.
+            fromSystem: true,
           );
           break;
 
@@ -312,11 +428,45 @@ class CallNotificationService {
           }
           break;
 
-        case CallEventActionCallEnded():
+        case CallEventActionCallEnded(:final callKitParams):
+          final id =
+              callKitParams.extra?['callId']?.toString() ?? callKitParams.id;
+          if (_closedByApp.remove(id)) {
+            // This app closed the call in the phone's call system, so the call
+            // on screen is not hung up.
+            break;
+          }
+          if (id.isNotEmpty && ActiveCallControls.callId == id) {
+            // Ended by the phone: its hang-up button, a headset or car button,
+            // or the phone's own call screen.
+            ActiveCallControls.hangUp?.call();
+          } else {
+            // A ringing call closed. The caller's own timer marks it missed, so
+            // nothing is written here.
+            _dismissIncomingUI();
+          }
+          break;
+
         case CallEventActionCallTimeout():
-          // The native screen timed out or closed. The caller's own timer marks
-          // the call missed, so nothing is written here.
           _dismissIncomingUI();
+          break;
+
+        case CallEventActionDidUpdateDevicePushTokenVoip():
+          await _registerVoipToken();
+          break;
+
+        case CallEventActionCallToggleMute(:final id, :final isMuted):
+          if (ActiveCallControls.callId == id) {
+            ActiveCallControls.setMuted?.call(isMuted);
+          }
+          break;
+
+        case CallEventActionCallToggleHold(:final id, :final isOnHold):
+          // An ordinary phone call took over: this one goes silent until the
+          // phone gives it back.
+          if (ActiveCallControls.callId == id) {
+            ActiveCallControls.setMuted?.call(isOnHold);
+          }
           break;
 
         default:
@@ -330,6 +480,8 @@ class CallNotificationService {
   void _startListening(String uid) {
     if (_currentListeningUid == uid) return;
     _currentListeningUid = uid;
+    // The PushKit token belongs to whoever is signed in now.
+    unawaited(_registerVoipToken());
     _callsSub?.cancel();
     _emailCallsSub?.cancel();
     _vpsCallSub?.cancel();
@@ -410,11 +562,9 @@ class CallNotificationService {
     final createdAt = data['createdAt'] as Timestamp?;
     if (createdAt != null &&
         DateTime.now().difference(createdAt.toDate()) > _staleCallAge) {
-      unawaited(_declineCall(
-        callId,
-        callerId: data['callerId'] as String?,
-        isVideo: isVideo,
-      ));
+      // The caller's app went away without ending it. This phone never rang
+      // for it, so it is closed as missed rather than declined.
+      unawaited(_expireStaleCall(callId, callerId: callerId, isVideo: isVideo));
       return;
     }
     final (callerName, callerAvatar) = await _resolveCaller(
@@ -435,6 +585,9 @@ class CallNotificationService {
   Future<void> _presentFromRelay(
       Map<String, dynamic> event, String callId) async {
     if (callId.isEmpty) return;
+    // An offer can arrive after the call was answered elsewhere, declined or
+    // ended. Only a call that is still ringing rings here.
+    if (!await CallSignalingService.isStillRinging(callId)) return;
     final callerId = event['callerId']?.toString() ?? '';
     final (callerName, callerAvatar) = await _resolveCaller(
       callerId,
@@ -487,10 +640,15 @@ class CallNotificationService {
     required bool isVideo,
   }) async {
     if (!_shown.claim(callId, DateTime.now())) return;
+    // The phone already rings for this call (the background push did), or the
+    // call has been answered or ended: a second ring is never shown.
+    if (await SystemCallBridge.isActive(callId)) return;
+    if (!await CallSignalingService.isStillRinging(callId)) return;
 
-    if (CallSignalingService.isInCall &&
-        CallSignalingService.activeCallId != callId) {
-      // Already on a call: refuse this one so the caller is not left ringing.
+    final waiting = CallSignalingService.isInCall &&
+        CallSignalingService.activeCallId != callId;
+    if (waiting && kIsWeb && !_canShowInAppDialog()) {
+      // A browser has no native screen to ring a second call on.
       await CallSignalingService().declineCall(
         callId,
         callerId: callerId,
@@ -524,6 +682,7 @@ class CallNotificationService {
         callerName: callerName,
         avatarUrl: callerAvatar,
         isVideo: isVideo,
+        waiting: waiting,
       );
     }
   }
@@ -547,6 +706,7 @@ class CallNotificationService {
     required String callerName,
     required String? avatarUrl,
     required bool isVideo,
+    bool waiting = false,
   }) {
     _isCallDialogShowing = true;
     _inAppCall = (
@@ -556,7 +716,8 @@ class CallNotificationService {
       avatarUrl: avatarUrl,
       isVideo: isVideo,
     );
-    _startInAppRingtone();
+    // A second call during a call does not ring over the conversation.
+    if (!waiting) _startInAppRingtone();
     _dialogTimeout?.cancel();
     _dialogTimeout = Timer(const Duration(seconds: kCallRingSeconds), () {
       if (_activeIncomingCallId == callId) _dismissIncomingUI();
@@ -564,128 +725,31 @@ class CallNotificationService {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: const Color(0xFF00A884),
-              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                  ? CachedNetworkImageProvider(signedMediaUrl(avatarUrl),
-                      maxWidth: kMaxDecodeDimension)
-                  : null,
-              child: (avatarUrl == null || avatarUrl.isEmpty)
-                  ? Text(
-                      callerName.isNotEmpty
-                          ? callerName.substring(0, 1).toUpperCase()
-                          : 'T',
-                      style: const TextStyle(
-                          fontSize: 32,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              callerName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isVideo ? Icons.videocam : Icons.call,
-                  color: const Color(0xFF00A884),
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  isVideo ? 'Incoming Video Call...' : 'Incoming Voice Call...',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Decline button
-                GestureDetector(
-                  onTap: () async {
-                    Navigator.of(ctx).pop();
-                    _isCallDialogShowing = false;
-                    await _declineCall(
-                      callId,
-                      callerId: callerId,
-                      isVideo: isVideo,
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.call_end,
-                            color: Colors.white, size: 26),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text('Decline',
-                          style:
-                              TextStyle(color: Colors.redAccent, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                // Accept button
-                GestureDetector(
-                  onTap: () async {
-                    Navigator.of(ctx).pop();
-                    _isCallDialogShowing = false;
-                    await _acceptCall(
-                      callId: callId,
-                      callerId: callerId,
-                      callerName: callerName,
-                      avatarUrl: avatarUrl,
-                      isVideo: isVideo,
-                    );
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF00A884),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.call,
-                            color: Colors.white, size: 26),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text('Accept',
-                          style: TextStyle(
-                              color: Color(0xFF00A884), fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      builder: (ctx) => IncomingCallDialog(
+        callerName: callerName,
+        avatarUrl: avatarUrl,
+        isVideo: isVideo,
+        waiting: waiting,
+        onDecline: () async {
+          Navigator.of(ctx).pop();
+          _isCallDialogShowing = false;
+          await _declineCall(
+            callId,
+            callerId: callerId,
+            isVideo: isVideo,
+          );
+        },
+        onAccept: () async {
+          Navigator.of(ctx).pop();
+          _isCallDialogShowing = false;
+          await _acceptCall(
+            callId: callId,
+            callerId: callerId,
+            callerName: callerName,
+            avatarUrl: avatarUrl,
+            isVideo: isVideo,
+          );
+        },
       ),
     ).then((_) {
       _isCallDialogShowing = false;
@@ -700,14 +764,31 @@ class CallNotificationService {
     required String callerName,
     required String? avatarUrl,
     required bool isVideo,
+    bool fromSystem = false,
   }) async {
     // Native and in-app buttons can both report the same Accept.
-    if (!_settled.claim('accept:$callId', DateTime.now())) return;
+    if (!_settled.claim('accept:$callId', DateTime.now())) {
+      if (ActiveCallControls.callId != callId &&
+          CallSignalingService.activeCallId != callId) {
+        _openCall(
+          callId: callId,
+          callerId: callerId,
+          callerName: callerName,
+          avatarUrl: avatarUrl,
+          isVideo: isVideo,
+        );
+      }
+      return;
+    }
     _activeIncomingCallId = null;
     _closeInAppDialog();
-    if (!kIsWeb) {
-      await FlutterCallkitIncoming.endCall(callId);
+    // A call answered on the phone's own screen stays in its call system until
+    // it ends. One answered in the app was never there, so only a stray native
+    // ring is closed.
+    if (!kIsWeb && !fromSystem) {
+      await _closeSystemCall(callId);
     }
+    await _endCallInProgressFor(callId);
     _openCall(
       callId: callId,
       callerId: callerId,
@@ -717,8 +798,19 @@ class CallNotificationService {
     );
   }
 
+  /// Hangs up the call on screen before another is answered, and waits for its
+  /// screen to close.
+  Future<void> _endCallInProgressFor(String callId) async {
+    final current = CallSignalingService.activeCallId;
+    if (current == null || current == callId) return;
+    ActiveCallControls.hangUp?.call();
+    for (var i = 0; i < 30 && CallSignalingService.isInCall; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+  }
+
   /// Opens the call screen. A cold start from the native screen can get here
-  /// before the navigator exists, so the Accept waits for it for up to 15 seconds.
+  /// before the navigator exists, so the Accept waits for it for up to 30 seconds.
   void _openCall({
     required String callId,
     required String callerId,
@@ -726,6 +818,12 @@ class CallNotificationService {
     required String? avatarUrl,
     required bool isVideo,
   }) {
+    if (ActiveCallControls.callId == callId ||
+        CallSignalingService.activeCallId == callId) {
+      _pendingAcceptTimer?.cancel();
+      return;
+    }
+
     final context = AppRouter.navigatorKey.currentContext;
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (context != null && context.mounted && uid.isNotEmpty) {
@@ -760,12 +858,29 @@ class CallNotificationService {
           avatarUrl: avatarUrl,
           isVideo: isVideo,
         );
-      } else if (attempts >= 60) {
+      } else if (attempts >= 120) {
         // The app never came up. Decline so the caller is not left ringing.
         timer.cancel();
+        unawaited(CallAudioSession.releaseAcceptLaunch());
         unawaited(_declineCall(callId, callerId: callerId, isVideo: isVideo));
       }
     });
+  }
+
+  Future<void> _expireStaleCall(
+    String callId, {
+    required String callerId,
+    required bool isVideo,
+  }) async {
+    if (!_settled.claim('expire:$callId', DateTime.now())) return;
+    final calleeUid = FirebaseAuth.instance.currentUser?.uid;
+    if (calleeUid == null) return;
+    await CallSignalingService.expireStaleCall(
+      callId: callId,
+      calleeUid: calleeUid,
+      callerId: callerId,
+      isVideo: isVideo,
+    );
   }
 
   Future<void> _declineCall(
@@ -775,9 +890,7 @@ class CallNotificationService {
   }) async {
     if (!_settled.claim('decline:$callId', DateTime.now())) return;
     if (_activeIncomingCallId == callId) _activeIncomingCallId = null;
-    if (!kIsWeb) {
-      await FlutterCallkitIncoming.endCall(callId);
-    }
+    await _closeSystemCall(callId);
     await CallSignalingService().declineCall(
       callId,
       callerId: callerId,
@@ -787,6 +900,14 @@ class CallNotificationService {
 
   // ── Dismissing ─────────────────────────────────────────────────────────────
 
+  /// Stops the ring for [callId] on this phone: the native screen and the
+  /// in-app dialog. Used when the server says the call stopped ringing.
+  void dismissRingingCall(String callId) {
+    if (callId.isEmpty) return;
+    _dismissIncomingUI(callId: callId);
+    unawaited(endNativeIncomingCall(callId));
+  }
+
   /// Closes the call screen and native ring for the call on screen. When
   /// [callId] is given, only that call is closed.
   void _dismissIncomingUI({String? callId}) {
@@ -794,7 +915,7 @@ class CallNotificationService {
     if (callId != null && callId != active) return;
     _activeIncomingCallId = null;
     if (!kIsWeb && active != null) {
-      unawaited(FlutterCallkitIncoming.endCall(active));
+      unawaited(_closeSystemCall(active));
     }
     _closeInAppDialog();
   }

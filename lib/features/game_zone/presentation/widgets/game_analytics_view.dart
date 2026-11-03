@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
@@ -118,7 +119,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
   Widget _buildSubTabSelector() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: const Color(0xFF14241B),
+      color: context.forest.surfaceFor(const Color(0xFF14241B)),
       child: Row(
         children: [
           _buildPill(0, 'পরিসংখ্যান (Stats)', Icons.insights_rounded),
@@ -147,12 +148,12 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.mintGreen
-                : Colors.white.withValues(alpha: 0.06),
+                : context.forest.text.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
                   ? AppColors.mintGreen
-                  : Colors.white.withValues(alpha: 0.1),
+                  : context.forest.text.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -163,7 +164,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 size: 14,
                 color: isSelected
                     ? const Color(0xFF0F1E14)
-                    : Colors.white.withValues(alpha: 0.8),
+                    : context.forest.text.withValues(alpha: 0.8),
               ),
               const SizedBox(width: 4),
               Flexible(
@@ -176,7 +177,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected
                         ? const Color(0xFF0F1E14)
-                        : Colors.white.withValues(alpha: 0.8),
+                        : context.forest.text.withValues(alpha: 0.8),
                   ),
                 ),
               ),
@@ -198,15 +199,15 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
         children: [
           _buildOverviewCard(analytics),
           const SizedBox(height: 20),
-          const Row(
+          Row(
             children: [
               Icon(Icons.sports_esports_rounded,
-                  color: AppColors.mintGreen, size: 20),
-              SizedBox(width: 8),
+                  color: context.forest.accentText, size: 20),
+              const SizedBox(width: 8),
               Text(
                 'খেলা ভিত্তিক পরিসংখ্যান (Game Breakdown)',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.forest.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -352,15 +353,15 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
         const SizedBox(height: 6),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.forest.text,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          style: TextStyle(color: context.forest.text54, fontSize: 11),
         ),
       ],
     );
@@ -371,9 +372,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         children: [
@@ -382,11 +383,11 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: context.forest.text.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child:
-                    Icon(stat.rankIcon, color: AppColors.mintGreen, size: 20),
+                child: Icon(stat.rankIcon,
+                    color: context.forest.accentText, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -395,8 +396,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   children: [
                     Text(
                       stat.gameType.label,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -404,7 +405,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     Text(
                       'র‍্যাংক: ${stat.rankBadge}',
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 11),
+                          TextStyle(color: context.forest.text54, fontSize: 11),
                     ),
                   ],
                 ),
@@ -414,16 +415,16 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 children: [
                   Text(
                     '${stat.matchesWon} / ${stat.matchesPlayed} জয়',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     '${stat.winRate.toStringAsFixed(0)}% উইন রেট',
-                    style: const TextStyle(
-                      color: AppColors.mintGreen,
+                    style: TextStyle(
+                      color: context.forest.accentText,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -439,7 +440,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               value: stat.matchesPlayed > 0
                   ? stat.matchesWon / stat.matchesPlayed
                   : 0.0,
-              backgroundColor: Colors.white10,
+              backgroundColor: context.forest.divider10,
               valueColor:
                   const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
               minHeight: 6,
@@ -453,12 +454,14 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 if (stat.currentStreak > 0)
                   Text(
                     '🔥 বর্তমান স্ট্রিক: ${stat.currentStreak}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    style:
+                        TextStyle(color: context.forest.text70, fontSize: 11),
                   ),
                 if (stat.highestScore > 0)
                   Text(
                     '⭐ সর্বোচ্চ স্কোর: ${stat.highestScore}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    style:
+                        TextStyle(color: context.forest.text70, fontSize: 11),
                   ),
               ],
             ),
@@ -482,13 +485,13 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               Icon(
                 Icons.history_rounded,
                 size: 64,
-                color: Colors.white.withValues(alpha: 0.2),
+                color: context.forest.text.withValues(alpha: 0.2),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'কোনো ম্যাচ হিস্টোরি পাওয়া যায়নি',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.forest.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -498,7 +501,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 'Game Zone এ অনলাইন টেবিল অথবা অফলাইন আর্কেড খেললে আপনার সাম্প্রতিক ম্যাচের বিবরণ এখানে জমা হবে।',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: context.forest.text.withValues(alpha: 0.6),
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -520,7 +523,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF14241B),
+            color: context.forest.surfaceFor(const Color(0xFF14241B)),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isWon
@@ -540,7 +543,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 ),
                 child: Icon(
                   isWon ? Icons.emoji_events_rounded : Icons.close_rounded,
-                  color: isWon ? AppColors.mintGreen : Colors.redAccent,
+                  color: isWon
+                      ? context.forest.accentText
+                      : context.forest.readable(Colors.redAccent),
                   size: 20,
                 ),
               ),
@@ -553,8 +558,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       children: [
                         Text(
                           record.gameType.label,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: context.forest.text,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -573,8 +578,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                             isWon ? 'WON' : 'LOST',
                             style: TextStyle(
                               color: isWon
-                                  ? AppColors.mintGreen
-                                  : Colors.redAccent,
+                                  ? context.forest.accentText
+                                  : context.forest.readable(Colors.redAccent),
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -586,7 +591,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     Text(
                       record.details ?? record.mode,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.65),
+                        color: context.forest.text.withValues(alpha: 0.65),
                         fontSize: 12,
                       ),
                     ),
@@ -599,8 +604,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   if (record.score > 0)
                     Text(
                       '${record.score} pts',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
@@ -608,7 +613,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   Text(
                     _formatTimeAgo(record.timestamp),
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4),
+                      color: context.forest.text.withValues(alpha: 0.4),
                       fontSize: 10,
                     ),
                   ),
@@ -635,13 +640,13 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               Icon(
                 Icons.groups_rounded,
                 size: 64,
-                color: Colors.white.withValues(alpha: 0.2),
+                color: context.forest.text.withValues(alpha: 0.2),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'ট্যুর লিডারবোর্ড সক্রিয় নয়',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.forest.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -651,7 +656,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 'একটি সক্রিয় গ্রুপে যুক্ত থাকলে দলের সকল ভ্রমণসঙ্গীদের গেম পারফরম্যান্স এবং চ্যাম্পিয়ন র‍্যাংকিং এখানে দেখতে পাবেন।',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: context.forest.text.withValues(alpha: 0.6),
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -678,16 +683,16 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.leaderboard_rounded,
                 size: 64,
-                color: Colors.white24,
+                color: context.forest.text24,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'এখনও লিডারবোর্ড স্কোর নেই',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.forest.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -697,7 +702,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 'গ্রুপের সদস্যরা অনলাইন টেবিল খেললে তাদের স্কোর ও ট্রফি লিডারবোর্ডে যুক্ত হবে।',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: context.forest.text.withValues(alpha: 0.6),
                   fontSize: 13,
                 ),
               ),
@@ -706,7 +711,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 onPressed: _loadLeaderboard,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.mintGreen,
-                  foregroundColor: const Color(0xFF0F1E14),
+                  foregroundColor:
+                      context.forest.surfaceFor(const Color(0xFF0F1E14)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -793,12 +799,12 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF14241B),
+              color: context.forest.surfaceFor(const Color(0xFF14241B)),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: rank <= 3
                     ? Colors.amber.withValues(alpha: 0.25)
-                    : Colors.white10,
+                    : context.forest.divider10,
               ),
             ),
             child: Row(
@@ -810,7 +816,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     style: TextStyle(
                       fontSize: rank <= 3 ? 18 : 13,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: context.forest.text,
                     ),
                   ),
                 ),
@@ -825,8 +831,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                           entry.displayName.isNotEmpty
                               ? entry.displayName.substring(0, 1).toUpperCase()
                               : 'T',
-                          style: const TextStyle(
-                            color: AppColors.mintGreen,
+                          style: TextStyle(
+                            color: context.forest.accentText,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -840,8 +846,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     children: [
                       Text(
                         entry.displayName,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -850,8 +856,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                         entry.favoriteGame != null
                             ? '${entry.rankBadge} • ${entry.favoriteGame!.label}'
                             : entry.rankBadge,
-                        style: const TextStyle(
-                          color: Colors.white54,
+                        style: TextStyle(
+                          color: context.forest.text54,
                           fontSize: 11,
                         ),
                       ),
@@ -863,16 +869,16 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   children: [
                     Text(
                       '${entry.totalWins} জয়',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       '${entry.totalMatches} ম্যাচ (${entry.winRate.toStringAsFixed(0)}%)',
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
+                      style: TextStyle(
+                        color: context.forest.accentText,
                         fontSize: 11,
                       ),
                     ),

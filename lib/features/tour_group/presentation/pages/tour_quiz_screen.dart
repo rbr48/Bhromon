@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -202,19 +203,20 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1A1C),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
       appBar: AppBar(
         title: Text(
           context.l10n.translate('tq_title_master'),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        backgroundColor: const Color(0xFF142428),
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+        foregroundColor: context.forest.text,
         elevation: 0,
         actions: [
           IconButton(
             tooltip: 'নতুন প্রশ্ন আনুন',
-            icon: const Icon(Icons.refresh, color: Colors.tealAccent),
+            icon: Icon(Icons.refresh,
+                color: context.forest.readable(Colors.tealAccent)),
             onPressed: _restartQuiz,
           ),
         ],
@@ -227,15 +229,15 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Colors.tealAccent),
-            SizedBox(height: 16),
+            const CircularProgressIndicator(color: Colors.tealAccent),
+            const SizedBox(height: 16),
             Text(
               'সার্ভার থেকে ১০০০+ প্রিমিয়াম কুইজ লোড হচ্ছে...',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: context.forest.text70, fontSize: 13),
             ),
           ],
         ),
@@ -249,12 +251,13 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.info_outline, color: Colors.amber, size: 48),
+              Icon(Icons.info_outline,
+                  color: context.forest.readable(Colors.amber), size: 48),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: context.forest.text70, fontSize: 14),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -295,16 +298,16 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               Text(
                 context.l10n.translate('tq_progress',
                     args: {'n': _currentIndex + 1, 'total': _quiz.length}),
-                style: const TextStyle(
-                  color: Colors.tealAccent,
+                style: TextStyle(
+                  color: context.forest.readable(Colors.tealAccent),
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
               ),
               Text(
                 context.l10n.translate('tq_score', args: {'score': _score}),
-                style: const TextStyle(
-                  color: Colors.amber,
+                style: TextStyle(
+                  color: context.forest.readable(Colors.amber),
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -338,8 +341,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 ),
                 child: Text(
                   _formatCategoryLabel(q.category),
-                  style: const TextStyle(
-                    color: Colors.tealAccent,
+                  style: TextStyle(
+                    color: context.forest.readable(Colors.tealAccent),
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -349,7 +352,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: context.forest.text.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -358,10 +361,10 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                       : (q.difficulty == 'hard' ? 'কঠিন' : 'মাঝারি'),
                   style: TextStyle(
                     color: q.difficulty == 'easy'
-                        ? Colors.greenAccent
+                        ? context.forest.readable(Colors.greenAccent)
                         : (q.difficulty == 'hard'
                             ? Colors.orangeAccent
-                            : Colors.white70),
+                            : context.forest.text70),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -413,7 +416,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFF183038),
+                color: context.forest.surfaceFor(const Color(0xFF183038)),
                 borderRadius: BorderRadius.circular(14),
                 border:
                     Border.all(color: Colors.tealAccent.withValues(alpha: 0.3)),
@@ -423,13 +426,14 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.lightbulb,
-                          color: Colors.amber, size: 16),
+                      Icon(Icons.lightbulb,
+                          color: context.forest.readable(Colors.amber),
+                          size: 16),
                       const SizedBox(width: 6),
                       Text(
                         context.l10n.translate('tq_explanation_heading'),
-                        style: const TextStyle(
-                          color: Colors.amber,
+                        style: TextStyle(
+                          color: context.forest.readable(Colors.amber),
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -439,8 +443,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                   const SizedBox(height: 4),
                   Text(
                     q.explanation,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: context.forest.text70,
                       fontSize: 12,
                       height: 1.4,
                     ),
@@ -474,9 +478,9 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
   }
 
   Widget _buildOptionButton(ServerQuizQuestion q, int index) {
-    Color bg = const Color(0xFF142428);
-    Color border = Colors.white12;
-    Color textColor = Colors.white;
+    Color bg = context.forest.surfaceFor(const Color(0xFF142428));
+    Color border = context.forest.divider12;
+    Color textColor = context.forest.text;
 
     if (_isAnswered) {
       if (index == q.correctIndex) {
@@ -576,15 +580,15 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 color: Colors.amber.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child:
-                  const Icon(Icons.emoji_events, color: Colors.amber, size: 72),
+              child: Icon(Icons.emoji_events,
+                  color: context.forest.readable(Colors.amber), size: 72),
             ),
             const SizedBox(height: 20),
             Text(
               badge,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.amber,
+              style: TextStyle(
+                color: context.forest.readable(Colors.amber),
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
               ),
@@ -593,12 +597,14 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             Text(
               context.l10n.translate('tq_result_summary',
                   args: {'score': _score, 'total': _quiz.length}),
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: context.forest.text, fontSize: 16),
             ),
             const SizedBox(height: 6),
             Text(
               'সঠিক উত্তর: ${pct.toStringAsFixed(0)}%',
-              style: const TextStyle(color: Colors.tealAccent, fontSize: 14),
+              style: TextStyle(
+                  color: context.forest.readable(Colors.tealAccent),
+                  fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(

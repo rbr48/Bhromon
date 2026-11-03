@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +16,7 @@ import '../../domain/services/notice_engine.dart';
 import '../../domain/services/notice_speech.dart';
 import '../widgets/notice/notice_composer.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/widgets/swipe_step.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -154,28 +156,28 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
+        backgroundColor: context.forest.surfaceFor(_card),
         title: Text(l10n.translate('tour_edit_meeting_point'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                     labelText: l10n.translate('tour_place_name')),
               ),
               TextField(
                 controller: noteCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration:
                     InputDecoration(labelText: l10n.translate('tour_details')),
               ),
               TextField(
                 controller: urlCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                     labelText: l10n.translate('tour_map_link_label')),
               ),
@@ -254,10 +256,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: _card,
+        backgroundColor: context.forest.surfaceFor(_card),
         title: Text(l10n.translate('tour_delete_notice'),
-            style: const TextStyle(color: Colors.white)),
-        content: Text(n.title, style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text)),
+        content: Text(n.title, style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -265,7 +267,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           TextButton(
               onPressed: () => Navigator.pop(c, true),
               child: Text(l10n.translate('fund_delete'),
-                  style: const TextStyle(color: Colors.redAccent))),
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent)))),
         ],
       ),
     );
@@ -316,10 +319,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final l10n = context.l10n;
     final cal = NoticeEngine.calendarUri(n, tourName: _group?.name);
     Widget item(IconData icon, String label, VoidCallback onTap,
-            {Color color = Colors.white70}) =>
+            {Color? color}) =>
         ListTile(
-          leading: Icon(icon, color: color),
-          title: Text(label, style: const TextStyle(color: Colors.white)),
+          leading: Icon(icon, color: color ?? context.forest.text70),
+          title: Text(label, style: TextStyle(color: context.forest.text)),
           onTap: () {
             Navigator.pop(context);
             onTap();
@@ -327,7 +330,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         );
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -371,7 +374,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final live = _repository.watchNotices(widget.tourId);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       isScrollControlled: true,
       builder: (ctx) => StreamBuilder<List<TourNotice>>(
         stream: live,
@@ -388,8 +391,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(n.title,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 18,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
@@ -402,8 +405,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           l10n.translate(
                               rollcall ? 'notice_missing' : 'notice_waiting',
                               args: {'n': l10n.number(a.waiting.length)}),
-                          style: const TextStyle(
-                              color: AppColors.gold,
+                          style: TextStyle(
+                              color: context.forest.readable(AppColors.gold),
                               fontWeight: FontWeight.bold)),
                     ),
                     TextButton.icon(
@@ -417,26 +420,29 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           for (final m in a.waiting) '• ${m.displayName}',
                         ].join('\n'));
                       },
-                      icon: const Icon(Icons.share_rounded,
-                          size: 16, color: AppColors.gold),
+                      icon: Icon(Icons.share_rounded,
+                          size: 16,
+                          color: context.forest.readable(AppColors.gold)),
                       label: Text(l10n.translate('notice_share'),
-                          style: const TextStyle(color: AppColors.gold)),
+                          style: TextStyle(
+                              color: context.forest.readable(AppColors.gold))),
                     ),
                   ]),
                   for (final m in a.waiting)
                     ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.hourglass_top_rounded,
-                          color: AppColors.gold, size: 20),
+                      leading: Icon(Icons.hourglass_top_rounded,
+                          color: context.forest.readable(AppColors.gold),
+                          size: 20),
                       title: Text(m.displayName,
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: context.forest.text)),
                       subtitle: m.familyCount > 1
                           ? Text(
                               l10n.translate('fund_family_of',
                                   args: {'n': l10n.number(m.familyCount)}),
-                              style: const TextStyle(
-                                  color: Colors.white38, fontSize: 11))
+                              style: TextStyle(
+                                  color: context.forest.text38, fontSize: 11))
                           : null,
                       trailing: _isAdmin
                           ? TextButton(
@@ -445,33 +451,33 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                                   l10n.translate(rollcall
                                       ? 'notice_mark_present'
                                       : 'notice_mark_answered'),
-                                  style: const TextStyle(
-                                      color: AppColors.mintGreen)),
+                                  style: TextStyle(
+                                      color: context.forest.accentText)),
                             )
                           : null,
                     ),
-                  const Divider(color: Colors.white12),
+                  Divider(color: context.forest.divider12),
                 ],
                 Text(
                     l10n.translate(
                         rollcall ? 'notice_present' : 'notice_answered',
                         args: {'n': l10n.number(a.answered.length)}),
-                    style: const TextStyle(
-                        color: AppColors.mintGreen,
+                    style: TextStyle(
+                        color: context.forest.accentText,
                         fontWeight: FontWeight.bold)),
                 for (final m in a.answered)
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.check_circle_rounded,
-                        color: AppColors.mintGreen, size: 20),
+                    leading: Icon(Icons.check_circle_rounded,
+                        color: context.forest.accentText, size: 20),
                     title: Text(m.displayName,
-                        style: const TextStyle(color: Colors.white)),
+                        style: TextStyle(color: context.forest.text)),
                     trailing: _isAdmin && m.email != _me
                         ? IconButton(
                             tooltip: l10n.translate('notice_undo'),
-                            icon: const Icon(Icons.undo_rounded,
-                                color: Colors.white38, size: 18),
+                            icon: Icon(Icons.undo_rounded,
+                                color: context.forest.text38, size: 18),
                             onPressed: () => _answer(n, false, email: m.email),
                           )
                         : null,
@@ -501,12 +507,12 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final next = notices == null ? null : NoticeEngine.nextUp(notices, _now);
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('tour_notice_board_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         elevation: 0,
         actions: [
           if (today.isNotEmpty)
@@ -527,17 +533,24 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             )
           : null,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: [
-            if (next != null) _nextUp(l10n, next),
-            _meetingPoint(l10n),
-            if (today.isNotEmpty) _todaySchedule(l10n, today),
-            const SizedBox(height: 4),
-            _filters(l10n, needsMe),
-            const SizedBox(height: 8),
-            ..._list(l10n),
-          ],
+        // A swipe moves to the next or previous filter. It only changes which
+        // notices of the stream already on screen are shown.
+        child: SwipeStep(
+          onStep: _stepFilter,
+          nextLabel: l10n.translate('notice_next_filter'),
+          previousLabel: l10n.translate('notice_previous_filter'),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            children: [
+              if (next != null) _nextUp(l10n, next),
+              _meetingPoint(l10n),
+              if (today.isNotEmpty) _todaySchedule(l10n, today),
+              const SizedBox(height: 4),
+              _filters(l10n, needsMe),
+              const SizedBox(height: 8),
+              ..._list(l10n),
+            ],
+          ),
         ),
       ),
     );
@@ -552,7 +565,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [
           color.withValues(alpha: 0.28),
-          _card,
+          context.forest.surfaceFor(_card),
         ], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: color.withValues(alpha: 0.6)),
@@ -611,41 +624,45 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.forest.surfaceFor(_card),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.place_rounded, color: Colors.amber),
+          Icon(Icons.place_rounded,
+              color: context.forest.readable(Colors.amber)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(l10n.translate('tour_live_meeting_point'),
-                    style: const TextStyle(color: Colors.amber, fontSize: 11)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.amber),
+                        fontSize: 11)),
                 Text(_meetingTitle(l10n),
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: context.forest.text,
+                        fontWeight: FontWeight.bold)),
                 if (note.isNotEmpty)
                   Text(note,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12)),
+                      style: TextStyle(
+                          color: context.forest.text70, fontSize: 12)),
               ],
             ),
           ),
           IconButton(
             tooltip: l10n.translate('tour_view_on_map'),
-            icon: const Icon(Icons.navigation_rounded,
-                color: AppColors.mintGreen),
+            icon: Icon(Icons.navigation_rounded,
+                color: context.forest.accentText),
             onPressed: () => _open(_meetingMapUri),
           ),
           if (_isAdmin)
             IconButton(
               tooltip: l10n.translate('tour_edit_meeting_point'),
-              icon: const Icon(Icons.edit_rounded,
-                  size: 18, color: Colors.white54),
+              icon: Icon(Icons.edit_rounded,
+                  size: 18, color: context.forest.text54),
               onPressed: _editMeetingPoint,
             ),
         ],
@@ -658,16 +675,16 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.forest.surfaceFor(_card),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.translate('notice_today'),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: context.forest.text, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           for (final (i, n) in today.indexed)
             IntrinsicHeight(
@@ -680,8 +697,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         localizedDateFormat('h:mm a').format(n.eventAt!),
                         style: TextStyle(
                             color: n.eventAt!.isBefore(_now)
-                                ? Colors.white38
-                                : AppColors.mintGreen,
+                                ? context.forest.text38
+                                : context.forest.accentText,
                             fontSize: 12,
                             fontWeight: FontWeight.bold)),
                   ),
@@ -707,8 +724,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         style: TextStyle(
                             color: n.eventAt!.isBefore(
                                     _now.subtract(NoticeEngine.nowWindow))
-                                ? Colors.white38
-                                : Colors.white,
+                                ? context.forest.text38
+                                : context.forest.text,
                             fontSize: 13),
                       ),
                     ),
@@ -719,6 +736,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         ],
       ),
     );
+  }
+
+  /// Moves the filter by [by]. The first and last filters stop the swipe.
+  void _stepFilter(int by) {
+    final next = NoticeEngine.stepFilter(_filter, by);
+    if (next == _filter) return;
+    setState(() => _filter = next);
   }
 
   Widget _filters(AppLocalizations l10n, int needsMe) {
@@ -743,13 +767,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 selectedColor: f == NoticeFilter.needsMe && needsMe > 0
                     ? AppColors.gold
                     : AppColors.mintGreen,
-                backgroundColor: _card,
+                backgroundColor: context.forest.surfaceFor(_card),
                 labelStyle: TextStyle(
                     color: _filter == f
                         ? AppColors.darkGreen
                         : (f == NoticeFilter.needsMe && needsMe > 0
                             ? AppColors.gold
-                            : Colors.white)),
+                            : context.forest.text)),
                 onSelected: (_) => setState(() => _filter = f),
               ),
             ),
@@ -764,7 +788,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       return [
         _loadFailed
             ? Text(l10n.translate('tour_notices_load_failed'),
-                style: const TextStyle(color: Colors.white54))
+                style: TextStyle(color: context.forest.text54))
             : const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -782,7 +806,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               l10n.translate(
                   notices.isEmpty ? 'tour_no_notices' : 'notice_filter_empty'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54)),
+              style: TextStyle(color: context.forest.text54)),
         ),
       ];
     }
@@ -818,7 +842,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 'n': l10n.number(a.answered.length),
                 'total': l10n.number(a.total),
               }),
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(color: context.forest.text70, fontSize: 12),
         ),
         const SizedBox(height: 4),
         ClipRRect(
@@ -827,7 +851,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             value: a.ratio,
             minHeight: 6,
             color: a.waiting.isEmpty ? AppColors.mintGreen : AppColors.gold,
-            backgroundColor: Colors.white10,
+            backgroundColor: context.forest.divider10,
           ),
         ),
       ],
@@ -846,7 +870,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               reading ? 'notice_read_aloud_stop' : 'notice_read_aloud'),
           icon: Icon(
             reading ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
-            color: reading ? AppColors.mintGreen : Colors.white54,
+            color: reading ? context.forest.accentText : context.forest.text54,
             size: 20,
           ),
           onPressed: () => _readAloud(l10n, n),
@@ -889,14 +913,16 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: hot ? Colors.redAccent.withValues(alpha: 0.08) : _card,
+          color: hot
+              ? Colors.redAccent.withValues(alpha: 0.08)
+              : context.forest.surfaceFor(_card),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
               color: hot
                   ? Colors.redAccent.withValues(alpha: 0.6)
                   : (n.pinned
                       ? AppColors.mintGreen.withValues(alpha: 0.5)
-                      : Colors.white12)),
+                      : context.forest.divider12)),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -923,55 +949,57 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     Flexible(
                       child: Text('· $stop',
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11)),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 11)),
                     ),
                   ],
                   const Spacer(),
                   if (n.pinned)
-                    const Icon(Icons.push_pin_rounded,
-                        size: 16, color: AppColors.mintGreen),
+                    Icon(Icons.push_pin_rounded,
+                        size: 16, color: context.forest.accentText),
                   if (hot)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
                       child: Icon(Icons.warning_amber_rounded,
-                          color: Colors.redAccent, size: 18),
+                          color: context.forest.readable(Colors.redAccent),
+                          size: 18),
                     ),
-                  const Icon(Icons.more_vert_rounded,
-                      size: 18, color: Colors.white38),
+                  Icon(Icons.more_vert_rounded,
+                      size: 18, color: context.forest.text38),
                 ]),
                 const SizedBox(height: 8),
                 Text(n.title,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 15)),
                 if (n.content.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(n.content,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 13)),
+                      style: TextStyle(
+                          color: context.forest.text70, fontSize: 13)),
                 ],
                 if (n.eventAt != null || n.place != null) ...[
                   const SizedBox(height: 8),
                   Wrap(spacing: 10, runSpacing: 4, children: [
                     if (n.eventAt != null)
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.schedule_rounded,
-                            size: 15, color: AppColors.gold),
+                        Icon(Icons.schedule_rounded,
+                            size: 15,
+                            color: context.forest.readable(AppColors.gold)),
                         const SizedBox(width: 4),
                         Text(
                             localizedDateFormat('EEE d MMM, h:mm a')
                                 .format(n.eventAt!),
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.forest.text, fontSize: 12)),
                         if (!archived) ...[
                           const SizedBox(width: 6),
                           Text(noticeCountdown(l10n, n.eventAt!, _now),
                               style: TextStyle(
                                   color: timing == NoticeTiming.past
-                                      ? Colors.white38
-                                      : AppColors.gold,
+                                      ? context.forest.text38
+                                      : context.forest.readable(AppColors.gold),
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold)),
                         ],
@@ -980,12 +1008,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       InkWell(
                         onTap: mapUri == null ? null : () => _open(mapUri),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.place_rounded,
-                              size: 15, color: Colors.amber),
+                          Icon(Icons.place_rounded,
+                              size: 15,
+                              color: context.forest.readable(Colors.amber)),
                           const SizedBox(width: 4),
                           Text(n.place!,
                               style: TextStyle(
-                                  color: Colors.white,
+                                  color: context.forest.text,
                                   fontSize: 12,
                                   decoration: mapUri == null
                                       ? null
@@ -1019,8 +1048,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           'date': localizedDateFormat('dd MMM, hh:mm a')
                               .format(n.createdAt),
                         }),
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 11)),
+                        style: TextStyle(
+                            color: context.forest.text38, fontSize: 11)),
                   ),
                   _readAloudButton(l10n, n),
                 ]),

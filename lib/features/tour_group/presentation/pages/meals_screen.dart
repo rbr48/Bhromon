@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../../core/widgets/swipe_step.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/meal_log.dart';
 import '../../domain/models/tour_group.dart';
@@ -55,6 +57,14 @@ class _MealsScreenState extends State<MealsScreen> {
     });
   }
 
+  /// Moves the selected day by [by] within the month. The ends stop the swipe.
+  void _stepDay(int by) {
+    final days = DateUtils.getDaysInMonth(_month.year, _month.month);
+    final next = _day + by;
+    if (next < 1 || next > days) return;
+    setState(() => _day = next);
+  }
+
   Future<void> _save(MealLog log) async {
     try {
       await _repository.saveMeal(widget.tourId, log);
@@ -77,12 +87,12 @@ class _MealsScreenState extends State<MealsScreen> {
         final members = [...?memberSnap.data]..sort((a, b) =>
             _nameOf(a).toLowerCase().compareTo(_nameOf(b).toLowerCase()));
         return Scaffold(
-          backgroundColor: _bg,
+          backgroundColor: context.forest.surfaceFor(_bg),
           appBar: AppBar(
-            backgroundColor: _bg,
-            iconTheme: const IconThemeData(color: Colors.white),
+            backgroundColor: context.forest.surfaceFor(_bg),
+            iconTheme: IconThemeData(color: context.forest.text),
             title: Text(l10n.translate('meals_title'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
           ),
           body: StreamBuilder<List<MealLog>>(
             stream: _logs,
@@ -96,7 +106,12 @@ class _MealsScreenState extends State<MealsScreen> {
                     child:
                         CircularProgressIndicator(color: AppColors.mintGreen));
               }
-              return _body(members, logs, l10n);
+              return SwipeStep(
+                onStep: _stepDay,
+                nextLabel: l10n.translate('meals_next_day'),
+                previousLabel: l10n.translate('meals_prev_day'),
+                child: _body(members, logs, l10n),
+              );
             },
           ),
         );
@@ -135,8 +150,8 @@ class _MealsScreenState extends State<MealsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(l10n.translate('meals_none_logged'),
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style: TextStyle(
+                          color: context.forest.text54, fontSize: 12)),
                 ),
             ],
           ),
@@ -157,15 +172,15 @@ class _MealsScreenState extends State<MealsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(l10n.translate('meals_read_only'),
-                      style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style: TextStyle(
+                          color: context.forest.text54, fontSize: 12)),
                 ),
             ],
           ),
         ),
         const SizedBox(height: 14),
         Text(l10n.translate('meals_split_hint'),
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            style: TextStyle(color: context.forest.text54, fontSize: 12)),
       ],
     );
   }
@@ -176,20 +191,22 @@ class _MealsScreenState extends State<MealsScreen> {
         IconButton(
           tooltip: l10n.translate('meals_prev_month'),
           onPressed: () => _moveMonth(-1),
-          icon: const Icon(Icons.chevron_left_rounded, color: Colors.white),
+          icon: Icon(Icons.chevron_left_rounded, color: context.forest.text),
         ),
         Expanded(
           child: Text(
             localizedDateFormat('MMMM yyyy').format(_month),
             textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: context.forest.text,
+                fontSize: 16,
+                fontWeight: FontWeight.bold),
           ),
         ),
         IconButton(
           tooltip: l10n.translate('meals_next_month'),
           onPressed: () => _moveMonth(1),
-          icon: const Icon(Icons.chevron_right_rounded, color: Colors.white),
+          icon: Icon(Icons.chevron_right_rounded, color: context.forest.text),
         ),
       ],
     );
@@ -210,8 +227,11 @@ class _MealsScreenState extends State<MealsScreen> {
             selected: selected,
             onSelected: (_) => setState(() => _day = day),
             selectedColor: AppColors.mintGreen,
-            backgroundColor: _card,
-            labelStyle: TextStyle(color: selected ? _bg : Colors.white),
+            backgroundColor: context.forest.surfaceFor(_card),
+            labelStyle: TextStyle(
+                color: selected
+                    ? context.forest.surfaceFor(_bg)
+                    : context.forest.text),
           );
         },
       ),
@@ -226,8 +246,8 @@ class _MealsScreenState extends State<MealsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(_nameOf(m),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: context.forest.text, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -270,7 +290,7 @@ class _MealsScreenState extends State<MealsScreen> {
     return Column(
       children: [
         Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            style: TextStyle(color: context.forest.text70, fontSize: 12)),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -285,8 +305,8 @@ class _MealsScreenState extends State<MealsScreen> {
               width: 22,
               child: Text(l10n.number(value),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.text, fontWeight: FontWeight.bold)),
             ),
             IconButton(
               visualDensity: VisualDensity.compact,
@@ -305,14 +325,15 @@ class _MealsScreenState extends State<MealsScreen> {
   Widget _section(String title, Widget child) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration:
-          BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+          color: context.forest.surfaceFor(_card),
+          borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15)),
           const SizedBox(height: 8),
@@ -328,10 +349,11 @@ class _MealsScreenState extends State<MealsScreen> {
       child: Row(
         children: [
           Expanded(
-              child: Text(name, style: const TextStyle(color: Colors.white))),
+              child: Text(name, style: TextStyle(color: context.forest.text))),
           Text(value,
-              style: const TextStyle(
-                  color: AppColors.mintGreen, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: context.forest.accentText,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -346,7 +368,7 @@ class _MealsScreenState extends State<MealsScreen> {
         padding: const EdgeInsets.all(24),
         child: Text(text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
       ),
     );
   }

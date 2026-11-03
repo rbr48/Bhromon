@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,10 +11,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/audio/call_audio_session.dart';
+import '../../../../core/services/battery_guidance.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
+import '../../data/system_call_bridge.dart';
+import '../../domain/call_display.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
 
@@ -64,7 +68,30 @@ class _CallScreenState extends State<CallScreen> {
   bool _remoteVideoConnected = false;
   bool _controlsVisible = true;
   bool _hasExited = false;
-  String _callStatusText = 'Calling...';
+
+  /// Whether the other side's camera is on. A video call starts with it on;
+  /// either side can turn a camera on or off at any time.
+  late bool _remoteCameraOn;
+
+  /// Whether the phone's own call system (Telecom, CallKit) holds this call.
+  bool _systemCall = false;
+
+  /// True while the call is shrunk into a picture-in-picture window.
+  bool _inPip = false;
+
+  /// The audio output the user picked, or null for speaker/earpiece by the
+  /// speaker button.
+  String? _outputDeviceId;
+
+  /// Whether the call shows video: it started as a video call, or a camera has
+  /// been turned on since.
+  bool get _videoMode =>
+      widget.isVideoCall ||
+      _remoteCameraOn ||
+      (_signaling.hasLocalVideo && !_isVideoOff);
+
+  /// The translation key of the status line shown until the call connects.
+  String _statusKey = 'call_status_calling';
 
   /// True while the media is up. The clock and the link badge show only then.
   bool _isConnected = false;
@@ -118,6 +145,16 @@ class _CallScreenState extends State<CallScreen> {
     // Calls start on the loudspeaker. The earpiece is much quieter, and a phone
     // lying on a table is the common case. The speaker button switches back.
     _isSpeakerOn = true;
+    _remoteCameraOn = widget.isVideoCall;
+    // The phone's hang-up, mute and hold buttons reach this call.
+    ActiveCallControls.attach(
+      id: widget.callId,
+      onHangUp: _endCall,
+      onMute: _setMutedFromSystem,
+    );
+    CallAudioSession.setPipListener((inPip) {
+      if (mounted) setState(() => _inPip = inPip);
+    });
     // A video call keeps the screen on, or the phone sleeps in the middle of it.
     if (widget.isVideoCall && !kIsWeb) {
       unawaited(WakelockPlus.enable());
@@ -125,16 +162,30 @@ class _CallScreenState extends State<CallScreen> {
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
-    _initCall();
+    // A call answered on a locked phone opens over the lock screen, and the
+    // notification's Hang up button ends it.
+    unawaited(CallAudioSession.showOverLockScreen(true));
+    CallAudioSession.setHangUpHandler(_endCall);
+    // The setup reads the app's language, which is only available once the
+    // screen is in the tree, so it starts after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_initCall());
+    });
   }
 
   void _applyAudioRouting() {
-    if (!kIsWeb) {
+    if (kIsWeb) return;
+    final picked = _outputDeviceId;
+    if (picked != null) {
+      // Bluetooth or headphones the user chose stay chosen.
+      unawaited(Helper.selectAudioOutput(picked));
+    } else {
       Helper.setSpeakerphoneOn(_isSpeakerOn);
     }
   }
 
   Future<void> _initCall() async {
+    final l10n = context.l10n;
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
     if (!mounted) return;
@@ -146,16 +197,26 @@ class _CallScreenState extends State<CallScreen> {
     // call into an audio call instead of failing it.
     var videoEnabled = widget.isVideoCall;
     if (!kIsWeb) {
-      final micStatus = await Permission.microphone.request();
+      var micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        micStatus = await Permission.microphone.request();
+      }
+      // Left while the prompt was open: the call must not start.
+      if (!mounted) return;
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
         await _failCall(
-          'Microphone permission is required for calls.',
+          l10n.translate('call_mic_required'),
           messenger,
         );
         return;
       }
       if (widget.isVideoCall) {
-        videoEnabled = (await Permission.camera.request()).isGranted;
+        var camStatus = await Permission.camera.status;
+        if (!camStatus.isGranted) {
+          camStatus = await Permission.camera.request();
+        }
+        videoEnabled = camStatus.isGranted;
+        if (!mounted) return;
       }
       _applyAudioRouting();
     }
@@ -186,32 +247,37 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         switch (state) {
           case 'calling':
-            _callStatusText =
-                widget.isCaller ? 'Ringing...' : 'Incoming call...';
+            _statusKey =
+                widget.isCaller ? 'call_status_ringing' : 'call_incoming';
             if (widget.isCaller) {
               _startRingback();
             }
           case 'answered':
             // Accepted, but the media has not connected yet.
             _stopRingback();
-            _callStatusText = 'Connecting...';
+            _statusKey = 'call_status_connecting';
             _applyAudioRouting();
           case 'connected':
             _stopRingback();
             _isConnected = true;
-            _callStatusText = 'Connected';
+            unawaited(BatteryGuidance.markCallAnswered());
+            _statusKey = 'chat_connected';
             _applyAudioRouting();
             _startDurationTimer();
+            if (_systemCall) {
+              unawaited(SystemCallBridge.markConnected(widget.callId));
+            }
+            _onVideoModeChanged();
           case 'reconnecting':
             _isConnected = false;
-            _callStatusText = 'Reconnecting...';
+            _statusKey = 'call_status_reconnecting';
           case 'declined' || 'missed' || 'ended' || 'failed':
             _stopRingback();
-            _callStatusText = switch (state) {
-              'declined' => 'Call declined',
-              'missed' => 'No answer',
-              'failed' => 'Could not connect',
-              _ => 'Call ended',
+            _statusKey = switch (state) {
+              'declined' => 'call_status_declined',
+              'missed' => 'call_status_no_answer',
+              'failed' => 'call_status_failed',
+              _ => 'call_status_ended',
             };
             Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
@@ -222,9 +288,26 @@ class _CallScreenState extends State<CallScreen> {
       _safeExit();
     };
 
+    _signaling.onRemoteCamera = (on) {
+      if (!mounted) return;
+      setState(() => _remoteCameraOn = on);
+      _onVideoModeChanged();
+    };
+
     try {
       if (widget.isCaller) {
         final tourId = await _confirmCanCall();
+        if (!mounted) return;
+        // The phone's own call system holds the call, so an ordinary phone call
+        // puts it on hold and headset buttons work.
+        _systemCall = await SystemCallBridge.startOutgoing(
+          callId: widget.callId,
+          calleeId: widget.remoteUid,
+          calleeName: widget.remoteUserName,
+          calleeAvatar: widget.remoteAvatarUrl,
+          isVideo: widget.isVideoCall,
+        );
+        if (!mounted) return;
         await _signaling.startCall(
           widget.callId,
           widget.localUid,
@@ -237,6 +320,9 @@ class _CallScreenState extends State<CallScreen> {
           remoteEmail: widget.remoteEmail,
         );
       } else {
+        // Answered on the phone's own ring screen: the phone keeps the call.
+        _systemCall = await SystemCallBridge.isActive(widget.callId);
+        if (!mounted) return;
         await _signaling.answerCall(
           widget.callId,
           widget.localUid,
@@ -244,18 +330,34 @@ class _CallScreenState extends State<CallScreen> {
         );
       }
       _applyAudioRouting();
+      // Keeps the microphone (and camera) running when the app goes to the
+      // background mid-call.
+      // The phone's call system runs its own in-call service and notification.
+      if (mounted && !_systemCall) {
+        final l10n = context.l10n;
+        unawaited(CallAudioSession.startOngoing(
+          camera: _signaling.hasLocalVideo,
+          title: l10n.translate('call_ongoing_title'),
+          text: l10n.translate('call_ongoing_text',
+              args: {'name': widget.remoteUserName}),
+          hangUp: l10n.translate('call_hang_up'),
+        ));
+        _updateProximity();
+      }
     } catch (e) {
       // A call that started has already been ended by the signaling service. A setup
       // that failed before any connection may still hold the audio mode, so the
       // session is handed back here as well.
       logError('CallScreen initialization error: $e');
       await CallAudioSession.release();
+      // A setup stopped because the user hung up or left needs no message.
+      if (!mounted || _signaling.wasCancelled) return;
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
             e is CallSetupException
                 ? e.message
-                : 'Could not connect the call. Please try again.',
+                : l10n.translate('call_connect_failed'),
           ),
           backgroundColor: Colors.redAccent,
         ),
@@ -269,6 +371,7 @@ class _CallScreenState extends State<CallScreen> {
   /// there is none, the call says why instead of failing with a generic message.
   /// Returns null when there is no partner email, which startCall refuses on its own.
   Future<String?> _confirmCanCall() async {
+    final l10n = context.l10n;
     final remoteEmail = widget.remoteEmail;
     if (remoteEmail == null || remoteEmail.isEmpty) return null;
     final ({String? tourId, CallPartnerStatus status}) resolved;
@@ -285,17 +388,17 @@ class _CallScreenState extends State<CallScreen> {
     final tourId = resolved.tourId;
     if (tourId != null) return tourId;
     final typedName = widget.remoteUserName.trim();
-    final name = typedName.isEmpty ? 'This person' : typedName;
+    final name =
+        typedName.isEmpty ? l10n.translate('call_this_person') : typedName;
     final problem = switch (resolved.status) {
       CallPartnerStatus.ready => null,
-      CallPartnerStatus.youLeft =>
-        'You are no longer a member of this tour, so you cannot call from it.',
+      CallPartnerStatus.youLeft => l10n.translate('call_not_member_self'),
       CallPartnerStatus.partnerLeft =>
-        '$name is no longer a member of this tour, so you cannot call them.',
+        l10n.translate('call_peer_not_member', args: {'name': name}),
       CallPartnerStatus.partnerNotLinked =>
-        '$name needs to open Bhromon once before you can call them.',
+        l10n.translate('call_peer_not_signed_in', args: {'name': name}),
       CallPartnerStatus.noSharedTour =>
-        'You do not share a tour with $name, so you cannot call them.',
+        l10n.translate('call_peer_no_shared_group', args: {'name': name}),
     };
     throw CallSetupException(problem ?? kCallUnreachableMessage);
   }
@@ -346,46 +449,51 @@ class _CallScreenState extends State<CallScreen> {
   void _showLinkDetails() {
     final sample = _signaling.linkSample;
     String figure(double? value, String unit, {int digits = 0}) => value == null
-        ? 'No data yet'
+        ? context.l10n.translate('call_quality_no_data')
         : '${value.toStringAsFixed(digits)} $unit';
 
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1F2C34),
-        title:
-            const Text('Call quality', style: TextStyle(color: Colors.white)),
+        title: Text(context.l10n.translate('call_quality_title'),
+            style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detailRow(
-                'Link',
+                context.l10n.translate('chat_quality_link'),
                 switch (_signaling.networkQuality.value) {
-                  CallNetworkQuality.good => 'Good',
-                  CallNetworkQuality.fair => 'Fair',
-                  CallNetworkQuality.poor => 'Weak',
+                  CallNetworkQuality.good =>
+                    context.l10n.translate('chat_quality_good'),
+                  CallNetworkQuality.fair =>
+                    context.l10n.translate('chat_quality_fair'),
+                  CallNetworkQuality.poor =>
+                    context.l10n.translate('chat_quality_weak'),
                 }),
-            _detailRow('Round trip', figure(sample?.roundTripMs, 'ms')),
-            _detailRow('Jitter', figure(sample?.jitterMs, 'ms')),
+            _detailRow(context.l10n.translate('call_quality_rtt'),
+                figure(sample?.roundTripMs, 'ms')),
+            _detailRow(context.l10n.translate('chat_quality_jitter'),
+                figure(sample?.jitterMs, 'ms')),
             _detailRow(
-              'Packets lost',
+              context.l10n.translate('call_quality_loss'),
               sample?.lossRatio == null
-                  ? 'No data yet'
+                  ? context.l10n.translate('call_quality_no_data')
                   : '${(sample!.lossRatio! * 100).toStringAsFixed(1)} %',
             ),
             _detailRow(
-              'Sending',
+              context.l10n.translate('chat_quality_sending'),
               figure(sample?.outboundKbps, 'kbps'),
             ),
-            _detailRow(
-                'Loudness', '${_signaling.remoteGain.toStringAsFixed(0)}x'),
+            _detailRow(context.l10n.translate('chat_quality_loudness'),
+                '${_signaling.remoteGain.toStringAsFixed(0)}x'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            child: Text(context.l10n.translate('call_close')),
           ),
         ],
       ),
@@ -412,20 +520,157 @@ class _CallScreenState extends State<CallScreen> {
     _signaling.toggleAudio(!_isAudioMuted);
   }
 
-  void _toggleVideo() {
-    // A call that started without a camera has no video track to switch on.
-    if (_isVideoOff && !_signaling.hasLocalVideo) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('The camera is not available for this call.'),
-        ),
-      );
+  Future<void> _toggleVideo() async {
+    if (!_signaling.hasLocalVideo) {
+      // No camera yet: a voice call (or a video call that started without
+      // one) turns its camera on.
+      final granted = kIsWeb || (await Permission.camera.request()).isGranted;
+      final started = granted && await _signaling.startCamera();
+      if (!mounted) return;
+      if (!started) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.translate('call_camera_unavailable')),
+          ),
+        );
+        return;
+      }
+      setState(() => _isVideoOff = false);
+      _onVideoModeChanged();
       return;
     }
     setState(() {
       _isVideoOff = !_isVideoOff;
     });
-    _signaling.toggleVideo(!_isVideoOff);
+    await _signaling.toggleVideo(!_isVideoOff);
+    _onVideoModeChanged();
+  }
+
+  /// Keeps the screen, the background service, the ear sensor and the
+  /// picture-in-picture window in step with whether the call shows video.
+  void _onVideoModeChanged() {
+    if (!mounted) return;
+    final video = _videoMode;
+    if (!kIsWeb) {
+      unawaited(video ? WakelockPlus.enable() : WakelockPlus.disable());
+    }
+    _updateProximity();
+    unawaited(CallAudioSession.setPipAllowed(video && _isConnected));
+    if (!_systemCall && _signaling.hasLocalVideo && _isConnected) {
+      // The background service now has to keep the camera running too.
+      final l10n = context.l10n;
+      unawaited(CallAudioSession.startOngoing(
+        camera: true,
+        title: l10n.translate('call_ongoing_title'),
+        text: l10n.translate('call_ongoing_text',
+            args: {'name': widget.remoteUserName}),
+        hangUp: l10n.translate('call_hang_up'),
+      ));
+    }
+  }
+
+  /// The phone's mute button, or hold while an ordinary phone call is on.
+  void _setMutedFromSystem(bool muted) {
+    if (!mounted) return;
+    setState(() => _isAudioMuted = muted);
+    _signaling.toggleAudio(!muted);
+  }
+
+  /// The speaker button. With Bluetooth or headphones connected it asks where
+  /// the sound should go; otherwise it switches between speaker and earpiece.
+  Future<void> _onSpeakerTap() async {
+    if (kIsWeb) {
+      _toggleSpeaker();
+      return;
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Bluetooth devices are listed only with this permission (Android 12+).
+      await Permission.bluetoothConnect.request();
+    }
+    List<MediaDeviceInfo> outputs;
+    try {
+      outputs = await Helper.audiooutputs;
+    } catch (e) {
+      outputs = const [];
+    }
+    if (!mounted) return;
+    final hasExternal = outputs.any((o) {
+      final kind = audioOutputKind(o.deviceId, o.label);
+      return kind == AudioOutputKind.bluetooth ||
+          kind == AudioOutputKind.headset;
+    });
+    if (!hasExternal) {
+      _outputDeviceId = null;
+      _toggleSpeaker();
+      return;
+    }
+    final chosen = await showModalBottomSheet<MediaDeviceInfo>(
+      context: context,
+      backgroundColor: const Color(0xFF1F2C34),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                sheetContext.l10n.translate('call_audio_output'),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            for (final output in outputs)
+              ListTile(
+                leading: Icon(
+                  switch (audioOutputKind(output.deviceId, output.label)) {
+                    AudioOutputKind.bluetooth => Icons.bluetooth_audio,
+                    AudioOutputKind.headset => Icons.headphones,
+                    AudioOutputKind.earpiece => Icons.phone_in_talk,
+                    _ => Icons.volume_up,
+                  },
+                  color: output.deviceId == _outputDeviceId
+                      ? const Color(0xFF00A884)
+                      : Colors.white70,
+                ),
+                title: Text(
+                  _outputName(sheetContext, output),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () => Navigator.of(sheetContext).pop(output),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    final kind = audioOutputKind(chosen.deviceId, chosen.label);
+    setState(() {
+      _isSpeakerOn = kind == AudioOutputKind.speaker;
+      _outputDeviceId =
+          (kind == AudioOutputKind.bluetooth || kind == AudioOutputKind.headset)
+              ? chosen.deviceId
+              : null;
+    });
+    if (_outputDeviceId != null) {
+      await Helper.selectAudioOutput(chosen.deviceId);
+    } else {
+      _applyAudioRouting();
+    }
+    _updateProximity();
+  }
+
+  String _outputName(BuildContext context, MediaDeviceInfo output) {
+    final l10n = context.l10n;
+    final label = output.label.trim();
+    return switch (audioOutputKind(output.deviceId, output.label)) {
+      AudioOutputKind.speaker => l10n.translate('call_output_speaker'),
+      AudioOutputKind.earpiece => l10n.translate('call_output_earpiece'),
+      AudioOutputKind.bluetooth =>
+        label.isEmpty ? l10n.translate('call_output_bluetooth') : label,
+      AudioOutputKind.headset =>
+        label.isEmpty ? l10n.translate('call_output_headset') : label,
+      AudioOutputKind.other => label.isEmpty ? output.deviceId : label,
+    };
   }
 
   void _toggleSpeaker() {
@@ -433,6 +678,16 @@ class _CallScreenState extends State<CallScreen> {
       _isSpeakerOn = !_isSpeakerOn;
     });
     _applyAudioRouting();
+    _updateProximity();
+  }
+
+  /// On the earpiece of an audio call the phone is held to the ear, so the
+  /// screen turns off when something is close, and cheeks press no buttons.
+  void _updateProximity() {
+    unawaited(CallAudioSession.setProximityScreenOff(!_videoMode &&
+        !_isSpeakerOn &&
+        _outputDeviceId == null &&
+        !_hasExited));
   }
 
   void _switchCamera() {
@@ -473,7 +728,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _stopRingback();
-    if (widget.isVideoCall && !kIsWeb) {
+    if (!kIsWeb) {
       unawaited(WakelockPlus.disable());
     }
     if (!kIsWeb) {
@@ -484,12 +739,21 @@ class _CallScreenState extends State<CallScreen> {
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     _signaling.dispose();
+    unawaited(CallAudioSession.stopOngoing());
+    unawaited(CallAudioSession.setProximityScreenOff(false));
+    unawaited(CallAudioSession.showOverLockScreen(false));
+    CallAudioSession.setHangUpHandler(null);
+    CallAudioSession.setPipListener(null);
+    unawaited(CallAudioSession.setPipAllowed(false));
+    ActiveCallControls.detach(widget.callId);
+    if (_systemCall) unawaited(SystemCallBridge.end(widget.callId));
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isVideo = widget.isVideoCall;
+    final isVideo = _videoMode;
+    final cameraOn = _signaling.hasLocalVideo && !_isVideoOff;
     // Show the other person's video whenever they send it. Our own camera
     // being off must not hide it.
     final remoteHasVideo =
@@ -519,7 +783,10 @@ class _CallScreenState extends State<CallScreen> {
               fit: StackFit.expand,
               children: [
                 // ── Background / Remote Video Layer ───────────────────────────────
-                if (isVideo && _remoteVideoConnected && remoteHasVideo)
+                if (isVideo &&
+                    _remoteCameraOn &&
+                    _remoteVideoConnected &&
+                    remoteHasVideo)
                   Positioned.fill(
                     child: RTCVideoView(
                       _remoteRenderer,
@@ -549,7 +816,7 @@ class _CallScreenState extends State<CallScreen> {
                   right: 0,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 250),
-                    opacity: _controlsVisible ? 1.0 : 0.0,
+                    opacity: _controlsVisible && !_inPip ? 1.0 : 0.0,
                     child: SafeArea(
                       bottom: false,
                       child: Padding(
@@ -588,7 +855,8 @@ class _CallScreenState extends State<CallScreen> {
                                       Text(
                                         _isConnected
                                             ? _formatDuration(_callDuration)
-                                            : _callStatusText,
+                                            : context.l10n
+                                                .translate(_statusKey),
                                         style: TextStyle(
                                           color: _isConnected
                                               ? const Color(0xFF00A884)
@@ -616,17 +884,20 @@ class _CallScreenState extends State<CallScreen> {
                                               case CallNetworkQuality.good:
                                                 dotColor =
                                                     const Color(0xFF00E676);
-                                                label = 'HD';
+                                                label = context.l10n.translate(
+                                                    'chat_quality_hd');
                                                 break;
                                               case CallNetworkQuality.fair:
                                                 dotColor =
                                                     const Color(0xFFFFD600);
-                                                label = 'Fair';
+                                                label = context.l10n.translate(
+                                                    'chat_quality_fair');
                                                 break;
                                               case CallNetworkQuality.poor:
                                                 dotColor =
                                                     const Color(0xFFFF1744);
-                                                label = 'Weak';
+                                                label = context.l10n.translate(
+                                                    'chat_quality_weak');
                                                 break;
                                             }
                                             return GestureDetector(
@@ -695,18 +966,22 @@ class _CallScreenState extends State<CallScreen> {
                 ),
 
                 // ── Local Video PIP (Picture-In-Picture for Video Calls) ─────────
-                if (isVideo && !_isVideoOff)
+                if (isVideo &&
+                    _signaling.hasLocalVideo &&
+                    !_isVideoOff &&
+                    !_inPip)
                   Positioned(
                     right: _pipOffset.dx,
                     top: _pipOffset.dy,
                     child: GestureDetector(
                       onPanUpdate: (details) {
                         setState(() {
+                          final size = MediaQuery.of(context).size;
                           _pipOffset = Offset(
-                            (_pipOffset.dx - details.delta.dx).clamp(
-                                10, MediaQuery.of(context).size.width - 120),
-                            (_pipOffset.dy + details.delta.dy).clamp(
-                                60, MediaQuery.of(context).size.height - 200),
+                            clampWithin(_pipOffset.dx - details.delta.dx, 10,
+                                size.width - 120),
+                            clampWithin(_pipOffset.dy + details.delta.dy, 60,
+                                size.height - 200),
                           );
                         });
                       },
@@ -743,7 +1018,7 @@ class _CallScreenState extends State<CallScreen> {
                 // ── Bottom Action Controls Bar ────────────────────────────────────
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 250),
-                  bottom: _controlsVisible ? 36 : -120,
+                  bottom: _controlsVisible && !_inPip ? 36 : -120,
                   left: 20,
                   right: 20,
                   child: SafeArea(
@@ -775,8 +1050,8 @@ class _CallScreenState extends State<CallScreen> {
                             bgColor: _isSpeakerOn
                                 ? Colors.white.withValues(alpha: 0.15)
                                 : const Color(0xFF2A3942),
-                            tooltip: 'Speaker',
-                            onTap: _toggleSpeaker,
+                            tooltip: context.l10n.translate('call_speaker'),
+                            onTap: _onSpeakerTap,
                           ),
 
                           // Mute Audio Toggle
@@ -787,7 +1062,9 @@ class _CallScreenState extends State<CallScreen> {
                             bgColor: _isAudioMuted
                                 ? Colors.white.withValues(alpha: 0.15)
                                 : const Color(0xFF2A3942),
-                            tooltip: _isAudioMuted ? 'Unmute' : 'Mute',
+                            tooltip: _isAudioMuted
+                                ? context.l10n.translate('chat_unmute')
+                                : context.l10n.translate('chat_mute'),
                             onTap: _toggleAudio,
                           ),
 
@@ -800,27 +1077,27 @@ class _CallScreenState extends State<CallScreen> {
                             bgColor: _signaling.remoteGain > 1
                                 ? Colors.white.withValues(alpha: 0.15)
                                 : const Color(0xFF2A3942),
-                            tooltip:
-                                'Louder (${_signaling.remoteGain.toStringAsFixed(0)}x)',
+                            tooltip: context.l10n
+                                .translate('call_louder', args: {
+                              'gain': _signaling.remoteGain.toStringAsFixed(0)
+                            }),
                             onTap: _cycleRemoteGain,
                           ),
 
-                          // Video Toggle (only for video calls)
-                          if (isVideo)
-                            _buildCallActionBtn(
-                              icon: _isVideoOff
-                                  ? Icons.videocam_off
-                                  : Icons.videocam,
-                              color:
-                                  _isVideoOff ? Colors.redAccent : Colors.white,
-                              bgColor: _isVideoOff
-                                  ? Colors.white.withValues(alpha: 0.15)
-                                  : const Color(0xFF2A3942),
-                              tooltip: _isVideoOff
-                                  ? 'Turn Video On'
-                                  : 'Turn Video Off',
-                              onTap: _toggleVideo,
-                            ),
+                          // Camera: on and off, or on for the first time,
+                          // which turns a voice call into a video call.
+                          _buildCallActionBtn(
+                            icon:
+                                !cameraOn ? Icons.videocam_off : Icons.videocam,
+                            color: !cameraOn ? Colors.redAccent : Colors.white,
+                            bgColor: !cameraOn
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : const Color(0xFF2A3942),
+                            tooltip: !cameraOn
+                                ? context.l10n.translate('call_video_on')
+                                : context.l10n.translate('call_video_off'),
+                            onTap: _toggleVideo,
+                          ),
 
                           // End Call Button (Red Circle)
                           _buildCallActionBtn(
@@ -828,7 +1105,7 @@ class _CallScreenState extends State<CallScreen> {
                             color: Colors.white,
                             bgColor: Colors.redAccent,
                             isEndCall: true,
-                            tooltip: 'End Call',
+                            tooltip: context.l10n.translate('call_end'),
                             onTap: _endCall,
                           ),
                         ],
@@ -845,9 +1122,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _buildAudioOrPlaceholderBackground() {
-    final initials = widget.remoteUserName.isNotEmpty
-        ? widget.remoteUserName.substring(0, 1).toUpperCase()
-        : 'T';
+    final initials = callInitial(widget.remoteUserName);
 
     return Container(
       width: double.infinity,
@@ -932,7 +1207,9 @@ class _CallScreenState extends State<CallScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _isConnected ? _formatDuration(_callDuration) : _callStatusText,
+              _isConnected
+                  ? _formatDuration(_callDuration)
+                  : context.l10n.translate(_statusKey),
               style: TextStyle(
                 color: _isConnected ? const Color(0xFF00A884) : Colors.white60,
                 fontSize: 16,

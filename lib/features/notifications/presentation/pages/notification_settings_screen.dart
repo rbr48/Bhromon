@@ -1,11 +1,15 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/theme_controller.dart';
+import '../../../tour_group/data/channel_swipe_controller.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -35,10 +39,10 @@ class _NotificationSettingsScreenState
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: context.forest.surfaceFor(Colors.black),
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: context.forest.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -67,10 +71,10 @@ class _NotificationSettingsScreenState
                 ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
-                    const Text(
+                    Text(
                       'Language / ভাষা',
                       style: TextStyle(
-                          color: Colors.white60,
+                          color: context.forest.text60,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5),
@@ -78,12 +82,27 @@ class _NotificationSettingsScreenState
                     const SizedBox(height: 12),
                     _buildLanguagePicker(),
                     const SizedBox(height: 16),
-                    const Divider(color: Colors.white10),
+                    Divider(color: context.forest.divider10),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
+                      'Theme / থিম',
+                      style: TextStyle(
+                          color: context.forest.text60,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildThemePicker(),
+                    const SizedBox(height: 16),
+                    _buildChannelSwipeToggle(),
+                    const SizedBox(height: 16),
+                    Divider(color: context.forest.divider10),
+                    const SizedBox(height: 16),
+                    Text(
                       'Push Notification Preferences',
                       style: TextStyle(
-                          color: Colors.white60,
+                          color: context.forest.text60,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5),
@@ -108,12 +127,12 @@ class _NotificationSettingsScreenState
                       (v) => setState(() => _moderationAlerts = v),
                     ),
                     const SizedBox(height: 12),
-                    const Divider(color: Colors.white10),
+                    Divider(color: context.forest.divider10),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Account Security & Session',
                       style: TextStyle(
-                          color: Colors.white60,
+                          color: context.forest.text60,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5),
@@ -125,43 +144,48 @@ class _NotificationSettingsScreenState
                         color: context.surfacePanel,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.04)),
+                            color: context.forest.text.withValues(alpha: 0.04)),
                       ),
                       child: Column(
                         children: [
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.lock_outline,
-                                color: AppColors.mintGreen),
-                            title: const Text('Change / Set Password',
+                            leading: Icon(Icons.lock_outline,
+                                color: context.forest.accentText),
+                            title: Text('Change / Set Password',
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: context.forest.text,
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold)),
-                            subtitle: const Text(
+                            subtitle: Text(
                                 'Add or update password for email sign-in backup',
                                 style: TextStyle(
-                                    color: Colors.white54, fontSize: 11)),
-                            trailing: const Icon(Icons.chevron_right,
-                                color: Colors.white54),
+                                    color: context.forest.text54,
+                                    fontSize: 11)),
+                            trailing: Icon(Icons.chevron_right,
+                                color: context.forest.text54),
                             onTap: () => _showChangePasswordDialog(context),
                           ),
-                          const Divider(color: Colors.white10),
+                          Divider(color: context.forest.divider10),
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.delete_forever,
-                                color: Colors.redAccent),
-                            title: const Text('Delete Profile & Account',
+                            leading: Icon(Icons.delete_forever,
+                                color:
+                                    context.forest.readable(Colors.redAccent)),
+                            title: Text('Delete Profile & Account',
                                 style: TextStyle(
-                                    color: Colors.redAccent,
+                                    color: context.forest
+                                        .readable(Colors.redAccent),
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold)),
-                            subtitle: const Text(
+                            subtitle: Text(
                                 'Permanently delete your profile and travel logs',
                                 style: TextStyle(
-                                    color: Colors.white54, fontSize: 11)),
-                            trailing: const Icon(Icons.chevron_right,
-                                color: Colors.redAccent),
+                                    color: context.forest.text54,
+                                    fontSize: 11)),
+                            trailing: Icon(Icons.chevron_right,
+                                color:
+                                    context.forest.readable(Colors.redAccent)),
                             onTap: () => context.push('/delete-account'),
                           ),
                         ],
@@ -194,8 +218,8 @@ class _NotificationSettingsScreenState
         child: SegmentedButton<String>(
           style: SegmentedButton.styleFrom(
             selectedBackgroundColor: AppColors.midGreen,
-            selectedForegroundColor: Colors.white,
-            foregroundColor: Colors.white70,
+            selectedForegroundColor: context.forest.text,
+            foregroundColor: context.forest.text70,
           ),
           segments: const [
             ButtonSegment(value: 'bn', label: Text('বাংলা')),
@@ -206,6 +230,60 @@ class _NotificationSettingsScreenState
             unawaited(LocaleController.instance.setLanguage(selection.first));
           },
         ),
+      ),
+    );
+  }
+
+  /// Dark, Light, or System theme for the whole app. The choice is saved on this device.
+  Widget _buildThemePicker() {
+    return AnimatedBuilder(
+      animation: ThemeController.instance,
+      builder: (context, _) {
+        final isBn = LocaleController.instance.locale.languageCode == 'bn';
+        return SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ThemeMode>(
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppColors.midGreen,
+              selectedForegroundColor: context.forest.text,
+              foregroundColor: context.forest.text70,
+            ),
+            segments: [
+              ButtonSegment(
+                value: ThemeMode.dark,
+                icon: const Icon(Icons.dark_mode_outlined, size: 16),
+                label: Text(isBn ? 'ডার্ক' : 'Dark'),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                icon: const Icon(Icons.light_mode_outlined, size: 16),
+                label: Text(isBn ? 'লাইট' : 'Light'),
+              ),
+              ButtonSegment(
+                value: ThemeMode.system,
+                icon: const Icon(Icons.brightness_auto_outlined, size: 16),
+                label: Text(isBn ? 'সিস্টেম' : 'System'),
+              ),
+            ],
+            selected: {ThemeController.instance.mode},
+            onSelectionChanged: (selection) {
+              unawaited(ThemeController.instance.setMode(selection.first));
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildChannelSwipeToggle() {
+    final l10n = context.l10n;
+    return ListenableBuilder(
+      listenable: ChannelSwipeController.instance,
+      builder: (context, _) => _buildToggle(
+        l10n.translate('chan_swipe_setting_title'),
+        l10n.translate('chan_swipe_setting_body'),
+        ChannelSwipeController.instance.enabled,
+        (v) => unawaited(ChannelSwipeController.instance.setEnabled(v)),
       ),
     );
   }
@@ -221,12 +299,12 @@ class _NotificationSettingsScreenState
       child: SwitchListTile(
         activeThumbColor: AppColors.mintGreen,
         title: Text(title,
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: context.forest.text,
                 fontSize: 16,
                 fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle,
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            style: TextStyle(color: context.forest.text54, fontSize: 12)),
         value: val,
         onChanged: onChange,
       ),
@@ -243,28 +321,31 @@ class _NotificationSettingsScreenState
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
         ),
-        title: const Text(
+        title: Text(
           'SET NEW PASSWORD',
           style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 16),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Enter a password to set on your account.',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: context.forest.text54, fontSize: 12),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: passwordController,
               obscureText: true,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 hintText: 'Minimum 6 characters',
-                hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-                fillColor: Colors.white.withValues(alpha: 0.05),
+                hintStyle:
+                    TextStyle(color: context.forest.text54, fontSize: 13),
+                fillColor: context.forest.text.withValues(alpha: 0.05),
                 filled: true,
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -276,7 +357,7 @@ class _NotificationSettingsScreenState
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                Text('Cancel', style: TextStyle(color: context.forest.text54)),
           ),
           ElevatedButton(
             style:

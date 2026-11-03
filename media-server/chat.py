@@ -25,6 +25,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket,
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
+from voip_push import VOIP_PLATFORM, voip_sender
+
+from push_strings import call_alert, chat_preview, normalize_language, push_text
+
 logger = logging.getLogger("bhromon.chat")
 
 DEAD_TOKEN_CODES = {
@@ -64,6 +68,8 @@ class ChatDatabase:
         self.db_path = str(db_path)
         os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
         self._local = threading.local()
+        # Serialises the check and the insert in save_message_once.
+        self._write_lock = threading.Lock()
         self._init_schema()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -78,6 +84,10 @@ class ChatDatabase:
 
     def _init_schema(self) -> None:
         conn = self._get_conn()
+        # Databases from before the language column get it here.
+        device_columns = {row[1] for row in conn.execute("PRAGMA table_info(device_tokens)")}
+        if device_columns and "language" not in device_columns:
+            conn.execute("ALTER TABLE device_tokens ADD COLUMN language TEXT NOT NULL DEFAULT 'en'")
         with conn:
             conn.executescript(
                 """
@@ -87,6 +97,7 @@ class ChatDatabase:
                     token TEXT NOT NULL,
                     email TEXT,
                     platform TEXT,
+                    language TEXT NOT NULL DEFAULT 'en',
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY (uid, device_id)
                 );
@@ -123,11 +134,23 @@ class ChatDatabase:
                     status TEXT DEFAULT 'sent',
                     metadata TEXT,
                     created_at INTEGER NOT NULL,
-                    deleted_for TEXT
+                    deleted_for TEXT,
+                    client_id TEXT
                 );
                 CREATE INDEX IF NOT EXISTS idx_messages_chat_created ON messages(chat_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
                 """
+            )
+        # Messages from before the client id column get it here. The unique index
+        # lets save_message_once answer a repeated send with the message already saved.
+        message_columns = {row[1] for row in conn.execute("PRAGMA table_info(messages)")}
+        if "client_id" not in message_columns:
+            with conn:
+                conn.execute("ALTER TABLE messages ADD COLUMN client_id TEXT")
+        with conn:
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_client_id "
+                "ON messages(sender_id, client_id) WHERE client_id IS NOT NULL"
             )
 
     # ── Device Tokens ─────────────────────────────────────────────────────────
@@ -139,6 +162,7 @@ class ChatDatabase:
         device_id: Optional[str] = None,
         email: Optional[str] = None,
         platform: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> None:
         clean_uid = uid.strip()
         clean_token = token.strip()
@@ -151,24 +175,40 @@ class ChatDatabase:
         with conn:
             conn.execute(
                 """
-                INSERT INTO device_tokens (uid, device_id, token, email, platform, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO device_tokens (uid, device_id, token, email, platform, language, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(uid, device_id) DO UPDATE SET
                     token=excluded.token,
                     email=coalesce(excluded.email, device_tokens.email),
                     platform=coalesce(excluded.platform, device_tokens.platform),
+                    language=excluded.language,
                     updated_at=excluded.updated_at;
                 """,
-                (clean_uid, dev_id, clean_token, (email or "").strip().lower(), platform or "unknown", now),
+                (
+                    clean_uid,
+                    dev_id,
+                    clean_token,
+                    (email or "").strip().lower(),
+                    platform or "unknown",
+                    normalize_language(language),
+                    now,
+                ),
             )
 
     def get_device_tokens(self, uid: str) -> List[Dict[str, str]]:
         conn = self._get_conn()
         cursor = conn.execute(
-            "SELECT token, platform FROM device_tokens WHERE uid = ?",
+            "SELECT token, platform, language FROM device_tokens WHERE uid = ?",
             (uid.strip(),),
         )
-        return [{"token": row["token"], "platform": row["platform"]} for row in cursor.fetchall()]
+        return [
+            {
+                "token": row["token"],
+                "platform": row["platform"],
+                "language": normalize_language(row["language"]),
+            }
+            for row in cursor.fetchall()
+        ]
 
     def delete_device_token(self, token: str) -> None:
         conn = self._get_conn()
@@ -346,8 +386,8 @@ class ChatDatabase:
                     id, chat_id, sender_id, sender_name, sender_avatar,
                     text, type, media_url, media_path, thumbnail_url,
                     reply_to, reactions, read_by, status, metadata,
-                    created_at, deleted_for
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    created_at, deleted_for, client_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     msg_id,
@@ -367,6 +407,7 @@ class ChatDatabase:
                     json.dumps(msg.get("metadata")) if msg.get("metadata") else None,
                     created_at,
                     json.dumps(msg.get("deletedFor") or []),
+                    msg.get("clientMessageId"),
                 ),
             )
 
@@ -399,6 +440,29 @@ class ChatDatabase:
         msg["id"] = msg_id
         msg["createdAt"] = created_at
         return msg
+
+    def find_message_by_client_id(self, sender_id: str, client_id: str) -> Optional[Dict[str, Any]]:
+        row = self._get_conn().execute(
+            "SELECT * FROM messages WHERE sender_id = ? AND client_id = ?",
+            (sender_id, client_id),
+        ).fetchone()
+        return self._row_to_message(row) if row else None
+
+    def save_message_once(self, msg: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
+        """Saves a message unless its sender already sent it with the same client id.
+
+        Returns the message and whether this call saved it. A phone that retries
+        after a dropped connection gets the message it already sent back, and
+        nothing is delivered or pushed a second time.
+        """
+        client_id = msg.get("clientMessageId")
+        if not client_id:
+            return self.save_message(msg), True
+        with self._write_lock:
+            existing = self.find_message_by_client_id(msg["senderId"], client_id)
+            if existing is not None:
+                return existing, False
+            return self.save_message(msg), True
 
     def get_messages(
         self,
@@ -585,6 +649,7 @@ class ChatDatabase:
             "metadata": metadata,
             "createdAt": row["created_at"],
             "deletedFor": deleted_for,
+            **({"clientMessageId": row["client_id"]} if "client_id" in row.keys() and row["client_id"] else {}),
         }
 
 
@@ -701,6 +766,7 @@ class PushNotificationDispatcher:
         body: str,
         data: Dict[str, str],
         image_url: Optional[str] = None,
+        localize: Any = None,
     ) -> int:
         tokens = self.db.get_device_tokens(recipient_uid)
         if not tokens:
@@ -716,13 +782,20 @@ class PushNotificationDispatcher:
         # Build notification object
         sent_count = 0
         for entry in tokens:
+            if entry.get("platform") == VOIP_PLATFORM:
+                continue  # An iPhone's PushKit token takes call pushes only.
             token = entry["token"]
+            entry_title, entry_body = (
+                localize(normalize_language(entry.get("language")))
+                if localize
+                else (title, body)
+            )
             try:
                 android_config = messaging.AndroidConfig(
                     priority="high",
                     notification=messaging.AndroidNotification(
-                        title=title,
-                        body=body,
+                        title=entry_title,
+                        body=entry_body,
                         sound="default",
                         channel_id="bhromon_general",
                         image=image_url,
@@ -731,8 +804,8 @@ class PushNotificationDispatcher:
                 web_config = messaging.WebpushConfig(
                     headers={"Urgency": "high"},
                     notification=messaging.WebpushNotification(
-                        title=title,
-                        body=body,
+                        title=entry_title,
+                        body=entry_body,
                         icon="/icons/Icon-192.png",
                         image=image_url,
                     ),
@@ -740,7 +813,7 @@ class PushNotificationDispatcher:
 
                 msg = messaging.Message(
                     token=token,
-                    notification=messaging.Notification(title=title, body=body, image=image_url),
+                    notification=messaging.Notification(title=entry_title, body=entry_body, image=image_url),
                     data=data,
                     android=android_config,
                     webpush=web_config,
@@ -782,9 +855,6 @@ class PushNotificationDispatcher:
             logger.warning("Firebase Admin SDK not initialized; skipping call push.")
             return 0
 
-        kind = "Video" if is_video else "Voice"
-        title = f"Incoming {kind} Call"
-        body = f"{caller_name} is calling you on Bhromon..."
         data = {
             "action": "call",
             "callId": call_id,
@@ -796,6 +866,24 @@ class PushNotificationDispatcher:
         sent_count = 0
         for entry in tokens:
             token = entry["token"]
+            # Each device rings in its own language.
+            language = normalize_language(entry.get("language"))
+            entry_title, entry_body = call_alert(language, is_video, caller_name)
+            if entry.get("platform") == VOIP_PLATFORM:
+                # A closed iPhone shows the system call screen only for a VoIP push.
+                result = voip_sender.send_call(
+                    token,
+                    call_id=call_id,
+                    caller_id=caller_id,
+                    caller_name=caller_name,
+                    is_video=is_video,
+                    language=language,
+                )
+                if result == "sent":
+                    sent_count += 1
+                elif result == "dead":
+                    self.db.delete_device_token(token)
+                continue
             try:
                 if entry.get("platform") == "web":
                     # A browser has no native call screen, so it gets a visible alert.
@@ -805,7 +893,7 @@ class PushNotificationDispatcher:
                         webpush=messaging.WebpushConfig(
                             headers={"Urgency": "high", "TTL": str(CALL_RING_SECONDS)},
                             notification=messaging.WebpushNotification(
-                                title=title, body=body, icon="/icons/Icon-192.png"
+                                title=entry_title, body=entry_body, icon="/icons/Icon-192.png"
                             ),
                         ),
                     )
@@ -821,7 +909,7 @@ class PushNotificationDispatcher:
                             },
                             payload=messaging.APNSPayload(
                                 aps=messaging.Aps(
-                                    alert=messaging.ApsAlert(title=title, body=body),
+                                    alert=messaging.ApsAlert(title=entry_title, body=entry_body),
                                     sound="default",
                                     content_available=True,
                                 )
@@ -914,6 +1002,7 @@ class TokenRegistrationRequest(BaseModel):
     deviceId: Optional[str] = None
     email: Optional[str] = None
     platform: Optional[str] = None
+    language: Optional[str] = None
 
 
 class SendMessageRequest(BaseModel):
@@ -928,6 +1017,8 @@ class SendMessageRequest(BaseModel):
     thumbnailUrl: Optional[str] = None
     replyTo: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
+    # The phone's id for the message. A retry sends the same id.
+    clientMessageId: Optional[str] = None
 
 
 class MarkReadRequest(BaseModel):
@@ -962,6 +1053,7 @@ async def register_device_token(
         device_id=req.deviceId,
         email=req.email,
         platform=req.platform,
+        language=req.language,
     )
     return {"status": "success"}
 
@@ -1018,6 +1110,7 @@ async def send_message(
         participants=participants,
     )
 
+    client_id = (req.clientMessageId or "").strip()[:128] or None
     msg_dict = {
         "chatId": req.chatId,
         "senderId": uid,
@@ -1032,9 +1125,14 @@ async def send_message(
         "metadata": req.metadata,
         "status": "sent",
         "createdAt": _now_ms(),
+        "clientMessageId": client_id,
     }
 
-    saved = await run_in_threadpool(chat_db.save_message, msg_dict)
+    saved, created = await run_in_threadpool(chat_db.save_message_once, msg_dict)
+    if not created:
+        # A retry of a message that is already saved: answer with that message,
+        # and do not broadcast or push it again.
+        return {"status": "success", "message": saved, "duplicate": True}
     message_id = saved["id"]
 
     # A socket that accepted the write is not proof that the phone showed the
@@ -1052,6 +1150,10 @@ async def send_message(
         "recipient_uid": req.recipientId,
         "title": req.senderName or "New Message",
         "body": preview,
+        "localize": lambda lang: (
+            req.senderName or push_text(lang, "vps.title"),
+            chat_preview(lang, req.text, req.type),
+        ),
         "data": {
             "action": "chat",
             "chatId": req.chatId,
@@ -1167,10 +1269,20 @@ STUN_URLS = [
     "stun:stun2.l.google.com:19302",
     "stun:stun.cloudflare.com:3478",
 ]
+TURN_HOST = os.environ.get("TURN_SERVER_HOST", "turn.sottocall.com")
 TURN_URLS = [
-    "turn:148.135.137.245:3478?transport=udp",
-    "turn:148.135.137.245:3478?transport=tcp",
+    f"turn:{TURN_HOST}:3478?transport=udp",
+    f"turn:{TURN_HOST}:3478?transport=tcp",
+    f"turns:{TURN_HOST}:5349?transport=tcp",
 ]
+
+
+def turn_tls_urls() -> List[str]:
+    """TURN over TLS, for networks that let only HTTPS out. Set TURN_TLS_URLS
+    (comma separated, for example "turns:turn.bhromon.fun:443?transport=tcp")
+    once coturn listens with a certificate; see the README."""
+    raw = os.environ.get("TURN_TLS_URLS", "")
+    return [url.strip() for url in raw.split(",") if url.strip().startswith("turns:")]
 # A TURN credential is short-lived and bound to the caller. The app refetches it
 # before it expires, so a leaked credential stops working within the hour.
 ICE_CREDENTIAL_TTL_SECONDS = 3600
@@ -1185,7 +1297,7 @@ def build_ice_servers(uid: str, secret: str, now: Optional[int] = None) -> Dict[
         "iceServers": [
             {"urls": STUN_URLS},
             {
-                "urls": TURN_URLS,
+                "urls": TURN_URLS + [url for url in turn_tls_urls() if url not in TURN_URLS],
                 "username": username,
                 "credential": base64.b64encode(digest).decode("ascii"),
             },
@@ -1212,9 +1324,16 @@ async def get_ice_servers(uid: str = Depends(authenticate_user)):
 # is how a dropped link is rebuilt. "renegotiate" asks the caller for a new offer.
 # None of the three rings a phone, so they are relayed without a push, an ack or
 # the offer limit.
-CALL_SIGNAL_TYPES = frozenset({"offer", "answer", "candidate", "end", "declined", "reoffer", "reanswer", "renegotiate"})
+# "camera" says whether the sender's camera is on, so a voice call can turn into a
+# video call and back without a new offer.
+CALL_SIGNAL_TYPES = frozenset(
+    {"offer", "answer", "candidate", "end", "declined", "reoffer", "reanswer", "renegotiate", "camera"}
+)
 MAX_CALL_SIGNAL_BYTES = 64 * 1024
-CALL_OFFERS_PER_WINDOW = 6
+# The same limit as the call push watcher (notifications.py) and the Cloud
+# Function (CALLS_PER_WINDOW), so a call that one of them allows is not refused
+# by another halfway through ringing.
+CALL_OFFERS_PER_WINDOW = 10
 CALL_OFFER_WINDOW_SECONDS = 600.0
 WS_AUTH_TIMEOUT_SECONDS = 10.0
 # How long a chat message waits for its recipient's app to confirm it on screen,
@@ -1280,6 +1399,17 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
     signal_type = data.get("signalType")
     recipient_id = data.get("recipientId")
 
+    # A recipient named by email is resolved first, so the group check below
+    # runs on the uid it applies to.
+    target_uid = recipient_id
+    if isinstance(recipient_id, str) and "@" in recipient_id:
+        try:
+            from firebase_admin import auth as fb_auth
+            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
+            target_uid = user.uid
+        except Exception as ex:
+            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
+
     refusal: Optional[str] = None
     if (
         not isinstance(signal_type, str)
@@ -1287,11 +1417,12 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         or not isinstance(recipient_id, str)
         or not recipient_id
         or recipient_id == uid
+        or target_uid == uid
     ):
         refusal = "invalid"
     elif len(json.dumps(data)) > MAX_CALL_SIGNAL_BYTES:
         refusal = "too_large"
-    elif not await run_in_threadpool(shares_group, uid, recipient_id):
+    elif not await run_in_threadpool(shares_group, uid, target_uid):
         refusal = "not_in_group"
     elif signal_type == "offer" and not call_offer_limiter.allow(uid):
         refusal = "rate_limited"
@@ -1302,15 +1433,6 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
             {"type": "call_signal_error", "callId": call_id, "signalType": signal_type, "reason": refusal}
         )
         return
-
-    target_uid = recipient_id
-    if isinstance(recipient_id, str) and "@" in recipient_id:
-        try:
-            from firebase_admin import auth as fb_auth
-            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
-            target_uid = user.uid
-        except Exception as ex:
-            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
 
     delivered = await ws_manager.send_to_user(
         target_uid,
@@ -1344,7 +1466,7 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         _start_background(
             run_in_threadpool(
                 push_dispatcher.send_call_push_to_uid,
-                recipient_uid=recipient_id,
+                recipient_uid=target_uid,
                 call_id=call_id,
                 caller_id=uid,
                 caller_name=_short_text(data.get("callerName"), 80) or "A member",

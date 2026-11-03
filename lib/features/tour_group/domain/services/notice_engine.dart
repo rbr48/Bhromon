@@ -124,6 +124,14 @@ class NoticeEngine {
       });
   }
 
+  /// The filter [by] steps from [current]. The first and last filters stop the
+  /// step, so a swipe never wraps around.
+  static NoticeFilter stepFilter(NoticeFilter current, int by) {
+    const filters = NoticeFilter.values;
+    final index = (filters.indexOf(current) + by).clamp(0, filters.length - 1);
+    return filters[index];
+  }
+
   static List<TourNotice> filter(
     List<TourNotice> notices,
     NoticeFilter filter, {

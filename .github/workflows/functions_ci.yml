@@ -80,7 +80,7 @@ jobs:
         with:
           name: functions-lib
           path: functions/lib
-          retention-days: 7
+          retention-days: 1
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Job 3: Run Cloud Functions Unit Tests
@@ -140,4 +140,4 @@ jobs:
         with:
           name: functions-test-coverage
           path: functions/coverage
-          retention-days: 14
+          retention-days: 1

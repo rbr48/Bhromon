@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'hotel_room_map_screen.dart';
 import 'transport_screen.dart';
 import 'luggage_tracker_screen.dart';
@@ -34,14 +35,16 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(
           context.l10n.translate('tour_logistics_title'),
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 18),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -49,7 +52,7 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
           tabAlignment: TabAlignment.start,
           indicatorColor: AppColors.mintGreen,
           labelColor: AppColors.mintGreen,
-          unselectedLabelColor: Colors.white60,
+          unselectedLabelColor: context.forest.text60,
           tabs: [
             Tab(
                 icon: const Icon(Icons.commute_rounded),

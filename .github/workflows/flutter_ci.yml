@@ -108,7 +108,7 @@ jobs:
         with:
           name: flutter-coverage
           path: coverage/
-          retention-days: 14
+          retention-days: 1
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Job 5: Web build. The release web build was made only by hand before this.

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -8,15 +9,17 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/localization/locale_controller.dart';
+import '../../../../core/localization/localized_date.dart';
 import '../../../../core/services/media_upload_service.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/widgets/swipe_step.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/widgets/skeleton.dart';
@@ -27,6 +30,7 @@ import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/tour_choice.dart';
 import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 import '../widgets/server_patron_card.dart';
@@ -41,7 +45,17 @@ class ExplorerProfileScreen extends StatefulWidget {
   /// when the profile is opened outside a tour.
   final String? tourId;
 
-  const ExplorerProfileScreen({super.key, required this.uid, this.tourId});
+  /// The person's email when the caller knows it, such as the chat with them.
+  /// It only helps find their groups; it is never shown unless a shared
+  /// group's membership confirms it.
+  final String? emailHint;
+
+  const ExplorerProfileScreen({
+    super.key,
+    required this.uid,
+    this.tourId,
+    this.emailHint,
+  });
 
   @override
   State<ExplorerProfileScreen> createState() => _ExplorerProfileScreenState();
@@ -61,6 +75,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   // Active tab: 'tours' | 'vault' | 'settings'
   String _activeTab = 'tours';
+
+  // On someone else's profile: the groups you share with them, null until
+  // known, and their email as their membership row in a shared group gives it.
+  Set<String>? _sharedTourIds;
+  String? _subjectEmail;
+  String _sharedKey = '';
   bool _isGuest = false;
 
   // The tour the tabs and cards open. Creating or joining a tour changes it.
@@ -86,6 +106,30 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   bool get _isBn => LocaleController.instance.locale.languageCode == 'bn';
+
+  /// The email of the person this profile belongs to: yours on your own
+  /// profile, and on someone else's the one their shared membership confirms.
+  String _emailFor(bool isOwnProfile) =>
+      isOwnProfile ? _tourRepo.currentEmail : (_subjectEmail ?? '');
+
+  /// Works out which of [myGroups] the profile's person is also in, once per
+  /// set of groups.
+  void _ensureSharedGroups(List<TourGroup> myGroups) {
+    final uid = _profile?.uid ?? widget.uid;
+    final ids = [for (final g in myGroups) g.id]..sort();
+    final key = '$uid|${ids.join(',')}';
+    if (key == _sharedKey) return;
+    _sharedKey = key;
+    _tourRepo
+        .sharedGroupsWith(uid: uid, email: widget.emailHint, tourIds: ids)
+        .then((result) {
+      if (!mounted || key != _sharedKey) return;
+      setState(() {
+        _sharedTourIds = result.tourIds;
+        _subjectEmail = result.tourIds.isEmpty ? null : result.email;
+      });
+    });
+  }
 
   Future<void> _loadProfile() async {
     final authState = context.read<AuthCubit>().state;
@@ -171,14 +215,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1B3326),
+        backgroundColor: context.forest.dialog,
         title: Row(
           children: [
-            const Icon(Icons.edit_note_rounded, color: AppColors.mintGreen),
+            Icon(Icons.edit_note_rounded, color: context.forest.accentText),
             const SizedBox(width: 8),
             Text(
               _isBn ? 'স্ট্যাটাস নোট' : 'Status Note',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: context.forest.text, fontSize: 16),
             ),
           ],
         ),
@@ -186,14 +230,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           controller: ctrl,
           maxLength: 80,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.forest.text),
           decoration: InputDecoration(
             hintText: _isBn
                 ? 'আজকের অনুভূতি বা নোট লিখুন...'
                 : 'Write your travel note or mood...',
-            hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-            enabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+            hintStyle: TextStyle(color: context.forest.text38, fontSize: 13),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: context.forest.text24)),
             focusedBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.mintGreen)),
           ),
@@ -203,7 +247,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               _isBn ? 'বাতিল' : 'Cancel',
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(color: context.forest.text54),
             ),
           ),
           FilledButton(
@@ -244,25 +288,25 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF1B3326),
+          backgroundColor: context.forest.dialog,
           title: Row(
             children: [
               const Icon(Icons.bloodtype_rounded, color: Colors.redAccent),
               const SizedBox(width: 8),
               Text(
                 _isBn ? 'রক্তের গ্রুপ' : 'Blood Group',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: context.forest.text, fontSize: 16),
               ),
             ],
           ),
           content: DropdownButtonFormField<String>(
             initialValue: groups.contains(chosen) ? chosen : 'O+',
-            dropdownColor: const Color(0xFF14241B),
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
+            dropdownColor: context.forest.card,
+            style: TextStyle(color: context.forest.text),
+            decoration: InputDecoration(
               enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24)),
-              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: context.forest.text24)),
+              focusedBorder: const UnderlineInputBorder(
                   borderSide: BorderSide(color: AppColors.mintGreen)),
             ),
             items: [
@@ -278,7 +322,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               onPressed: () => Navigator.pop(ctx),
               child: Text(
                 _isBn ? 'বাতিল' : 'Cancel',
-                style: const TextStyle(color: Colors.white54),
+                style: TextStyle(color: context.forest.text54),
               ),
             ),
             FilledButton(
@@ -327,12 +371,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color),
+          Icon(icon, size: 13, color: context.forest.readable(color)),
           const SizedBox(width: 5),
           Text(
             text,
             style: TextStyle(
-              color: color,
+              color: context.forest.readable(color),
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -353,12 +397,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final isOwnProfile =
         currentUid.isNotEmpty && (_profile?.uid ?? widget.uid) == currentUid;
 
-    final email = _tourRepo.currentEmail;
-    final rawHandle = email.isNotEmpty
-        ? email.split('@').first
-        : (_profile?.displayName.toLowerCase().replaceAll(' ', '_') ??
-            'explorer');
-    final handle = rawHandle.replaceAll(RegExp(r'[^a-zA-Z0-9_.]'), '');
+    final handle = profileHandle(
+      email: _emailFor(isOwnProfile),
+      displayName: _profile?.displayName ?? '',
+    );
 
     return PopScope(
       canPop: context.canPop(),
@@ -367,22 +409,22 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         context.go(tourHubPath(_tourId));
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.background,
         appBar: AppBar(
           title: Text(
             '@$handle',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
-              color: Colors.white,
+              color: context.forest.text,
             ),
           ),
           centerTitle: true,
-          backgroundColor: const Color(0xFF0D1A12),
+          backgroundColor: context.forest.background,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white70),
+            icon: Icon(Icons.arrow_back, color: context.forest.text70),
             tooltip: _isBn ? 'ফিরে যান' : 'Back',
             onPressed: () {
               if (context.canPop()) {
@@ -394,8 +436,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.share_outlined,
-                  color: Colors.white70, size: 20),
+              icon: Icon(Icons.share_outlined,
+                  color: context.forest.text70, size: 20),
               tooltip: _isBn ? 'শেয়ার করুন' : 'Share Profile',
               onPressed: () {
                 final name = _profile?.displayName ?? 'Member';
@@ -409,8 +451,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ),
             if (isOwnProfile) ...[
               IconButton(
-                icon: const Icon(Icons.edit_outlined,
-                    color: AppColors.mintGreen, size: 20),
+                icon: Icon(Icons.edit_outlined,
+                    color: context.forest.accentText, size: 20),
                 tooltip: _isBn ? 'প্রোফাইল পরিবর্তন' : 'Edit Profile',
                 onPressed: () {
                   if (_profile != null) {
@@ -470,7 +512,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   _isBn
                       ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
                       : 'Failed to load profile: $_error',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(color: context.forest.text70, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -501,7 +543,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     return StreamBuilder<List<TourGroup>>(
       stream: _tourRepo.watchMyGroups(),
       builder: (context, groupsSnap) {
-        final groups = groupsSnap.data ?? [];
+        final myGroups = groupsSnap.data ?? [];
+        if (!isOwnProfile && groupsSnap.hasData) _ensureSharedGroups(myGroups);
+        // Someone else's profile lists only the groups you share with them.
+        final groups = profileGroups(
+          isOwnProfile: isOwnProfile,
+          myGroups: myGroups,
+          sharedIds: _sharedTourIds,
+          idOf: (g) => g.id,
+        );
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: bottomInset + 32),
@@ -517,7 +567,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 16),
 
               // 3. Tour Group Metrics Summary Bar
-              _buildTourMetricsBar(groups),
+              _buildTourMetricsBar(groups, isOwnProfile),
               const SizedBox(height: 18),
 
               // 4. Tour Action Buttons (Create Tour, Join Tour, Share, Settings)
@@ -531,17 +581,28 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 20),
 
               // 6. Achievements Showcase (অর্জনের শোকেস)
-              _buildAchievementsShowcase(groups),
+              _buildAchievementsShowcase(groups, isOwnProfile),
               const SizedBox(height: 20),
 
-              // 7. Segmented Navigation Tabs
-              _buildSegmentedTabs(),
-              const SizedBox(height: 16),
+              // 7. Segmented Navigation Tabs: games, vault and settings are
+              // your own, so someone else's profile shows only shared groups.
+              if (isOwnProfile) ...[
+                _buildSegmentedTabs(),
+                const SizedBox(height: 16),
+              ],
 
               // 6. Active Tab Content
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildActiveTabContent(profile, groups, isOwnProfile),
+                child: isOwnProfile
+                    ? SwipeStep(
+                        onStep: _stepTab,
+                        nextLabel: _isBn ? 'পরের ট্যাব' : 'Next tab',
+                        previousLabel: _isBn ? 'আগের ট্যাব' : 'Previous tab',
+                        child: _buildActiveTabContent(
+                            profile, groups, isOwnProfile),
+                      )
+                    : _buildActiveTabContent(profile, groups, isOwnProfile),
               ),
             ],
           ),
@@ -653,8 +714,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0D1A12),
+                  decoration: BoxDecoration(
+                    color: context.forest.background,
                     shape: BoxShape.circle,
                   ),
                   child: Container(
@@ -718,7 +779,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         color: AppColors.mintGreen,
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: const Color(0xFF0D1A12), width: 2),
+                            color: context.forest.background, width: 2),
                       ),
                       child: const Icon(Icons.camera_alt,
                           color: Colors.black, size: 14),
@@ -734,52 +795,57 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   Widget _buildUserInfo(ExplorerProfile profile, bool isOwnProfile) {
     final bio = _getDisplayBio(profile);
-    final email = _tourRepo.currentEmail;
+    final email = _emailFor(isOwnProfile);
+    final hasNote = _statusNote != null && _statusNote!.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          // Status Note bubble above name
-          GestureDetector(
-            onTap: () => _editStatusNote(context, isOwnProfile),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.mintGreen.withValues(alpha: 0.35)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isOwnProfile &&
-                      (_statusNote == null || _statusNote!.isEmpty))
-                    const Icon(Icons.add, size: 12, color: AppColors.mintGreen),
-                  Text(
-                    (_statusNote != null && _statusNote!.isNotEmpty)
-                        ? _statusNote!
-                        : (isOwnProfile
-                            ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
-                            : (_isBn ? 'সদস্য নোট' : 'Member note')),
-                    style: const TextStyle(
-                      color: AppColors.mintGreen,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+          // Status Note bubble above name: on someone else's profile only
+          // when they wrote one.
+          if (isOwnProfile || hasNote)
+            GestureDetector(
+              onTap: () => _editStatusNote(context, isOwnProfile),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: context.forest.text.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: AppColors.mintGreen.withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isOwnProfile &&
+                        (_statusNote == null || _statusNote!.isEmpty))
+                      Icon(Icons.add,
+                          size: 12, color: context.forest.accentText),
+                    Text(
+                      (_statusNote != null && _statusNote!.isNotEmpty)
+                          ? _statusNote!
+                          : (isOwnProfile
+                              ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
+                              : (_isBn ? 'সদস্য নোট' : 'Member note')),
+                      style: TextStyle(
+                        color: context.forest.accentText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
 
           // Display Name
           Text(
             profile.displayName.isNotEmpty ? profile.displayName : 'Member',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.forest.text,
               fontSize: 22,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
@@ -800,15 +866,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified_user_rounded,
-                    size: 13, color: AppColors.mintGreen),
+                Icon(Icons.verified_user_rounded,
+                    size: 13, color: context.forest.accentText),
                 const SizedBox(width: 5),
                 Text(
                   email.isNotEmpty
                       ? email
                       : (_isBn ? 'গ্রুপের সদস্য' : 'Group member'),
-                  style: const TextStyle(
-                    color: AppColors.mintGreen,
+                  style: TextStyle(
+                    color: context.forest.accentText,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -824,30 +890,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildDetailChip(
-                icon: Icons.hotel_rounded,
-                text: _isBn ? 'রিসোর্ট অতিথি' : 'Resort Guest',
-                color: Colors.amberAccent,
-              ),
-              _buildDetailChip(
-                icon: Icons.directions_bus_rounded,
-                text: _isBn ? 'এক্সপ্রেস সিট' : 'Express Seat',
-                color: Colors.cyanAccent,
-              ),
-              GestureDetector(
-                onTap: isOwnProfile
-                    ? () => _editBloodGroup(context, isOwnProfile)
-                    : null,
-                child: _buildDetailChip(
-                  icon: Icons.bloodtype_rounded,
-                  text: _bloodGroup != null && _bloodGroup!.isNotEmpty
-                      ? '🩸 $_bloodGroup'
-                      : (isOwnProfile
-                          ? (_isBn ? '🩸 + রক্তের গ্রুপ' : '🩸 + Blood Group')
-                          : '🩸 O+'),
-                  color: Colors.redAccent,
+              if (isOwnProfile ||
+                  (_bloodGroup != null && _bloodGroup!.isNotEmpty))
+                GestureDetector(
+                  onTap: isOwnProfile
+                      ? () => _editBloodGroup(context, isOwnProfile)
+                      : null,
+                  child: _buildDetailChip(
+                    icon: Icons.bloodtype_rounded,
+                    text: _bloodGroup != null && _bloodGroup!.isNotEmpty
+                        ? '🩸 $_bloodGroup'
+                        : (_isBn ? '🩸 + রক্তের গ্রুপ' : '🩸 + Blood Group'),
+                    color: Colors.redAccent,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -859,8 +915,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               child: Text(
                 bio,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: context.forest.text70,
                   fontSize: 13,
                   height: 1.4,
                   fontStyle: FontStyle.italic,
@@ -877,8 +933,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 bio.isEmpty
                     ? (_isBn ? '+ বায়ো যুক্ত করুন' : '+ Add Bio')
                     : (_isBn ? 'বায়ো পরিবর্তন করুন' : 'Edit Bio'),
-                style: const TextStyle(
-                  color: AppColors.mintGreen,
+                style: TextStyle(
+                  color: context.forest.accentText,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -893,8 +949,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Tour Metrics Summary Bar (4-metric Stats)
   // ---------------------------------------------------------------------------
 
-  Widget _buildTourMetricsBar(List<TourGroup> groups) {
-    final email = _tourRepo.currentEmail;
+  Widget _buildTourMetricsBar(List<TourGroup> groups, bool isOwnProfile) {
+    final email = _emailFor(isOwnProfile);
     final ownedCount = groups.where((g) => g.ownerEmail == email).length;
     final totalDays = groups.fold<int>(0, (acc, g) {
       final days = g.endDate.difference(g.startDate).inDays + 1;
@@ -905,9 +961,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.forest.text.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -920,7 +976,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           Container(
             height: 32,
             width: 1,
-            color: Colors.white.withValues(alpha: 0.1),
+            color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
             '$ownedCount',
@@ -930,7 +986,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           Container(
             height: 32,
             width: 1,
-            color: Colors.white.withValues(alpha: 0.1),
+            color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
             '$totalDays',
@@ -940,7 +996,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           Container(
             height: 32,
             width: 1,
-            color: Colors.white.withValues(alpha: 0.1),
+            color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
             _isBn ? 'সক্রিয়' : 'Active',
@@ -959,12 +1015,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: AppColors.mintGreen),
+            Icon(icon, size: 15, color: context.forest.accentText),
             const SizedBox(width: 4),
             Text(
               value,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -974,7 +1030,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 3),
         Text(
           label,
-          style: const TextStyle(color: Colors.white54, fontSize: 10),
+          style: TextStyle(color: context.forest.text54, fontSize: 10),
         ),
       ],
     );
@@ -1039,9 +1095,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           // Share Button
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: context.forest.text.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(
+                  color: context.forest.text.withValues(alpha: 0.08)),
             ),
             child: IconButton(
               onPressed: () {
@@ -1050,8 +1107,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 SharePlus.instance.share(ShareParams(text: text));
               },
               tooltip: _isBn ? 'শেয়ার' : 'Share',
-              icon: const Icon(Icons.share_outlined,
-                  color: Colors.white70, size: 20),
+              icon: Icon(Icons.share_outlined,
+                  color: context.forest.text70, size: 20),
             ),
           ),
           const SizedBox(width: 8),
@@ -1059,14 +1116,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           // Settings Button
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: context.forest.text.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(
+                  color: context.forest.text.withValues(alpha: 0.08)),
             ),
             child: IconButton(
               onPressed: () => context.push('/settings'),
               tooltip: _isBn ? 'সেটিংস' : 'Settings',
-              icon: const Icon(Icons.settings, color: Colors.white70, size: 20),
+              icon:
+                  Icon(Icons.settings, color: context.forest.text70, size: 20),
             ),
           ),
         ],
@@ -1155,7 +1214,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected ? cat.color : Colors.white24,
+                        color: isSelected ? cat.color : context.forest.text24,
                         width: isSelected ? 2.2 : 1.0,
                       ),
                     ),
@@ -1163,17 +1222,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       radius: 22,
                       backgroundColor: isSelected
                           ? cat.color.withValues(alpha: 0.25)
-                          : const Color(0xFF182630),
+                          : context.forest.chip,
                       child: Icon(cat.icon,
                           size: 20,
-                          color: isSelected ? cat.color : Colors.white70),
+                          color: isSelected
+                              ? context.forest.readable(cat.color)
+                              : context.forest.text70),
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     cat.label,
                     style: TextStyle(
-                      color: isSelected ? cat.color : Colors.white60,
+                      color: isSelected
+                          ? context.forest.readable(cat.color)
+                          : context.forest.text60,
                       fontSize: 10,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.normal,
@@ -1192,42 +1255,26 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Achievements Showcase (অর্জনের শোকেস)
   // ---------------------------------------------------------------------------
 
-  Widget _buildAchievementsShowcase(List<TourGroup> groups) {
+  Widget _buildAchievementsShowcase(List<TourGroup> groups, bool isOwnProfile) {
+    // Only what the data shows: a blood group on file, and owning a group.
+    final email = _emailFor(isOwnProfile);
+    final ownsGroup =
+        email.isNotEmpty && groups.any((g) => g.ownerEmail == email);
     final achievements = <({String title, IconData icon, Color color})>[
-      (
-        title: _isBn ? 'ফটোগ্রাফার' : 'Photographer',
-        icon: Icons.camera_alt_rounded,
-        color: Colors.blueAccent,
-      ),
-      (
-        title: _isBn ? 'রিলস ডিরেক্টর' : 'Reels Director',
-        icon: Icons.movie_creation_rounded,
-        color: Colors.purpleAccent,
-      ),
-      (
-        title: _isBn ? 'স্টার সদস্য' : 'Star member',
-        icon: Icons.star_rounded,
-        color: AppColors.gold,
-      ),
       if (_bloodGroup != null && _bloodGroup!.isNotEmpty)
         (
           title: _isBn ? 'লাইফ সেভার' : 'Life Saver',
           icon: Icons.favorite_rounded,
           color: Colors.redAccent,
         ),
-      (
-        title: _isBn ? 'স্পট এক্সপ্লোরার' : 'Spot Explorer',
-        icon: Icons.hotel_rounded,
-        color: AppColors.mintGreen,
-      ),
-      if (groups.isNotEmpty)
+      if (ownsGroup)
         (
-          title: _isBn ? 'টপ কন্ট্রিবিউটর' : 'Top Contributor',
-          icon: Icons.account_balance_wallet_rounded,
-          color: Colors.amber,
+          title: _isBn ? 'আয়োজক' : 'Organiser',
+          icon: Icons.workspace_premium_rounded,
+          color: AppColors.gold,
         ),
     ];
-
+    if (achievements.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -1240,8 +1287,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(width: 6),
               Text(
                 '${_isBn ? 'অর্জনের শোকেস' : 'Achievements'} (${achievements.length})',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1261,19 +1308,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF14241B),
+                    color: context.forest.card,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: a.color.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(a.icon, size: 14, color: a.color),
+                      Icon(a.icon,
+                          size: 14, color: context.forest.readable(a.color)),
                       const SizedBox(width: 6),
                       Text(
                         a.title,
                         style: TextStyle(
-                          color: a.color,
+                          color: context.forest.readable(a.color),
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1293,13 +1341,27 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Segmented Tabs
   // ---------------------------------------------------------------------------
 
+  /// The tabs a swipe moves through, in the order of the segmented row.
+  static const _tabKeys = ['tours', 'games', 'vault', 'settings'];
+
+  /// Moves to the next or previous tab. The first and last tabs stop the swipe.
+  /// Only the active tab's content is built, so a tab loads its data only while
+  /// it is shown.
+  void _stepTab(int by) {
+    final index = _tabKeys.indexOf(_activeTab);
+    if (index < 0) return;
+    final next = (index + by).clamp(0, _tabKeys.length - 1);
+    if (next == index) return;
+    setState(() => _activeTab = _tabKeys[next]);
+  }
+
   Widget _buildSegmentedTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: context.forest.text.withValues(alpha: 0.06)),
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
@@ -1346,13 +1408,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               Icon(
                 icon,
                 size: 16,
-                color: isActive ? Colors.black : Colors.white60,
+                color: isActive ? Colors.black : context.forest.text60,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive ? Colors.black : Colors.white70,
+                  color: isActive ? Colors.black : context.forest.text70,
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                 ),
@@ -1373,6 +1435,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     List<TourGroup> groups,
     bool isOwnProfile,
   ) {
+    if (!isOwnProfile) return _buildMyToursTab(groups, false);
     switch (_activeTab) {
       case 'vault':
         return _buildKeepsakesTab(groups);
@@ -1391,24 +1454,41 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildMyToursTab(List<TourGroup> groups, bool isOwnProfile) {
+    if (groups.isEmpty && !isOwnProfile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          _sharedTourIds == null
+              ? (_isBn
+                  ? 'শেয়ার করা গ্রুপ খোঁজা হচ্ছে…'
+                  : 'Finding shared groups…')
+              : (_isBn
+                  ? 'আপনাদের কোনো শেয়ার করা গ্রুপ নেই।'
+                  : 'You have no groups in common.'),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.forest.text54, fontSize: 13),
+        ),
+      );
+    }
     if (groups.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(28),
         margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF14241B),
+          color: context.forest.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border:
+              Border.all(color: context.forest.text.withValues(alpha: 0.08)),
         ),
         child: Column(
           children: [
-            const Icon(Icons.travel_explore_rounded,
-                size: 56, color: AppColors.mintGreen),
+            Icon(Icons.travel_explore_rounded,
+                size: 56, color: context.forest.accentText),
             const SizedBox(height: 14),
             Text(
               _isBn ? 'কোনো গ্রুপ পাওয়া যায়নি' : 'No Groups Found',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -1418,7 +1498,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _isBn
                   ? 'নতুন ট্যুর তৈরি করুন অথবা কোড দিয়ে বন্ধুর ট্যুরে যোগ দিন।'
                   : 'Create a new tour or join with an invite code.',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: context.forest.text54, fontSize: 12),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
@@ -1443,8 +1523,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   icon: const Icon(Icons.key, size: 16),
                   label: Text(_isBn ? 'যোগ দিন' : 'Join'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.mintGreen,
-                    side: const BorderSide(color: AppColors.mintGreen),
+                    foregroundColor: context.forest.accentText,
+                    side: BorderSide(color: context.forest.accentText),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -1457,7 +1537,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       );
     }
 
-    final email = _tourRepo.currentEmail;
+    final email = _emailFor(isOwnProfile);
     final filteredGroups = switch (_activeCategory) {
       'beach' => groups
           .where((g) =>
@@ -1490,26 +1570,32 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              _isBn
-                  ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
-                  : 'Active & Past Tours (${displayGroups.length})',
-              style: const TextStyle(
-                color: Colors.white,
+              isOwnProfile
+                  ? (_isBn
+                      ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
+                      : 'Active & Past Tours (${displayGroups.length})')
+                  : (_isBn
+                      ? 'শেয়ার করা গ্রুপ (${displayGroups.length})'
+                      : 'Groups in common (${displayGroups.length})'),
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton.icon(
-              onPressed: () => _showJoinGroupDialog(context),
-              icon: const Icon(Icons.add, size: 15, color: AppColors.mintGreen),
-              label: Text(
-                _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
-                style: const TextStyle(
-                    color: AppColors.mintGreen,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold),
+            if (isOwnProfile)
+              TextButton.icon(
+                onPressed: () => _showJoinGroupDialog(context),
+                icon:
+                    Icon(Icons.add, size: 15, color: context.forest.accentText),
+                label: Text(
+                  _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
+                  style: TextStyle(
+                      color: context.forest.accentText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -1525,18 +1611,24 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1B4332), Color(0xFF112217)],
+                gradient: LinearGradient(
+                  colors: [
+                    context.forest.bannerStart,
+                    context.forest.bannerEnd,
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.25),
+                  color: context.forest.isDark
+                      ? AppColors.mintGreen.withValues(alpha: 0.25)
+                      : context.forest.text.withValues(alpha: 0.12),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black
+                        .withValues(alpha: context.forest.isDark ? 0.3 : 0.06),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -1555,8 +1647,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           children: [
                             Text(
                               group.name,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: context.forest.text,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1564,8 +1656,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             const SizedBox(height: 4),
                             Text(
                               '📍 ${group.destination}  ·  ${group.tourType.labelBn.split(' ').first}',
-                              style: const TextStyle(
-                                color: AppColors.mintGreen,
+                              style: TextStyle(
+                                color: context.forest.accentText,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1578,13 +1670,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: isOwner
-                              ? AppColors.gold.withValues(alpha: 0.2)
-                              : Colors.white10,
+                              ? AppColors.gold.withValues(
+                                  alpha: context.forest.isDark ? 0.2 : 0.15)
+                              : (context.forest.isDark
+                                  ? context.forest.divider10
+                                  : context.forest.text
+                                      .withValues(alpha: 0.08)),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isOwner
                                 ? AppColors.gold.withValues(alpha: 0.5)
-                                : Colors.white24,
+                                : context.forest.text24,
                             width: 0.8,
                           ),
                         ),
@@ -1593,7 +1689,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               ? (_isBn ? '👑 ওনার' : 'Owner')
                               : (_isBn ? '🎒 সদস্য' : 'Member'),
                           style: TextStyle(
-                            color: isOwner ? AppColors.gold : Colors.white70,
+                            color: isOwner
+                                ? (context.forest.isDark
+                                    ? AppColors.gold
+                                    : const Color(0xFFB78103))
+                                : context.forest.text70,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1606,19 +1706,19 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   // Dates and Duration
                   Row(
                     children: [
-                      const Icon(Icons.date_range_rounded,
-                          size: 14, color: Colors.white54),
+                      Icon(Icons.date_range_rounded,
+                          size: 14, color: context.forest.text54),
                       const SizedBox(width: 5),
                       Text(
-                        '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
+                        '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – ${localizedDateFormat('d MMM yyyy').format(group.endDate)}',
+                        style: TextStyle(
+                            color: context.forest.text70, fontSize: 12),
                       ),
                       const Spacer(),
                       Text(
                         '⏱️ ${group.durationText}',
-                        style: const TextStyle(
-                          color: AppColors.mintGreen,
+                        style: TextStyle(
+                          color: context.forest.accentText,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1653,22 +1753,26 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 5),
                           decoration: BoxDecoration(
-                            color: Colors.black26,
+                            color: context.forest.isDark
+                                ? context.forest.inset26
+                                : Colors.white.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                                color:
-                                    AppColors.mintGreen.withValues(alpha: 0.3)),
+                                color: context.forest.isDark
+                                    ? AppColors.mintGreen.withValues(alpha: 0.3)
+                                    : AppColors.midGreen
+                                        .withValues(alpha: 0.35)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.copy_rounded,
-                                  size: 12, color: AppColors.mintGreen),
+                              Icon(Icons.copy_rounded,
+                                  size: 12, color: context.forest.accentText),
                               const SizedBox(width: 4),
                               Text(
                                 group.inviteCode,
-                                style: const TextStyle(
-                                  color: AppColors.mintGreen,
+                                style: TextStyle(
+                                  color: context.forest.accentText,
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1,
@@ -1724,8 +1828,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           _isBn
               ? 'ট্যুর স্মৃতি ও অফলাইন ভল্ট'
               : 'Trip Keepsakes & Offline Vault',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.forest.text,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
@@ -1808,9 +1912,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF14241B),
+          color: context.forest.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border:
+              Border.all(color: context.forest.text.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -1820,7 +1925,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 24),
+              child:
+                  Icon(icon, color: context.forest.readable(color), size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1829,8 +1935,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1838,8 +1944,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: context.forest.text54,
                       fontSize: 11,
                       height: 1.3,
                     ),
@@ -1847,8 +1953,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: Colors.white38, size: 22),
+            Icon(Icons.chevron_right_rounded,
+                color: context.forest.text38, size: 22),
           ],
         ),
       ),
@@ -1865,8 +1971,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       children: [
         Text(
           _isBn ? 'অ্যাপ পছন্দ ও সেটিংস' : 'App Preferences & Settings',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.forest.text,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
@@ -1877,22 +1983,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF14241B),
+            color: context.forest.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border:
+                Border.all(color: context.forest.text.withValues(alpha: 0.08)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.language_rounded,
-                      color: AppColors.mintGreen, size: 20),
+                  Icon(Icons.language_rounded,
+                      color: context.forest.accentText, size: 20),
                   const SizedBox(width: 10),
                   Text(
                     _isBn ? 'অ্যাপের ভাষা' : 'App Language',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1933,6 +2040,81 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         const SizedBox(height: 12),
 
+        // Theme Selector (Dark / Light / System)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.forest.card,
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: context.forest.text.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.palette_outlined,
+                      color: context.forest.accentText, size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    _isBn ? 'অ্যাপের থিম' : 'App Theme',
+                    style: TextStyle(
+                      color: context.forest.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListenableBuilder(
+                listenable: ThemeController.instance,
+                builder: (context, _) {
+                  final currentMode = ThemeController.instance.mode;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildChoiceChip(
+                          selected: currentMode == ThemeMode.dark,
+                          label: _isBn ? 'ডার্ক' : 'Dark',
+                          onTap: () {
+                            ThemeController.instance.setMode(ThemeMode.dark);
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildChoiceChip(
+                          selected: currentMode == ThemeMode.light,
+                          label: _isBn ? 'লাইট' : 'Light',
+                          onTap: () {
+                            ThemeController.instance.setMode(ThemeMode.light);
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildChoiceChip(
+                          selected: currentMode == ThemeMode.system,
+                          label: _isBn ? 'সিস্টেম' : 'System',
+                          onTap: () {
+                            ThemeController.instance.setMode(ThemeMode.system);
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
         // Community Support / Keep Bhromon Alive Card
         const ServerPatronCard(),
         const SizedBox(height: 12),
@@ -1941,22 +2123,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF14241B),
+            color: context.forest.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border:
+                Border.all(color: context.forest.text.withValues(alpha: 0.08)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.account_circle_outlined,
-                      color: AppColors.mintGreen, size: 20),
+                  Icon(Icons.account_circle_outlined,
+                      color: context.forest.accentText, size: 20),
                   const SizedBox(width: 10),
                   Text(
                     _isBn ? 'অ্যাকাউন্ট তথ্য' : 'Account Details',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1970,9 +2153,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _buildAccountRow(_isBn ? 'বিভাগ' : 'Division', profile.division),
               _buildAccountRow(
                 _isBn ? 'যোগদান' : 'Joined',
-                DateFormat('d MMMM yyyy').format(profile.createdAt),
+                localizedDateFormat('d MMMM yyyy').format(profile.createdAt),
               ),
-              const Divider(color: Colors.white10, height: 24),
+              Divider(color: context.forest.divider10, height: 24),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -2013,14 +2196,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? AppColors.mintGreen : Colors.white24,
+            color: selected ? AppColors.mintGreen : context.forest.text24,
             width: selected ? 1.4 : 0.8,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppColors.mintGreen : Colors.white70,
+            color: selected ? context.forest.accentText : context.forest.text70,
             fontSize: 12,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -2036,11 +2219,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: TextStyle(color: context.forest.text54, fontSize: 12)),
           Text(
             value.isNotEmpty ? value : '—',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.forest.text,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -2084,13 +2267,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 nights == 0 ? '$days দিন' : '$days দিন $nights রাত';
 
             return AlertDialog(
-              backgroundColor: const Color(0xFF14241B),
+              backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
               title: Text(
                 _isBn ? 'নতুন গ্রুপ তৈরি করুন' : 'Create New Group',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 17,
                 ),
@@ -2104,15 +2287,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     children: [
                       TextField(
                         controller: nameCtrl,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: context.forest.text),
                         decoration: InputDecoration(
                           labelText: _isBn
                               ? 'ট্যুরের নাম (যেমন: সাজেক ট্যুর ২০২৬)'
                               : 'Tour Name',
-                          labelStyle: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
+                          labelStyle: TextStyle(
+                              color: context.forest.text70, fontSize: 13),
                           filled: true,
-                          fillColor: Colors.black26,
+                          fillColor: context.forest.inset26,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -2124,8 +2307,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         _isBn
                             ? 'জনপ্রিয় গন্তব্যসমূহ (Quick Select):'
                             : 'Popular Destinations:',
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: context.forest.text70,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2150,14 +2333,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? AppColors.mintGreen
-                                    : Colors.white10,
+                                    : context.forest.divider10,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 p.label,
                                 style: TextStyle(
-                                  color:
-                                      isSelected ? Colors.black : Colors.white,
+                                  color: isSelected
+                                      ? Colors.black
+                                      : context.forest.text,
                                   fontSize: 11,
                                   fontWeight: isSelected
                                       ? FontWeight.bold
@@ -2173,13 +2357,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       // Destination field
                       TextField(
                         controller: destCtrl,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: context.forest.text),
                         decoration: InputDecoration(
                           labelText: _isBn ? 'গন্তব্য' : 'Destination',
-                          labelStyle: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
+                          labelStyle: TextStyle(
+                              color: context.forest.text70, fontSize: 13),
                           filled: true,
-                          fillColor: Colors.black26,
+                          fillColor: context.forest.inset26,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -2208,7 +2392,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
-                            color: Colors.black38,
+                            color: context.forest.inset38,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                                 color:
@@ -2216,14 +2400,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.date_range_rounded,
-                                  color: AppColors.mintGreen, size: 20),
+                              Icon(Icons.date_range_rounded,
+                                  color: context.forest.accentText, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)} ($durationText)',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
+                                  '${localizedDateFormat('d MMM yyyy').format(startDate)} – ${localizedDateFormat('d MMM yyyy').format(endDate)} ($durationText)',
+                                  style: TextStyle(
+                                      color: context.forest.text, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -2239,7 +2423,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   onPressed: isCreating ? null : () => Navigator.pop(ctx),
                   child: Text(
                     _isBn ? 'বাতিল' : 'Cancel',
-                    style: const TextStyle(color: Colors.white54),
+                    style: TextStyle(color: context.forest.text54),
                   ),
                 ),
                 ElevatedButton(
@@ -2300,15 +2484,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           }
                         },
                   child: isCreating
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
+                              color: context.forest.text, strokeWidth: 2),
                         )
                       : Text(
                           _isBn ? 'ট্যুর তৈরি করুন' : 'Create Tour',
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.forest.text),
                         ),
                 ),
               ],
@@ -2330,13 +2514,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
             return AlertDialog(
-              backgroundColor: const Color(0xFF14241B),
+              backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
               title: Text(
                 _isBn ? 'গ্রুপে যোগ দিন' : 'Join a Group',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -2347,14 +2531,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     _isBn
                         ? 'ট্যুরের ৮ অক্ষরের আমন্ত্রণ কোড লিখুন:'
                         : 'Enter the 8-character tour invite code:',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    style:
+                        TextStyle(color: context.forest.text70, fontSize: 13),
                   ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: codeCtrl,
                     textCapitalization: TextCapitalization.characters,
-                    style: const TextStyle(
-                      color: AppColors.mintGreen,
+                    style: TextStyle(
+                      color: context.forest.accentText,
                       fontSize: 20,
                       letterSpacing: 4,
                       fontWeight: FontWeight.bold,
@@ -2362,10 +2547,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
                       hintText: '7KQ2M9XB',
-                      hintStyle: const TextStyle(
-                          color: Colors.white38, letterSpacing: 2),
+                      hintStyle: TextStyle(
+                          color: context.forest.text38, letterSpacing: 2),
                       filled: true,
-                      fillColor: Colors.black26,
+                      fillColor: context.forest.inset26,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide:
@@ -2380,7 +2565,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   onPressed: isJoining ? null : () => Navigator.pop(ctx),
                   child: Text(
                     _isBn ? 'বাতিল' : 'Cancel',
-                    style: const TextStyle(color: Colors.white54),
+                    style: TextStyle(color: context.forest.text54),
                   ),
                 ),
                 ElevatedButton(
@@ -2431,15 +2616,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           }
                         },
                   child: isJoining
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
+                              color: context.forest.text, strokeWidth: 2),
                         )
                       : Text(
                           _isBn ? 'যোগ দিন' : 'Join',
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.forest.text),
                         ),
                 ),
               ],
@@ -2502,8 +2687,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               color: context.surfacePanel,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(24)),
-              border: const Border(
-                top: BorderSide(color: Colors.white12, width: 1),
+              border: Border(
+                top: BorderSide(color: context.forest.divider12, width: 1),
               ),
             ),
             child: Padding(
@@ -2522,7 +2707,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: context.forest.text24,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -2535,16 +2720,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       children: [
                         Text(
                           _isBn ? 'প্রোফাইল তথ্য পরিবর্তন' : 'EDIT PROFILE',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: context.forest.text,
                             fontWeight: FontWeight.w900,
                             fontSize: 16,
                             letterSpacing: 1.2,
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close,
-                              color: Colors.white54, size: 20),
+                          icon: Icon(Icons.close,
+                              color: context.forest.text54, size: 20),
                           onPressed: isSaving
                               ? null
                               : () => Navigator.pop(bottomSheetContext),
@@ -2552,7 +2737,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       ],
                     ),
                   ),
-                  const Divider(color: Colors.white10),
+                  Divider(color: context.forest.divider10),
                   Flexible(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -2585,7 +2770,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                        color: Colors.white
+                                        color: context.forest.text
                                             .withValues(alpha: 0.08)),
                                   ),
                                   child: ClipRRect(
@@ -2752,8 +2937,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
                           // Display Name
                           Text(_isBn ? 'প্রদর্শন নাম' : 'DISPLAY NAME',
-                              style: const TextStyle(
-                                  color: Colors.white54,
+                              style: TextStyle(
+                                  color: context.forest.text54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
@@ -2761,9 +2946,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           TextField(
                             controller: nameController,
                             enabled: !isSaving,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.forest.text),
                             decoration: InputDecoration(
-                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              fillColor:
+                                  context.forest.text.withValues(alpha: 0.04),
                               filled: true,
                               hintText: 'Enter your name',
                               contentPadding: const EdgeInsets.symmetric(
@@ -2777,8 +2963,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
                           // Bio Bangla
                           Text(_isBn ? 'বায়ো (বাংলা)' : 'BIO (BANGLA)',
-                              style: const TextStyle(
-                                  color: Colors.white54,
+                              style: TextStyle(
+                                  color: context.forest.text54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
@@ -2786,10 +2972,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           TextField(
                             controller: bioBanglaController,
                             enabled: !isSaving,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.forest.text),
                             maxLines: 2,
                             decoration: InputDecoration(
-                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              fillColor:
+                                  context.forest.text.withValues(alpha: 0.04),
                               filled: true,
                               hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
                               contentPadding: const EdgeInsets.symmetric(
@@ -2803,8 +2990,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
                           // Bio English
                           Text(_isBn ? 'বায়ো (ইংরেজি)' : 'BIO (ENGLISH)',
-                              style: const TextStyle(
-                                  color: Colors.white54,
+                              style: TextStyle(
+                                  color: context.forest.text54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
@@ -2812,10 +2999,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           TextField(
                             controller: bioEnglishController,
                             enabled: !isSaving,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.forest.text),
                             maxLines: 2,
                             decoration: InputDecoration(
-                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              fillColor:
+                                  context.forest.text.withValues(alpha: 0.04),
                               filled: true,
                               hintText: 'Describe your journeys in English...',
                               contentPadding: const EdgeInsets.symmetric(
@@ -2829,8 +3017,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
                           // Division
                           Text(_isBn ? 'বিভাগ' : 'DIVISION',
-                              style: const TextStyle(
-                                  color: Colors.white54,
+                              style: TextStyle(
+                                  color: context.forest.text54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
@@ -2838,9 +3026,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           DropdownButtonFormField<String>(
                             initialValue: selectedDivision,
                             dropdownColor: context.surfacePanel,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.forest.text),
                             decoration: InputDecoration(
-                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              fillColor:
+                                  context.forest.text.withValues(alpha: 0.04),
                               filled: true,
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 14),
@@ -2868,8 +3057,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
                           // Blood Group
                           Text(_isBn ? 'রক্তের গ্রুপ' : 'BLOOD GROUP',
-                              style: const TextStyle(
-                                  color: Colors.white54,
+                              style: TextStyle(
+                                  color: context.forest.text54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
@@ -2880,9 +3069,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                     ? selectedBloodGroup
                                     : 'O+',
                             dropdownColor: context.surfacePanel,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.forest.text),
                             decoration: InputDecoration(
-                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              fillColor:
+                                  context.forest.text.withValues(alpha: 0.04),
                               filled: true,
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 14),
@@ -2910,8 +3100,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
                           // Status Note
                           Text(_isBn ? 'স্ট্যাটাস নোট' : 'STATUS NOTE',
-                              style: const TextStyle(
-                                  color: Colors.white54,
+                              style: TextStyle(
+                                  color: context.forest.text54,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
@@ -2920,9 +3110,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             controller: statusNoteController,
                             enabled: !isSaving,
                             maxLength: 80,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.forest.text),
                             decoration: InputDecoration(
-                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              fillColor:
+                                  context.forest.text.withValues(alpha: 0.04),
                               filled: true,
                               hintText: _isBn
                                   ? 'আজকের ভ্রমণ নোট বা অনুভূতি...'
@@ -2942,9 +3133,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               Expanded(
                                 child: OutlinedButton(
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white70,
-                                    side:
-                                        const BorderSide(color: Colors.white10),
+                                    foregroundColor: context.forest.text70,
+                                    side: BorderSide(
+                                        color: context.forest.divider10),
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 14),
                                     shape: RoundedRectangleBorder(
@@ -3140,13 +3331,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.account_circle_outlined,
-                  size: 72, color: AppColors.mintGreen),
+              Icon(Icons.account_circle_outlined,
+                  size: 72, color: context.forest.accentText),
               const SizedBox(height: 20),
               Text(
                 _isBn ? 'আপনার প্রোফাইল' : 'Your profile',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -3157,7 +3348,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
                     : 'Sign in to manage your groups, split expenses, and share moments.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: context.forest.text70, fontSize: 13),
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
@@ -3219,20 +3410,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         backgroundColor: dialogContext.surfacePanel,
         title: Text(
           _isBn ? 'লগআউট করতে চান?' : 'Log out?',
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.forest.text),
         ),
         content: Text(
           _isBn
               ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
               : 'Your offline data stays safely on this device. You can sign back in anytime.',
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: TextStyle(color: context.forest.text70, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
               _isBn ? 'বাতিল' : 'Cancel',
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(color: context.forest.text54),
             ),
           ),
           FilledButton(

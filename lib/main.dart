@@ -25,6 +25,7 @@ import 'core/media/media_access.dart';
 import 'app/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'features/tour_group/data/channel_swipe_controller.dart';
 import 'features/trust/presentation/bloc/trust_bloc.dart';
 import 'features/auth/domain/repositories/i_auth_repository.dart';
 import 'features/auth/data/repositories/mock_offline_auth_repository.dart';
@@ -35,6 +36,7 @@ import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'features/chat/data/call_notification_service.dart';
+import 'features/chat/data/call_signaling_service.dart';
 import 'features/chat/data/vps_chat_service.dart';
 import 'features/game_zone/data/game_analytics_service.dart';
 import 'features/notifications/data/fcm_service.dart';
@@ -45,6 +47,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // A call push is data-only, so this is what rings the phone while the app is
   // closed. The name in it is only a placeholder until the app loads the profile.
   if (message.data['action'] == 'call') {
+    final callId = (message.data['callId'] as String?) ?? '';
+    // A call is pushed more than once, and a late copy must not ring a call
+    // that was already answered, declined or ended.
+    if (!await CallSignalingService.isStillRinging(callId)) return;
     await CallNotificationService.showNativeIncomingCall(
       callId: (message.data['callId'] as String?) ?? '',
       callerId: (message.data['callerId'] as String?) ?? '',
@@ -272,6 +278,7 @@ void main() {
     }
     await LocaleController.instance.load();
     await ThemeController.instance.load();
+    await ChannelSwipeController.instance.load();
     GameAnalyticsService.hasStorage = true;
     await GameAnalyticsService().init();
     final bool firebaseAvailable = await firebaseInit;
@@ -423,14 +430,28 @@ class MyApp extends StatelessWidget {
           builder: (context, child) {
             final isDark = Theme.of(context).brightness == Brightness.dark;
             final navBg = isDark ? const Color(0xFF161616) : Colors.white;
-            return Container(
-              color: navBg,
-              child: SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                bottom: true,
-                child: OtaListenerWrapper(child: child ?? const SizedBox()),
+            // The icons follow the theme. Without this, Android picks dark icons
+            // on a dark scrim, which is what hid the light-theme bottom bar.
+            // Screens with their own app bar still set the status bar themselves.
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarColor: navBg,
+                systemNavigationBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarContrastEnforced: false,
+              ),
+              child: Container(
+                color: navBg,
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  right: false,
+                  bottom: true,
+                  child: OtaListenerWrapper(child: child ?? const SizedBox()),
+                ),
               ),
             );
           },

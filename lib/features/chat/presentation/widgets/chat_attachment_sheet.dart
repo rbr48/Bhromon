@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:file_picker/file_picker.dart';
@@ -103,6 +105,7 @@ class ChatAttachmentSheet extends StatelessWidget {
   }
 
   Future<void> _shareLocation(BuildContext context) async {
+    final l10n = context.l10n;
     Navigator.pop(context);
     try {
       LocationPermission permission = await Geolocator.checkPermission();
@@ -119,7 +122,7 @@ class ChatAttachmentSheet extends StatelessWidget {
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      onLocationPicked(pos, 'Current Location');
+      onLocationPicked(pos, l10n.translate('chat_attach_current_location'));
     } catch (e) {
       logError('Error getting location: $e');
     }
@@ -131,7 +134,7 @@ class ChatAttachmentSheet extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: context.chat.bar,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -150,42 +153,42 @@ class ChatAttachmentSheet extends StatelessWidget {
             context,
             icon: Icons.insert_drive_file,
             color: const Color(0xFF7F66FF),
-            label: 'Document',
+            label: context.l10n.translate('chat_attach_document'),
             onTap: () => _pickDocument(context),
           ),
           _buildItem(
             context,
             icon: Icons.camera_alt,
             color: const Color(0xFFD3396D),
-            label: 'Camera',
+            label: context.l10n.translate('chat_open_camera'),
             onTap: () => _pickFromCamera(context),
           ),
           _buildItem(
             context,
             icon: Icons.photo,
             color: const Color(0xFFAC44CF),
-            label: 'Gallery',
+            label: context.l10n.translate('chat_attach_gallery'),
             onTap: () => _pickFromGallery(context),
           ),
           _buildItem(
             context,
             icon: Icons.headphones,
             color: const Color(0xFFE36D38),
-            label: 'Audio',
+            label: context.l10n.translate('chat_attach_audio'),
             onTap: () => _pickAudio(context),
           ),
           _buildItem(
             context,
             icon: Icons.location_on,
             color: const Color(0xFF1FA855),
-            label: 'Location',
+            label: context.l10n.translate('chat_attach_location'),
             onTap: () => _shareLocation(context),
           ),
           _buildItem(
             context,
             icon: Icons.payments_outlined,
             color: const Color(0xFF00A884),
-            label: 'Split Bill',
+            label: context.l10n.translate('chat_split_bill'),
             onTap: () {
               Navigator.pop(context);
               onExpenseSplit();
@@ -214,13 +217,13 @@ class ChatAttachmentSheet extends StatelessWidget {
             CircleAvatar(
               radius: 28,
               backgroundColor: color,
-              child: Icon(icon, color: Colors.white, size: 26),
+              child: Icon(icon, color: context.chat.text, size: 26),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: context.chat.text70,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

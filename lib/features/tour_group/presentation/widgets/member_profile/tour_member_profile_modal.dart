@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -226,25 +227,25 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1B3326),
+        backgroundColor: context.forest.dialog,
         title: Row(
           children: [
-            const Icon(Icons.edit_note_rounded, color: AppColors.mintGreen),
+            Icon(Icons.edit_note_rounded, color: context.forest.accentText),
             const SizedBox(width: 8),
             Text(l10n.translate('prof_note'),
-                style: const TextStyle(color: Colors.white, fontSize: 16)),
+                style: TextStyle(color: context.forest.text, fontSize: 16)),
           ],
         ),
         content: TextField(
           controller: ctrl,
           maxLength: 80,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.forest.text),
           decoration: InputDecoration(
             hintText: l10n.translate('prof_note_hint'),
-            hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-            enabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+            hintStyle: TextStyle(color: context.forest.text38, fontSize: 13),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: context.forest.text24)),
             focusedBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.mintGreen)),
           ),
@@ -253,7 +254,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.translate('tour_cancel'),
-                style: const TextStyle(color: Colors.white54)),
+                style: TextStyle(color: context.forest.text54)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
@@ -293,23 +294,23 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF1B3326),
+          backgroundColor: context.forest.dialog,
           title: Row(
             children: [
               const Icon(Icons.bloodtype_rounded, color: Colors.redAccent),
               const SizedBox(width: 8),
               Text(l10n.translate('prof_blood_group'),
-                  style: const TextStyle(color: Colors.white, fontSize: 16)),
+                  style: TextStyle(color: context.forest.text, fontSize: 16)),
             ],
           ),
           content: DropdownButtonFormField<String>(
             initialValue: groups.contains(chosen) ? chosen : 'O+',
-            dropdownColor: const Color(0xFF14241B),
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
+            dropdownColor: context.forest.card,
+            style: TextStyle(color: context.forest.text),
+            decoration: InputDecoration(
               enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24)),
-              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: context.forest.text24)),
+              focusedBorder: const UnderlineInputBorder(
                   borderSide: BorderSide(color: AppColors.mintGreen)),
             ),
             items: [
@@ -324,7 +325,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: Text(l10n.translate('tour_cancel'),
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
             ),
             FilledButton(
               style:
@@ -369,9 +370,10 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0F1B24),
+            color: context.forest.sheet,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            border:
+                Border.all(color: context.forest.text.withValues(alpha: 0.12)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.6),
@@ -746,16 +748,16 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
   Widget _buildHeaderBar(AppLocalizations l10n, String name, String handle) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.forest.divider10)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               '@$handle',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
                 letterSpacing: 0.3,
@@ -766,21 +768,22 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
           IconButton(
             icon: Icon(
               _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-              color: _isMuted ? Colors.white38 : AppColors.mintGreen,
+              color:
+                  _isMuted ? context.forest.text38 : context.forest.accentText,
               size: 20,
             ),
             tooltip: _isMuted ? 'Sound on' : 'Mute',
             onPressed: _toggleMute,
           ),
           IconButton(
-            icon: const Icon(Icons.share_outlined,
-                color: Colors.white70, size: 20),
+            icon: Icon(Icons.share_outlined,
+                color: context.forest.text70, size: 20),
             tooltip: l10n.translate('prof_share'),
             onPressed: () => _shareProfile(l10n, name, handle),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded,
-                color: Colors.white70, size: 22),
+            icon: Icon(Icons.close_rounded,
+                color: context.forest.text70, size: 22),
             tooltip: l10n.translate('tour_cancel'),
             onPressed: () => Navigator.pop(context),
           ),
@@ -805,13 +808,13 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     final Color balanceColor;
     if (balancePaisa > 0) {
       balanceText = '+${TripLedgerEngine.formatTaka(balancePaisa)}';
-      balanceColor = AppColors.mintGreen;
+      balanceColor = context.forest.accentText;
     } else if (balancePaisa < 0) {
       balanceText = '-${TripLedgerEngine.formatTaka(balancePaisa.abs())}';
-      balanceColor = Colors.orangeAccent;
+      balanceColor = context.forest.readable(Colors.orangeAccent);
     } else {
       balanceText = '০৳';
-      balanceColor = Colors.white70;
+      balanceColor = context.forest.text70;
     }
 
     return Row(
@@ -828,7 +831,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
+                  color: context.forest.text.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                       color: AppColors.mintGreen.withValues(alpha: 0.3)),
@@ -837,12 +840,12 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_isMe && _note == null)
-                      const Icon(Icons.add,
-                          size: 11, color: AppColors.mintGreen),
+                      Icon(Icons.add,
+                          size: 11, color: context.forest.accentText),
                     Text(
                       _note ?? l10n.translate('prof_note_add'),
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
+                      style: TextStyle(
+                        color: context.forest.accentText,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -880,7 +883,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               ),
               child: CircleAvatar(
                 radius: 36,
-                backgroundColor: const Color(0xFF0F1B24),
+                backgroundColor: context.forest.sheet,
                 backgroundImage: member.photoUrl != null
                     ? NetworkImage(signedMediaUrl(member.photoUrl!))
                     : null,
@@ -908,11 +911,11 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildStatColumn(l10n.number(postsCount),
-                  l10n.translate('prof_posts'), Colors.white),
+                  l10n.translate('prof_posts'), context.forest.text),
               _buildStatColumn(l10n.number(likesCount),
                   l10n.translate('prof_likes'), const Color(0xFFFF5252)),
               _buildStatColumn(l10n.number(taggedCount),
-                  l10n.translate('prof_tagged'), Colors.white70),
+                  l10n.translate('prof_tagged'), context.forest.text70),
               _buildStatColumn(
                   balanceText, l10n.translate('prof_balance'), balanceColor),
             ],
@@ -944,8 +947,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             child: Text(
               label,
               maxLines: 1,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: context.forest.text54,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
@@ -979,8 +982,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             Flexible(
               child: Text(
                 member.displayName,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -998,8 +1001,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               ),
               child: Text(
                 roleText,
-                style: const TextStyle(
-                  color: AppColors.mintGreen,
+                style: TextStyle(
+                  color: context.forest.accentText,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1063,12 +1066,12 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color),
+          Icon(icon, size: 13, color: context.forest.readable(color)),
           const SizedBox(width: 4),
           Text(
             text,
             style: TextStyle(
-              color: color,
+              color: context.forest.readable(color),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -1089,12 +1092,12 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
           flex: 3,
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF1B3326),
-              foregroundColor: Colors.white,
+              backgroundColor: context.forest.dialog,
+              foregroundColor: context.forest.text,
               padding: const EdgeInsets.symmetric(vertical: 11),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Colors.white12),
+                side: BorderSide(color: context.forest.divider12),
               ),
             ),
             onPressed: () {
@@ -1107,7 +1110,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             icon: Icon(
               _isMe ? Icons.edit_rounded : Icons.chat_bubble_outline_rounded,
               size: 15,
-              color: AppColors.mintGreen,
+              color: context.forest.accentText,
             ),
             label: Text(
               _isMe
@@ -1122,8 +1125,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
           flex: 2,
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white70,
-              side: const BorderSide(color: Colors.white12),
+              foregroundColor: context.forest.text70,
+              side: BorderSide(color: context.forest.divider12),
               padding: const EdgeInsets.symmetric(vertical: 11),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
@@ -1212,7 +1215,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? cat.color : Colors.white24,
+                      color: isSelected ? cat.color : context.forest.text24,
                       width: isSelected ? 2.2 : 1.0,
                     ),
                   ),
@@ -1220,17 +1223,21 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                     radius: 22,
                     backgroundColor: isSelected
                         ? cat.color.withValues(alpha: 0.25)
-                        : const Color(0xFF182630),
+                        : context.forest.chip,
                     child: Icon(cat.icon,
                         size: 20,
-                        color: isSelected ? cat.color : Colors.white70),
+                        color: isSelected
+                            ? context.forest.readable(cat.color)
+                            : context.forest.text70),
                   ),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   cat.label,
                   style: TextStyle(
-                    color: isSelected ? cat.color : Colors.white60,
+                    color: isSelected
+                        ? context.forest.readable(cat.color)
+                        : context.forest.text60,
                     fontSize: 10,
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
@@ -1261,8 +1268,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             const SizedBox(width: 6),
             Text(
               '${l10n.translate('prof_achievements')} (${l10n.number(list.length)})',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),
@@ -1282,19 +1289,20 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF14241B),
+                  color: context.forest.card,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: a.color.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(a.icon, size: 14, color: a.color),
+                    Icon(a.icon,
+                        size: 14, color: context.forest.readable(a.color)),
                     const SizedBox(width: 6),
                     Text(
                       a.title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1345,8 +1353,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     ];
 
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.forest.divider10)),
       ),
       child: Row(
         children: [
@@ -1376,16 +1384,16 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                         t.icon,
                         size: 18,
                         color: _activeTab == t.id
-                            ? AppColors.mintGreen
-                            : Colors.white38,
+                            ? context.forest.accentText
+                            : context.forest.text38,
                       ),
                       const SizedBox(height: 3),
                       Text(
                         t.label,
                         style: TextStyle(
                           color: _activeTab == t.id
-                              ? Colors.white
-                              : Colors.white54,
+                              ? context.forest.text
+                              : context.forest.text54,
                           fontSize: 10,
                           fontWeight: _activeTab == t.id
                               ? FontWeight.bold
@@ -1522,7 +1530,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   fit: BoxFit.cover,
                   placeholder: Container(color: Colors.black26),
                   errorWidget: Container(
-                    color: const Color(0xFF14241B),
+                    color: context.forest.card,
                     child: const Icon(Icons.photo, color: Colors.white24),
                   ),
                 )
@@ -1530,17 +1538,17 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                 ReelThumbnailPreview(videoUrl: post.videoUrl!)
               else
                 Container(
-                  color: const Color(0xFF14241B),
-                  child: const Icon(Icons.photo, color: Colors.white24),
+                  color: context.forest.card,
+                  child: Icon(Icons.photo, color: context.forest.text24),
                 ),
 
               // Badges
               if (isVideo)
-                const Positioned(
+                Positioned(
                   top: 5,
                   right: 5,
                   child: Icon(Icons.play_arrow_rounded,
-                      size: 18, color: Colors.white),
+                      size: 18, color: context.forest.text),
                 )
               else if (isMultiImage)
                 const Positioned(
@@ -1588,9 +1596,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: context.forest.text.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         children: [
@@ -1599,14 +1607,14 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             label: l10n.translate('prof_info_email'),
             value: member.email,
           ),
-          const Divider(color: Colors.white10, height: 20),
+          Divider(color: context.forest.divider10, height: 20),
           if (_phone != null && _phone!.isNotEmpty) ...[
             _buildInfoRow(
               icon: Icons.phone_outlined,
               label: l10n.translate('prof_info_phone'),
               value: _phone!,
             ),
-            const Divider(color: Colors.white10, height: 20),
+            Divider(color: context.forest.divider10, height: 20),
           ],
           _buildInfoRow(
             icon: Icons.bloodtype_outlined,
@@ -1614,21 +1622,21 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             value: _bloodGroup ?? 'O+',
             valueColor: Colors.redAccent,
           ),
-          const Divider(color: Colors.white10, height: 20),
+          Divider(color: context.forest.divider10, height: 20),
           _buildInfoRow(
             icon: Icons.hotel_outlined,
             label: l10n.translate('prof_hotel_room'),
             value: room.isNotEmpty ? room : l10n.translate('ig_not_assigned'),
             valueColor: Colors.amberAccent,
           ),
-          const Divider(color: Colors.white10, height: 20),
+          Divider(color: context.forest.divider10, height: 20),
           _buildInfoRow(
             icon: Icons.directions_bus_outlined,
             label: l10n.translate('prof_transport_seat'),
             value: seat.isNotEmpty ? seat : l10n.translate('ig_not_assigned'),
             valueColor: Colors.cyanAccent,
           ),
-          const Divider(color: Colors.white10, height: 20),
+          Divider(color: context.forest.divider10, height: 20),
           _buildInfoRow(
             icon: Icons.family_restroom_rounded,
             label: l10n.translate('prof_info_family'),
@@ -1647,15 +1655,15 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: Colors.white54),
+        Icon(icon, size: 18, color: context.forest.text54),
         const SizedBox(width: 10),
         Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            style: TextStyle(color: context.forest.text54, fontSize: 12)),
         const Spacer(),
         Text(
           value,
           style: TextStyle(
-            color: valueColor ?? Colors.white,
+            color: valueColor ?? context.forest.text,
             fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
@@ -1671,10 +1679,10 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: Colors.white24),
+            Icon(icon, size: 40, color: context.forest.text24),
             const SizedBox(height: 10),
             Text(message,
-                style: const TextStyle(color: Colors.white38, fontSize: 13)),
+                style: TextStyle(color: context.forest.text38, fontSize: 13)),
           ],
         ),
       ),

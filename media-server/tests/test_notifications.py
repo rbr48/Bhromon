@@ -131,7 +131,7 @@ def test_send_sos_alert():
     engine = NotificationEngine()
     engine.get_active_tour_members = MagicMock(return_value=["alice@x.com"])
     engine.get_uids_for_emails = MagicMock(return_value=["uid_alice"])
-    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_alice", MagicMock())])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_alice", MagicMock(), "en")])
     engine.send_multicast = MagicMock(return_value=1)
 
     res = engine.send_sos_alert(
@@ -150,7 +150,7 @@ def test_send_channel_message_notification():
     engine = NotificationEngine()
     engine.get_active_tour_members = MagicMock(return_value=["alice@x.com", "bob@x.com"])
     engine.get_uids_for_emails = MagicMock(return_value=["uid_alice"])
-    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_alice", MagicMock())])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_alice", MagicMock(), "en")])
     engine.send_multicast = MagicMock(return_value=1)
 
     mock_db = MagicMock()
@@ -186,7 +186,7 @@ def test_send_call_push():
     mock_db.collection.return_value.document.return_value.get.return_value = profile_doc
 
     engine = NotificationEngine(db=mock_db, messaging_mod=mock_messaging)
-    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock())])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock(), "en")])
 
     res = engine.send_call_push(
         call_id="c_123",
@@ -224,7 +224,7 @@ def test_send_call_push_email_resolution():
 
     engine = NotificationEngine(db=mock_db, messaging_mod=mock_messaging)
     engine.get_uids_for_emails = MagicMock(return_value=["uid_bob"])
-    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock())])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock(), "en")])
 
     res = engine.send_call_push(
         call_id="c_124",
@@ -246,7 +246,7 @@ def test_send_call_ended_push():
     mock_messaging.send_each_for_multicast.return_value = mock_resp
 
     engine = NotificationEngine(messaging_mod=mock_messaging)
-    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock())])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock(), "en")])
 
     res = engine.send_call_ended_push(call_id="c_123", callee_id="uid_bob")
     assert res["status"] == "success"
@@ -338,3 +338,135 @@ def test_api_notify_endpoints(client):
         )
         assert res.status_code == 200
         assert res.json()["status"] == "success"
+
+
+def _call_change(call_id, data, kind="MODIFIED"):
+    doc = MagicMock()
+    doc.id = call_id
+    doc.to_dict.return_value = data
+    change = MagicMock()
+    change.type.name = kind
+    change.document = doc
+    return change
+
+
+def test_old_finished_calls_send_no_ring_stop_push():
+    # The first snapshot after a start lists earlier calls. Those stopped ringing
+    # long ago, so none of them may send a push.
+    from datetime import datetime, timedelta, timezone
+
+    engine = NotificationEngine()
+    engine.send_call_ended_push = MagicMock(return_value={"status": "success"})
+    watcher = FirestoreNotificationWatcher(engine)
+    old = datetime.now(timezone.utc) - timedelta(days=30)
+    changes = [
+        _call_change(f"old_{i}", {"status": status, "calleeId": "uid_bob", "createdAt": old}, "ADDED")
+        for i, status in enumerate(["ended", "declined", "missed", "answered"])
+    ]
+    watcher.on_call_snapshot(None, changes, None)
+    engine.send_call_ended_push.assert_not_called()
+
+
+def test_an_answered_call_stops_the_ring_on_the_callees_other_phones():
+    from datetime import datetime, timezone
+
+    engine = NotificationEngine()
+    engine.send_call_ended_push = MagicMock(return_value={"status": "success"})
+    watcher = FirestoreNotificationWatcher(engine)
+    data = {"status": "answered", "calleeId": "uid_bob", "createdAt": datetime.now(timezone.utc)}
+    watcher.on_call_snapshot(None, [_call_change("call_x", data)], None)
+    # Ending it later sends nothing more: the ring already stopped.
+    watcher.on_call_snapshot(None, [_call_change("call_x", {**data, "status": "ended"})], None)
+    engine.send_call_ended_push.assert_called_once_with("call_x", "uid_bob")
+
+
+def test_call_may_still_ring_only_while_it_is_young():
+    from datetime import datetime, timedelta, timezone
+
+    from notifications import call_may_still_ring
+
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert call_may_still_ring(now - timedelta(seconds=30), now)
+    assert not call_may_still_ring(now - timedelta(minutes=10), now)
+    # Without a creation time a call is treated as recent, so it is never left ringing.
+    assert call_may_still_ring(None, now)
+    # A naive time is read as UTC.
+    assert call_may_still_ring((now - timedelta(seconds=30)).replace(tzinfo=None), now)
+
+
+def test_send_localized_splits_devices_by_language():
+    engine = NotificationEngine()
+    engine.send_multicast = MagicMock(return_value=1)
+    targets = [
+        ("tok_en", MagicMock(), "en"),
+        ("tok_bn", MagicMock(), "bn"),
+        ("tok_bn2", MagicMock(), "bn"),
+    ]
+
+    sent = engine.send_localized(
+        targets,
+        lambda lang: (f"title-{lang}", f"body-{lang}"),
+        {"action": "chat"},
+    )
+
+    assert sent == 2
+    calls = {c.args[1]: c.args for c in engine.send_multicast.call_args_list}
+    assert calls["title-en"][0] == [("tok_en", targets[0][1])]
+    assert [t for t, _ in calls["title-bn"][0]] == ["tok_bn", "tok_bn2"]
+    assert calls["title-bn"][2] == "body-bn"
+
+
+def test_chat_push_is_in_the_recipients_language():
+    engine = NotificationEngine()
+    engine.get_push_targets_for_uids = MagicMock(
+        return_value=[("tok_bn", MagicMock(), "bn")]
+    )
+    engine.get_language_for_uid = MagicMock(return_value="bn")
+    engine.send_multicast = MagicMock(return_value=1)
+    mock_db = MagicMock()
+    chat_doc = MagicMock()
+    chat_doc.exists = True
+    chat_doc.to_dict.return_value = {"participants": ["uid_sender", "uid_bn"]}
+    profile_doc = MagicMock()
+    profile_doc.exists = False
+    mock_db.collection.return_value.document.return_value.get.side_effect = [
+        chat_doc,
+        profile_doc,
+    ]
+    engine._get_db = MagicMock(return_value=mock_db)
+
+    engine.send_chat_notification(
+        chat_id="c1",
+        sender_id="uid_sender",
+        text="hello",
+        message_type="text",
+    )
+
+    title = engine.send_multicast.call_args.args[1]
+    assert title.endswith("থেকে নতুন বার্তা")
+
+
+def test_call_alert_is_in_the_callees_language():
+    mock_messaging = MagicMock()
+    mock_db = MagicMock()
+    profile_doc = MagicMock()
+    profile_doc.exists = True
+    profile_doc.to_dict.return_value = {"displayName": "Rahim"}
+    mock_db.collection.return_value.document.return_value.get.return_value = profile_doc
+    engine = NotificationEngine(db=mock_db, messaging_mod=mock_messaging)
+    engine.get_push_targets_for_uids = MagicMock(
+        return_value=[("tok_bn", MagicMock(), "bn")]
+    )
+
+    engine.send_call_push(
+        call_id="c_bn",
+        caller_id="uid_rahim",
+        callee_id="uid_bn",
+        is_video=False,
+        caller_name="Rahim",
+    )
+
+    alert = mock_messaging.ApsAlert.call_args.kwargs
+    assert alert["title"] == "আসছে ভয়েস কল"
+    assert alert["body"] == "Rahim Bhromon-এ আপনাকে কল করছেন..."
+

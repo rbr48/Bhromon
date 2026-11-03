@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -87,7 +88,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
     return showModalBottomSheet<TourStop>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF14241B),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _StopSheet(stop: stop),
@@ -99,10 +100,10 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
     final l10n = context.l10n;
     final days = localizedDateFormat('d MMM');
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1A1C),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF142428),
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+        foregroundColor: context.forest.text,
         title: Text(l10n.translate('itin_title')),
         actions: [
           TextButton(
@@ -111,8 +112,9 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                 : () => Navigator.pop(context,
                     ItineraryEdit(stops: _stops, returnHome: _returnHome)),
             child: Text(l10n.translate('tour_save'),
-                style: const TextStyle(
-                    color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: context.forest.accentText,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -127,13 +129,13 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
         children: [
           Text(l10n.translate('itin_help'),
-              style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              style: TextStyle(color: context.forest.text60, fontSize: 12)),
           const SizedBox(height: 12),
           _point(Icons.home_rounded, widget.group.originCity,
               l10n.translate('itin_start')),
           for (var i = 0; i < _stops.length; i++)
             Card(
-              color: const Color(0xFF142428),
+              color: context.forest.surfaceFor(const Color(0xFF142428)),
               margin: const EdgeInsets.only(top: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
@@ -141,14 +143,15 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                 leading: CircleAvatar(
                   backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
                   child: Icon(tourTypeIcon(_stops[i].kind),
-                      color: AppColors.mintGreen),
+                      color: context.forest.accentText),
                 ),
                 title: Text(
                     _stops[i].name.isEmpty
                         ? l10n.translate('itin_unnamed')
                         : _stops[i].name,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: context.forest.text,
+                        fontWeight: FontWeight.bold)),
                 subtitle: Text(
                   [
                     '${days.format(_stops[i].arrive)} – ${days.format(_stops[i].leave)}',
@@ -156,12 +159,12 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                         args: {'n': l10n.number(_stops[i].nights)}),
                     if (_stops[i].stay.isNotEmpty) _stops[i].stay,
                   ].join(' · '),
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: TextStyle(color: context.forest.text60, fontSize: 12),
                 ),
                 trailing: IconButton(
                   tooltip: l10n.translate('itin_remove'),
-                  icon:
-                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  icon: Icon(Icons.delete_outline,
+                      color: context.forest.readable(Colors.redAccent)),
                   onPressed: _stops.length == 1
                       ? null
                       : () => setState(() => _stops.removeAt(i)),
@@ -184,7 +187,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
             title: Text(
                 l10n.translate('itin_return_home',
                     args: {'origin': widget.group.originCity}),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onChanged: (v) => setState(() => _returnHome = v),
           ),
         ],
@@ -194,10 +197,10 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
 
   Widget _point(IconData icon, String name, String label) => ListTile(
         contentPadding: EdgeInsets.zero,
-        leading: Icon(icon, color: AppColors.gold),
-        title: Text(name, style: const TextStyle(color: Colors.white)),
+        leading: Icon(icon, color: context.forest.readable(AppColors.gold)),
+        title: Text(name, style: TextStyle(color: context.forest.text)),
         subtitle: Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            style: TextStyle(color: context.forest.text54, fontSize: 12)),
       );
 }
 
@@ -246,13 +249,13 @@ class _StopSheetState extends State<_StopSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(l10n.translate('itin_stop'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 17,
                     fontWeight: FontWeight.bold)),
             TextField(
               controller: _name,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('itin_place')),
             ),
@@ -267,14 +270,16 @@ class _StopSheetState extends State<_StopSheet> {
                         size: 16,
                         color: t == _s.kind
                             ? AppColors.darkGreen
-                            : Colors.white70),
+                            : context.forest.text70),
                     label: Text(l10n.translate(tourTypeKey(t))),
                     selected: t == _s.kind,
                     selectedColor: AppColors.mintGreen,
-                    backgroundColor: const Color(0xFF1E3326),
+                    backgroundColor:
+                        context.forest.surfaceFor(const Color(0xFF1E3326)),
                     labelStyle: TextStyle(
-                        color:
-                            t == _s.kind ? AppColors.darkGreen : Colors.white),
+                        color: t == _s.kind
+                            ? AppColors.darkGreen
+                            : context.forest.text),
                     onSelected: (_) =>
                         setState(() => _s = _s.copyWith(kind: t)),
                   ),
@@ -284,11 +289,11 @@ class _StopSheetState extends State<_StopSheet> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading:
-                  const Icon(Icons.login_rounded, color: AppColors.mintGreen),
+                  Icon(Icons.login_rounded, color: context.forest.accentText),
               title: Text(days.format(_s.arrive),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               subtitle: Text(l10n.translate('itin_arrive'),
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
               onTap: () async {
                 final d = await _pick(_s.arrive);
                 if (d == null) return;
@@ -298,14 +303,15 @@ class _StopSheetState extends State<_StopSheet> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.logout_rounded, color: AppColors.gold),
+              leading: Icon(Icons.logout_rounded,
+                  color: context.forest.readable(AppColors.gold)),
               title: Text(days.format(_s.leave),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               subtitle: Text(
                   '${l10n.translate('itin_leave')} · ${l10n.translate('itin_nights', args: {
                         'n': l10n.number(_s.nights)
                       })}',
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
               onTap: () async {
                 final d = await _pick(_s.leave);
                 if (d == null) return;
@@ -314,7 +320,7 @@ class _StopSheetState extends State<_StopSheet> {
             ),
             TextField(
               controller: _stay,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('itin_stay')),
             ),
@@ -322,12 +328,14 @@ class _StopSheetState extends State<_StopSheet> {
               controller: _notes,
               maxLines: 2,
               maxLength: 300,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('itin_notes')),
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!,
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent))),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -386,7 +394,7 @@ Future<DestinationPick?> showDestinationPicker(BuildContext context) {
   return showModalBottomSheet<DestinationPick>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF14241B),
+    backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => const _DestinationPicker(),
@@ -431,22 +439,22 @@ class _DestinationPickerState extends State<_DestinationPicker> {
               child: TextField(
                 autofocus: false,
                 onChanged: (v) => setState(() => _query = v),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                  prefixIcon: Icon(Icons.search, color: context.forest.text54),
                   hintText: l10n.translate('itin_search'),
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: TextStyle(color: context.forest.text38),
                 ),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.edit_location_alt_rounded,
-                  color: AppColors.gold),
+              leading: Icon(Icons.edit_location_alt_rounded,
+                  color: context.forest.readable(AppColors.gold)),
               title: Text(l10n.translate('itin_custom_place'),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               onTap: () => Navigator.pop(context, const DestinationPick(null)),
             ),
-            const Divider(color: Colors.white12, height: 1),
+            Divider(color: context.forest.divider12, height: 1),
             Expanded(
               child: ListView(
                 children: [
@@ -455,20 +463,20 @@ class _DestinationPickerState extends State<_DestinationPicker> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
                         child: Text(l10n.translate(tourTypeKey(kind)),
-                            style: const TextStyle(
-                                color: AppColors.gold,
+                            style: TextStyle(
+                                color: context.forest.readable(AppColors.gold),
                                 fontWeight: FontWeight.bold)),
                       ),
                       for (final p in byKind[kind]!)
                         ListTile(
                           leading: Icon(tourTypeIcon(p.kind),
-                              color: AppColors.mintGreen),
+                              color: context.forest.accentText),
                           title: Text(p.nameFor(lang),
-                              style: const TextStyle(color: Colors.white)),
+                              style: TextStyle(color: context.forest.text)),
                           subtitle: Text(
                               '${lang == 'bn' ? p.nameEn : p.nameBn} · ${p.region}',
-                              style: const TextStyle(
-                                  color: Colors.white54, fontSize: 12)),
+                              style: TextStyle(
+                                  color: context.forest.text54, fontSize: 12)),
                           onTap: () =>
                               Navigator.pop(context, DestinationPick(p)),
                         ),

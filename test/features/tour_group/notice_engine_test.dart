@@ -97,6 +97,20 @@ void main() {
     });
   });
 
+  group('filter swipe', () {
+    test('a step moves one filter along the row', () {
+      expect(NoticeEngine.stepFilter(NoticeFilter.all, 1), NoticeFilter.pinned);
+      expect(NoticeEngine.stepFilter(NoticeFilter.needsMe, -1),
+          NoticeFilter.upcoming);
+    });
+
+    test('the first and last filters stop the step instead of wrapping', () {
+      expect(NoticeEngine.stepFilter(NoticeFilter.all, -1), NoticeFilter.all);
+      expect(NoticeEngine.stepFilter(NoticeFilter.archive, 1),
+          NoticeFilter.archive);
+    });
+  });
+
   group('answers', () {
     final call = _n('call',
         kind: NoticeKind.rollcall,

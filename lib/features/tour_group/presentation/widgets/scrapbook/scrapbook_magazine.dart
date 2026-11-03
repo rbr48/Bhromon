@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -164,7 +165,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
         LinearProgressIndicator(
           value: (page + 1) / total,
           minHeight: 3,
-          backgroundColor: Colors.white10,
+          backgroundColor: context.forest.divider10,
           valueColor: const AlwaysStoppedAnimation(_gold),
         ),
         Expanded(
@@ -177,7 +178,8 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
               index: i,
               child: RepaintBoundary(
                 key: _pageKeys[i],
-                child: ColoredBox(color: _paper, child: pages[i]),
+                child: ColoredBox(
+                    color: context.forest.surfaceFor(_paper), child: pages[i]),
               ),
             ),
           ),
@@ -373,10 +375,11 @@ class _PostPicture extends StatelessWidget {
         : TourSafeNetworkImage(
             imageUrl: url,
             fit: BoxFit.cover,
-            placeholder: const ColoredBox(color: Color(0xFF2A231C)),
-            errorWidget: const ColoredBox(
-              color: Color(0xFF2A231C),
-              child: Center(
+            placeholder: ColoredBox(
+                color: context.forest.surfaceFor(const Color(0xFF2A231C))),
+            errorWidget: ColoredBox(
+              color: context.forest.surfaceFor(const Color(0xFF2A231C)),
+              child: const Center(
                   child: Icon(Icons.broken_image_outlined, color: _muted)),
             ),
           );
@@ -390,9 +393,9 @@ class _PostPicture extends StatelessWidget {
           children: [
             picture,
             if (post.isReel && url != null)
-              const Center(
+              Center(
                   child: Icon(Icons.play_circle_fill_rounded,
-                      color: Colors.white70, size: 40)),
+                      color: context.forest.text70, size: 40)),
           ],
         ),
       ),
@@ -420,7 +423,7 @@ void _openPhoto(BuildContext context, String url) {
             child: IconButton(
               tooltip: l10n.translate('mag_close'),
               onPressed: () => Navigator.pop(ctx),
-              icon: const Icon(Icons.close_rounded, color: Colors.white),
+              icon: Icon(Icons.close_rounded, color: context.forest.text),
             ),
           ),
         ),
@@ -448,8 +451,9 @@ class _Avatar extends StatelessWidget {
       child: url != null && isRemoteMediaUrl(url)
           ? null
           : Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(),
-              style:
-                  const TextStyle(color: _paper, fontWeight: FontWeight.w800)),
+              style: TextStyle(
+                  color: context.forest.surfaceFor(_paper),
+                  fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -486,10 +490,14 @@ class _CoverPage extends StatelessWidget {
         if (cover != null)
           _PostPicture(post: cover, radius: 0)
         else
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF8D4B00), Color(0xFF3E1F00), _paper],
+                colors: [
+                  const Color(0xFF8D4B00),
+                  const Color(0xFF3E1F00),
+                  context.forest.surfaceFor(_paper)
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -541,8 +549,8 @@ class _CoverPage extends StatelessWidget {
               const Spacer(),
               Text(
                 g?.name ?? l10n.translate('scrap_default_name'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 32,
                     height: 1.1,
                     fontWeight: FontWeight.w800),
@@ -630,7 +638,7 @@ class _NumbersPage extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
+                  color: context.forest.text.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: _gold.withValues(alpha: 0.25)),
                 ),
@@ -732,12 +740,13 @@ class _YourPage extends StatelessWidget {
           children: [
             for (final kind in recap.awards)
               Chip(
-                avatar: const Icon(Icons.emoji_events_rounded,
-                    color: _paper, size: 18),
+                avatar: Icon(Icons.emoji_events_rounded,
+                    color: context.forest.surfaceFor(_paper), size: 18),
                 backgroundColor: _gold,
                 label: Text(l10n.translate(_awardTitleKey(kind)),
-                    style: const TextStyle(
-                        color: _paper, fontWeight: FontWeight.w700)),
+                    style: TextStyle(
+                        color: context.forest.surfaceFor(_paper),
+                        fontWeight: FontWeight.w700)),
               ),
           ],
         ),
@@ -821,7 +830,7 @@ class _ChapterPage extends StatelessWidget {
             for (final place in chapter.places)
               Chip(
                 avatar: const Icon(Icons.place_rounded, color: _gold, size: 16),
-                backgroundColor: Colors.white.withValues(alpha: 0.05),
+                backgroundColor: context.forest.text.withValues(alpha: 0.05),
                 side: BorderSide(color: _gold.withValues(alpha: 0.3)),
                 label: Text(place,
                     style: const TextStyle(color: _ink, fontSize: 12)),
@@ -1002,7 +1011,7 @@ class _AwardsPage extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: context.forest.text.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: _gold.withValues(alpha: 0.3)),
           ),
@@ -1018,7 +1027,8 @@ class _AwardsPage extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 12,
                       backgroundColor: _gold,
-                      child: Icon(_awardIcon(a.kind), size: 14, color: _paper),
+                      child: Icon(_awardIcon(a.kind),
+                          size: 14, color: context.forest.surfaceFor(_paper)),
                     ),
                   ),
                 ],
@@ -1080,8 +1090,9 @@ class _PlacesPage extends StatelessWidget {
                       height: 14,
                       margin: const EdgeInsets.only(top: 3),
                       decoration: BoxDecoration(
-                        color:
-                            i == 0 || i == places.length - 1 ? _gold : _paper,
+                        color: i == 0 || i == places.length - 1
+                            ? _gold
+                            : context.forest.surfaceFor(_paper),
                         shape: BoxShape.circle,
                         border: Border.all(color: _gold, width: 2),
                       ),
@@ -1148,7 +1159,7 @@ class _BackCoverPage extends StatelessWidget {
         child: FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: _gold,
-            foregroundColor: _paper,
+            foregroundColor: context.forest.surfaceFor(_paper),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           onPressed: onShare,

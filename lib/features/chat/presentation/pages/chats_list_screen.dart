@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,12 +12,18 @@ import 'package:local_auth/local_auth.dart';
 import 'dart:math' as math;
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/services/battery_guidance.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/localized_date.dart';
 import '../../../../core/utils/doc_future_cache.dart';
 import '../../data/call_history_stream.dart';
+import '../../data/chat_deletion_service.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../domain/chat_deletion.dart';
+import '../widgets/chat_delete_dialogs.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
@@ -35,6 +42,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   int _bottomNavIndex = 0; // 0 = Chats, 1 = Calls
   List<Map<String, dynamic>> _offlineConversations = [];
   Set<String> _lockedChatIds = {};
+  // The chat documents from the latest snapshot, so a locked chat can show
+  // the other person's name instead of its id.
+  Map<String, Map<String, dynamic>> _chatDataById = {};
 
   // Built once per signed-in user, so typing in search or switching tabs
   // doesn't tear down and re-attach both Firestore listeners.
@@ -55,6 +65,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     super.initState();
     _loadOfflineConversations();
     _listenToVpsConversations();
+    // The battery guidance waits until the list is on screen, so it never
+    // covers a call that is connecting.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(BatteryGuidance.maybeShowDue(context));
+    });
   }
 
   @override
@@ -104,9 +119,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }) {
     if (otherUid.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot start call: user information is missing.'),
-          backgroundColor: Color(0xFF1F2C34),
+        SnackBar(
+          content: Text(context.l10n.translate('chats_call_no_user')),
+          backgroundColor: const Color(0xFF1F2C34),
         ),
       );
       return;
@@ -114,9 +129,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
     if (sharedTourId == null || remoteEmail == null || remoteEmail.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You can only call members of a tour you share.'),
-          backgroundColor: Color(0xFF1F2C34),
+        SnackBar(
+          content: Text(context.l10n.translate('chats_call_members_only')),
+          backgroundColor: const Color(0xFF1F2C34),
         ),
       );
       return;
@@ -217,12 +232,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         context.go('/group-hub');
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
+        backgroundColor: context.chat.wallpaper, // WhatsApp dark background
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1F2C34), // WhatsApp secondary bar
+          backgroundColor: context.chat.bar, // WhatsApp secondary bar
           elevation: 1,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: context.chat.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -232,9 +247,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             },
           ),
           title: Text(
-            _bottomNavIndex == 0 ? 'Bhromon Chat' : 'Calls',
-            style: const TextStyle(
-              color: Colors.white,
+            _bottomNavIndex == 0
+                ? context.l10n.translate('chats_title')
+                : context.l10n.translate('chats_calls_title'),
+            style: TextStyle(
+              color: context.chat.text,
               fontSize: 18,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
@@ -242,51 +259,51 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.camera_alt_outlined, color: Colors.white),
-              tooltip: 'Quick Camera',
+              icon: Icon(Icons.camera_alt_outlined, color: context.chat.text),
+              tooltip: context.l10n.translate('chats_quick_camera'),
               onPressed: _openQuickCamera,
             ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-              color: const Color(0xFF1F2C34),
+              icon: Icon(Icons.more_vert, color: context.chat.text),
+              color: context.chat.bar,
               onSelected: (val) {
                 if (val == 'new_chat') {
                   _showSelectTravelerSheet(context, currentUid);
                 } else if (val == 'starred_messages') {
                   context.push('/starred-messages');
                 } else if (val == 'locked_chats') {
-                  _openLockedChats();
+                  _openLockedChats(currentUid);
                 } else if (val == 'tour_groups') {
-                  context.push('/tour-groups');
+                  context.push('/group-hub');
                 } else if (val == 'settings') {
                   context.push('/settings');
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'new_chat',
-                  child:
-                      Text('New chat', style: TextStyle(color: Colors.white)),
+                  child: Text(context.l10n.translate('chats_menu_new_chat'),
+                      style: TextStyle(color: context.chat.text)),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'starred_messages',
-                  child: Text('Starred messages',
-                      style: TextStyle(color: Colors.white)),
+                  child: Text(context.l10n.translate('chats_menu_starred'),
+                      style: TextStyle(color: context.chat.text)),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'locked_chats',
-                  child: Text('Locked chats',
-                      style: TextStyle(color: Colors.white)),
+                  child: Text(context.l10n.translate('chats_menu_locked'),
+                      style: TextStyle(color: context.chat.text)),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'tour_groups',
-                  child: Text('Your groups',
-                      style: TextStyle(color: Colors.white)),
+                  child: Text(context.l10n.translate('chats_menu_groups'),
+                      style: TextStyle(color: context.chat.text)),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'settings',
-                  child:
-                      Text('Settings', style: TextStyle(color: Colors.white)),
+                  child: Text(context.l10n.translate('chats_menu_settings'),
+                      style: TextStyle(color: context.chat.text)),
                 ),
               ],
             ),
@@ -309,27 +326,28 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     children: [
                       // WhatsApp styled Search Bar
                       Container(
-                        color: const Color(0xFF1F2C34),
+                        color: context.chat.bar,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2A3942),
+                            color: context.chat.field,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextField(
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 13),
+                            style: TextStyle(
+                                color: context.chat.text, fontSize: 13),
                             decoration: InputDecoration(
-                              hintText: 'Search chats or messages...',
-                              hintStyle: const TextStyle(
-                                  color: Colors.white54, fontSize: 13),
-                              prefixIcon: const Icon(Icons.search,
-                                  color: Colors.white54, size: 18),
+                              hintText:
+                                  context.l10n.translate('chats_search_hint'),
+                              hintStyle: TextStyle(
+                                  color: context.chat.text54, fontSize: 13),
+                              prefixIcon: Icon(Icons.search,
+                                  color: context.chat.text54, size: 18),
                               suffixIcon: _searchQuery.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear,
-                                          color: Colors.white54, size: 16),
+                                      icon: Icon(Icons.clear,
+                                          color: context.chat.text54, size: 16),
                                       onPressed: () =>
                                           setState(() => _searchQuery = ''),
                                     )
@@ -349,7 +367,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                       // WhatsApp tabs (All, Unread, Favourites, Groups)
                       Container(
-                        color: const Color(0xFF0B141A),
+                        color: context.chat.wallpaper,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         child: SingleChildScrollView(
@@ -397,13 +415,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     return _buildOfflineConversationsList(
                                         blockedUids, currentUid);
                                   }
-                                  return const Center(
+                                  return Center(
                                     child: Padding(
-                                      padding: EdgeInsets.all(24.0),
+                                      padding: const EdgeInsets.all(24.0),
                                       child: Text(
-                                        'Connecting to chat server...',
+                                        context.l10n
+                                            .translate('chats_connecting'),
                                         style: TextStyle(
-                                            color: Colors.white54,
+                                            color: context.chat.text54,
                                             fontSize: 13),
                                         textAlign: TextAlign.center,
                                       ),
@@ -416,6 +435,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                         doc.data() as Map<String, dynamic>?,
                                         _myTourIds))
                                     .toList();
+                                _chatDataById = {
+                                  for (final doc in allDocs)
+                                    doc.id: doc.data() as Map<String, dynamic>,
+                                };
                                 for (final doc in allDocs) {
                                   final d = doc.data() as Map<String, dynamic>;
                                   ChatLocalCache().cacheConversation(
@@ -436,6 +459,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     return false;
                                   }
                                   if (_lockedChatIds.contains(doc.id)) {
+                                    return false;
+                                  }
+                                  // A chat this person deleted stays hidden until a newer message arrives.
+                                  if (isChatHiddenByCutoff(
+                                    clearedAt: ChatDeletionService.clearedAtOf(
+                                        data, currentUid),
+                                    lastMessageAt:
+                                        ChatDeletionService.timestampOf(
+                                            data['lastMessageTime']),
+                                  )) {
                                     return false;
                                   }
 
@@ -464,20 +497,22 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       children: [
                                         Icon(Icons.chat_bubble_outline,
                                             size: 64,
-                                            color: Colors.white
+                                            color: context.chat.text
                                                 .withValues(alpha: 0.08)),
                                         const SizedBox(height: 16),
-                                        const Text(
-                                          'No conversations here yet.',
+                                        Text(
+                                          context.l10n
+                                              .translate('chats_empty_title'),
                                           style: TextStyle(
-                                              color: Colors.white54,
+                                              color: context.chat.text54,
                                               fontSize: 13),
                                         ),
                                         const SizedBox(height: 8),
-                                        const Text(
-                                          'Tap the green button to start a chat!',
+                                        Text(
+                                          context.l10n
+                                              .translate('chats_empty_hint'),
                                           style: TextStyle(
-                                              color: Color(0xFF00A884),
+                                              color: context.chat.accentText,
                                               fontSize: 11),
                                         ),
                                       ],
@@ -486,9 +521,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 }
 
                                 return ListView.separated(
-                                  separatorBuilder: (context, index) =>
-                                      const Divider(
-                                    color: Color(0xFF1F2C34),
+                                  separatorBuilder: (context, index) => Divider(
+                                    color: context.chat.bar,
                                     height: 1,
                                     indent: 72,
                                     endIndent: 16,
@@ -590,6 +624,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       if (blockedUids.contains(otherUser)) return false;
       final cId = (data['chatId'] ?? data['id'] ?? '') as String;
       if (_lockedChatIds.contains(cId)) return false;
+      if (isChatHiddenByCutoff(
+        clearedAt: ChatDeletionService.clearedAtOf(data, currentUid),
+        lastMessageAt: ChatDeletionService.timestampOf(
+            data['lastMessageTime'] ?? data['lastTime']),
+      )) {
+        return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final lastMsg = (data['lastMessage'] as String? ?? '').toLowerCase();
         final otherUserLower = otherUser.toLowerCase();
@@ -602,8 +643,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }).toList();
 
     return ListView.separated(
-      separatorBuilder: (context, index) => const Divider(
-        color: Color(0xFF1F2C34),
+      separatorBuilder: (context, index) => Divider(
+        color: context.chat.bar,
         height: 1,
         indent: 72,
         endIndent: 16,
@@ -690,7 +731,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: const Color(0xFF005C4B),
+        backgroundColor: context.chat.outgoing,
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
             ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
                 context.decodeWidth(48))
@@ -698,8 +739,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         child: (avatarUrl == null || avatarUrl.isEmpty)
             ? Text(
                 initials,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.chat.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -709,7 +750,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       title: Text(
         displayName,
         style: TextStyle(
-          color: isMissed ? Colors.redAccent : Colors.white,
+          color: isMissed ? Colors.redAccent : context.chat.text,
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -721,22 +762,25 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 ? Icons.call_missed
                 : (isCaller ? Icons.call_made : Icons.call_received),
             size: 15,
-            color: isMissed ? Colors.redAccent : const Color(0xFF00A884),
+            color: isMissed ? Colors.redAccent : context.chat.accentText,
           ),
           const SizedBox(width: 4),
           Text(
             timeStr +
                 (durationSeconds != null && durationSeconds > 0
-                    ? ' (${durationSeconds ~/ 60}m ${durationSeconds % 60}s)'
+                    ? ' (${context.l10n.translate('chats_call_duration', args: {
+                            'm': durationSeconds ~/ 60,
+                            's': durationSeconds % 60
+                          })})'
                     : ''),
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: context.chat.text54, fontSize: 12),
           ),
         ],
       ),
       trailing: IconButton(
         icon: Icon(
           isVideo ? Icons.videocam : Icons.call,
-          color: onTap != null ? const Color(0xFF00A884) : Colors.white24,
+          color: onTap != null ? context.chat.accentText : context.chat.text24,
           size: 22,
         ),
         onPressed: onTap,
@@ -748,8 +792,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Widget _buildCallsView(String currentUid) {
     if (_toursFailed) {
       return _callsError(
-          'Your tours could not be checked, so calls cannot be shown.',
-          _retryCalls);
+          context.l10n.translate('chats_calls_error_tours'), _retryCalls);
     }
     if (!_toursLoaded) {
       // Calls are filtered by tour, so wait for the tours before showing any.
@@ -766,7 +809,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           );
         }
         if (snapshot.hasError) {
-          return _callsError('Your calls could not be loaded.', _retryCalls);
+          return _callsError(
+              context.l10n.translate('chats_calls_error'), _retryCalls);
         }
 
         // Sorted here, newest first. The list is merged from several queries.
@@ -789,16 +833,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.add_call,
-                    size: 64, color: Colors.white.withValues(alpha: 0.08)),
+                    size: 64, color: context.chat.text.withValues(alpha: 0.08)),
                 const SizedBox(height: 16),
-                const Text(
-                  'No recent calls.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                Text(
+                  context.l10n.translate('chats_calls_empty_title'),
+                  style: TextStyle(color: context.chat.text54, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Tap the green button to start a call!',
-                  style: TextStyle(color: Color(0xFF00A884), fontSize: 11),
+                Text(
+                  context.l10n.translate('chats_calls_empty_hint'),
+                  style:
+                      TextStyle(color: context.chat.accentText, fontSize: 11),
                 ),
               ],
             ),
@@ -808,8 +853,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
           itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(
-            color: Color(0xFF1F2C34),
+          separatorBuilder: (_, __) => Divider(
+            color: context.chat.bar,
             height: 1,
             indent: 72,
             endIndent: 16,
@@ -826,17 +871,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             final callDate = _parseCallDate(data['createdAt']);
             final durationSeconds = (data['durationSeconds'] as num?)?.toInt();
 
-            String timeStr = 'Recent';
+            String timeStr = context.l10n.translate('chats_calls_recent');
             if (callDate != null) {
-              final now = DateTime.now();
-              final isToday = callDate.year == now.year &&
-                  callDate.month == now.month &&
-                  callDate.day == now.day;
-              final hour = callDate.hour.toString().padLeft(2, '0');
-              final minute = callDate.minute.toString().padLeft(2, '0');
-              timeStr = isToday
-                  ? 'Today, $hour:$minute'
-                  : '${callDate.day}/${callDate.month}, $hour:$minute';
+              timeStr = _chatTimeLabel(callDate);
             }
 
             final isMissed =
@@ -871,16 +908,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               ),
               builder: (context, profSnap) {
                 final profData = profSnap.data?.data() as Map<String, dynamic>?;
-                final otherName = (profData?['displayName'] as String?)
-                            ?.trim()
-                            .isNotEmpty ==
-                        true
-                    ? (profData!['displayName'] as String)
-                    : (callerNameInDoc?.trim().isNotEmpty == true
-                        ? callerNameInDoc!
-                        : (otherUid.contains('@')
-                            ? otherUid
-                            : 'Member ${otherUid.substring(0, math.min(otherUid.length, 6))}'));
+                final otherName =
+                    (profData?['displayName'] as String?)?.trim().isNotEmpty ==
+                            true
+                        ? (profData!['displayName'] as String)
+                        : (callerNameInDoc?.trim().isNotEmpty == true
+                            ? callerNameInDoc!
+                            : (otherUid.contains('@')
+                                ? otherUid
+                                : context.l10n.translate('chats_member')));
                 final avatarUrl =
                     profData?['avatarUrl'] as String? ?? callerAvatarInDoc;
 
@@ -918,9 +954,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       final photo = await picker.pickImage(source: ImageSource.camera);
       if (photo != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Photo captured. Select a chat to share it.'),
-            backgroundColor: Color(0xFF00A884),
+          SnackBar(
+            content: Text(context.l10n.translate('chats_camera_saved')),
+            backgroundColor: const Color(0xFF00A884),
           ),
         );
       }
@@ -930,9 +966,25 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   /// One of the two sections at the top: Chats or Calls.
+  /// The text of a section tab. The tab's id stays English.
+  String _sectionLabel(BuildContext context, String id) => context.l10n
+      .translate(id == 'Calls' ? 'chats_calls_title' : 'chats_tab_chats');
+
+  /// The text of a filter tab. The id stays English, because the filters
+  /// compare against it.
+  String _tabLabel(BuildContext context, String id) {
+    final key = switch (id) {
+      'Unread' => 'chats_filter_unread',
+      'Favourites' => 'chats_filter_favourites',
+      'Groups' => 'chats_filter_groups',
+      _ => 'chats_filter_all',
+    };
+    return context.l10n.translate(key);
+  }
+
   Widget _buildSectionTab(String label, int index) {
     final selected = _bottomNavIndex == index;
-    final color = selected ? const Color(0xFF00A884) : Colors.white60;
+    final color = selected ? const Color(0xFF00A884) : context.chat.text60;
     return InkWell(
       onTap: () => setState(() => _bottomNavIndex = index),
       child: Container(
@@ -946,7 +998,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
         ),
         child: Text(
-          label,
+          _sectionLabel(context, label),
           style: TextStyle(
             color: color,
             fontSize: 14,
@@ -966,18 +1018,18 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.cloud_off_outlined,
-                size: 48, color: Colors.white.withValues(alpha: 0.15)),
+                size: 48, color: context.chat.text.withValues(alpha: 0.15)),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: TextStyle(color: context.chat.text54, fontSize: 13),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: onRetry,
-              child: const Text('Try again',
-                  style: TextStyle(color: Color(0xFF00A884))),
+              child: Text(context.l10n.translate('chats_retry'),
+                  style: TextStyle(color: context.chat.accentText)),
             ),
           ],
         ),
@@ -992,7 +1044,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
+          color: isSelected ? context.chat.outgoing : context.chat.bar,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
@@ -1002,9 +1054,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
         ),
         child: Text(
-          label,
+          _tabLabel(context, label),
           style: TextStyle(
-            color: isSelected ? const Color(0xFF00A884) : Colors.white60,
+            color: isSelected ? context.chat.accentText : context.chat.text60,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -1054,9 +1106,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).padding.bottom + 12,
               ),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2C34), // WhatsApp slate dark
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.chat.bar, // WhatsApp slate dark
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 children: [
@@ -1065,27 +1118,28 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white12,
+                      color: context.chat.divider12,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'Start Conversation',
+                      context.l10n.translate('chats_start_title'),
                       style: TextStyle(
-                          color: Colors.white,
+                          color: context.chat.text,
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'Only members of your groups',
-                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                      context.l10n.translate('chats_start_subtitle'),
+                      style:
+                          TextStyle(color: context.chat.text54, fontSize: 11),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1093,20 +1147,22 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2A3942),
+                        color: context.chat.field,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: TextField(
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
-                        decoration: const InputDecoration(
-                          hintText: 'Search member name or tour...',
-                          hintStyle:
-                              TextStyle(color: Colors.white54, fontSize: 12),
+                            TextStyle(color: context.chat.text, fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText:
+                              context.l10n.translate('chats_start_search_hint'),
+                          hintStyle: TextStyle(
+                              color: context.chat.text54, fontSize: 12),
                           prefixIcon: Icon(Icons.search,
-                              color: Colors.white54, size: 18),
+                              color: context.chat.text54, size: 18),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
                         ),
                         onChanged: (val) => setSheetState(() {
                           sheetSearch = val.trim().toLowerCase();
@@ -1125,14 +1181,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   color: Color(0xFF00A884)));
                         }
                         if (snap.hasError) {
-                          return const Center(
+                          return Center(
                             child: Padding(
-                              padding: EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24),
                               child: Text(
-                                'Could not load your travel companions. Check your connection and try again.',
+                                context.l10n.translate('chats_start_error'),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                    color: Colors.white54, fontSize: 12),
+                                    color: context.chat.text54, fontSize: 12),
                               ),
                             ),
                           );
@@ -1146,14 +1202,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             .toList();
 
                         if (contacts.isEmpty) {
-                          return const Center(
+                          return Center(
                             child: Padding(
-                              padding: EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24),
                               child: Text(
-                                'Join or create a group to chat with its members.',
+                                context.l10n.translate('chats_start_empty'),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                    color: Colors.white54, fontSize: 12),
+                                    color: context.chat.text54, fontSize: 12),
                               ),
                             ),
                           );
@@ -1162,22 +1218,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         return ListView.separated(
                           padding: const EdgeInsets.all(8),
                           separatorBuilder: (context, index) =>
-                              const Divider(color: Colors.white10, height: 1),
+                              Divider(color: context.chat.divider10, height: 1),
                           itemCount: contacts.length,
                           itemBuilder: (context, idx) {
                             final contact = contacts[idx];
                             final name = contact.name;
                             final avatarUrl = contact.photoUrl ?? '';
-                            final initials = name.length > 2
-                                ? name.substring(0, 2).toUpperCase()
-                                : 'EX';
+                            final initials = _initialsOf(name);
 
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 4),
                               leading: CircleAvatar(
                                 radius: 20,
-                                backgroundColor: const Color(0xFF005C4B),
+                                backgroundColor: context.chat.outgoing,
                                 backgroundImage: avatarUrl.isNotEmpty
                                     ? sizedImage(
                                         NetworkImage(signedMediaUrl(avatarUrl)),
@@ -1185,29 +1239,31 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     : null,
                                 child: avatarUrl.isEmpty
                                     ? Text(initials,
-                                        style: const TextStyle(
-                                            color: Colors.white,
+                                        style: TextStyle(
+                                            color: context.chat.text,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12))
                                     : null,
                               ),
                               title: Text(name,
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: context.chat.text,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13)),
                               subtitle: Text(
                                 contact.tours.map((t) => t.name).join(' · '),
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 11),
+                                style: TextStyle(
+                                    color: context.chat.text54, fontSize: 11),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.call,
-                                        color: Color(0xFF00A884), size: 20),
-                                    tooltip: 'Audio Call',
+                                    icon: Icon(Icons.call,
+                                        color: context.chat.accentText,
+                                        size: 20),
+                                    tooltip: context.l10n
+                                        .translate('chats_audio_call'),
                                     onPressed: () {
                                       Navigator.pop(context);
                                       _initiateCall(
@@ -1222,9 +1278,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.videocam,
-                                        color: Color(0xFF00A884), size: 22),
-                                    tooltip: 'Video Call',
+                                    icon: Icon(Icons.videocam,
+                                        color: context.chat.accentText,
+                                        size: 22),
+                                    tooltip: context.l10n
+                                        .translate('chats_video_call'),
                                     onPressed: () {
                                       Navigator.pop(context);
                                       _initiateCall(
@@ -1267,17 +1325,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
-  Future<void> _openLockedChats() async {
+  Future<void> _openLockedChats(String currentUid) async {
     bool authenticated = false;
     if (!kIsWeb) {
+      final biometricReason = context.l10n.translate('chats_biometric_reason');
       try {
         final auth = LocalAuthentication();
         final canCheck =
             await auth.canCheckBiometrics || await auth.isDeviceSupported();
         if (canCheck) {
           authenticated = await auth.authenticate(
-            localizedReason:
-                'Authenticate with Biometrics to view your locked chats',
+            localizedReason: biometricReason,
             options: const AuthenticationOptions(
               biometricOnly: false,
               stickyAuth: true,
@@ -1295,14 +1353,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }
 
     if (authenticated && mounted) {
-      _showLockedChatsModal(context);
+      _showLockedChatsModal(context, currentUid);
     }
   }
 
-  void _showLockedChatsModal(BuildContext context) {
+  void _showLockedChatsModal(BuildContext context, String currentUid) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.chat.bar,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1318,20 +1376,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: context.chat.text24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 16),
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.lock, color: Color(0xFF00A884), size: 20),
-                  SizedBox(width: 8),
+                  Icon(Icons.lock, color: context.chat.accentText, size: 20),
+                  const SizedBox(width: 8),
                   Text(
-                    'Locked Chats',
+                    context.l10n.translate('chats_locked_title'),
                     style: TextStyle(
-                      color: Colors.white,
+                      color: context.chat.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1340,12 +1398,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               ),
               const SizedBox(height: 16),
               if (lockedIds.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(32),
+                Padding(
+                  padding: const EdgeInsets.all(32),
                   child: Text(
-                    'No chats are currently locked.\nLong-press any chat tile to lock it.',
+                    context.l10n.translate('chats_locked_empty'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, height: 1.4),
+                    style: TextStyle(color: context.chat.text54, height: 1.4),
                   ),
                 )
               else
@@ -1355,31 +1413,26 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     itemCount: lockedIds.length,
                     itemBuilder: (context, idx) {
                       final cid = lockedIds.elementAt(idx);
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFF005C4B),
-                          child: Icon(Icons.person, color: Colors.white),
-                        ),
-                        title: Text('Chat $cid',
-                            style: const TextStyle(color: Colors.white)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.lock_open,
-                              color: Colors.white54),
-                          tooltip: 'Unlock chat',
-                          onPressed: () async {
-                            await ChatLocalCache().setChatLocked(cid, false);
-                            if (mounted) {
-                              setState(() {
-                                _lockedChatIds =
-                                    ChatLocalCache().getLockedChatIds();
-                              });
-                            }
-                            if (ctx.mounted) Navigator.pop(ctx);
-                          },
-                        ),
+                      return _LockedChatTile(
+                        data: _chatDataById[cid] ??
+                            _offlineConversations.firstWhere(
+                              (c) => (c['chatId'] ?? c['id']) == cid,
+                              orElse: () => <String, dynamic>{},
+                            ),
+                        currentUid: currentUid,
                         onTap: () {
                           Navigator.pop(ctx);
                           context.push('/chat/$cid');
+                        },
+                        onUnlock: () async {
+                          await ChatLocalCache().setChatLocked(cid, false);
+                          if (mounted) {
+                            setState(() {
+                              _lockedChatIds =
+                                  ChatLocalCache().getLockedChatIds();
+                            });
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
                         },
                       );
                     },
@@ -1392,12 +1445,21 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
+  /// The other person's name in a chat, for the delete dialog.
+  String _otherNameFor(String chatId, String otherUid) {
+    final profiles =
+        _chatDataById[chatId]?['participantProfiles'] as Map<String, dynamic>?;
+    final name = (profiles?[otherUid] as Map?)?['displayName'] as String?;
+    final clean = name?.trim() ?? '';
+    return clean.isEmpty ? context.l10n.translate('chats_member') : clean;
+  }
+
   void _showChatTileOptions(
       BuildContext context, String chatId, String otherUid) {
     final isLocked = _lockedChatIds.contains(chatId);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.chat.bar,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1408,21 +1470,26 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ListTile(
               leading: Icon(
                 isLocked ? Icons.lock_open : Icons.lock_outline,
-                color: const Color(0xFF00A884),
+                color: context.chat.accentText,
               ),
               title: Text(
-                isLocked ? 'Unlock chat' : 'Lock chat',
-                style: const TextStyle(color: Colors.white),
+                isLocked
+                    ? context.l10n.translate('chats_unlock')
+                    : context.l10n.translate('chats_lock'),
+                style: TextStyle(color: context.chat.text),
               ),
               subtitle: Text(
                 isLocked
-                    ? 'Allow chat to appear in standard list'
-                    : 'Hide and protect this chat with biometrics',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ? context.l10n.translate('chats_unlock_hint')
+                    : context.l10n.translate('chats_lock_hint'),
+                style: TextStyle(color: context.chat.text54, fontSize: 12),
               ),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(ctx);
+                final unlockedMessage =
+                    context.l10n.translate('chats_unlocked');
+                final lockedMessage = context.l10n.translate('chats_locked');
                 await ChatLocalCache().setChatLocked(chatId, !isLocked);
                 if (mounted) {
                   setState(() {
@@ -1430,18 +1497,146 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   });
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text(isLocked
-                          ? 'Chat unlocked'
-                          : 'Chat locked behind biometrics'),
+                      content: Text(isLocked ? unlockedMessage : lockedMessage),
                       backgroundColor: const Color(0xFF00A884),
                     ),
                   );
                 }
               },
             ),
+            ListTile(
+              leading:
+                  const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: Text(
+                context.l10n.translate('chat_menu_delete_chat'),
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+              subtitle: Text(
+                context.l10n.translate('chats_delete_chat_hint'),
+                style: TextStyle(color: context.chat.text54, fontSize: 12),
+              ),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final uid = _streamsUid;
+                if (uid == null || uid.isEmpty) return;
+                final otherName = _otherNameFor(chatId, otherUid);
+                final deleted = await showDeleteChatDialog(
+                  context,
+                  chatId: chatId,
+                  uid: uid,
+                  otherName: otherName,
+                );
+                if (deleted && mounted) {
+                  setState(() {
+                    _offlineConversations = _offlineConversations
+                        .where((c) => (c['chatId'] ?? c['id']) != chatId)
+                        .toList();
+                  });
+                }
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The letters for an avatar: the first two of the name, or the whole name
+/// when it is shorter.
+String _initialsOf(String name) {
+  final clean = name.trim();
+  if (clean.isEmpty) return '?';
+  return clean.substring(0, math.min(2, clean.length)).toUpperCase();
+}
+
+/// The time of a chat or call: the clock time when it is today, and the date
+/// before that.
+String _chatTimeLabel(DateTime date) {
+  final now = DateTime.now();
+  final isToday =
+      date.year == now.year && date.month == now.month && date.day == now.day;
+  return isToday
+      ? localizedDateFormat('h:mm a').format(date)
+      : localizedDateFormat('d MMM').format(date);
+}
+
+/// A locked chat in the locked-chats sheet: the other person's photo and
+/// name, with actions to open the chat or unlock it.
+class _LockedChatTile extends StatelessWidget {
+  const _LockedChatTile({
+    required this.data,
+    required this.currentUid,
+    required this.onTap,
+    required this.onUnlock,
+  });
+
+  final Map<String, dynamic> data;
+  final String currentUid;
+  final VoidCallback onTap;
+  final VoidCallback onUnlock;
+
+  @override
+  Widget build(BuildContext context) {
+    final participants =
+        List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
+    final otherUid =
+        participants.firstWhere((p) => p != currentUid, orElse: () => '');
+    if (otherUid.isEmpty) {
+      return _row(context,
+          name: context.l10n.translate('chats_locked_unknown'),
+          avatarUrl: null);
+    }
+    final profiles = data['participantProfiles'] as Map<String, dynamic>?;
+    final cached = profiles?[otherUid] as Map<String, dynamic>?;
+    if (cached != null) {
+      return _row(context,
+          name: (cached['displayName'] as String?) ??
+              context.l10n.translate('chats_member'),
+          avatarUrl: cached['avatarUrl'] as String?);
+    }
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: DocFutureCache.instance.get(
+        FirebaseFirestore.instance
+            .collection('explorer_profiles')
+            .doc(otherUid),
+      ),
+      builder: (context, snapshot) {
+        final profile = snapshot.data?.data();
+        return _row(context,
+            name: (profile?['displayName'] as String?) ??
+                context.l10n.translate('chats_member'),
+            avatarUrl: profile?['avatarUrl'] as String?);
+      },
+    );
+  }
+
+  Widget _row(BuildContext context,
+      {required String name, required String? avatarUrl}) {
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    return ListTile(
+      leading: CircleAvatar(
+        radius: 20,
+        backgroundColor: context.chat.outgoing,
+        backgroundImage: hasAvatar
+            ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
+                context.decodeWidth(40))
+            : null,
+        child: hasAvatar
+            ? null
+            : Text(_initialsOf(name),
+                style: TextStyle(
+                    color: context.chat.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13)),
+      ),
+      title: Text(name, style: TextStyle(color: context.chat.text)),
+      trailing: IconButton(
+        icon: Icon(Icons.lock_open, color: context.chat.text54),
+        tooltip: context.l10n.translate('chats_unlock'),
+        onPressed: onUnlock,
+      ),
+      onTap: onTap,
     );
   }
 }
@@ -1484,9 +1679,10 @@ class ChatTile extends StatelessWidget {
     }
 
     if (cachedOtherProfile != null) {
-      final name = (cachedOtherProfile!['displayName'] as String?) ?? 'Member';
+      final name = (cachedOtherProfile!['displayName'] as String?) ??
+          context.l10n.translate('chats_member');
       final avatar = cachedOtherProfile!['avatarUrl'] as String?;
-      final inits = name.length > 2 ? name.substring(0, 2).toUpperCase() : 'TR';
+      final inits = _initialsOf(name);
       return _buildTile(context,
           displayName: name, avatarUrl: avatar, initials: inits);
     }
@@ -1501,10 +1697,9 @@ class ChatTile extends StatelessWidget {
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
         final name = (data?['displayName'] as String?) ??
-            'Member ${otherUserUid.substring(0, math.min(otherUserUid.length, 6))}';
+            context.l10n.translate('chats_member');
         final avatar = data?['avatarUrl'] as String?;
-        final inits =
-            name.length > 2 ? name.substring(0, 2).toUpperCase() : 'TR';
+        final inits = _initialsOf(name);
         return _buildTile(context,
             displayName: name, avatarUrl: avatar, initials: inits);
       },
@@ -1520,50 +1715,54 @@ class ChatTile extends StatelessWidget {
     final bool isMe = lastMessageSenderId == currentUid;
     String timeStr = '';
     if (lastTime != null) {
-      final date = lastTime!.toDate();
-      timeStr = '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      timeStr = _chatTimeLabel(lastTime!.toDate());
     }
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: const Color(0xFF005C4B),
+        backgroundColor: context.chat.outgoing,
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
             ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
                 context.decodeWidth(48))
             : null,
         child: (avatarUrl == null || avatarUrl.isEmpty)
             ? Text(initials,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.chat.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13))
             : null,
       ),
       title: Text(
         displayName,
-        style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+        style: TextStyle(
+            color: context.chat.text,
+            fontWeight: FontWeight.bold,
+            fontSize: 14),
       ),
       subtitle: Row(
         children: [
           if (isMe && lastMessage.isNotEmpty) ...[
-            const Icon(
+            Icon(
               Icons.done_all,
               size: 16,
-              color: Colors.white30,
+              color: context.chat.text30,
             ),
             const SizedBox(width: 4),
           ],
           Expanded(
             child: Text(
-              lastMessage.isNotEmpty ? lastMessage : 'Start a chat...',
+              lastMessage.isNotEmpty
+                  ? lastMessage
+                  : context.l10n.translate('chats_start_hint'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color:
-                    unreadCount > 0 ? const Color(0xFF00A884) : Colors.white54,
+                color: unreadCount > 0
+                    ? context.chat.accentText
+                    : context.chat.text54,
                 fontSize: 12,
                 fontWeight:
                     unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
@@ -1579,7 +1778,9 @@ class ChatTile extends StatelessWidget {
           Text(
             timeStr,
             style: TextStyle(
-              color: unreadCount > 0 ? const Color(0xFF00A884) : Colors.white30,
+              color: unreadCount > 0
+                  ? context.chat.accentText
+                  : context.chat.text30,
               fontSize: 10,
               fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),

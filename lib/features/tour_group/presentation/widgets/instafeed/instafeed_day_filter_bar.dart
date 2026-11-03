@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/tour_group.dart';
@@ -72,11 +73,12 @@ class InstafeedDayFilterBar extends StatelessWidget {
                     final isSelected = selectedDay == 'all';
                     final count = _countFor('all');
                     return _buildCircleItem(
+                      context: context,
                       label: context.l10n.translate('ig_all_days'),
                       topWidget: Text(
                         context.l10n.translate('ig_all_short'),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.forest.text,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -94,6 +96,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                   final label = instafeedDayLabel(context, d.dayNumber);
 
                   return _buildCircleItem(
+                    context: context,
                     label: label,
                     topWidget: Text(
                       emoji,
@@ -120,8 +123,8 @@ class InstafeedDayFilterBar extends StatelessWidget {
                     Text(
                       context.l10n.translate('ig_posts_count',
                           args: {'count': filteredCount}),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 13.5,
                         fontWeight: FontWeight.bold,
                       ),
@@ -144,8 +147,8 @@ class InstafeedDayFilterBar extends StatelessWidget {
                             int.tryParse(selectedDay.replaceAll('day', '')) ??
                                 1,
                           ),
-                          style: const TextStyle(
-                            color: AppColors.mintGreen,
+                          style: TextStyle(
+                            color: context.forest.accentText,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -161,9 +164,9 @@ class InstafeedDayFilterBar extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
+                    color: context.forest.feedSurface,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white12),
+                    border: Border.all(color: context.forest.divider12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -186,16 +189,16 @@ class InstafeedDayFilterBar extends StatelessWidget {
                                 Icons.view_agenda_rounded,
                                 size: 14,
                                 color: !isGridView
-                                    ? AppColors.mintGreen
-                                    : Colors.white54,
+                                    ? context.forest.accentText
+                                    : context.forest.text54,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'List',
                                 style: TextStyle(
                                   color: !isGridView
-                                      ? AppColors.mintGreen
-                                      : Colors.white54,
+                                      ? context.forest.accentText
+                                      : context.forest.text54,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -222,16 +225,16 @@ class InstafeedDayFilterBar extends StatelessWidget {
                                 Icons.grid_view_rounded,
                                 size: 14,
                                 color: isGridView
-                                    ? AppColors.mintGreen
-                                    : Colors.white54,
+                                    ? context.forest.accentText
+                                    : context.forest.text54,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Grid',
                                 style: TextStyle(
                                   color: isGridView
-                                      ? AppColors.mintGreen
-                                      : Colors.white54,
+                                      ? context.forest.accentText
+                                      : context.forest.text54,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -254,12 +257,12 @@ class InstafeedDayFilterBar extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
+                      color: context.forest.feedSurface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: activeFilterSummary != 'all'
                             ? AppColors.mintGreen.withValues(alpha: 0.5)
-                            : Colors.white12,
+                            : context.forest.divider12,
                       ),
                     ),
                     child: Row(
@@ -268,16 +271,16 @@ class InstafeedDayFilterBar extends StatelessWidget {
                           Icons.tune_rounded,
                           size: 14,
                           color: activeFilterSummary != 'all'
-                              ? AppColors.mintGreen
-                              : Colors.white70,
+                              ? context.forest.accentText
+                              : context.forest.text70,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'ফিল্টার',
                           style: TextStyle(
                             color: activeFilterSummary != 'all'
-                                ? AppColors.mintGreen
-                                : Colors.white70,
+                                ? context.forest.accentText
+                                : context.forest.text70,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -295,6 +298,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
   }
 
   Widget _buildCircleItem({
+    required BuildContext context,
     required String label,
     required Widget topWidget,
     required int count,
@@ -321,11 +325,11 @@ class InstafeedDayFilterBar extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: isSelected
                         ? AppColors.mintGreen.withValues(alpha: 0.15)
-                        : const Color(0xFF1E1E1E),
+                        : context.forest.feedSurface,
                     border: Border.all(
                       color: isSelected
                           ? AppColors.mintGreen
-                          : Colors.white.withValues(alpha: 0.15),
+                          : context.forest.text.withValues(alpha: 0.15),
                       width: isSelected ? 2.2 : 1.2,
                     ),
                     boxShadow: isSelected
@@ -352,17 +356,19 @@ class InstafeedDayFilterBar extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.mintGreen
-                            : const Color(0xFF2A2A2A),
+                            : context.forest.feedRaised,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? Colors.black : Colors.white24,
+                          color:
+                              isSelected ? Colors.black : context.forest.text24,
                           width: 0.8,
                         ),
                       ),
                       child: Text(
                         '$count',
                         style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white,
+                          color:
+                              isSelected ? Colors.black : context.forest.text,
                           fontSize: 9.5,
                           fontWeight: FontWeight.bold,
                         ),
@@ -375,7 +381,9 @@ class InstafeedDayFilterBar extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? AppColors.mintGreen : Colors.white70,
+                color: isSelected
+                    ? context.forest.accentText
+                    : context.forest.text70,
                 fontSize: 10.5,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),

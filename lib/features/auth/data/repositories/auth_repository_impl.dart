@@ -15,6 +15,7 @@ import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
+import '../../../tour_group/data/channel_message_cache.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 import '../google_sign_in_failure.dart';
 
@@ -68,6 +69,9 @@ class AuthRepositoryImpl implements IAuthRepository {
     } catch (e, stack) {
       logWarning('AuthRepository: failed to clear local cache', e, stack);
     }
+    // The channel messages kept on this device go too, so the next person to use
+    // the phone does not see them.
+    await ChannelMessageCache(encryption: _encryptionService).clearAll();
   }
 
   Future<T> _withRetry<T>(

@@ -80,8 +80,33 @@ void main() {
       expect(first, CallIceConfig.stunOnly);
       expect(first.toString(), isNot(contains('username')));
 
-      await ice.current();
+      // Each attempt asks twice before giving up on TURN.
       expect(fetches, 2);
+      await ice.current();
+      expect(fetches, 4);
+    });
+
+    test('keeps the last credential while it still works if a refresh fails',
+        () async {
+      var now = DateTime.fromMillisecondsSinceEpoch(0);
+      var serverUp = true;
+      final expiresAt = secondsFrom(now.add(const Duration(hours: 1)));
+      final ice = CallIceConfig(
+        fetch: () async =>
+            serverUp ? serverBody(expiresAtSeconds: expiresAt) : null,
+        clock: () => now,
+      );
+
+      final first = await ice.current();
+      serverUp = false;
+
+      // In the refresh window, but before expiry: the old credential is kept.
+      now = now.add(const Duration(minutes: 55));
+      expect(await ice.current(), first);
+
+      // After expiry it is no use any more.
+      now = now.add(const Duration(minutes: 10));
+      expect(await ice.current(), CallIceConfig.stunOnly);
     });
 
     test('callers that arrive together share one request', () async {

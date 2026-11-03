@@ -1,0 +1,82 @@
+name: Native builds
+
+# Compiles the Android (Kotlin) and iOS (Swift) code. CI used to build only the
+# web and the Dart checks, so a native compile error could reach main unseen.
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'ios/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/native_build.yml'
+  workflow_dispatch:
+
+env:
+  # Kept in step with flutter_ci.yml.
+  FLUTTER_VERSION: '3.47.9'
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Android: a debug APK. Debug builds need no signing key, so this runs on
+  # every PR. A release build still needs android/key.properties.
+  # ─────────────────────────────────────────────────────────────────────────────
+  build_android:
+    name: Build Android (debug APK)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # android/gradle.properties sets org.gradle.java.home to a Windows JDK path,
+      # which makes Gradle fail on Linux before it compiles anything. The runner
+      # supplies JDK 17 through JAVA_HOME, so the line is dropped for this job
+      # only. The file itself is unchanged for the maintainer's Windows builds.
+      - name: Drop the Windows-only JDK path for this job
+        run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # iOS: no-codesign build on macOS, which costs several times the Linux minutes.
+  # It stays off until the repository variable IOS_BUILD_ENABLED is set to
+  # 'true', because the iOS project has no Podfile in git yet (see the PR notes).
+  # ─────────────────────────────────────────────────────────────────────────────
+  build_ios:
+    name: Build iOS (no codesign)
+    if: vars.IOS_BUILD_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS (debug, no codesign)
+        run: flutter build ios --debug --no-codesign

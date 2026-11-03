@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../theme/theme_context.dart';
 
 /// Shimmer skeleton placeholders shown while content loads.
@@ -29,7 +30,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final Color highlight = context.isDarkMode
-        ? Colors.white.withValues(alpha: 0.10)
+        ? context.forest.text.withValues(alpha: 0.10)
         : Colors.black.withValues(alpha: 0.06);
     return AnimatedBuilder(
       animation: _controller,
@@ -89,7 +90,7 @@ class SkeletonBox extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: context.isDarkMode
-            ? Colors.white.withValues(alpha: 0.055)
+            ? context.forest.text.withValues(alpha: 0.055)
             : Colors.black.withValues(alpha: 0.05),
         shape: circle ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circle ? null : BorderRadius.circular(radius),

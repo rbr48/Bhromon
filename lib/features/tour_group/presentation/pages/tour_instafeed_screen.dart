@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,8 +16,10 @@ import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/fund_analytics.dart';
+import '../../domain/services/post_view_queue.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
+import '../widgets/instafeed/feed_resume.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
 import '../widgets/instafeed/instafeed_day_filter_bar.dart';
@@ -73,11 +76,31 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   final ValueNotifier<String?> _playingVideoNotifier =
       ValueNotifier<String?>(null);
   bool _isScrolling = false;
+  // Views of the posts the feed has built, sent in a few writes once scrolling
+  // settles, rather than one write per post during a fling.
+  final PostViewQueue _viewQueue = PostViewQueue();
+  Timer? _viewFlushTimer;
   bool _settleScheduled = false;
   TourGroup? _tourGroup;
   StreamSubscription<TourGroup?>? _groupSub;
   StreamSubscription<List<BusSeat>>? _seatSub;
   StreamSubscription<List<HotelRoom>>? _roomSub;
+
+  // Where the feed was left, per tour: its view and the post at the top. The
+  // screen is rebuilt when you leave it, so the map lives on the class.
+  static final Map<String, FeedResume> _resumeByTour = {};
+  // Enough frames to reach a post that is far down, or on a page not loaded yet.
+  static const int _restoreAttempts = 240;
+  final ScrollController _feedScroll = ScrollController();
+  // Each post's row, and each post's place in the list shown, so the feed can
+  // find the post at the top of the screen.
+  final Map<String, GlobalKey> _rowKeys = {};
+  Map<String, int> _visibleIndex = {};
+  bool _feedRestoreScheduled = false;
+  bool _feedRestored = false;
+  bool _feedCaptureScheduled = false;
+  double? _restoredTo;
+  int? _resumeLoadRequestedFor;
 
   // Logistics cache (Seat & Room mappings: email -> seat/room)
   final Map<String, String> _seatMap = {};
@@ -111,6 +134,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _highlightsStream = _repository.watchHighlights(widget.tourId);
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
+    _restoreFeedView();
+    _feedScroll.addListener(_rememberFeedOffset);
     _watchGroup();
     _loadMyRole();
     _loadFeedPrefs();
@@ -126,9 +151,154 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _groupSub?.cancel();
     _seatSub?.cancel();
     _roomSub?.cancel();
+    _saveFeedView();
+    // Views noted so far are sent now, so leaving the feed does not lose them.
+    unawaited(_sendPendingViews());
+    _feedScroll.removeListener(_rememberFeedOffset);
+    _feedScroll.dispose();
     unawaited(_feed.close());
     _playingVideoNotifier.dispose();
     super.dispose();
+  }
+
+  /// Notes where the feed is as the user scrolls, so it outlives a rebuild.
+  void _rememberFeedOffset() => _scheduleFeedCapture();
+
+  FeedResume _resumeFor(String tourId) =>
+      _resumeByTour.putIfAbsent(tourId, () => FeedResume());
+
+  GlobalKey _rowKeyFor(String postId) =>
+      _rowKeys.putIfAbsent(postId, () => GlobalKey());
+
+  /// Puts the filters, sort and layout back to how the feed was left.
+  void _restoreFeedView() {
+    final resume = _resumeByTour[widget.tourId];
+    if (resume == null) return;
+    _selectedDayFilter = resume.day;
+    _selectedMediaFilter = resume.media;
+    _activeHashtagFilter = resume.hashtag;
+    _selectedLandmarkFilter = resume.landmark;
+    _selectedBookmarkCollection = resume.bookmarkCollection;
+    _sortByPopular = resume.popular;
+    _isGridView = resume.grid;
+  }
+
+  /// Writes the current filters, sort and layout into the tour's record.
+  void _saveFeedView() {
+    final resume = _resumeFor(widget.tourId);
+    resume
+      ..day = _selectedDayFilter
+      ..media = _selectedMediaFilter
+      ..hashtag = _activeHashtagFilter
+      ..landmark = _selectedLandmarkFilter
+      ..bookmarkCollection = _selectedBookmarkCollection
+      ..popular = _sortByPopular
+      ..grid = _isGridView;
+  }
+
+  /// Notes the post at the top of the screen once the frame has laid out. It is
+  /// taken again after each change, so it is current when the user leaves, even
+  /// after new posts have pushed the content down.
+  void _scheduleFeedCapture() {
+    if (_feedCaptureScheduled) return;
+    _feedCaptureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _feedCaptureScheduled = false;
+      if (mounted) _captureFeedResume();
+    });
+  }
+
+  void _captureFeedResume() {
+    // Nothing is noted while the feed is still moving to its saved place.
+    if (!_feedRestored) return;
+    _saveFeedView();
+    if (_isGridView || !_feedScroll.hasClients) return;
+    final resume = _resumeFor(widget.tourId);
+    final pixels = _feedScroll.position.pixels;
+    final rows = layoutFeedRows(_rowKeys, _visibleIndex);
+    final anchor = pickFeedAnchor(rows, pixels);
+    resume
+      ..pixels = pixels
+      ..anchorPostId = anchor?.postId
+      ..anchorDy = anchor?.dy ?? 0;
+    final average = averageFeedRowHeight(rows);
+    if (average > 0) resume.averageHeight = average;
+  }
+
+  /// Returns the feed to the offset it was left at, once the posts have laid
+  /// out far enough. Gives up after a while, and leaves the feed where it is if
+  /// the user has already scrolled.
+  void _restoreFeedOffset(int attemptsLeft) {
+    _feedRestoreScheduled = false;
+    if (_feedRestored || !mounted) return;
+    final resume = _resumeByTour[widget.tourId];
+    if (resume == null || resume.grid) {
+      _feedRestored = true;
+      return;
+    }
+    if (!_feedScroll.hasClients) {
+      if (attemptsLeft > 0) {
+        _scheduleFeedRestore(attemptsLeft - 1);
+      } else {
+        _feedRestored = true;
+      }
+      return;
+    }
+    final position = _feedScroll.position;
+    final anchorId = resume.anchorPostId;
+    final index = anchorId == null ? null : _visibleIndex[anchorId];
+    final anchorKey = anchorId == null ? null : _rowKeys[anchorId];
+    final anchorBox = anchorKey == null ? null : laidOutRow(anchorKey);
+    final rows = layoutFeedRows(_rowKeys, _visibleIndex);
+    final restoredTo = _restoredTo;
+    final plan = planFeedRestore(
+      resume: resume,
+      userScrolled: feedMovedByUser(
+        pixels: position.pixels,
+        restoredTo: restoredTo,
+        maxExtent: position.maxScrollExtent,
+      ),
+      anchorListed: index != null,
+      hasMore: _feed.hasMore,
+      loadRequested: _resumeLoadRequestedFor == _latestPosts.length,
+      anchorTop: anchorBox == null ? null : feedRowTop(anchorBox),
+      estimate: index == null
+          ? null
+          : estimateFeedOffset(
+              rows: rows,
+              index: index,
+              averageHeight: resume.averageHeight > 0
+                  ? resume.averageHeight
+                  : averageFeedRowHeight(rows),
+            ),
+      outOfTime: attemptsLeft <= 0,
+      maxExtent: position.maxScrollExtent,
+    );
+    if (plan.loadMore) {
+      _resumeLoadRequestedFor = _latestPosts.length;
+      _loadMorePosts();
+    }
+    final target = plan.jumpTo;
+    if (target != null) {
+      _restoredTo = target;
+      position.jumpTo(target);
+    }
+    if (plan.finished) {
+      _feedRestored = true;
+      // The video to play is chosen where the feed is, so choose it again here.
+      _scheduleSettle();
+      return;
+    }
+    _scheduleFeedRestore(attemptsLeft - 1);
+  }
+
+  void _scheduleFeedRestore(int attemptsLeft) {
+    if (_feedRestoreScheduled) return;
+    _feedRestoreScheduled = true;
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _restoreFeedOffset(attemptsLeft));
+    // The restore may wait on a frame that nothing else asks for.
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   /// Keeps the tour's details live, so a trip change by an admin shows at once
@@ -154,7 +324,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       _bookmarkedPostIds = Set<String>.from(prefs.bookmarks);
       _seenStoryIds = Set<String>.from(prefs.seenStories);
       _bookmarkCollections = Map<String, List<String>>.from(prefs.collections);
+      // A collection deleted since the view was left is not restored.
+      if (_selectedBookmarkCollection != null &&
+          !_bookmarkCollections.containsKey(_selectedBookmarkCollection)) {
+        _selectedBookmarkCollection = null;
+      }
     });
+    // A restored Saved view reads its posts from these bookmarks.
+    if (_selectedMediaFilter == 'saved') unawaited(_refreshSavedPosts());
   }
 
   void _saveFeedPrefs() {
@@ -216,7 +393,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: context.forest.feedSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -234,7 +411,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: context.forest.text24,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -242,8 +419,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   const SizedBox(height: 12),
                   Text(
                     context.l10n.translate('ig_collections_title'),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -251,9 +428,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   const SizedBox(height: 6),
                   Text(
                     context.l10n.translate('ig_collections_hint'),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style:
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
-                  const Divider(color: Colors.white12, height: 20),
+                  Divider(color: context.forest.divider12, height: 20),
 
                   // Existing Collections
                   if (_bookmarkCollections.isEmpty)
@@ -261,8 +439,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
                         context.l10n.translate('ig_no_folders'),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 13),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 13),
                       ),
                     )
                   else
@@ -278,12 +456,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           return CheckboxListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(collectionName,
-                                style: const TextStyle(color: Colors.white)),
+                                style: TextStyle(color: context.forest.text)),
                             subtitle: Text(
                                 context.l10n.translate('ig_saved_count',
                                     args: {'count': list.length}),
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 11)),
+                                style: TextStyle(
+                                    color: context.forest.text54,
+                                    fontSize: 11)),
                             value: isIncluded,
                             activeColor: AppColors.mintGreen,
                             onChanged: (bool? val) {
@@ -312,14 +491,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       Expanded(
                         child: TextField(
                           controller: newCollectionCtrl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.forest.text),
                           decoration: InputDecoration(
                             hintText:
                                 context.l10n.translate('ig_folder_name_hint'),
-                            hintStyle: const TextStyle(
-                                color: Colors.white54, fontSize: 13),
+                            hintStyle: TextStyle(
+                                color: context.forest.text54, fontSize: 13),
                             filled: true,
-                            fillColor: const Color(0xFF2C2C2C),
+                            fillColor: context.forest.feedField,
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 10),
                             border: OutlineInputBorder(
@@ -382,7 +561,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF141414),
+      backgroundColor: context.forest.feedDeep,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -398,7 +577,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: context.forest.text24,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -406,13 +585,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.explore_rounded,
-                      color: AppColors.mintGreen, size: 24),
+                  Icon(Icons.explore_rounded,
+                      color: context.forest.accentText, size: 24),
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.translate('ig_landmark_map'),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -430,7 +609,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 ],
               ),
             ),
-            const Divider(color: Colors.white12, height: 1),
+            Divider(color: context.forest.divider12, height: 1),
             Expanded(
               child: ListView.builder(
                 controller: scrollController,
@@ -449,13 +628,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   return Card(
                     color: isSelected
                         ? AppColors.mintGreen.withValues(alpha: 0.15)
-                        : const Color(0xFF1E1E1E),
+                        : context.forest.feedSurface,
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
-                        color:
-                            isSelected ? AppColors.mintGreen : Colors.white10,
+                        color: isSelected
+                            ? AppColors.mintGreen
+                            : context.forest.divider10,
                       ),
                     ),
                     child: ListTile(
@@ -472,18 +652,18 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                   fit: BoxFit.cover,
                                   placeholder:
                                       Container(color: Colors.grey.shade900),
-                                  errorWidget: const Icon(Icons.location_on,
-                                      color: AppColors.mintGreen),
+                                  errorWidget: Icon(Icons.location_on,
+                                      color: context.forest.accentText),
                                 )
-                              : const Center(
+                              : Center(
                                   child: Icon(Icons.location_on,
-                                      color: AppColors.mintGreen)),
+                                      color: context.forest.accentText)),
                         ),
                       ),
                       title: Text(
                         spotName,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.forest.text,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -491,13 +671,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       subtitle: Text(
                         context.l10n.translate('ig_memories_count',
                             args: {'count': spotPosts.length}),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 12),
                       ),
                       trailing: FilledButton.tonal(
                         style: FilledButton.styleFrom(
-                          backgroundColor:
-                              isSelected ? AppColors.mintGreen : Colors.white12,
+                          backgroundColor: isSelected
+                              ? AppColors.mintGreen
+                              : context.forest.divider12,
                         ),
                         onPressed: () {
                           setState(() {
@@ -511,7 +692,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                               ? context.l10n.translate('ig_selected')
                               : context.l10n.translate('ig_feed_filter'),
                           style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white,
+                            color:
+                                isSelected ? Colors.black : context.forest.text,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -548,6 +730,33 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         _activeHashtagFilter,
       ].join('|');
 
+  /// Notes a post the feed has built. Its view is recorded later, in a few
+  /// writes, rather than one write each time a card is built.
+  void _noteViewed(TourPostItem post) {
+    final email = _repository.currentEmail;
+    if (email.isEmpty) return;
+    _viewQueue.note(post.id, alreadyViewed: post.isViewedBy(email));
+    if (!_viewQueue.isEmpty) {
+      _viewFlushTimer ??= Timer(const Duration(seconds: 1), _onViewFlushTimer);
+    }
+  }
+
+  /// Sends the waiting views once the feed has been still for a moment. While it
+  /// is moving, they wait for the scroll to end.
+  void _onViewFlushTimer() {
+    _viewFlushTimer = null;
+    if (!_isScrolling) unawaited(_sendPendingViews());
+  }
+
+  /// Records the waiting views, in as few writes as the list allows.
+  Future<void> _sendPendingViews() async {
+    _viewFlushTimer?.cancel();
+    _viewFlushTimer = null;
+    final ids = _viewQueue.take();
+    if (ids.isEmpty) return;
+    await _repository.recordPostViews(tourId: widget.tourId, postIds: ids);
+  }
+
   /// Handles the feed's own scrolling. A scroll releases the playing video, and
   /// the one nearest the middle is picked when it stops. Nested scrollers, such
   /// as the stories tray, are ignored.
@@ -559,6 +768,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     } else if (n is ScrollEndNotification) {
       _isScrolling = false;
       _scheduleSettle();
+      if (!_viewQueue.isEmpty) unawaited(_sendPendingViews());
     }
     return false;
   }
@@ -746,13 +956,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: context.forest.feedSurface,
         title: Row(
           children: [
-            const Icon(Icons.receipt_long, color: AppColors.mintGreen),
+            Icon(Icons.receipt_long, color: context.forest.accentText),
             const SizedBox(width: 8),
             Text(context.l10n.translate('ig_add_to_ledger'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
           ],
         ),
         content: Column(
@@ -760,10 +970,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           children: [
             TextField(
               controller: titleCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: context.l10n.translate('ig_expense_details'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: context.forest.text70),
               ),
             ),
             const SizedBox(height: 12),
@@ -771,22 +981,22 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               controller: amountCtrl,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: context.l10n.translate('ig_amount_bdt'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: context.forest.text70),
                 prefixText: '৳ ',
-                prefixStyle: const TextStyle(color: AppColors.mintGreen),
+                prefixStyle: TextStyle(color: context.forest.accentText),
               ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: selectedCategory,
-              dropdownColor: const Color(0xFF222222),
-              style: const TextStyle(color: Colors.white),
+              dropdownColor: context.forest.feedRaised,
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: context.l10n.translate('ig_category'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: context.forest.text70),
               ),
               items: [
                 // An older post's category stays selectable even if it is not
@@ -867,16 +1077,16 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     final isLive = _tourGroup?.isLiveAt(DateTime.now()) ?? false;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A120D),
+      backgroundColor: context.forest.feedPage,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A120D),
+        backgroundColor: context.forest.feedPage,
         elevation: 0,
         title: Row(
           children: [
             Text(
               context.l10n.translate('hub_nav_moments'),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontWeight: FontWeight.bold,
                 fontSize: 19,
                 letterSpacing: 0.5,
@@ -909,7 +1119,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           IconButton(
             icon: Icon(
               _isGridView ? Icons.view_agenda_outlined : Icons.grid_on_outlined,
-              color: Colors.white70,
+              color: context.forest.text70,
             ),
             tooltip: _isGridView
                 ? context.l10n.translate('ig_feed_view')
@@ -922,8 +1132,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             icon: Icon(
               Icons.explore_outlined,
               color: _selectedLandmarkFilter != null
-                  ? AppColors.mintGreen
-                  : Colors.white70,
+                  ? context.forest.accentText
+                  : context.forest.text70,
             ),
             tooltip: context.l10n.translate('ig_spot_map'),
             onPressed: () => _showLandmarkMapModal(context, _latestPosts),
@@ -933,7 +1143,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           IconButton(
             icon: Icon(
               _sortByPopular ? Icons.trending_up : Icons.access_time_rounded,
-              color: _sortByPopular ? AppColors.mintGreen : Colors.white70,
+              color: _sortByPopular
+                  ? context.forest.accentText
+                  : context.forest.text70,
             ),
             tooltip: _sortByPopular
                 ? context.l10n.translate('ig_popular_posts')
@@ -942,8 +1154,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           ),
 
           IconButton(
-            icon: const Icon(Icons.add_photo_alternate_rounded,
-                color: AppColors.mintGreen),
+            icon: Icon(Icons.add_photo_alternate_rounded,
+                color: context.forest.accentText),
             tooltip: context.l10n.translate('ig_share_new_post'),
             onPressed: () => _showCreatePostModal(context),
           ),
@@ -1060,9 +1272,20 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
 
+                      _visibleIndex = {
+                        for (var i = 0; i < filteredPosts.length; i++)
+                          filteredPosts[i].id: i,
+                      };
+                      _rowKeys.removeWhere(
+                          (id, _) => !_visibleIndex.containsKey(id));
+                      if (!_feedRestored && filteredPosts.isNotEmpty) {
+                        _scheduleFeedRestore(_restoreAttempts);
+                      }
+                      _scheduleFeedCapture();
                       return NotificationListener<ScrollNotification>(
                         onNotification: _onFeedScroll,
                         child: CustomScrollView(
+                          controller: _feedScroll,
                           // ignore: deprecated_member_use
                           cacheExtent: 1600.0,
                           physics: const AlwaysScrollableScrollPhysics(
@@ -1108,18 +1331,20 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                           Chip(
                                             backgroundColor: AppColors.mintGreen
                                                 .withValues(alpha: 0.2),
-                                            avatar: const Icon(Icons.tag,
+                                            avatar: Icon(Icons.tag,
                                                 size: 16,
-                                                color: AppColors.mintGreen),
+                                                color:
+                                                    context.forest.accentText),
                                             label: Text(
                                               _activeHashtagFilter!,
-                                              style: const TextStyle(
-                                                  color: AppColors.mintGreen,
+                                              style: TextStyle(
+                                                  color:
+                                                      context.forest.accentText,
                                                   fontWeight: FontWeight.bold),
                                             ),
-                                            deleteIcon: const Icon(Icons.close,
+                                            deleteIcon: Icon(Icons.close,
                                                 size: 16,
-                                                color: Colors.white70),
+                                                color: context.forest.text70),
                                             onDeleted: () => setState(() =>
                                                 _activeHashtagFilter = null),
                                           ),
@@ -1145,19 +1370,20 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                           Chip(
                                             backgroundColor: AppColors.mintGreen
                                                 .withValues(alpha: 0.2),
-                                            avatar: const Icon(
-                                                Icons.location_on,
+                                            avatar: Icon(Icons.location_on,
                                                 size: 16,
-                                                color: AppColors.mintGreen),
+                                                color:
+                                                    context.forest.accentText),
                                             label: Text(
                                               _selectedLandmarkFilter!,
-                                              style: const TextStyle(
-                                                  color: AppColors.mintGreen,
+                                              style: TextStyle(
+                                                  color:
+                                                      context.forest.accentText,
                                                   fontWeight: FontWeight.bold),
                                             ),
-                                            deleteIcon: const Icon(Icons.close,
+                                            deleteIcon: Icon(Icons.close,
                                                 size: 16,
-                                                color: Colors.white70),
+                                                color: context.forest.text70),
                                             onDeleted: () => setState(() =>
                                                 _selectedLandmarkFilter = null),
                                           ),
@@ -1219,13 +1445,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                       null,
                                               selectedColor: Colors.amber,
                                               backgroundColor:
-                                                  const Color(0xFF1E1E1E),
+                                                  context.forest.feedSurface,
                                               labelStyle: TextStyle(
                                                 color:
                                                     _selectedBookmarkCollection ==
                                                             null
                                                         ? Colors.black
-                                                        : Colors.white70,
+                                                        : context.forest.text70,
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                               ),
@@ -1247,11 +1473,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                 selected: isSel,
                                                 selectedColor: Colors.amber,
                                                 backgroundColor:
-                                                    const Color(0xFF1E1E1E),
+                                                    context.forest.feedSurface,
                                                 labelStyle: TextStyle(
                                                   color: isSel
                                                       ? Colors.black
-                                                      : Colors.white70,
+                                                      : context.forest.text70,
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -1328,11 +1554,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                       );
                                     }
                                     final post = filteredPosts[index];
+                                    _noteViewed(post);
                                     final isVideo = post.videoUrl != null;
                                     // Only a video card listens for the video that plays, so a
                                     // change rebuilds one card, not the whole feed.
                                     Widget cardFor(String? playingId) {
                                       return RepaintBoundary(
+                                        key: _rowKeyFor(post.id),
                                         child: Center(
                                           child: ConstrainedBox(
                                             constraints: const BoxConstraints(
@@ -1493,7 +1721,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               width: 1,
-              color: Colors.white12,
+              color: context.forest.divider12,
             ),
             ...highlights.map((h) => _buildFacebookHighlightCard(h)),
           ],
@@ -1530,15 +1758,16 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 TourSafeNetworkImage(
                   imageUrl: latestStory.mediaUrl,
                   fit: BoxFit.cover,
-                  placeholder: Container(color: const Color(0xFF1E1E1E)),
+                  placeholder: Container(color: context.forest.feedSurface),
                   errorWidget: Container(
-                    color: const Color(0xFF1E1E1E),
-                    child: const Icon(Icons.person, color: Colors.white38),
+                    color: context.forest.feedSurface,
+                    child: Icon(Icons.person, color: context.forest.text38),
                   ),
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white12, width: 0.5),
+                    border:
+                        Border.all(color: context.forest.divider12, width: 0.5),
                     borderRadius: BorderRadius.circular(12),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -1635,9 +1864,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF242526),
+              color: context.forest.feedBubble,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white12, width: 0.5),
+              border: Border.all(color: context.forest.divider12, width: 0.5),
             ),
             child: Stack(
               children: [
@@ -1647,12 +1876,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       flex: 65,
                       child: Container(
                         width: double.infinity,
-                        color: const Color(0xFF1B1B1B),
+                        color: context.forest.feedPlaceholder,
                         child: Center(
                           child: Icon(
                             Icons.person,
                             size: 40,
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: context.forest.text.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -1661,15 +1890,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       flex: 35,
                       child: Container(
                         width: double.infinity,
-                        color: const Color(0xFF242526),
+                        color: context.forest.feedBubble,
                         padding:
                             const EdgeInsets.only(top: 18, left: 4, right: 4),
                         child: Text(
                           context.l10n.translate('ig_create_story'),
                           textAlign: TextAlign.center,
                           maxLines: 2,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: context.forest.text,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1687,8 +1916,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.mintGreen,
-                      border:
-                          Border.all(color: const Color(0xFF242526), width: 3),
+                      border: Border.all(
+                          color: context.forest.feedBubble, width: 3),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black38,
@@ -1737,12 +1966,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               TourSafeNetworkImage(
                 imageUrl: story.mediaUrl,
                 fit: BoxFit.cover,
-                placeholder: Container(color: const Color(0xFF1E1E1E)),
+                placeholder: Container(color: context.forest.feedSurface),
               ),
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12, width: 0.5),
+                  border:
+                      Border.all(color: context.forest.divider12, width: 0.5),
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -1871,21 +2101,21 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               TourSafeNetworkImage(
                 imageUrl: highlight.coverUrl,
                 fit: BoxFit.cover,
-                placeholder: Container(color: const Color(0xFF1E1E1E)),
+                placeholder: Container(color: context.forest.feedSurface),
                 errorWidget: Container(
-                  color: const Color(0xFF1E1E1E),
+                  color: context.forest.feedSurface,
                   child: const Icon(Icons.star, color: Colors.amber),
                 ),
               )
             else
               Container(
-                color: const Color(0xFF1E1E1E),
+                color: context.forest.feedSurface,
                 child: const Icon(Icons.star, color: Colors.amber, size: 32),
               ),
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12, width: 0.5),
+                border: Border.all(color: context.forest.divider12, width: 0.5),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -1943,7 +2173,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   Future<void> _showFilterSheet() {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: context.forest.feedSurface,
       showDragHandle: true,
       builder: (_) => StatefulBuilder(
         builder: (context, setSheetState) => InstafeedFilterSheet(
@@ -1971,12 +2201,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 48, color: Colors.white54),
+            Icon(Icons.cloud_off_rounded,
+                size: 48, color: context.forest.text54),
             const SizedBox(height: 12),
             Text(
               context.l10n.translate('ig_posts_load_failed'),
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
+              style: TextStyle(color: context.forest.text70, fontSize: 16),
             ),
             const SizedBox(height: 12),
             FilledButton.tonal(
@@ -2008,14 +2238,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.filter_alt_off_outlined,
-                      size: 54, color: Colors.white54),
+                  Icon(Icons.filter_alt_off_outlined,
+                      size: 54, color: context.forest.text54),
                   const SizedBox(height: 16),
                   Text(
                     context.l10n.translate('ig_no_posts_filter'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 17,
                         fontWeight: FontWeight.bold),
                   ),
@@ -2039,13 +2269,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.photo_library_outlined,
-                size: 54, color: Colors.white54),
+            Icon(Icons.photo_library_outlined,
+                size: 54, color: context.forest.text54),
             const SizedBox(height: 16),
             Text(
               context.l10n.translate('ig_no_posts'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 17,
                   fontWeight: FontWeight.bold),
             ),
@@ -2053,7 +2283,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             Text(
               context.l10n.translate('ig_share_first_photo'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: TextStyle(color: context.forest.text54, fontSize: 13),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(

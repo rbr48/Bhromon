@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -147,12 +148,13 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                       IconButton(
                         icon: const Icon(Icons.share_outlined,
                             color: Colors.white),
-                        tooltip: 'Share',
+                        tooltip: context.l10n.translate('chat_media_share'),
                         onPressed: () {
                           SharePlus.instance.share(
                             ShareParams(
                               text: widget.mediaUrl,
-                              subject: 'Media from Bhromon Chat',
+                              subject: context.l10n
+                                  .translate('chat_media_share_subject'),
                             ),
                           );
                         },

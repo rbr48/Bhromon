@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
@@ -56,7 +57,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       shape: _sheetShape,
       builder: (_) => _RequestSheet(
         repository: _repository,
@@ -71,7 +72,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       shape: _sheetShape,
       builder: (_) => _RequestDetailSheet(
         repository: _repository,
@@ -86,7 +87,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
         final saved = await showModalBottomSheet<bool>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: _card,
+          backgroundColor: context.forest.surfaceFor(_card),
           shape: _sheetShape,
           builder: (_) => _RequestSheet(
             repository: _repository,
@@ -106,12 +107,12 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('society_requests_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -145,7 +146,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
                     'progress': l10n.number(counts.inProgress),
                     'done': l10n.number(counts.resolved),
                   }),
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(color: context.forest.text70, fontSize: 13),
                 ),
               ),
               _filters(l10n),
@@ -170,7 +171,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
               style: const TextStyle(fontSize: 12)),
           selected: _filter == null,
           selectedColor: AppColors.mintGreen,
-          backgroundColor: const Color(0xFF1E3326),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF1E3326)),
           onSelected: (_) => setState(() => _filter = null),
         ),
         for (final status in ServiceRequestStatus.values)
@@ -179,7 +180,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
                 style: const TextStyle(fontSize: 12)),
             selected: _filter == status,
             selectedColor: AppColors.mintGreen,
-            backgroundColor: const Color(0xFF1E3326),
+            backgroundColor: context.forest.surfaceFor(const Color(0xFF1E3326)),
             onSelected: (_) => setState(() => _filter = status),
           ),
       ],
@@ -191,22 +192,22 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
         ? request.createdByEmail
         : request.createdByName;
     return Card(
-      color: _card,
+      color: context.forest.surfaceFor(_card),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         onTap: () => _open(request),
-        leading:
-            Icon(_categoryIcon(request.category), color: AppColors.mintGreen),
+        leading: Icon(_categoryIcon(request.category),
+            color: context.forest.accentText),
         title: Text(request.title,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                color: context.forest.text, fontWeight: FontWeight.w600)),
         subtitle: Text(
           [
             _categoryLabel(l10n, request.category),
             if (who.isNotEmpty)
               l10n.translate('society_request_by', args: {'name': who}),
           ].join(' · '),
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          style: TextStyle(color: context.forest.text54, fontSize: 12),
         ),
         trailing: _StatusChip(
           label: _statusLabel(l10n, request.status),
@@ -220,7 +221,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
         padding: const EdgeInsets.all(24),
         child: Text(text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white60)),
+            style: TextStyle(color: context.forest.text60)),
       );
 }
 
@@ -395,20 +396,20 @@ class _RequestSheetState extends State<_RequestSheet> {
                   editing
                       ? l10n.translate('society_request_edit')
                       : l10n.translate('society_request_new'),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
               const SizedBox(height: 12),
               TextField(
                 controller: _title,
                 maxLength: kServiceRequestTitleMax,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('society_request_title_label'),
                   hintText: l10n.translate('society_request_title_hint'),
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  labelStyle: const TextStyle(color: Colors.white70),
+                  hintStyle: TextStyle(color: context.forest.text38),
+                  labelStyle: TextStyle(color: context.forest.text70),
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -417,18 +418,18 @@ class _RequestSheetState extends State<_RequestSheet> {
                 controller: _details,
                 maxLines: 3,
                 maxLength: kServiceRequestDetailsMax,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('society_request_details_label'),
                   hintText: l10n.translate('society_request_details_hint'),
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  labelStyle: const TextStyle(color: Colors.white70),
+                  hintStyle: TextStyle(color: context.forest.text38),
+                  labelStyle: TextStyle(color: context.forest.text70),
                   border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               Text(l10n.translate('society_request_category_label'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -440,7 +441,8 @@ class _RequestSheetState extends State<_RequestSheet> {
                           style: const TextStyle(fontSize: 12)),
                       selected: _category == category,
                       selectedColor: AppColors.mintGreen,
-                      backgroundColor: const Color(0xFF1E3326),
+                      backgroundColor:
+                          context.forest.surfaceFor(const Color(0xFF1E3326)),
                       onSelected: (_) => setState(() => _category = category),
                     ),
                 ],
@@ -448,8 +450,9 @@ class _RequestSheetState extends State<_RequestSheet> {
               if (_error != null) ...[
                 const SizedBox(height: 10),
                 Text(_error!,
-                    style:
-                        const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent),
+                        fontSize: 12)),
               ],
               const SizedBox(height: 14),
               FilledButton(
@@ -533,11 +536,11 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
+        backgroundColor: context.forest.surfaceFor(_card),
         title: Text(l10n.translate('society_request_delete'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('society_request_delete_body'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -593,12 +596,12 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
               Row(
                 children: [
                   Icon(_categoryIcon(request.category),
-                      color: AppColors.mintGreen),
+                      color: context.forest.accentText),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(request.title,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 16)),
                   ),
@@ -611,7 +614,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                   if (who.isNotEmpty)
                     l10n.translate('society_request_by', args: {'name': who}),
                 ].join(' · '),
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: context.forest.text54, fontSize: 12),
               ),
               const SizedBox(height: 10),
               _StatusChip(
@@ -621,24 +624,25 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
               if (request.details.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(request.details,
-                    style: const TextStyle(color: Colors.white70, height: 1.4)),
+                    style:
+                        TextStyle(color: context.forest.text70, height: 1.4)),
               ],
               if (!widget.isAdmin && request.adminNote.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 Text(l10n.translate('society_request_note_label'),
-                    style: const TextStyle(
-                        color: AppColors.mintGreen,
+                    style: TextStyle(
+                        color: context.forest.accentText,
                         fontWeight: FontWeight.bold,
                         fontSize: 12)),
                 const SizedBox(height: 4),
                 Text(request.adminNote,
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
               ],
               if (widget.isAdmin) ...[
                 const SizedBox(height: 16),
                 Text(l10n.translate('society_request_status'),
                     style:
-                        const TextStyle(color: Colors.white70, fontSize: 12)),
+                        TextStyle(color: context.forest.text70, fontSize: 12)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
@@ -650,7 +654,8 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                             style: const TextStyle(fontSize: 12)),
                         selected: _status == status,
                         selectedColor: AppColors.mintGreen,
-                        backgroundColor: const Color(0xFF1E3326),
+                        backgroundColor:
+                            context.forest.surfaceFor(const Color(0xFF1E3326)),
                         onSelected: _busy
                             ? null
                             : (_) => setState(() => _status = status),
@@ -662,12 +667,12 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                   controller: _note,
                   maxLines: 2,
                   maxLength: kServiceRequestNoteMax,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('society_request_note_label'),
                     hintText: l10n.translate('society_request_note_hint'),
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintStyle: TextStyle(color: context.forest.text38),
+                    labelStyle: TextStyle(color: context.forest.text70),
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -684,25 +689,27 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
               if (_error != null) ...[
                 const SizedBox(height: 10),
                 Text(_error!,
-                    style:
-                        const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent),
+                        fontSize: 12)),
               ],
               if (canEdit)
                 TextButton.icon(
                   onPressed:
                       _busy ? null : () => Navigator.pop(context, 'edit'),
-                  icon: const Icon(Icons.edit_rounded,
-                      color: AppColors.mintGreen),
+                  icon: Icon(Icons.edit_rounded,
+                      color: context.forest.accentText),
                   label: Text(l10n.translate('society_request_edit'),
-                      style: const TextStyle(color: AppColors.mintGreen)),
+                      style: TextStyle(color: context.forest.accentText)),
                 ),
               if (canDelete)
                 TextButton.icon(
                   onPressed: _busy ? null : _remove,
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: Colors.redAccent),
+                  icon: Icon(Icons.delete_outline_rounded,
+                      color: context.forest.readable(Colors.redAccent)),
                   label: Text(l10n.translate('society_request_delete'),
-                      style: const TextStyle(color: Colors.redAccent)),
+                      style: TextStyle(
+                          color: context.forest.readable(Colors.redAccent))),
                 ),
             ],
           ),

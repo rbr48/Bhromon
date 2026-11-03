@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/data/call_notification_service.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../../app/router.dart';
+import '../../../core/localization/locale_controller.dart';
 import '../../../core/services/push_device.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../chat/data/vps_chat_service.dart';
@@ -42,6 +44,8 @@ class FcmService {
   /// Global lifecycle hook: listens to user auth state, automatically registers
   /// FCM tokens on login, and cleans up tokens on sign-out.
   void initGlobalListener() {
+    LocaleController.instance.removeListener(_onLanguageChanged);
+    LocaleController.instance.addListener(_onLanguageChanged);
     _authSub?.cancel();
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
@@ -373,15 +377,19 @@ class FcmService {
   /// single document is also kept for the functions that read one token.
   Future<void> _saveToken(String uid, String token) async {
     final platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
+    // The server writes push text in this language, so the device says which it is.
+    final language = LocaleController.instance.locale.languageCode;
     final Map<String, dynamic> data = {
       'token': token,
       'platform': platform,
+      'language': language,
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
     // 1. Immediately register with VPS for instant server-direct push notifications
     try {
-      await VpsChatService().registerDeviceToken(token, platform: platform);
+      await VpsChatService()
+          .registerDeviceToken(token, platform: platform, language: language);
     } catch (e, st) {
       logWarning('[FcmService] VPS token registration error', e, st);
     }
@@ -396,11 +404,36 @@ class FcmService {
     }
   }
 
+  /// The push text follows the app's language, so the device record is written
+  /// again when the language changes.
+  void _onLanguageChanged() {
+    final uid = _initializedUid;
+    if (uid == null) return;
+    unawaited(_refreshDeviceLanguage(uid));
+  }
+
+  Future<void> _refreshDeviceLanguage(String uid) async {
+    try {
+      // ignore: deprecated_member_use
+      final token = await _messaging.getToken();
+      if (token != null) await _saveToken(uid, token);
+    } catch (e, st) {
+      logWarning('[FcmService] Could not update the push language', e, st);
+    }
+  }
+
   /// Show a rich local notification when the app is in the foreground.
   Future<void> _handleForeground(RemoteMessage message) async {
     // A call is shown by CallNotificationService, from the relay and the call
     // document. A banner here would ring the same call twice.
     if (message.data['action'] == 'call') return;
+    // A call stopped ringing (answered elsewhere, declined or ended). It has no
+    // text of its own and only closes the ring.
+    if (message.data['action'] == 'end_call') {
+      CallNotificationService()
+          .dismissRingingCall((message.data['callId'] as String?) ?? '');
+      return;
+    }
 
     final n = message.notification;
     final title = n?.title ?? (message.data['title'] as String?) ?? 'Bhromon';

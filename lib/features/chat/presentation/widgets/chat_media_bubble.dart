@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -48,8 +49,7 @@ class ChatMediaBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isUploading = uploadProgress != null && uploadProgress! < 1.0;
-    final Color bubbleColor =
-        isMe ? const Color(0xFF005C4B) : const Color(0xFF202C33);
+    final Color bubbleColor = isMe ? context.chat.outgoing : context.chat.panel;
 
     final double screenWidth = MediaQuery.of(context).size.width;
     final double maxBubbleWidth =
@@ -91,6 +91,7 @@ class ChatMediaBubble extends StatelessWidget {
           children: [
             // ── Media content ──────────────────────────────────────────────
             _buildMediaContent(
+              context,
               isUploading,
               context.decodeWidth(maxBubbleWidth),
               maxBubbleWidth,
@@ -126,6 +127,7 @@ class ChatMediaBubble extends StatelessWidget {
   }
 
   Widget _buildMediaContent(
+    BuildContext context,
     bool isUploading,
     int decodeWidth,
     double maxBubbleWidth,
@@ -137,9 +139,10 @@ class ChatMediaBubble extends StatelessWidget {
         return Container(
           width: maxBubbleWidth,
           height: 200,
-          color: const Color(0xFF1A2730),
-          child: const Center(
-            child: Icon(Icons.movie_outlined, color: Colors.white54, size: 48),
+          color: context.chat.recessed,
+          child: Center(
+            child: Icon(Icons.movie_outlined,
+                color: context.chat.text54, size: 48),
           ),
         );
       }
@@ -170,9 +173,10 @@ class ChatMediaBubble extends StatelessWidget {
       return Container(
         width: maxBubbleWidth,
         height: 200,
-        color: const Color(0xFF1A2730),
-        child: const Center(
-          child: Icon(Icons.image_outlined, color: Colors.white38, size: 40),
+        color: context.chat.recessed,
+        child: Center(
+          child:
+              Icon(Icons.image_outlined, color: context.chat.text38, size: 40),
         ),
       );
     }
@@ -184,9 +188,10 @@ class ChatMediaBubble extends StatelessWidget {
         return Container(
           width: maxBubbleWidth,
           height: 200,
-          color: const Color(0xFF1A2730),
-          child: const Center(
-            child: Icon(Icons.movie_outlined, color: Colors.white54, size: 48),
+          color: context.chat.recessed,
+          child: Center(
+            child: Icon(Icons.movie_outlined,
+                color: context.chat.text54, size: 48),
           ),
         );
       } else {
@@ -198,7 +203,7 @@ class ChatMediaBubble extends StatelessWidget {
         Widget buildPlaceholder() => Container(
               width: maxBubbleWidth,
               height: 200,
-              color: const Color(0xFF1A2730),
+              color: context.chat.recessed,
               child: const Center(
                 child: SizedBox(
                   width: 28,
@@ -214,10 +219,10 @@ class ChatMediaBubble extends StatelessWidget {
         Widget buildBrokenPlaceholder() => Container(
               width: maxBubbleWidth,
               height: 180,
-              color: const Color(0xFF1A2730),
-              child: const Center(
+              color: context.chat.recessed,
+              child: Center(
                 child: Icon(Icons.broken_image_outlined,
-                    color: Colors.white54, size: 36),
+                    color: context.chat.text54, size: 36),
               ),
             );
 
@@ -257,7 +262,7 @@ class ChatMediaBubble extends StatelessWidget {
     return Container(
       width: maxBubbleWidth,
       height: 180,
-      color: const Color(0xFF1A2730),
+      color: context.chat.recessed,
     );
   }
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/widgets/swipe_pager.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/family_task_models.dart';
@@ -31,6 +33,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
       _repository.watchMembers(widget.tourId);
   final TextEditingController _input = TextEditingController();
   FamilyTaskKind _kind = FamilyTaskKind.shopping;
+  final PageController _kindPager = PageController();
   String? _assignee;
   TourRole? _myRole;
   bool _adding = false;
@@ -52,6 +55,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
   @override
   void dispose() {
     _input.dispose();
+    _kindPager.dispose();
     super.dispose();
   }
 
@@ -121,11 +125,11 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
+        backgroundColor: context.forest.surfaceFor(_card),
         title: Text(l10n.translate('ft_delete_title'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('ft_delete_body'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -156,13 +160,13 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
       builder: (context, memberSnap) {
         final members = memberSnap.data ?? const <TourMember>[];
         return Scaffold(
-          backgroundColor: _bg,
+          backgroundColor: context.forest.surfaceFor(_bg),
           appBar: AppBar(
             title: Text(l10n.translate('ft_title'),
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            backgroundColor: _card,
-            foregroundColor: Colors.white,
+            backgroundColor: context.forest.surfaceFor(_card),
+            foregroundColor: context.forest.text,
             elevation: 0,
           ),
           body: Column(
@@ -183,7 +187,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                     if (tasks.isEmpty) {
                       return _message(l10n.translate('ft_empty'));
                     }
-                    return _list(tasks, members, l10n);
+                    return _kindPages(tasks, members, l10n);
                   },
                 ),
               ),
@@ -195,17 +199,38 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
     );
   }
 
-  Widget _list(
+  /// Two pages, shopping and to-dos, from the same stream. A swipe sets the kind a
+  /// new item gets, and the kind chips move the pages. Only the shown page takes
+  /// taps.
+  Widget _kindPages(
       List<FamilyTask> tasks, List<TourMember> members, AppLocalizations l10n) {
+    const kinds = [FamilyTaskKind.shopping, FamilyTaskKind.todo];
+    final index = kinds.indexOf(_kind);
+    return SwipePager(
+      controller: _kindPager,
+      count: kinds.length,
+      selectedIndex: index,
+      onSettled: (i) => setState(() => _kind = kinds[i]),
+      itemBuilder: (context, i) => IgnorePointer(
+        ignoring: i != index,
+        child: _list(tasks, kinds[i], members, l10n),
+      ),
+    );
+  }
+
+  Widget _list(List<FamilyTask> tasks, FamilyTaskKind kind,
+      List<TourMember> members, AppLocalizations l10n) {
+    final sections = familyTaskPage(tasks, kind);
+    if (sections.isEmpty) return _message(l10n.translate('ft_empty'));
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       children: [
-        for (final group in familyTaskSections(tasks)) ...[
+        for (final group in sections) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
             child: Text(l10n.translate('ft_section_${group.section.name}'),
-                style: const TextStyle(
-                    color: AppColors.mintGreen,
+                style: TextStyle(
+                    color: context.forest.accentText,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
           ),
@@ -227,7 +252,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
     ];
     final editable = _canEdit(task);
     return Card(
-      color: _card,
+      color: context.forest.surfaceFor(_card),
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         leading: Checkbox(
@@ -237,16 +262,16 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
         ),
         title: Text(task.title,
             style: TextStyle(
-                color: task.done ? Colors.white38 : Colors.white,
+                color: task.done ? context.forest.text38 : context.forest.text,
                 decoration: task.done ? TextDecoration.lineThrough : null)),
         subtitle: notes.isEmpty
             ? null
             : Text(notes.join(' · '),
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
         trailing: editable
             ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded,
-                    color: Colors.white54, size: 20),
+                icon: Icon(Icons.more_vert_rounded,
+                    color: context.forest.text54, size: 20),
                 onSelected: (v) => v == 'edit' ? _rename(task) : _remove(task),
                 itemBuilder: (_) => [
                   PopupMenuItem(
@@ -268,7 +293,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        color: _card,
+        color: context.forest.surfaceFor(_card),
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -281,7 +306,8 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                       style: const TextStyle(fontSize: 12)),
                   selected: _kind == FamilyTaskKind.shopping,
                   selectedColor: AppColors.mintGreen,
-                  backgroundColor: const Color(0xFF1E3326),
+                  backgroundColor:
+                      context.forest.surfaceFor(const Color(0xFF1E3326)),
                   onSelected: (_) =>
                       setState(() => _kind = FamilyTaskKind.shopping),
                 ),
@@ -291,7 +317,8 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                       style: const TextStyle(fontSize: 12)),
                   selected: _kind == FamilyTaskKind.todo,
                   selectedColor: AppColors.mintGreen,
-                  backgroundColor: const Color(0xFF1E3326),
+                  backgroundColor:
+                      context.forest.surfaceFor(const Color(0xFF1E3326)),
                   onSelected: (_) =>
                       setState(() => _kind = FamilyTaskKind.todo),
                 ),
@@ -324,10 +351,10 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                   child: TextField(
                     controller: _input,
                     maxLength: 120,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.forest.text),
                     decoration: InputDecoration(
                       hintText: l10n.translate('ft_add_hint'),
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: TextStyle(color: context.forest.text38),
                       counterText: '',
                     ),
                     onSubmitted: (_) => _add(),
@@ -336,8 +363,8 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                 IconButton(
                   tooltip: l10n.translate('ft_add_hint'),
                   onPressed: _adding ? null : _add,
-                  icon: const Icon(Icons.send_rounded,
-                      color: AppColors.mintGreen),
+                  icon: Icon(Icons.send_rounded,
+                      color: context.forest.accentText),
                 ),
               ],
             ),
@@ -352,7 +379,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
           padding: const EdgeInsets.all(32),
           child: Text(text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+              style: TextStyle(color: context.forest.text70, fontSize: 14)),
         ),
       );
 
@@ -389,14 +416,14 @@ class _RenamePromptState extends State<_RenamePrompt> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       title: Text(l10n.translate('ft_rename_title'),
-          style: const TextStyle(color: Colors.white)),
+          style: TextStyle(color: context.forest.text)),
       content: TextField(
         controller: _controller,
         autofocus: true,
         maxLength: 120,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: context.forest.text),
       ),
       actions: [
         TextButton(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -85,14 +86,14 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
     );
     if (widget.embedded) return body;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(
           context.l10n.translate('hol_title'),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.forest.text,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -136,7 +137,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       children: [
         Text(
           l10n.translate('hol_shift_label'),
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: TextStyle(color: context.forest.text60, fontSize: 12),
         ),
         const SizedBox(height: 6),
         SegmentedButton<int>(
@@ -295,7 +296,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
             ),
             const SizedBox(width: 6),
             Text(label,
-                style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                style: TextStyle(color: context.forest.text60, fontSize: 11)),
           ],
         );
     return Wrap(
@@ -303,7 +304,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       runSpacing: 6,
       children: [
         swatch(kHolidayRed, l10n.translate('hol_legend_holiday')),
-        swatch(Colors.white38, l10n.translate('hol_legend_weekend')),
+        swatch(context.forest.text38, l10n.translate('hol_legend_weekend')),
         swatch(AppColors.mintGreen, l10n.translate('hol_legend_trip'),
             outline: true),
       ],

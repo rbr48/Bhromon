@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'instafeed_zoomable_media.dart';
 import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
@@ -144,7 +145,7 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                           decoration: BoxDecoration(
                             color: isActive
                                 ? AppColors.mintGreen
-                                : Colors.white.withValues(alpha: 0.45),
+                                : context.forest.text.withValues(alpha: 0.45),
                             borderRadius: BorderRadius.circular(3),
                           ),
                         );
