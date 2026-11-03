@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:local_auth/local_auth.dart';
 import 'dart:math' as math;
@@ -40,6 +39,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   String _activeTab = 'All'; // 'All' | 'Unread'
   String _searchQuery = '';
   int _bottomNavIndex = 0; // 0 = Chats, 1 = Calls
+  late final PageController _pageController;
   List<Map<String, dynamic>> _offlineConversations = [];
   Set<String> _lockedChatIds = {};
   // The chat documents from the latest snapshot, so a locked chat can show
@@ -63,6 +63,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _bottomNavIndex);
     _loadOfflineConversations();
     _listenToVpsConversations();
     // The battery guidance waits until the list is on screen, so it never
@@ -74,6 +75,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _vpsConvSub?.cancel();
     _myToursSub?.cancel();
     super.dispose();
@@ -258,11 +260,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ),
           ),
           actions: [
-            IconButton(
-              icon: Icon(Icons.camera_alt_outlined, color: context.chat.text),
-              tooltip: context.l10n.translate('chats_quick_camera'),
-              onPressed: _openQuickCamera,
-            ),
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: context.chat.text),
               color: context.chat.bar,
@@ -321,8 +318,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 960),
-            child: _bottomNavIndex == 0
-                ? Column(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                if (_bottomNavIndex != index) {
+                  setState(() => _bottomNavIndex = index);
+                }
+              },
+              children: [
+                Column(
                     children: [
                       // WhatsApp styled Search Bar
                       Container(
@@ -521,6 +525,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 }
 
                                 return ListView.separated(
+                                  key: const PageStorageKey<String>(
+                                      'chats_list_scroll'),
                                   separatorBuilder: (context, index) => Divider(
                                     color: context.chat.bar,
                                     height: 1,
@@ -594,8 +600,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         ),
                       ),
                     ],
-                  )
-                : _buildCallsView(currentUid),
+                  ),
+                _buildCallsView(currentUid),
+              ],
+            ),
           ),
         ),
         bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
@@ -851,6 +859,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }
 
         return ListView.separated(
+          key: const PageStorageKey<String>('calls_list_scroll'),
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
           itemCount: docs.length,
           separatorBuilder: (_, __) => Divider(
@@ -948,23 +957,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
-  Future<void> _openQuickCamera() async {
-    try {
-      final picker = ImagePicker();
-      final photo = await picker.pickImage(source: ImageSource.camera);
-      if (photo != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.translate('chats_camera_saved')),
-            backgroundColor: const Color(0xFF00A884),
-          ),
-        );
-      }
-    } catch (e) {
-      logError('Quick camera error: $e');
-    }
-  }
-
   /// One of the two sections at the top: Chats or Calls.
   /// The text of a section tab. The tab's id stays English.
   String _sectionLabel(BuildContext context, String id) => context.l10n
@@ -986,7 +978,18 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final selected = _bottomNavIndex == index;
     final color = selected ? const Color(0xFF00A884) : context.chat.text60;
     return InkWell(
-      onTap: () => setState(() => _bottomNavIndex = index),
+      onTap: () {
+        if (_bottomNavIndex != index) {
+          setState(() => _bottomNavIndex = index);
+          if (_pageController.hasClients) {
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      },
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(

@@ -5,6 +5,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_composer.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_message_bubble.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_sheets.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/groups/member_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,6 +70,7 @@ ChannelMessageBubble _bubble(
   VoidCallback? onLongPress,
   ValueChanged<int>? onVote,
   bool isMine = false,
+  String? senderPhotoUrl,
 }) {
   return ChannelMessageBubble(
     message: message,
@@ -76,6 +78,7 @@ ChannelMessageBubble _bubble(
     mentionsMe: false,
     myEmail: 'me@x.com',
     badge: 'Seat B2',
+    senderPhotoUrl: senderPhotoUrl,
     onLongPress: onLongPress ?? () {},
     onReact: (_) {},
     onVote: onVote ?? (_) {},
@@ -92,6 +95,30 @@ void main() {
       expect(find.text('Rahim'), findsOneWidget);
       expect(find.text('Seat B2'), findsOneWidget);
       expect(find.textContaining('Gate 2'), findsOneWidget);
+    });
+
+    testWidgets("shows the sender's photo beside the name", (tester) async {
+      await _pump(
+        tester,
+        _bubble(_message(), senderPhotoUrl: 'https://media.example/rahim.jpg'),
+      );
+      final avatar = tester.widget<MemberAvatar>(find.byType(MemberAvatar));
+      expect(avatar.photoUrl, 'https://media.example/rahim.jpg');
+      expect(find.text('Rahim'), findsOneWidget,
+          reason: 'the name is read once, from the text beside the avatar');
+    });
+
+    testWidgets('shows the initial when the sender has no photo',
+        (tester) async {
+      await _pump(tester, _bubble(_message()));
+      final avatar = tester.widget<MemberAvatar>(find.byType(MemberAvatar));
+      expect(avatar.photoUrl, isNull);
+      expect(find.text('R'), findsOneWidget);
+    });
+
+    testWidgets('an own message shows no sender avatar', (tester) async {
+      await _pump(tester, _bubble(_message(), isMine: true));
+      expect(find.byType(MemberAvatar), findsNothing);
     });
 
     testWidgets('shows document bubble when message has file attachments',
@@ -433,6 +460,69 @@ void main() {
 
       expect(calledMember?.email, 'alice@x.com');
       expect(calledIsVideo, isFalse);
+    });
+
+    testWidgets(
+        'each member shows a photo when they have one, and an initial when not',
+        (tester) async {
+      final members = [
+        TourMember(
+          tourId: 't1',
+          email: 'me@x.com',
+          displayName: 'Me User',
+          role: TourRole.owner,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 1, 1),
+          uid: 'uid_me',
+        ),
+        TourMember(
+          tourId: 't1',
+          email: 'alice@x.com',
+          displayName: 'Alice Explorer',
+          role: TourRole.member,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 1, 2),
+          uid: 'uid_alice',
+          photoUrl: 'https://media.example/alice.jpg',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en'), Locale('bn')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () => showChannelMembersSheet(
+                  ctx,
+                  members: members,
+                  myEmail: 'me@x.com',
+                  badgeFor: (_) => '',
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final photos = [
+        for (final avatar
+            in tester.widgetList<MemberAvatar>(find.byType(MemberAvatar)))
+          avatar.photoUrl,
+      ];
+      expect(photos, [null, 'https://media.example/alice.jpg']);
+      expect(find.text('M'), findsOneWidget,
+          reason: 'a member without a photo shows the initial');
     });
   });
 

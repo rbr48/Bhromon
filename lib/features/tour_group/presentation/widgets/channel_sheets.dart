@@ -5,6 +5,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../domain/models/tour_group.dart';
+import 'groups/member_avatar.dart';
 
 const Color _sheetColor = Color(0xFF1F2C34);
 
@@ -390,12 +391,10 @@ Future<void> showChannelMembersSheet(
             ),
             for (final m in members)
               ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.midGreen,
-                  child: Text(
-                    m.displayName.isEmpty ? '?' : m.displayName.substring(0, 1),
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                leading: MemberAvatar(
+                  name: m.displayName,
+                  photoUrl: m.photoUrl,
+                  size: 40,
                 ),
                 title: Text(
                   m.email == myEmail

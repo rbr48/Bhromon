@@ -403,6 +403,15 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
   }
 
+  /// The sender's photo link, from the members list this screen already has.
+  String? _photoFor(String email) {
+    final me = normalizeEmail(email);
+    for (final member in _members) {
+      if (normalizeEmail(member.email) == me) return member.photoUrl;
+    }
+    return null;
+  }
+
   String _badgeFor(String email) {
     final l10n = context.l10n;
     final me = normalizeEmail(email);
@@ -1629,6 +1638,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 mentionsMe: m.mentionsEmail(_me),
                 myEmail: _me,
                 badge: _badgeFor(m.senderEmail),
+                senderPhotoUrl: _photoFor(m.senderEmail),
                 onLongPress: () => _onMessageLongPress(channel, m),
                 onReact: (emoji) => _react(channel, m, emoji),
                 onVote: (option) => _vote(channel, m, option),
