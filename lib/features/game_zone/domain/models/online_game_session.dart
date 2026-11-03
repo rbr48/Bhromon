@@ -45,6 +45,38 @@ enum OnlineGameType {
         return 'carrom';
     }
   }
+
+  String localizedLabel(bool isBn) {
+    if (!isBn) return label;
+    switch (this) {
+      case OnlineGameType.chess:
+        return 'দাবা';
+      case OnlineGameType.ludo:
+        return 'লুডু এক্সপ্রেস';
+      case OnlineGameType.card29:
+        return 'কার্ড ২৯';
+      case OnlineGameType.teenPatti:
+        return 'তিন পাত্তি';
+      case OnlineGameType.carrom:
+        return 'ক্যারম';
+    }
+  }
+
+  String localizedDescription(bool isBn) {
+    if (!isBn) return description;
+    switch (this) {
+      case OnlineGameType.chess:
+        return '২ জনের ক্লাসিক কৌশলগত দাবা লড়াই';
+      case OnlineGameType.ludo:
+        return '৪ গুটির রোমাঞ্চকর বোর্ড রেস';
+      case OnlineGameType.card29:
+        return 'চার জনের পার্টনারশিপ ট্রিক-টেকিং কার্ড খেলা';
+      case OnlineGameType.teenPatti:
+        return '৩ কার্ড পোকার, চাল ও সাইডশো';
+      case OnlineGameType.carrom:
+        return 'রিয়েল-টাইম কয়েন ও কুইন পকেট করার খেলা';
+    }
+  }
 }
 
 /// Lifecycle status of an online game table.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
@@ -13,6 +14,8 @@ class GameAnalyticsView extends StatefulWidget {
   final PlayerGameAnalytics? analytics;
   final String? activeTourId;
   final TourGroupRepository? tourRepository;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
   const GameAnalyticsView({
     super.key,
@@ -20,6 +23,8 @@ class GameAnalyticsView extends StatefulWidget {
     this.analytics,
     this.activeTourId,
     this.tourRepository,
+    this.shrinkWrap = false,
+    this.physics,
   });
 
   @override
@@ -99,34 +104,46 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
   }
 
   Widget _buildScaffoldContent(PlayerGameAnalytics analytics) {
+    final switcher = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: _selectedSubTab == 0
+          ? _buildStatsTab(analytics)
+          : _selectedSubTab == 1
+              ? _buildHistoryTab(analytics)
+              : _buildLeaderboardTab(),
+    );
+
+    if (widget.shrinkWrap) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSubTabSelector(),
+          switcher,
+        ],
+      );
+    }
+
     return Column(
       children: [
         _buildSubTabSelector(),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: _selectedSubTab == 0
-                ? _buildStatsTab(analytics)
-                : _selectedSubTab == 1
-                    ? _buildHistoryTab(analytics)
-                    : _buildLeaderboardTab(),
-          ),
-        ),
+        Expanded(child: switcher),
       ],
     );
   }
 
   Widget _buildSubTabSelector() {
+    final isBn = Localizations.localeOf(context).languageCode == 'bn';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: context.forest.surfaceFor(const Color(0xFF14241B)),
       child: Row(
         children: [
-          _buildPill(0, 'পরিসংখ্যান (Stats)', Icons.insights_rounded),
+          _buildPill(0, isBn ? 'পরিসংখ্যান' : 'Stats', Icons.insights_rounded),
           const SizedBox(width: 8),
-          _buildPill(1, 'ম্যাচ হিস্টোরি (History)', Icons.history_rounded),
+          _buildPill(1, isBn ? 'ম্যাচ হিস্ট্রি' : 'History', Icons.history_rounded),
           const SizedBox(width: 8),
-          _buildPill(2, 'গ্রুপ লিডারবোর্ড', Icons.leaderboard_rounded),
+          _buildPill(2, isBn ? 'লিডারবোর্ড' : 'Leaderboard', Icons.leaderboard_rounded),
         ],
       ),
     );
@@ -191,9 +208,13 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
   // ── TAB 0: STATS BREAKDOWN ──────────────────────────────────────────────
 
   Widget _buildStatsTab(PlayerGameAnalytics analytics) {
+    final isBn = Localizations.localeOf(context).languageCode == 'bn';
     return SingleChildScrollView(
       key: const ValueKey(0),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      physics: widget.shrinkWrap
+          ? const NeverScrollableScrollPhysics()
+          : (widget.physics ?? const AlwaysScrollableScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, widget.shrinkWrap ? 16 : 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -205,7 +226,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   color: context.forest.accentText, size: 20),
               const SizedBox(width: 8),
               Text(
-                'খেলা ভিত্তিক পরিসংখ্যান (Game Breakdown)',
+                isBn ? 'খেলা ভিত্তিক পরিসংখ্যান' : 'Game Breakdown',
                 style: TextStyle(
                   color: context.forest.text,
                   fontSize: 16,
@@ -226,6 +247,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
   }
 
   Widget _buildOverviewCard(PlayerGameAnalytics analytics) {
+    final isBn = Localizations.localeOf(context).languageCode == 'bn';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -271,7 +293,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        analytics.playerTitle,
+                        analytics.localizedPlayerTitle(isBn),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -280,8 +302,12 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       ),
                       Text(
                         analytics.favoriteGame != null
-                            ? 'পছন্দের খেলা: ${analytics.favoriteGame!.label}'
-                            : 'সকল খেলার সার্বিক ট্রফি',
+                            ? (isBn
+                                ? 'পছন্দের খেলা: ${analytics.favoriteGame!.localizedLabel(isBn)}'
+                                : 'Favorite Game: ${analytics.favoriteGame!.label}')
+                            : (isBn
+                                ? 'সকল খেলার সার্বিক ট্রফি'
+                                : 'All games overall trophy'),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -301,7 +327,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       color: AppColors.mintGreen.withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  '${analytics.overallWinRate.toStringAsFixed(0)}% Win',
+                  isBn
+                      ? '${analytics.overallWinRate.toStringAsFixed(0)}% জয়'
+                      : '${analytics.overallWinRate.toStringAsFixed(0)}% Win',
                   style: const TextStyle(
                     color: AppColors.mintGreen,
                     fontWeight: FontWeight.bold,
@@ -318,19 +346,25 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildMetricItem(
-                label: 'মোট ম্যাচ',
-                value: '${analytics.totalMatches}',
+                label: isBn ? 'মোট ম্যাচ' : 'Matches',
+                value: isBn
+                    ? context.l10n.number(analytics.totalMatches)
+                    : '${analytics.totalMatches}',
                 icon: Icons.games_rounded,
               ),
               _buildMetricItem(
-                label: 'মোট জয়',
-                value: '${analytics.totalWins}',
+                label: isBn ? 'মোট জয়' : 'Wins',
+                value: isBn
+                    ? context.l10n.number(analytics.totalWins)
+                    : '${analytics.totalWins}',
                 icon: Icons.emoji_events_rounded,
                 color: Colors.amber,
               ),
               _buildMetricItem(
-                label: 'সেরা স্ট্রিক',
-                value: '${analytics.bestOverallStreak}',
+                label: isBn ? 'সেরা স্ট্রিক' : 'Best Streak',
+                value: isBn
+                    ? context.l10n.number(analytics.bestOverallStreak)
+                    : '${analytics.bestOverallStreak}',
                 icon: Icons.local_fire_department_rounded,
                 color: Colors.orangeAccent,
               ),
@@ -368,6 +402,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
   }
 
   Widget _buildGameStatCard(GameStatItem stat) {
+    final isBn = Localizations.localeOf(context).languageCode == 'bn';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -395,7 +430,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      stat.gameType.label,
+                      stat.gameType.localizedLabel(isBn),
                       style: TextStyle(
                         color: context.forest.text,
                         fontSize: 15,
@@ -403,7 +438,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       ),
                     ),
                     Text(
-                      'র‍্যাংক: ${stat.rankBadge}',
+                      isBn
+                          ? 'র‍্যাংক: ${stat.localizedRankBadge(isBn)}'
+                          : 'Rank: ${stat.rankBadge}',
                       style:
                           TextStyle(color: context.forest.text54, fontSize: 11),
                     ),
@@ -414,7 +451,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${stat.matchesWon} / ${stat.matchesPlayed} জয়',
+                    isBn
+                        ? '${context.l10n.number(stat.matchesWon)} / ${context.l10n.number(stat.matchesPlayed)} জয়'
+                        : '${stat.matchesWon} / ${stat.matchesPlayed} Won',
                     style: TextStyle(
                       color: context.forest.text,
                       fontSize: 13,
@@ -422,7 +461,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     ),
                   ),
                   Text(
-                    '${stat.winRate.toStringAsFixed(0)}% উইন রেট',
+                    isBn
+                        ? '${stat.winRate.toStringAsFixed(0)}% জয়ের হার'
+                        : '${stat.winRate.toStringAsFixed(0)}% Win Rate',
                     style: TextStyle(
                       color: context.forest.accentText,
                       fontSize: 11,
@@ -474,6 +515,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
   // ── TAB 1: MATCH HISTORY ────────────────────────────────────────────────
 
   Widget _buildHistoryTab(PlayerGameAnalytics analytics) {
+    final isBn = Localizations.localeOf(context).languageCode == 'bn';
     if (analytics.recentMatches.isEmpty) {
       return Center(
         key: const ValueKey(1),
@@ -489,7 +531,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               ),
               const SizedBox(height: 16),
               Text(
-                'কোনো ম্যাচ হিস্টোরি পাওয়া যায়নি',
+                isBn
+                    ? 'কোনো ম্যাচ হিস্ট্রি পাওয়া যায়নি'
+                    : 'No match history found',
                 style: TextStyle(
                   color: context.forest.text,
                   fontSize: 16,
@@ -498,7 +542,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Game Zone এ অনলাইন টেবিল অথবা অফলাইন আর্কেড খেললে আপনার সাম্প্রতিক ম্যাচের বিবরণ এখানে জমা হবে।',
+                isBn
+                    ? 'Game Zone এ অনলাইন টেবিল অথবা অফলাইন আর্কেড খেললে আপনার সাম্প্রতিক ম্যাচের বিবরণ এখানে জমা হবে।'
+                    : 'Play online tables or offline arcade games to see match history here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: context.forest.text.withValues(alpha: 0.6),
@@ -514,7 +560,11 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
 
     return ListView.builder(
       key: const ValueKey(1),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      physics: widget.shrinkWrap
+          ? const NeverScrollableScrollPhysics()
+          : (widget.physics ?? const AlwaysScrollableScrollPhysics()),
+      shrinkWrap: widget.shrinkWrap,
+      padding: EdgeInsets.fromLTRB(16, 12, 16, widget.shrinkWrap ? 16 : 80),
       itemCount: analytics.recentMatches.length,
       itemBuilder: (context, index) {
         final record = analytics.recentMatches[index];
@@ -557,7 +607,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                     Row(
                       children: [
                         Text(
-                          record.gameType.label,
+                          record.gameType.localizedLabel(isBn),
                           style: TextStyle(
                             color: context.forest.text,
                             fontSize: 14,
@@ -575,7 +625,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            isWon ? 'WON' : 'LOST',
+                            isBn
+                                ? (isWon ? 'জয়' : 'পরাজয়')
+                                : (isWon ? 'WON' : 'LOST'),
                             style: TextStyle(
                               color: isWon
                                   ? context.forest.accentText
@@ -728,7 +780,11 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
 
     return ListView(
       key: const ValueKey(2),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      physics: widget.shrinkWrap
+          ? const NeverScrollableScrollPhysics()
+          : (widget.physics ?? const AlwaysScrollableScrollPhysics()),
+      shrinkWrap: widget.shrinkWrap,
+      padding: EdgeInsets.fromLTRB(16, 12, 16, widget.shrinkWrap ? 16 : 80),
       children: [
         // Top Champion Banner
         if (entries.isNotEmpty && entries.first.totalWins > 0)
