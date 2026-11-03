@@ -99,6 +99,18 @@ class TranslationKeys {
       'call_ongoing_text': 'In a call with {name}',
       'call_hang_up': 'Hang up',
       'call_end_and_answer': 'End & answer',
+      'battery_title': 'Keep calls ringing',
+      'battery_body':
+          'Some phones stop apps in the background, so calls may not ring. Let Bhromon run without battery limits.',
+      'battery_tip_xiaomi': 'Xiaomi: also turn on Autostart for Bhromon.',
+      'battery_tip_oppo':
+          'Oppo or Realme: allow background activity and auto-launch for Bhromon.',
+      'battery_tip_vivo':
+          'Vivo: allow high background power use and Autostart for Bhromon.',
+      'battery_tip_samsung':
+          'Samsung: set Bhromon\'s battery usage to Unrestricted.',
+      'battery_later': 'Later',
+      'battery_open_settings': 'Open settings',
       'call_waiting': 'Call waiting',
       'call_audio_output': 'Audio output',
       'call_output_speaker': 'Speaker',
@@ -499,6 +511,18 @@ class TranslationKeys {
       'call_ongoing_text': '{name}-এর সাথে কলে আছেন',
       'call_hang_up': 'কল কাটুন',
       'call_end_and_answer': 'কেটে ধরুন',
+      'battery_title': 'কল যেন বাজে তা নিশ্চিত করুন',
+      'battery_body':
+          'কিছু ফোন ব্যাকগ্রাউন্ডে অ্যাপ বন্ধ করে দেয়, তখন কল বাজে না। Bhromon-কে ব্যাটারির সীমা ছাড়া চালাতে দিন।',
+      'battery_tip_xiaomi': 'Xiaomi: Bhromon-এর জন্য Autostart-ও চালু করুন।',
+      'battery_tip_oppo':
+          'Oppo বা Realme: Bhromon-এর জন্য ব্যাকগ্রাউন্ড চালানো ও auto-launch অনুমতি দিন।',
+      'battery_tip_vivo':
+          'Vivo: Bhromon-এর জন্য ব্যাকগ্রাউন্ডে বেশি শক্তি ব্যবহার ও Autostart অনুমতি দিন।',
+      'battery_tip_samsung':
+          'Samsung: Bhromon-এর ব্যাটারি ব্যবহার Unrestricted-এ রাখুন।',
+      'battery_later': 'পরে',
+      'battery_open_settings': 'সেটিংস খুলুন',
       'call_waiting': 'কল অপেক্ষমাণ',
       'call_audio_output': 'শব্দ কোথায় শুনবেন',
       'call_output_speaker': 'স্পিকার',
