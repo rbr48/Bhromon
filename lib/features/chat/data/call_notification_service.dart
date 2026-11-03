@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
+import '../../../core/audio/call_audio_session.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/image_sizing.dart';
@@ -38,6 +39,43 @@ class IncomingCallRegistry {
     _seenAt[callId] = now;
     return true;
   }
+
+  /// Whether [callId] was claimed within [window], without claiming it.
+  bool isClaimed(String callId, DateTime now) {
+    final at = _seenAt[callId];
+    return at != null && now.difference(at) <= window;
+  }
+}
+
+/// A call the phone's call system holds as answered.
+typedef AcceptedSystemCall = ({
+  String callId,
+  String callerId,
+  String callerName,
+  String? avatarUrl,
+  bool isVideo,
+});
+
+/// The calls answered on the phone's own call screen, read from its list of
+/// calls. The phone marks a call answered the moment Accept is tapped, even
+/// when the app was closed or locked and never heard about it.
+List<AcceptedSystemCall> acceptedSystemCalls(Iterable<CallKitParams> calls) {
+  final accepted = <AcceptedSystemCall>[];
+  for (final call in calls) {
+    if (!call.isAccepted) continue;
+    final extra = call.extra ?? const <String, dynamic>{};
+    final callId = extra['callId']?.toString() ?? call.id;
+    if (callId.isEmpty) continue;
+    accepted.add((
+      callId: callId,
+      callerId: extra['callerId']?.toString() ?? '',
+      callerName:
+          extra['callerName']?.toString() ?? (call.nameCaller ?? 'Member'),
+      avatarUrl: extra['avatarUrl']?.toString() ?? call.avatar,
+      isVideo: extra['isVideo'] == true || call.type == 1,
+    ));
+  }
+  return accepted;
 }
 
 /// Top-level background callback invoked by flutter_callkit_incoming when
@@ -155,13 +193,11 @@ class CallNotificationService {
   }
 
   void _onAppLifecycleChanged(AppLifecycleState state) {
+    if (kIsWeb) return;
     if (state == AppLifecycleState.resumed) {
-      if (!kIsWeb) {
-        unawaited(checkPendingAcceptedCall());
-      }
+      unawaited(_recoverAcceptedCalls());
       return;
     }
-    if (kIsWeb) return;
     final pending = _inAppCall;
     if (pending == null || !_isCallDialogShowing) return;
     // The native screen rings from here on, so the in-app ringtone stops to
@@ -205,7 +241,7 @@ class CallNotificationService {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _startListening(user.uid);
-        unawaited(checkPendingAcceptedCall());
+        unawaited(_recoverAcceptedCalls());
       } else {
         _stopListening();
       }
@@ -213,7 +249,9 @@ class CallNotificationService {
 
     if (!kIsWeb) {
       _initCallkitEvents();
-      unawaited(checkPendingAcceptedCall());
+      // An Accept tapped while the app was closed or locked can arrive before
+      // anything here listens, so the phone's own list is checked too.
+      unawaited(_recoverAcceptedCalls());
       unawaited(_registerVoipToken());
       unawaited(ensureFullScreenIntentPermission());
       try {
@@ -287,43 +325,70 @@ class CallNotificationService {
     ));
   }
 
-  /// Checks whether a call was accepted while the app was backgrounded or locked,
-  /// and opens its call screen if it is not already being displayed.
-  Future<void> checkPendingAcceptedCall() async {
-    if (kIsWeb) return;
+  bool _recovering = false;
+
+  /// Answers a call that was accepted on the phone's call screen while the app
+  /// was not listening: a closed app opened by Accept, or a locked phone. The
+  /// phone already shows the call as answered with its timer running, so the
+  /// app answers it now; one that stopped ringing meanwhile is closed so the
+  /// phone stops showing it.
+  Future<void> _recoverAcceptedCalls() async {
+    if (kIsWeb || _recovering) return;
+    _recovering = true;
+    var opened = false;
     try {
-      final active = await FlutterCallkitIncoming.activeCalls();
-      for (final call in active) {
-        if (!call.isAccepted) continue;
-        final extra = call.extra ?? {};
-        final callId = extra['callId']?.toString() ?? call.id;
-        if (callId.isEmpty) continue;
-        if (ActiveCallControls.callId == callId ||
-            CallSignalingService.activeCallId == callId) {
+      final List<CallKitParams> calls;
+      try {
+        calls = await FlutterCallkitIncoming.activeCalls();
+      } catch (e) {
+        logInfo('[CallNotificationService] active calls unavailable: $e');
+        return;
+      }
+      for (final call in acceptedSystemCalls(calls)) {
+        final callId = call.callId;
+        if (_isHandled(callId)) {
+          opened = true;
           continue;
         }
-
+        final ringing = await CallSignalingService.isStillRinging(callId);
+        // The Accept event may have arrived while the check ran.
+        if (_isHandled(callId)) {
+          opened = true;
+          continue;
+        }
+        if (!ringing) {
+          logInfo('[CallNotificationService] accepted call $callId is over');
+          await _closeSystemCall(callId);
+          continue;
+        }
+        logInfo('[CallNotificationService] answering accepted call $callId');
+        opened = true;
         await _acceptCall(
           callId: callId,
-          callerId: extra['callerId']?.toString() ?? '',
-          callerName: extra['callerName']?.toString() ??
-              (call.nameCaller ?? 'Member'),
-          avatarUrl: extra['avatarUrl']?.toString() ?? call.avatar,
-          isVideo: extra['isVideo'] == true || call.type == 1,
+          callerId: call.callerId,
+          callerName: call.callerName,
+          avatarUrl: call.avatarUrl,
+          isVideo: call.isVideo,
           fromSystem: true,
         );
-        break;
       }
-    } catch (e, st) {
-      logWarning(
-          '[CallNotificationService] checkPendingAcceptedCall error', e, st);
+    } finally {
+      _recovering = false;
+      // Accept opens the app over the lock screen. With no call to show, the
+      // app goes back behind it.
+      if (!opened) unawaited(CallAudioSession.releaseAcceptLaunch());
     }
   }
+
+  /// Whether this app is already answering or showing [callId].
+  bool _isHandled(String callId) =>
+      CallSignalingService.activeCallId == callId ||
+      _settled.isClaimed('accept:$callId', DateTime.now());
 
   void _initCallkitEvents() {
     try {
       FlutterCallkitIncoming.acceptCallHandle((data) {
-        unawaited(checkPendingAcceptedCall());
+        unawaited(_recoverAcceptedCalls());
       });
     } catch (e, st) {
       logWarning(
@@ -893,6 +958,7 @@ class CallNotificationService {
       } else if (attempts >= 120) {
         // The app never came up. Decline so the caller is not left ringing.
         timer.cancel();
+        unawaited(CallAudioSession.releaseAcceptLaunch());
         unawaited(_declineCall(callId, callerId: callerId, isVideo: isVideo));
       }
     });
