@@ -17,6 +17,7 @@ import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/services/media_upload_service.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/widgets/swipe_step.dart';
 import '../../../../core/theme/theme_context.dart';
 import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/utils/app_logger.dart';
@@ -593,7 +594,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               // 6. Active Tab Content
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildActiveTabContent(profile, groups, isOwnProfile),
+                child: isOwnProfile
+                    ? SwipeStep(
+                        onStep: _stepTab,
+                        nextLabel: _isBn ? 'পরের ট্যাব' : 'Next tab',
+                        previousLabel: _isBn ? 'আগের ট্যাব' : 'Previous tab',
+                        child: _buildActiveTabContent(
+                            profile, groups, isOwnProfile),
+                      )
+                    : _buildActiveTabContent(profile, groups, isOwnProfile),
               ),
             ],
           ),
@@ -1331,6 +1340,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
   // Segmented Tabs
   // ---------------------------------------------------------------------------
+
+  /// The tabs a swipe moves through, in the order of the segmented row.
+  static const _tabKeys = ['tours', 'games', 'vault', 'settings'];
+
+  /// Moves to the next or previous tab. The first and last tabs stop the swipe.
+  /// Only the active tab's content is built, so a tab loads its data only while
+  /// it is shown.
+  void _stepTab(int by) {
+    final index = _tabKeys.indexOf(_activeTab);
+    if (index < 0) return;
+    final next = (index + by).clamp(0, _tabKeys.length - 1);
+    if (next == index) return;
+    setState(() => _activeTab = _tabKeys[next]);
+  }
 
   Widget _buildSegmentedTabs() {
     return Container(

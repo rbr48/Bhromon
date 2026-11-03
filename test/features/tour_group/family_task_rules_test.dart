@@ -91,4 +91,34 @@ void main() {
       expect(task.toFields()['kind'], 'todo');
     });
   });
+
+  group('familyTaskPage', () {
+    test(
+        'each page holds only its kind: open items first, then its ticked ones',
+        () {
+      final tasks = [
+        _task('1', 'Rice'),
+        _task('2', 'Mop', kind: FamilyTaskKind.todo),
+        _task('3', 'Soap', done: true),
+        _task('4', 'Bread', done: true),
+        _task('5', 'Sweep', kind: FamilyTaskKind.todo, done: true),
+      ];
+
+      final shopping = familyTaskPage(tasks, FamilyTaskKind.shopping);
+      expect(shopping.map((s) => s.section),
+          [FamilyTaskSection.shopping, FamilyTaskSection.done]);
+      expect(shopping.last.items.map((t) => t.title), ['Bread', 'Soap']);
+
+      final todo = familyTaskPage(tasks, FamilyTaskKind.todo);
+      expect(todo.map((s) => s.section),
+          [FamilyTaskSection.todo, FamilyTaskSection.done]);
+      expect(todo.last.items.map((t) => t.title), ['Sweep']);
+    });
+
+    test('an empty kind has no sections', () {
+      expect(
+          familyTaskPage([_task('1', 'Rice')], FamilyTaskKind.todo), isEmpty);
+      expect(familyTaskPage(const [], FamilyTaskKind.shopping), isEmpty);
+    });
+  });
 }
