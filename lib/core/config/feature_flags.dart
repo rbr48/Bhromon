@@ -4,4 +4,4 @@
 /// The new groups experience: the groups list (the Groups tab), the group page
 /// (`/group-hub?tourId=…`), the members sheet, and the profile's Games tab. With the
 /// flag off, the app keeps the layout it has always had.
-const bool kGroupsV2 = bool.fromEnvironment('GROUPS_V2', defaultValue: false);
+const bool kGroupsV2 = bool.fromEnvironment('GROUPS_V2', defaultValue: true);
