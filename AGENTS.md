@@ -252,7 +252,7 @@ static session while the user visits other screens, and asks before discarding a
 - **Disaster Recovery & Off-Site Backups**:
   - Nightly automated cron job at 02:30 UTC (`/root/Bhromon/deployment/db_backup.sh`).
   - Creates consistent online backups of SQLite metadata databases (`bhromon_chat.db`, `bhromon_news.db`, `bhromon_quiz.db`) from `/var/www/bhromon-media-meta`.
-  - Replicates archives to Google Drive (`rclone copy ... gdrive:Bhromon_Backups`).
+  - Replicates archives to Google Drive (`rclone copy ... gdrive:Bhromon_Backups`), except the chat database (`bhromon_chat.db`). It stays on the VPS until end-to-end encryption ships (decision D-04), and a chat restore comes from that VPS copy. The nightly job on the VPS must exclude it; the job's script is not in this repository.
   - Prunes local backup archives older than 30 days.
 
 ### H. Tour Record PDF Export & Bengali Typography

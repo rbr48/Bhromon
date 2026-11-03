@@ -57,7 +57,7 @@ Run every scenario on each profile, three times, and keep all results:
 4. Accept on a locked phone (scenario C-01 in the test plan), with the profile applied
    before the call starts.
 
-## Pass criteria (proposed, to confirm before the first run)
+## Pass criteria (confirmed by the owner; revisit after the first device-lab run)
 
 - The call connects on every run at 2% and 5% loss.
 - At 10% loss, the call connects on at least two of three runs, and the
