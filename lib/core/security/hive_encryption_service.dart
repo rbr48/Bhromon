@@ -28,10 +28,18 @@ class HiveEncryptionService {
   final FlutterSecureStorage _secureStorage;
   final String _keyName = 'hive_encryption_key';
 
-  HiveEncryptionService() : _secureStorage = const FlutterSecureStorage();
+  // On web, boxes live in IndexedDB, which cannot be copied to be probed, so they
+  // are checked with direct opens instead (see _openWeb). Tests run that path on
+  // files through `webStorage`.
+  final bool _webStorage;
+
+  HiveEncryptionService()
+      : _secureStorage = const FlutterSecureStorage(),
+        _webStorage = kIsWeb;
 
   @visibleForTesting
-  HiveEncryptionService.withStorage(this._secureStorage);
+  HiveEncryptionService.withStorage(this._secureStorage, {bool? webStorage})
+      : _webStorage = webStorage ?? kIsWeb;
 
   /// The key older versions used when secure storage failed. Only ever used
   /// to read (and migrate away from) data written that way.
@@ -176,15 +184,13 @@ class HiveEncryptionService {
   Future<Box<T>> _open<T>(String boxName) async {
     if (Hive.isBoxOpen(boxName)) return Hive.box<T>(boxName);
 
-    // On Web, Hive stores data in IndexedDB — no filesystem or migration probes exist.
-    if (kIsWeb) {
-      final key = await _deviceKey();
-      if (key == null) return _openInMemory<T>(boxName);
-      return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
-    }
-
     final key = await _deviceKey();
     if (key == null) return _openInMemory<T>(boxName);
+
+    if (_webStorage) {
+      await _finishInterruptedMigration(boxName, key);
+      return _openWeb<T>(boxName, key);
+    }
 
     await _finishInterruptedMigration(boxName, key);
 
@@ -218,6 +224,58 @@ class HiveEncryptionService {
     return box;
   }
 
+  /// Opens a box on web. Web storage cannot be copied, so the box is probed
+  /// directly: a failed open writes nothing, and the box stays as it was. The
+  /// device key is tried first, then the older keys (migrating what they read);
+  /// a box that none of them can read is never emptied or replaced, and the open
+  /// fails so the caller can see it.
+  Future<Box<T>> _openWeb<T>(String boxName, _DeviceKey key) async {
+    final marks = await Hive.openBox<dynamic>(_keyMarksBox);
+    final knownGood = marks.get(boxName) == key.fingerprint;
+    final Box<T> box;
+    if (knownGood) {
+      box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+    } else if (await _readableWith(boxName, key.cipher) != null) {
+      box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+      // Text and numbers saved before encryption were stored as they were, and
+      // open with any key. Writing them back encrypts them.
+      await box.putAll(box.toMap().cast<dynamic, T>());
+    } else {
+      final legacy = await _readableWith(boxName, _legacyFallbackCipher) ??
+          await _readableWith(boxName, null);
+      if (legacy == null) {
+        throw HiveError(
+            '[HiveEncryption] $boxName cannot be read with the device key or an older key; it is left as it is');
+      }
+      box = await _reencrypt<T>(boxName, key, legacy);
+    }
+    await marks.put(boxName, key.fingerprint);
+    return box;
+  }
+
+  /// The entries of [boxName] if they can be read with [cipher], else null. On web
+  /// nothing is copied: the box is opened directly. A box that does not exist yet
+  /// is created empty and reads as empty. Stray errors from a failed open stay in
+  /// the zone, as they do for the copy on native.
+  Future<Map<dynamic, dynamic>?> _readDirectly(
+      String boxName, HiveCipher? cipher) async {
+    final result = Completer<Map<dynamic, dynamic>?>();
+    runZonedGuarded(() async {
+      try {
+        final box = await Hive.openBox<dynamic>(boxName,
+            encryptionCipher: cipher, crashRecovery: false);
+        final entries = box.toMap();
+        await box.close();
+        if (!result.isCompleted) result.complete(entries);
+      } catch (_) {
+        if (!result.isCompleted) result.complete(null);
+      }
+    }, (_, __) {
+      if (!result.isCompleted) result.complete(null);
+    });
+    return result.future;
+  }
+
   int _probes = 0;
 
   /// Every entry of [boxName] if it can be read with [cipher] (null = no
@@ -226,6 +284,7 @@ class HiveEncryptionService {
   /// not reach the real box or the app's error reporting.
   Future<Map<dynamic, dynamic>?> _readableWith(
       String boxName, HiveCipher? cipher) async {
+    if (_webStorage) return _readDirectly(boxName, cipher);
     final source = _boxFile(boxName);
     if (source == null || !source.existsSync()) return null;
     final probe = '$boxName$_probeSuffix${_probes++}';
@@ -296,10 +355,13 @@ class HiveEncryptionService {
   Future<void> _finishInterruptedMigration(
       String boxName, _DeviceKey key) async {
     final temp = '$boxName$_migrationSuffix';
-    if (!await Hive.boxExists(temp)) return;
+    // On web, Hive.boxExists leaves a database connection open, and that connection
+    // would block the deletes below. There, a missing copy reads as empty, and an
+    // empty copy restores nothing.
+    if (!_webStorage && !await Hive.boxExists(temp)) return;
     await _resolveHome();
     final entries = await _readableWith(temp, key.cipher);
-    if (entries != null) {
+    if (entries != null && entries.isNotEmpty) {
       await Hive.deleteBoxFromDisk(boxName);
       final box =
           await Hive.openBox<dynamic>(boxName, encryptionCipher: key.cipher);
