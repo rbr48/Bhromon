@@ -241,6 +241,7 @@ class CallNotificationService {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _startListening(user.uid);
+        unawaited(_recoverAcceptedCalls());
       } else {
         _stopListening();
       }
@@ -385,6 +386,14 @@ class CallNotificationService {
       _settled.isClaimed('accept:$callId', DateTime.now());
 
   void _initCallkitEvents() {
+    try {
+      FlutterCallkitIncoming.acceptCallHandle((data) {
+        unawaited(_recoverAcceptedCalls());
+      });
+    } catch (e, st) {
+      logWarning(
+          '[CallNotificationService] Failed to set acceptCallHandle', e, st);
+    }
     _callkitSub?.cancel();
     _callkitSub = FlutterCallkitIncoming.onEvent.listen((event) async {
       if (event == null) return;
@@ -855,7 +864,19 @@ class CallNotificationService {
     bool fromSystem = false,
   }) async {
     // Native and in-app buttons can both report the same Accept.
-    if (!_settled.claim('accept:$callId', DateTime.now())) return;
+    if (!_settled.claim('accept:$callId', DateTime.now())) {
+      if (ActiveCallControls.callId != callId &&
+          CallSignalingService.activeCallId != callId) {
+        _openCall(
+          callId: callId,
+          callerId: callerId,
+          callerName: callerName,
+          avatarUrl: avatarUrl,
+          isVideo: isVideo,
+        );
+      }
+      return;
+    }
     _activeIncomingCallId = null;
     _closeInAppDialog();
     // A call answered on the phone's own screen stays in its call system until
@@ -894,6 +915,12 @@ class CallNotificationService {
     required String? avatarUrl,
     required bool isVideo,
   }) {
+    if (ActiveCallControls.callId == callId ||
+        CallSignalingService.activeCallId == callId) {
+      _pendingAcceptTimer?.cancel();
+      return;
+    }
+
     final context = AppRouter.navigatorKey.currentContext;
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (context != null && context.mounted && uid.isNotEmpty) {

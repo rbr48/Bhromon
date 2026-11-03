@@ -1,5 +1,6 @@
 package com.bhromon.app
 
+import android.app.KeyguardManager
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
@@ -42,14 +43,26 @@ class MainActivity: FlutterFragmentActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
+        setIntent(intent)
         noteAcceptLaunch(intent)
         super.onNewIntent(intent)
     }
 
     private fun noteAcceptLaunch(intent: Intent?) {
-        if (intent?.action != ACTION_CALL_ACCEPT) return
-        acceptOverLock = true
-        applyOverLockScreen()
+        if (intent == null) return
+        val action = intent.action ?: ""
+        val isCall = action.endsWith("ACTION_CALL_ACCEPT") ||
+            action == ACTION_CALL_ACCEPT ||
+            intent.hasExtra("EXTRA_CALLKIT_CALL_DATA") ||
+            intent.hasExtra("data")
+        if (isCall) {
+            acceptOverLock = true
+            applyOverLockScreen()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                keyguard?.requestDismissKeyguard(this, null)
+            }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
