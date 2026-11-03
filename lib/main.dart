@@ -25,6 +25,7 @@ import 'core/media/media_access.dart';
 import 'app/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'features/tour_group/data/channel_swipe_controller.dart';
 import 'features/trust/presentation/bloc/trust_bloc.dart';
 import 'features/auth/domain/repositories/i_auth_repository.dart';
 import 'features/auth/data/repositories/mock_offline_auth_repository.dart';
@@ -277,6 +278,7 @@ void main() {
     }
     await LocaleController.instance.load();
     await ThemeController.instance.load();
+    await ChannelSwipeController.instance.load();
     GameAnalyticsService.hasStorage = true;
     await GameAnalyticsService().init();
     final bool firebaseAvailable = await firebaseInit;
