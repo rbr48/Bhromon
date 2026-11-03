@@ -1,4 +1,5 @@
 import 'package:bhromon/features/chat/data/call_log_repository.dart';
+import 'package:bhromon/features/chat/data/call_notification_service.dart';
 import 'package:bhromon/features/chat/data/call_signaling_service.dart';
 import 'package:bhromon/features/chat/domain/call_display.dart';
 import 'package:bhromon/features/chat/domain/call_quality.dart';
@@ -163,5 +164,24 @@ void main() {
     expect(policy.startAttempt(), isFalse);
     policy.reset();
     expect(policy.startAttempt(), isTrue);
+  });
+
+  group('IncomingCallRegistry', () {
+    test('claims a fresh call id', () {
+      final registry = IncomingCallRegistry();
+      final now = DateTime(2026, 3, 1, 12);
+      expect(registry.claim('call-1', now), isTrue);
+      expect(
+          registry.claim('call-1', now.add(const Duration(seconds: 10))), isFalse);
+    });
+
+    test('re-claims after window expires', () {
+      final registry =
+          IncomingCallRegistry(window: const Duration(seconds: 30));
+      final now = DateTime(2026, 3, 1, 12);
+      expect(registry.claim('call-1', now), isTrue);
+      expect(
+          registry.claim('call-1', now.add(const Duration(seconds: 31))), isTrue);
+    });
   });
 }
