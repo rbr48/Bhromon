@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/widgets/swipe_pager.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/family_task_models.dart';
@@ -32,6 +33,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
       _repository.watchMembers(widget.tourId);
   final TextEditingController _input = TextEditingController();
   FamilyTaskKind _kind = FamilyTaskKind.shopping;
+  final PageController _kindPager = PageController();
   String? _assignee;
   TourRole? _myRole;
   bool _adding = false;
@@ -53,6 +55,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
   @override
   void dispose() {
     _input.dispose();
+    _kindPager.dispose();
     super.dispose();
   }
 
@@ -184,7 +187,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                     if (tasks.isEmpty) {
                       return _message(l10n.translate('ft_empty'));
                     }
-                    return _list(tasks, members, l10n);
+                    return _kindPages(tasks, members, l10n);
                   },
                 ),
               ),
@@ -196,12 +199,33 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
     );
   }
 
-  Widget _list(
+  /// Two pages, shopping and to-dos, from the same stream. A swipe sets the kind a
+  /// new item gets, and the kind chips move the pages. Only the shown page takes
+  /// taps.
+  Widget _kindPages(
       List<FamilyTask> tasks, List<TourMember> members, AppLocalizations l10n) {
+    const kinds = [FamilyTaskKind.shopping, FamilyTaskKind.todo];
+    final index = kinds.indexOf(_kind);
+    return SwipePager(
+      controller: _kindPager,
+      count: kinds.length,
+      selectedIndex: index,
+      onSettled: (i) => setState(() => _kind = kinds[i]),
+      itemBuilder: (context, i) => IgnorePointer(
+        ignoring: i != index,
+        child: _list(tasks, kinds[i], members, l10n),
+      ),
+    );
+  }
+
+  Widget _list(List<FamilyTask> tasks, FamilyTaskKind kind,
+      List<TourMember> members, AppLocalizations l10n) {
+    final sections = familyTaskPage(tasks, kind);
+    if (sections.isEmpty) return _message(l10n.translate('ft_empty'));
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       children: [
-        for (final group in familyTaskSections(tasks)) ...[
+        for (final group in sections) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
             child: Text(l10n.translate('ft_section_${group.section.name}'),

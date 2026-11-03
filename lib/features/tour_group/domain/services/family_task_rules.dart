@@ -31,3 +31,30 @@ List<({FamilyTaskSection section, List<FamilyTask> items})> familyTaskSections(
     if (done.isNotEmpty) (section: FamilyTaskSection.done, items: done),
   ];
 }
+
+/// The page of one kind in the two-page swipe: its open items, then the items of
+/// that kind already ticked off. Empty sections are left out.
+List<({FamilyTaskSection section, List<FamilyTask> items})> familyTaskPage(
+  List<FamilyTask> tasks,
+  FamilyTaskKind kind,
+) {
+  int byTitle(FamilyTask a, FamilyTask b) =>
+      a.title.toLowerCase().compareTo(b.title.toLowerCase());
+
+  final open = [
+    for (final t in tasks)
+      if (!t.done && t.kind == kind) t,
+  ]..sort(byTitle);
+  final done = [
+    for (final t in tasks)
+      if (t.done && t.kind == kind) t,
+  ]..sort(byTitle);
+  final section = kind == FamilyTaskKind.shopping
+      ? FamilyTaskSection.shopping
+      : FamilyTaskSection.todo;
+
+  return [
+    if (open.isNotEmpty) (section: section, items: open),
+    if (done.isNotEmpty) (section: FamilyTaskSection.done, items: done),
+  ];
+}
