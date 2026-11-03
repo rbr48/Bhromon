@@ -7,6 +7,41 @@ import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../../core/utils/app_logger.dart';
+import 'chat_delivery_receipts.dart';
+
+/// The body of a chat message send. [clientMessageId] is the sender's id for
+/// the message. A retry sends the same id, and the server answers it with the
+/// message it already saved instead of saving a second copy.
+@visibleForTesting
+Map<String, dynamic> sendMessageBody({
+  required String chatId,
+  required String recipientId,
+  String? text,
+  String type = 'text',
+  String? senderName,
+  String? senderAvatar,
+  String? mediaUrl,
+  String? mediaPath,
+  String? thumbnailUrl,
+  Map<String, dynamic>? replyTo,
+  Map<String, dynamic>? metadata,
+  String? clientMessageId,
+}) {
+  return {
+    'chatId': chatId,
+    'recipientId': recipientId,
+    'text': text ?? '',
+    'type': type,
+    'senderName': senderName,
+    'senderAvatar': senderAvatar,
+    'mediaUrl': mediaUrl,
+    'mediaPath': mediaPath,
+    'thumbnailUrl': thumbnailUrl,
+    'replyTo': replyTo,
+    'metadata': metadata,
+    if (clientMessageId != null) 'clientMessageId': clientMessageId,
+  };
+}
 
 /// Bhromon VPS Chat Service.
 ///
@@ -220,6 +255,16 @@ class VpsChatService {
             if (chatId != null) {
               _messagesControllers[chatId]?.add(msg);
             }
+            // This phone has the message, so the sender's copy moves to delivered.
+            final clientMessageId = msg['clientMessageId'];
+            if (chatId != null &&
+                clientMessageId is String &&
+                clientMessageId.isNotEmpty) {
+              unawaited(ChatDeliveryReceipts.recordDelivered(
+                chatId: chatId,
+                messageId: clientMessageId,
+              ));
+            }
             // Confirm only while the app is on screen. The server pushes to a
             // recipient that does not confirm, so a backgrounded app cannot miss it.
             final messageId = msg['id'];
@@ -395,24 +440,26 @@ class VpsChatService {
     String? thumbnailUrl,
     Map<String, dynamic>? replyTo,
     Map<String, dynamic>? metadata,
+    String? clientMessageId,
   }) async {
     try {
       final idToken = await _getIdToken();
       if (idToken == null) return null;
 
-      final payload = {
-        'chatId': chatId,
-        'recipientId': recipientId,
-        'text': text ?? '',
-        'type': type,
-        'senderName': senderName,
-        'senderAvatar': senderAvatar,
-        'mediaUrl': mediaUrl,
-        'mediaPath': mediaPath,
-        'thumbnailUrl': thumbnailUrl,
-        'replyTo': replyTo,
-        'metadata': metadata,
-      };
+      final payload = sendMessageBody(
+        chatId: chatId,
+        recipientId: recipientId,
+        text: text,
+        type: type,
+        senderName: senderName,
+        senderAvatar: senderAvatar,
+        mediaUrl: mediaUrl,
+        mediaPath: mediaPath,
+        thumbnailUrl: thumbnailUrl,
+        replyTo: replyTo,
+        metadata: metadata,
+        clientMessageId: clientMessageId,
+      );
 
       final res = await _dio.post<Map<String, dynamic>>(
         'message',
@@ -421,7 +468,9 @@ class VpsChatService {
       );
 
       final saved = res.data?['message'] as Map<String, dynamic>?;
-      if (saved != null) {
+      // A retry the server answered with the message it already has adds nothing new.
+      final isRepeat = res.data?['duplicate'] == true;
+      if (saved != null && !isRepeat) {
         _messagesControllers[chatId]?.add(saved);
         unawaited(fetchConversations());
       }
