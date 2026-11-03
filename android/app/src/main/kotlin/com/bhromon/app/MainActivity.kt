@@ -2,8 +2,10 @@ package com.bhromon.app
 
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
+import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Rational
@@ -15,11 +17,40 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity: FlutterFragmentActivity() {
+    companion object {
+        // The action flutter_callkit_incoming starts the app with on Accept.
+        private const val ACTION_CALL_ACCEPT =
+            "com.hiennv.flutter_callkit_incoming.ACTION_CALL_ACCEPT"
+    }
+
     private val CHANNEL = "com.bhromon.app/integrity"
     private val CALL_AUDIO_CHANNEL = "com.bhromon.app/call_audio"
     private var callAudioChannel: MethodChannel? = null
     private var proximityLock: PowerManager.WakeLock? = null
     private var pipAllowed = false
+    // The call screen asked to show over the lock screen.
+    private var callScreenOverLock = false
+    // The app was opened by Accept on the phone's call screen, and shows over
+    // the lock screen until Dart opens the call or finds none to open.
+    private var acceptOverLock = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Set before the first frame, so Accept on a locked phone opens the app
+        // over the lock screen instead of asking to unlock first.
+        noteAcceptLaunch(intent)
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        noteAcceptLaunch(intent)
+        super.onNewIntent(intent)
+    }
+
+    private fun noteAcceptLaunch(intent: Intent?) {
+        if (intent?.action != ACTION_CALL_ACCEPT) return
+        acceptOverLock = true
+        applyOverLockScreen()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -64,7 +95,16 @@ class MainActivity: FlutterFragmentActivity() {
                     result.success(null)
                 }
                 "showOverLockScreen" -> {
-                    showOverLockScreen(call.argument<Boolean>("enabled") ?: false)
+                    // The call screen takes over from an Accept launch, in both
+                    // directions: when it closes, the app goes behind the lock.
+                    callScreenOverLock = call.argument<Boolean>("enabled") ?: false
+                    acceptOverLock = false
+                    applyOverLockScreen()
+                    result.success(null)
+                }
+                "releaseAcceptLaunch" -> {
+                    acceptOverLock = false
+                    applyOverLockScreen()
                     result.success(null)
                 }
                 "setPipAllowed" -> {
@@ -78,6 +118,10 @@ class MainActivity: FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun applyOverLockScreen() {
+        showOverLockScreen(callScreenOverLock || acceptOverLock)
     }
 
     /** Lets the call screen show over the lock screen and wake the display. */

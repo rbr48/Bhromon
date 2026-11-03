@@ -40,6 +40,11 @@ class CallAudioSession {
   static Future<void> showOverLockScreen(bool enabled) =>
       _invoke('showOverLockScreen', {'enabled': enabled});
 
+  /// Accept on the phone's call screen opens the app over the lock screen.
+  /// This sends it back behind the lock when there turned out to be no call to
+  /// show. Android only.
+  static Future<void> releaseAcceptLaunch() => _invoke('releaseAcceptLaunch');
+
   /// Turns the screen off while the phone is held to the ear. Android only.
   static Future<void> setProximityScreenOff(bool enabled) =>
       _invoke('setProximityScreenOff', {'enabled': enabled});
