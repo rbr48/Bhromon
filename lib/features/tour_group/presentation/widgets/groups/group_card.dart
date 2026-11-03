@@ -33,10 +33,13 @@ class GroupCard extends StatelessWidget {
     final kind = group.isFamily
         ? l10n.translate('hub_section_family')
         : l10n.translate('hub_section_trips');
+    // The labelled node is the one that acts, so a screen reader's tap on the name
+    // opens the group.
     return Semantics(
       button: true,
       selected: selected,
       label: group.name,
+      onTap: onTap,
       child: Material(
         color: Colors.transparent,
         child: InkWell(

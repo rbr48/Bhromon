@@ -476,6 +476,8 @@ class TourTranslationKeys {
       'group_members_none': 'No members yet.',
       'group_close': 'Close',
       'group_loading': 'Loading',
+      'groups_offline_banner':
+          'You are offline. These groups are saved on this device.',
       'group_next_trip': 'The trip starts in {days} days.',
       'group_open_hint': 'Choose a group to see its members and tools.',
       'group_back_to_list': 'Back to groups',
@@ -2795,6 +2797,8 @@ class TourTranslationKeys {
       'group_members_none': 'এখনও কোনো সদস্য নেই।',
       'group_close': 'বন্ধ করুন',
       'group_loading': 'লোড হচ্ছে',
+      'groups_offline_banner':
+          'আপনি অফলাইনে আছেন। এই গ্রুপগুলো এই ডিভাইসে সংরক্ষিত আছে।',
       'group_next_trip': 'ট্রিপ শুরু হবে {days} দিন পরে।',
       'group_open_hint': 'সদস্য ও টুল দেখতে একটি গ্রুপ বাছাই করুন।',
       'group_back_to_list': 'গ্রুপের তালিকায় ফিরুন',

@@ -25,9 +25,11 @@ class MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The initial is decoration: the label is the name, read once.
     return Semantics(
       label: name,
       image: true,
+      excludeSemantics: true,
       child: _avatar(context),
     );
   }

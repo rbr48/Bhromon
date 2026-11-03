@@ -23,6 +23,7 @@ import '../widgets/groups/members_sheet.dart';
 import '../widgets/groups/members_strip.dart';
 import '../widgets/groups/next_step_card.dart';
 import '../widgets/groups/group_skeleton.dart';
+import '../widgets/groups/offline_banner.dart';
 import '../widgets/groups/sos_row.dart';
 import '../widgets/groups/switcher_chips.dart';
 import '../widgets/tour_membership_guard.dart';
@@ -87,6 +88,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   Stream<List<TourMember>> _membersOf(String tourId) =>
       _repository.watchMembers(tourId);
+
+  /// Starts the groups list again after an error. The old listeners close, and the list
+  /// is read from a new upstream. Called from the retry button, never from build.
+  void _retryGroups() {
+    setState(() {
+      _groupsStream = _repository.restartMyGroups();
+    });
+  }
 
   bool _viewerIsOwner(TourGroup group, List<TourMember> members) =>
       group.ownerEmail == _repository.currentEmail ||
@@ -758,6 +767,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   /// Opens [group] on the group page and makes it the active group.
+  /// How soon a second tap on the same tool tile is ignored, so a double tap opens one
+  /// route, not two (plan section 9.3).
+  static const Duration _toolTapGap = Duration(milliseconds: 600);
+  final Map<String, DateTime> _lastToolTap = {};
+
+  /// The tap for the tool tile [tile]. A tap that comes within [_toolTapGap] of the last
+  /// tap on that tile is ignored.
+  VoidCallback _toolTap(String tile, VoidCallback onTap) {
+    return () {
+      final now = DateTime.now();
+      final last = _lastToolTap[tile];
+      if (last != null && now.difference(last) < _toolTapGap) return;
+      _lastToolTap[tile] = now;
+      onTap();
+    };
+  }
+
   void _openGroup(TourGroup group) {
     unawaited(_active.select(group.id));
     context.go(tourHubPath(group.id));
@@ -789,6 +815,32 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
+  /// The groups list when the groups cannot load: what happened, and a retry (section 5.2).
+  /// It never reads as "no groups", which would be wrong while the groups are unknown.
+  Widget _buildGroupsError(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 48, color: context.forest.text54),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.translate('hub_groups_load_failed'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.forest.text70, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+            onPressed: _retryGroups,
+            child: Text(context.l10n.translate('hub_try_again')),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// The groups list (B1): the switcher, one card per group, and the members of the
   /// selected group. Empty and loading states follow section 5.2.
   Widget _buildGroupsList(
@@ -807,6 +859,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 960),
           child: ListView(
+            // Keeps the scroll position across the trip to a group page and back.
+            key: const PageStorageKey<String>('groups-list'),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
               Text(
@@ -824,9 +878,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   style: TextStyle(color: context.forest.text70, fontSize: 13),
                 ),
               ],
+              GroupsOfflineBanner(
+                fromCache: TourGroupRepository.groupsServedFromCache,
+              ),
               const SizedBox(height: 12),
               if (loading)
                 const GroupSkeleton()
+              else if (snapshot.hasError && groups.isEmpty)
+                _buildGroupsError(context)
               else if (groups.isEmpty)
                 _buildEmptyState(context)
               else ...[
@@ -907,6 +966,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           constraints: const BoxConstraints(maxWidth: 960),
           child: TourMembershipGuard(
             tourId: group.id,
+            repository: _repository,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               children: [
@@ -1258,9 +1318,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.midGreen),
-                              onPressed: () => setState(() {
-                                _groupsStream = _repository.restartMyGroups();
-                              }),
+                              onPressed: _retryGroups,
                               child:
                                   Text(context.l10n.translate('hub_try_again')),
                             ),
@@ -2210,7 +2268,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: m.onTap,
+                onTap: _toolTap(m.title, m.onTap),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding:
