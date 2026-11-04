@@ -139,6 +139,20 @@ class MainActivity: FlutterFragmentActivity() {
                     pipAllowed = call.argument<Boolean>("allowed") ?: false
                     result.success(null)
                 }
+                "enterPip" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        try {
+                            val entered = enterPictureInPictureMode(
+                                PictureInPictureParams.Builder().setAspectRatio(Rational(9, 16)).build()
+                            )
+                            result.success(entered)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    } else {
+                        result.success(false)
+                    }
+                }
                 "setProximityScreenOff" -> {
                     setProximityScreenOff(call.argument<Boolean>("enabled") ?: false)
                     result.success(null)

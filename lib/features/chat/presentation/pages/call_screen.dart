@@ -18,6 +18,7 @@ import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
 import '../../data/system_call_bridge.dart';
 import '../../domain/call_display.dart';
+import '../widgets/packet_loss_meter.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
 
@@ -899,78 +900,12 @@ class _CallScreenState extends State<CallScreen> {
                                       ),
                                       if (_isConnected) ...[
                                         const SizedBox(width: 8),
-                                        ValueListenableBuilder<
-                                            CallNetworkQuality>(
-                                          valueListenable:
+                                        CallQualityHud(
+                                          qualityNotifier:
                                               _signaling.networkQuality,
-                                          builder: (ctx, quality, _) {
-                                            Color dotColor;
-                                            String label;
-                                            switch (quality) {
-                                              case CallNetworkQuality.good:
-                                                dotColor =
-                                                    const Color(0xFF00E676);
-                                                label = context.l10n.translate(
-                                                    'chat_quality_hd');
-                                                break;
-                                              case CallNetworkQuality.fair:
-                                                dotColor =
-                                                    const Color(0xFFFFD600);
-                                                label = context.l10n.translate(
-                                                    'chat_quality_fair');
-                                                break;
-                                              case CallNetworkQuality.poor:
-                                                dotColor =
-                                                    const Color(0xFFFF1744);
-                                                label = context.l10n.translate(
-                                                    'chat_quality_weak');
-                                                break;
-                                            }
-                                            return GestureDetector(
-                                              onTap: _showLinkDetails,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 1),
-                                                decoration: BoxDecoration(
-                                                  color: dotColor.withValues(
-                                                      alpha: 0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                  border: Border.all(
-                                                      color:
-                                                          dotColor.withValues(
-                                                              alpha: 0.4),
-                                                      width: 0.8),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Container(
-                                                      width: 6,
-                                                      height: 6,
-                                                      decoration: BoxDecoration(
-                                                        color: dotColor,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      label,
-                                                      style: TextStyle(
-                                                        color: dotColor,
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
+                                          sampleNotifier:
+                                              _signaling.linkSampleNotifier,
+                                          onTapDetails: _showLinkDetails,
                                         ),
                                       ],
                                     ],
@@ -978,6 +913,19 @@ class _CallScreenState extends State<CallScreen> {
                                 ],
                               ),
                             ),
+                            if (isVideo)
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.picture_in_picture_alt_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                tooltip:
+                                    context.l10n.translate('call_pip_tooltip'),
+                                onPressed: () async {
+                                  await CallAudioSession.enterPip();
+                                },
+                              ),
                           ],
                         ),
                       ),
