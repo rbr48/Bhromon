@@ -26,6 +26,8 @@ class OfficialFeedPreference {
   static const String _boxName = 'app_prefs';
   static const String _key = 'official_feed_choice';
 
+  /// The stored answer, or [OfficialFeedChoice.unanswered] when there is none or the box
+  /// cannot be read.
   static Future<OfficialFeedChoice> load() async {
     try {
       final box = await Hive.openBox<dynamic>(_boxName);
@@ -36,6 +38,7 @@ class OfficialFeedPreference {
     }
   }
 
+  /// Keeps [choice] on this device. A failure is logged, and the question is asked again.
   static Future<void> save(OfficialFeedChoice choice) async {
     try {
       final box = await Hive.openBox<dynamic>(_boxName);
