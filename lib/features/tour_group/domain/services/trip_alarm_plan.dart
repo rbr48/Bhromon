@@ -148,6 +148,25 @@ int stableAlarmId(String key) {
   return 0x40000000 | (hash & 0x3fffffff);
 }
 
+/// The key of one alarm within a trip, such as `hubApproach|S1|5000.0`. The plan
+/// and the alerts both build keys with this function, so an alert always finds
+/// the alarm it belongs to.
+String tripAlarmKey(TripAlarmKind kind, String targetId, {double? thresholdM}) {
+  final base = '${kind.name}|$targetId';
+  return thresholdM == null ? base : '$base|$thresholdM';
+}
+
+/// The stable notification id of one alarm within a trip.
+int tripAlarmId(
+  String tripId,
+  TripAlarmKind kind,
+  String targetId, {
+  double? thresholdM,
+}) {
+  final key = tripAlarmKey(kind, targetId, thresholdM: thresholdM);
+  return stableAlarmId('$tripId|$key');
+}
+
 /// Builds the alarms for one trip. Pure: the caller supplies the stops, the
 /// final destination, the settings and the clock.
 ///
@@ -161,7 +180,8 @@ List<TripAlarm> buildTripAlarmPlan({
   required DateTime now,
   DateTime? finalEta,
 }) {
-  int idFor(String what) => stableAlarmId('$tripId|$what');
+  int idFor(TripAlarmKind kind, String targetId, {double? thresholdM}) =>
+      tripAlarmId(tripId, kind, targetId, thresholdM: thresholdM);
   final plan = <TripAlarm>[];
 
   for (final stop in stops) {
@@ -170,7 +190,7 @@ List<TripAlarm> buildTripAlarmPlan({
     if (settings.hubApproach) {
       for (final threshold in settings.hubApproachThresholdsM) {
         plan.add(TripAlarm(
-          id: idFor('hubApproach|${stop.id}|$threshold'),
+          id: idFor(TripAlarmKind.hubApproach, stop.id, thresholdM: threshold),
           kind: TripAlarmKind.hubApproach,
           targetId: stop.id,
           thresholdM: threshold,
@@ -180,7 +200,7 @@ List<TripAlarm> buildTripAlarmPlan({
     }
     if (settings.hubArrive) {
       plan.add(TripAlarm(
-        id: idFor('hubArrive|${stop.id}'),
+        id: idFor(TripAlarmKind.hubArrive, stop.id),
         kind: TripAlarmKind.hubArrive,
         targetId: stop.id,
         rings: false,
@@ -194,7 +214,8 @@ List<TripAlarm> buildTripAlarmPlan({
     if (settings.finalApproach) {
       for (final threshold in settings.finalApproachThresholdsM) {
         plan.add(TripAlarm(
-          id: idFor('finalApproach|${destination.id}|$threshold'),
+          id: idFor(TripAlarmKind.finalApproach, destination.id,
+              thresholdM: threshold),
           kind: TripAlarmKind.finalApproach,
           targetId: destination.id,
           thresholdM: threshold,
@@ -204,7 +225,7 @@ List<TripAlarm> buildTripAlarmPlan({
     }
     if (settings.finalArrivalAlarm) {
       plan.add(TripAlarm(
-        id: idFor('finalArrive|${destination.id}'),
+        id: idFor(TripAlarmKind.finalArrive, destination.id),
         kind: TripAlarmKind.finalArrive,
         targetId: destination.id,
         rings: true,
@@ -213,7 +234,7 @@ List<TripAlarm> buildTripAlarmPlan({
     }
     if (settings.overshootAlarm) {
       plan.add(TripAlarm(
-        id: idFor('overshoot|${destination.id}'),
+        id: idFor(TripAlarmKind.overshoot, destination.id),
         kind: TripAlarmKind.overshoot,
         targetId: destination.id,
         rings: true,
@@ -225,7 +246,7 @@ List<TripAlarm> buildTripAlarmPlan({
       final fireAt = eta.subtract(settings.etaFallbackLead);
       if (fireAt.isAfter(now)) {
         plan.add(TripAlarm(
-          id: idFor('etaFallback|${destination.id}'),
+          id: idFor(TripAlarmKind.etaFallback, destination.id),
           kind: TripAlarmKind.etaFallback,
           targetId: destination.id,
           rings: true,
