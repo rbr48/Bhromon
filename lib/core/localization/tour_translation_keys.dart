@@ -95,10 +95,10 @@ class TourTranslationKeys {
           'Create a group for your family or friends, or join one with an invite code.',
       'hub_create_tour': 'Create group',
       'hub_enter_code': 'Enter code',
-      'official_feed_title': 'Official feed',
+      'official_feed_title': 'Bhromon Official Feed',
       'official_feed_card_body':
           'Reels and updates from the Bhromon team. Anyone signed in can read them.',
-      'official_feed_prompt_title': 'Follow the official feed?',
+      'official_feed_prompt_title': 'Follow Bhromon Official Feed?',
       'official_feed_prompt_body':
           'Get a notification when the Bhromon team posts something new. You can change this later in the official feed.',
       'official_feed_not_now': 'Not now',
@@ -2444,10 +2444,10 @@ class TourTranslationKeys {
           'পরিবার বা বন্ধুদের জন্য একটি গ্রুপ তৈরি করুন, অথবা আমন্ত্রণ কোড দিয়ে যোগ দিন।',
       'hub_create_tour': 'গ্রুপ তৈরি করুন',
       'hub_enter_code': 'কোড লিখুন',
-      'official_feed_title': 'অফিশিয়াল ফিড',
+      'official_feed_title': 'Bhromon Official Feed',
       'official_feed_card_body':
           'Bhromon টিমের রিল ও আপডেট। সাইন ইন করা যে কেউ দেখতে পারবেন।',
-      'official_feed_prompt_title': 'অফিশিয়াল ফিড অনুসরণ করবেন?',
+      'official_feed_prompt_title': 'Bhromon Official Feed অনুসরণ করবেন?',
       'official_feed_prompt_body':
           'Bhromon টিম নতুন কিছু পোস্ট করলে আপনাকে বিজ্ঞপ্তি দেওয়া হবে। পরে অফিশিয়াল ফিড থেকে এটি বদলাতে পারবেন।',
       'official_feed_not_now': 'এখন নয়',

@@ -38,23 +38,13 @@ class OfficialFeedEntryCard extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.translate('official_feed_title'),
-                      style: TextStyle(
-                        color: forest.text,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.translate('official_feed_card_body'),
-                      style: TextStyle(color: forest.text70, fontSize: 13),
-                    ),
-                  ],
+                child: Text(
+                  l10n.translate('official_feed_title'),
+                  style: TextStyle(
+                    color: forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
               Icon(Icons.chevron_right_rounded, color: forest.text54),

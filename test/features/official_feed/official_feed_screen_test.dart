@@ -179,12 +179,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
-          'Reels and updates from the Bhromon team. Anyone signed in can read them.'),
+      find.text('Bhromon Official Feed'),
       findsOneWidget,
     );
+    expect(
+      find.text(
+          'Reels and updates from the Bhromon team. Anyone signed in can read them.'),
+      findsNothing,
+    );
 
-    await tester.tap(find.text('Official feed'));
+    await tester.tap(find.text('Bhromon Official Feed'));
     await tester.pumpAndSettle();
     expect(find.text('feed page'), findsOneWidget);
   });
