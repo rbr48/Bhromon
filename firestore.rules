@@ -866,6 +866,27 @@ service cloud.firestore {
                          (resource.data.createdByEmail == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Journey events (roadmap LJ-4.1). A member's arrival at, or departure from, a stop of
+      // the trip, written only while that member shares their location. Events carry no
+      // coordinates. The document id is the stop, the member and the type, so a retry cannot
+      // duplicate an event. Any member reads them. The author or an admin deletes one.
+      match /journey_events/{eventId} {
+        function validEvent(d) {
+          return d.keys().hasOnly(['type', 'stopId', 'email', 'uid', 'createdAt']) &&
+                 d.type in ['arrive', 'depart'] &&
+                 d.stopId is string && d.stopId.size() > 0 && d.stopId.size() <= 80 &&
+                 d.email == tourUserEmail() &&
+                 d.uid == request.auth.uid &&
+                 d.createdAt == request.time &&
+                 eventId == d.stopId + '__' + d.email + '__' + d.type;
+        }
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) && validEvent(request.resource.data);
+        allow update: if false;
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.email == tourUserEmail() || isTourAdmin(tourId));
+      }
+
       // Samity payments. Each member records what they have paid into a cycle, and an owner or
       // admin records any member's. The amount is what has been paid so far for the cycle, and
       // may not exceed the contribution. The member or an admin removes a record.

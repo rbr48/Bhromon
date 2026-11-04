@@ -17,6 +17,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'core/utils/app_logger.dart';
+import 'core/config/feature_flags.dart';
+import 'features/tour_group/presentation/live_journey_runtime.dart';
 import 'firebase_options.dart';
 import 'app/di/injection.dart';
 import 'app/di/environments.dart';
@@ -358,6 +360,7 @@ void main() {
 
     await MediaAccess.instance.startUp();
     runApp(const MyApp());
+    if (kLiveJourney && !kIsWeb) unawaited(startLiveJourney());
 
     // Background job registration and call listener isn't needed to draw the first frame.
     if (firebaseAvailable) {
