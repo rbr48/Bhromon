@@ -323,6 +323,7 @@ class CallSignalingService {
 
   final ValueNotifier<CallNetworkQuality> networkQuality =
       ValueNotifier(CallNetworkQuality.good);
+  final ValueNotifier<CallLinkSample?> linkSampleNotifier = ValueNotifier(null);
 
   // ── Public callbacks ───────────────────────────────────────────────────────
 
@@ -1495,6 +1496,7 @@ class CallSignalingService {
           .withLossRatio(intervalLoss ?? raw.lossRatio);
       if (!sample.hasIncomingMedia) return;
       _linkSample = sample;
+      linkSampleNotifier.value = sample;
       _summary.link(sample);
       final quality = classifyCallLink(sample);
       _updateNetworkQuality(quality);
@@ -1556,6 +1558,7 @@ class CallSignalingService {
     _connectedAt = null;
     _lastRebuildOfferSdp = null;
     _linkSample = null;
+    linkSampleNotifier.value = null;
     _appliedVideoBitrateCap = null;
     networkQuality.value = CallNetworkQuality.good;
 
