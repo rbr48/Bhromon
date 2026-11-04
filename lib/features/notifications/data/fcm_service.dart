@@ -538,6 +538,9 @@ class FcmService {
         break;
       case 'broadcast':
         break;
+      case 'official':
+        GoRouter.of(context).go('/official-feed');
+        break;
     }
   }
 

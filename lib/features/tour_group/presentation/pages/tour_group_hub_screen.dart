@@ -34,6 +34,9 @@ import '../widgets/group_photo_sheet.dart';
 import '../widgets/family/family_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../tour_pdf_export.dart';
+import 'package:bhromon/features/official_feed/data/official_feed_repository.dart';
+import 'package:bhromon/features/official_feed/presentation/official_feed_entry_card.dart';
+import 'package:bhromon/features/official_feed/presentation/official_feed_prompt.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   final TourGroupRepository? repository;
@@ -93,6 +96,21 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     } else {
       _expandedGroupId = null;
     }
+    // Asks once, on mobile, whether to follow the official feed. A test that passes its own
+    // repository never sees the question.
+    if (!kIsWeb && widget.repository == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_askAboutOfficialFeed());
+      });
+    }
+  }
+
+  /// Asks once whether to follow the official feed. The answer is kept on this device.
+  Future<void> _askAboutOfficialFeed() {
+    return showOfficialFeedPromptIfNeeded(
+      context,
+      onFollowChanged: OfficialFeedRepository().setFollowing,
+    );
   }
 
   Stream<List<TourMember>> _membersOf(String tourId) =>
@@ -929,6 +947,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           : null,
                     ),
                   ),
+                // After the groups, so the first group's layout is unchanged.
+                const OfficialFeedEntryCard(),
               ],
             ],
           ),
@@ -1465,6 +1485,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: context.forest.text70, fontSize: 14),
             ),
+            const SizedBox(height: 24),
+            const OfficialFeedEntryCard(),
             const SizedBox(height: 28),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

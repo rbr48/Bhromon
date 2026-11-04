@@ -1344,6 +1344,14 @@ service cloud.firestore {
       allow update, delete: if isAuth() && isOwnerOfTour(resource.data.tourId);
     }
 
+    // ---- Official instafeed ----
+    // Posts the Bhromon team publishes for everyone signed in. The server writes them
+    // (media-server publish_official_post); no app writes them, and nothing records who read them.
+    match /official_instafeed/{postId} {
+      allow read: if isAuth();
+      allow write: if false;
+    }
+
     // ---- Memberships ----
     // Each person can read their own rows; members see the roster of their tour.
     match /memberships/{membershipId} {
