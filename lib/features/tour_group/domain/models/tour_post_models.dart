@@ -555,6 +555,10 @@ class TourStoryItem {
   /// Stories are visible for this long after they are posted.
   static const Duration lifetime = Duration(hours: 24);
 
+  /// Allows for slight clock drift between device and server when checking
+  /// if a newly published story is already active.
+  static const Duration clockSkewTolerance = Duration(seconds: 45);
+
   final String id;
   final String authorEmail;
   final String authorName;
@@ -589,8 +593,9 @@ class TourStoryItem {
     this.reactions = const {},
   });
 
-  bool isActiveAt(DateTime now) =>
-      now.difference(createdAt) < lifetime && !createdAt.isAfter(now);
+  bool isActiveAt(DateTime now, {Duration tolerance = clockSkewTolerance}) =>
+      now.difference(createdAt) < lifetime &&
+      !createdAt.isAfter(now.add(tolerance));
 
   bool isViewedBy(String email) => viewers.contains(normalizeEmail(email));
 

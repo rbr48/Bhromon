@@ -122,6 +122,8 @@ void main() {
       expect(story.isActiveAt(now.add(TourStoryItem.lifetime)), isFalse);
       expect(
           story.isActiveAt(now.subtract(const Duration(minutes: 1))), isFalse);
+      expect(
+          story.isActiveAt(now.subtract(const Duration(seconds: 15))), isTrue);
       expect(story.isViewedBy('rina@example.com'), isTrue);
       expect(story.isViewedBy('babu@example.com'), isFalse);
     });
