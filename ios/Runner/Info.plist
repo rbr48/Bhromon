@@ -55,9 +55,12 @@
 		<false/>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Bhromon uses your location to show your place on the trip route and the distance to the next stop.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Bhromon uses your location in the background to sound destination arrival alarms and track group progress during active journeys.</string>
 		<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
+		<string>location</string>
 		<string>remote-notification</string>
 		<string>voip</string>
 	</array>
