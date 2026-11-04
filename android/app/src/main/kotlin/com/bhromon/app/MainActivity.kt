@@ -196,16 +196,25 @@ class MainActivity: FlutterFragmentActivity() {
         // A call needs the communication mode before its route can change.
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (enabled) {
-                val speaker = audioManager.availableCommunicationDevices
-                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                    ?: return false
-                audioManager.setCommunicationDevice(speaker)
-            } else {
-                audioManager.clearCommunicationDevice()
+            val success = try {
+                if (enabled) {
+                    val speaker = audioManager.availableCommunicationDevices
+                        .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                        ?: return false
+                    audioManager.setCommunicationDevice(speaker)
+                } else {
+                    audioManager.clearCommunicationDevice()
+                    true
+                }
+            } catch (e: Exception) {
+                false
             }
-            val onSpeaker = audioManager.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-            return onSpeaker == enabled
+            try {
+                audioManager.isSpeakerphoneOn = enabled
+            } catch (e: Exception) {
+                // Ignore OEM-specific exceptions on deprecated property
+            }
+            return success
         }
         audioManager.isSpeakerphoneOn = enabled
         return audioManager.isSpeakerphoneOn == enabled
@@ -217,9 +226,8 @@ class MainActivity: FlutterFragmentActivity() {
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             audioManager.clearCommunicationDevice()
-        } else {
-            audioManager.isSpeakerphoneOn = false
         }
+        audioManager.isSpeakerphoneOn = false
     }
 
     /** Turns the screen off while the phone is held to the ear. */
