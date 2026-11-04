@@ -298,9 +298,27 @@ class CallNotificationService {
 
   // ── Native call screen ─────────────────────────────────────────────────────
 
+  /// Ends the ringing native call for [callId] on this phone. The server sends this
+  /// push when the call stops ringing, and it also reaches the phone that answered the
+  /// call. Only a call this phone still holds as ringing is ended: ending a call the phone
+  /// has answered makes it report the call ended, and the app then hangs up the call on
+  /// screen.
   static Future<void> endNativeIncomingCall(String callId) async {
     if (kIsWeb || callId.isEmpty) return;
-    await FlutterCallkitIncoming.endCall(callId);
+    final List<CallKitParams> calls;
+    try {
+      calls = await FlutterCallkitIncoming.activeCalls();
+    } catch (e) {
+      // Without the list, the call is left alone rather than cut.
+      logInfo('[CallNotificationService] end push skipped: $e');
+      return;
+    }
+    for (final call in calls) {
+      final id = call.extra?['callId']?.toString() ?? call.id;
+      if (id != callId || call.isAccepted) continue;
+      await FlutterCallkitIncoming.endCall(call.id);
+      return;
+    }
   }
 
   /// Shows the native incoming-call screen for a call. Also runs in the
