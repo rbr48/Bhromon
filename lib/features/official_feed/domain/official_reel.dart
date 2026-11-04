@@ -12,11 +12,12 @@ bool isOfficialMediaUrl(String url) {
       uri.path.startsWith(officialMediaPrefix);
 }
 
-/// One post in the official feed.
+/// One post in the official feed (a video reel or an image post).
 class OfficialReel {
   const OfficialReel({
     required this.id,
-    required this.videoUrl,
+    this.videoUrl,
+    this.imageUrl,
     this.coverUrl,
     this.caption = '',
     this.createdAt,
@@ -24,24 +25,45 @@ class OfficialReel {
   });
 
   final String id;
-  final String videoUrl;
+  final String? videoUrl;
+  final String? imageUrl;
   final String? coverUrl;
   final String caption;
   final DateTime? createdAt;
   final int? durationSeconds;
 
-  /// The post a feed document describes, or null when its video is not an official file.
+  /// Whether this post is a video reel.
+  bool get isVideo => videoUrl != null && videoUrl!.isNotEmpty;
+
+  /// Whether this post is an image post.
+  bool get isImage =>
+      !isVideo &&
+      ((imageUrl != null && imageUrl!.isNotEmpty) ||
+          (coverUrl != null && coverUrl!.isNotEmpty));
+
+  /// The primary image URL for an image post or cover.
+  String? get displayImageUrl => imageUrl ?? coverUrl;
+
+  /// The post a feed document describes, or null when neither its video nor its image is an official file.
   static OfficialReel? fromMap(String id, Map<String, dynamic> data) {
     final video = data['videoUrl'];
-    if (video is! String || !isOfficialMediaUrl(video)) return null;
+    final image = data['imageUrl'];
     final cover = data['coverUrl'];
+
+    final hasValidVideo = video is String && isOfficialMediaUrl(video);
+    final hasValidImage = image is String && isOfficialMediaUrl(image);
+    final hasValidCover = cover is String && isOfficialMediaUrl(cover);
+
+    if (!hasValidVideo && !hasValidImage && !hasValidCover) return null;
+
     final caption = data['caption'];
     final created = data['createdAt'];
     final duration = data['durationSeconds'];
     return OfficialReel(
       id: id,
-      videoUrl: video,
-      coverUrl: cover is String && isOfficialMediaUrl(cover) ? cover : null,
+      videoUrl: hasValidVideo ? video : null,
+      imageUrl: hasValidImage ? image : null,
+      coverUrl: hasValidCover ? cover : null,
       caption: caption is String ? caption : '',
       createdAt: created is Timestamp ? created.toDate() : null,
       durationSeconds: duration is int && duration > 0 ? duration : null,

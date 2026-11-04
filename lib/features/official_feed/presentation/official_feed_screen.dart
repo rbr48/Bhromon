@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -12,6 +14,7 @@ import '../../../core/utils/app_logger.dart';
 import '../data/official_feed_repository.dart';
 import '../domain/official_feed_choice.dart';
 import '../domain/official_reel.dart';
+import 'official_post_create_sheet.dart';
 
 /// The official feed: short reels the Bhromon team publishes. Anyone signed in may read it.
 /// Each reel fills the screen. Only the reel on screen holds a video player, and the feed
@@ -22,6 +25,7 @@ class OfficialFeedScreen extends StatefulWidget {
     this.repository,
     this.loadChoice = OfficialFeedPreference.load,
     this.saveChoice = OfficialFeedPreference.save,
+    this.checkPublisher,
   });
 
   /// Where the feed is read from. Tests pass a fake; the app leaves it null.
@@ -31,6 +35,9 @@ class OfficialFeedScreen extends StatefulWidget {
   /// defaults.
   final Future<OfficialFeedChoice> Function() loadChoice;
   final Future<void> Function(OfficialFeedChoice choice) saveChoice;
+
+  /// Checks whether the caller is a platform admin. Tests pass a fake; the app leaves it null.
+  final Future<bool> Function()? checkPublisher;
 
   @override
   State<OfficialFeedScreen> createState() => _OfficialFeedScreenState();
@@ -52,11 +59,41 @@ class _OfficialFeedScreenState extends State<OfficialFeedScreen>
 
   bool get _following => _choice == OfficialFeedChoice.follow;
 
+  bool _canPublish = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_loadChoice());
+    unawaited(_checkPublisherPermission());
+  }
+
+  Future<void> _checkPublisherPermission() async {
+    final checker = widget.checkPublisher;
+    if (checker != null) {
+      final allowed = await checker();
+      if (mounted) setState(() => _canPublish = allowed);
+      return;
+    }
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      if (user.email?.toLowerCase() == 'rajbrur@gmail.com') {
+        if (mounted) setState(() => _canPublish = true);
+        return;
+      }
+      final doc = await FirebaseFirestore.instance
+          .collection('explorer_profiles')
+          .doc(user.uid)
+          .get();
+      final tier = doc.data()?['tier'];
+      if (tier == 'pioneer' || tier == 'regionExpert') {
+        if (mounted) setState(() => _canPublish = true);
+      }
+    } catch (_) {
+      // Firebase might not be initialized in headless test harness
+    }
   }
 
   @override
@@ -105,6 +142,31 @@ class _OfficialFeedScreenState extends State<OfficialFeedScreen>
         foregroundColor: Colors.white,
         title: Text(l10n.translate('official_feed_title')),
         actions: [
+          if (_canPublish)
+            IconButton(
+              tooltip: 'নতুন পোস্ট পাবলিশ করুন',
+              icon: const Icon(
+                Icons.add_circle_outline_rounded,
+                color: AppColors.mintGreen,
+                size: 26,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final published = await OfficialPostCreateSheet.show(
+                  context,
+                  repository: _repository,
+                );
+                if (published == true) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('অফিসিয়াল পোস্ট সফলভাবে প্রকাশিত হয়েছে!'),
+                      backgroundColor: AppColors.midGreen,
+                    ),
+                  );
+                  if (mounted) _retry();
+                }
+              },
+            ),
           // The web has no new-post notifications, so the switch is mobile only.
           if (!kIsWeb)
             IconButton(
@@ -219,8 +281,14 @@ class _OfficialReelPageState extends State<_OfficialReelPage> {
 
   Future<void> _start() async {
     _stop();
+    if (!widget.reel.isVideo) {
+      // Photo / image post has no video to stream
+      return;
+    }
+    final video = widget.reel.videoUrl;
+    if (video == null) return;
     final controller = VideoPlayerController.networkUrl(
-      Uri.parse(signedMediaUrl(widget.reel.videoUrl)),
+      Uri.parse(signedMediaUrl(video)),
     );
     _controller = controller;
     try {
@@ -272,17 +340,21 @@ class _OfficialReelPageState extends State<_OfficialReelPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final controller = _controller;
-    final showVideo = _ready && controller != null;
+    final isImage = widget.reel.isImage;
+    final showVideo = widget.reel.isVideo && _ready && controller != null;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: showVideo ? _togglePlay : null,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (!showVideo) _CoverImage(url: widget.reel.coverUrl),
-          if (controller != null && _ready) _VideoFill(controller: controller),
+          if (isImage)
+            _CoverImage(url: widget.reel.displayImageUrl)
+          else if (!showVideo)
+            _CoverImage(url: widget.reel.coverUrl),
+          if (showVideo) _VideoFill(controller: controller),
           // Only the reel on screen is loading. The others show their covers.
-          if (widget.active && !showVideo && !_failed)
+          if (widget.active && widget.reel.isVideo && !showVideo && !_failed)
             const Center(
               child: CircularProgressIndicator(color: Colors.white54),
             ),
@@ -315,27 +387,28 @@ class _OfficialReelPageState extends State<_OfficialReelPage> {
           ),
           Positioned(
             left: 16,
-            right: 72,
+            right: isImage ? 16 : 72,
             bottom: 28,
             child: _ReelCaption(
               badge: l10n.translate('official_feed_badge'),
               caption: widget.reel.caption,
             ),
           ),
-          Positioned(
-            right: 8,
-            bottom: 20,
-            child: IconButton(
-              tooltip: l10n.translate(
-                _muted ? 'official_feed_sound_on' : 'official_feed_sound_off',
+          if (!isImage)
+            Positioned(
+              right: 8,
+              bottom: 20,
+              child: IconButton(
+                tooltip: l10n.translate(
+                  _muted ? 'official_feed_sound_on' : 'official_feed_sound_off',
+                ),
+                color: Colors.white,
+                icon: Icon(
+                  _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                ),
+                onPressed: showVideo ? _toggleMute : null,
               ),
-              color: Colors.white,
-              icon: Icon(
-                _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-              ),
-              onPressed: showVideo ? _toggleMute : null,
             ),
-          ),
         ],
       ),
     );
@@ -383,11 +456,18 @@ class _VideoFill extends StatelessWidget {
   }
 }
 
-class _ReelCaption extends StatelessWidget {
+class _ReelCaption extends StatefulWidget {
   const _ReelCaption({required this.badge, required this.caption});
 
   final String badge;
   final String caption;
+
+  @override
+  State<_ReelCaption> createState() => _ReelCaptionState();
+}
+
+class _ReelCaptionState extends State<_ReelCaption> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -403,7 +483,7 @@ class _ReelCaption extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             child: Text(
-              badge,
+              widget.badge,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
@@ -412,14 +492,19 @@ class _ReelCaption extends StatelessWidget {
             ),
           ),
         ),
-        if (caption.isNotEmpty) ...[
+        if (widget.caption.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text(
-            caption,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.3,
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Text(
+              widget.caption,
+              maxLines: _expanded ? null : 3,
+              overflow: _expanded ? null : TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                height: 1.3,
+              ),
             ),
           ),
         ],
