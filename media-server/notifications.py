@@ -335,6 +335,23 @@ class NotificationEngine:
             logger.error("Error in send_sos_alert: %s", e)
             return {"status": "error", "error": str(e)}
 
+    def send_topic_push(
+        self, topic: str, title: str, body: str, data: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """Pushes one message to every device subscribed to `topic`. The caller decides what a failure means."""
+        try:
+            messaging_mod = self._get_messaging()
+            message = messaging_mod.Message(
+                topic=topic,
+                notification=messaging_mod.Notification(title=title, body=body),
+                data={str(k): str(v) for k, v in data.items()},
+            )
+            return {"status": "success", "messageId": messaging_mod.send(message)}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_topic_push: %s", e)
+            return {"status": "error", "error": str(e)}
+
     def send_channel_message_notification(
         self,
         tour_id: str,

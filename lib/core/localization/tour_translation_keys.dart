@@ -95,6 +95,24 @@ class TourTranslationKeys {
           'Create a group for your family or friends, or join one with an invite code.',
       'hub_create_tour': 'Create group',
       'hub_enter_code': 'Enter code',
+      'official_feed_title': 'Official feed',
+      'official_feed_card_body':
+          'Reels and updates from the Bhromon team. Anyone signed in can read them.',
+      'official_feed_prompt_title': 'Follow the official feed?',
+      'official_feed_prompt_body':
+          'Get a notification when the Bhromon team posts something new. You can change this later in the official feed.',
+      'official_feed_not_now': 'Not now',
+      'official_feed_follow': 'Follow',
+      'official_feed_empty':
+          'No posts yet. New posts from the Bhromon team will appear here.',
+      'official_feed_load_failed':
+          'The feed could not be loaded. Check your connection and try again.',
+      'official_feed_play_failed': 'This video could not be played.',
+      'official_feed_badge': 'Official',
+      'official_feed_follow_on': 'Notifications on. Tap to turn them off.',
+      'official_feed_follow_off': 'Notifications off. Tap to follow.',
+      'official_feed_sound_on': 'Turn sound on',
+      'official_feed_sound_off': 'Turn sound off',
       'tour_membership_ended': 'You are no longer a member of this group.',
       'hub_renew_code': 'Renew invite code',
       'hub_delete_tour': 'Delete group',
@@ -2426,6 +2444,24 @@ class TourTranslationKeys {
           'পরিবার বা বন্ধুদের জন্য একটি গ্রুপ তৈরি করুন, অথবা আমন্ত্রণ কোড দিয়ে যোগ দিন।',
       'hub_create_tour': 'গ্রুপ তৈরি করুন',
       'hub_enter_code': 'কোড লিখুন',
+      'official_feed_title': 'অফিশিয়াল ফিড',
+      'official_feed_card_body':
+          'Bhromon টিমের রিল ও আপডেট। সাইন ইন করা যে কেউ দেখতে পারবেন।',
+      'official_feed_prompt_title': 'অফিশিয়াল ফিড অনুসরণ করবেন?',
+      'official_feed_prompt_body':
+          'Bhromon টিম নতুন কিছু পোস্ট করলে আপনাকে বিজ্ঞপ্তি দেওয়া হবে। পরে অফিশিয়াল ফিড থেকে এটি বদলাতে পারবেন।',
+      'official_feed_not_now': 'এখন নয়',
+      'official_feed_follow': 'অনুসরণ করুন',
+      'official_feed_empty':
+          'এখনো কোনো পোস্ট নেই। Bhromon টিমের নতুন পোস্ট এখানে দেখা যাবে।',
+      'official_feed_load_failed':
+          'ফিড লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+      'official_feed_play_failed': 'এই ভিডিওটি চালানো যায়নি।',
+      'official_feed_badge': 'অফিশিয়াল',
+      'official_feed_follow_on': 'বিজ্ঞপ্তি চালু আছে। বন্ধ করতে ট্যাপ করুন।',
+      'official_feed_follow_off': 'বিজ্ঞপ্তি বন্ধ আছে। অনুসরণ করতে ট্যাপ করুন।',
+      'official_feed_sound_on': 'শব্দ চালু করুন',
+      'official_feed_sound_off': 'শব্দ বন্ধ করুন',
       'tour_membership_ended': 'আপনি আর এই গ্রুপের সদস্য নন।',
       'hub_renew_code': 'আমন্ত্রণ কোড নতুন করুন',
       'hub_delete_tour': 'গ্রুপ মুছে ফেলুন',

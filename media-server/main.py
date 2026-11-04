@@ -363,8 +363,17 @@ def require_platform_admin(caller: Caller) -> None:
         )
 
 
+# The official Bhromon feed: posts the team publishes for everyone signed in. Only the
+# publisher writes it (publish_official_post), and nothing records who reads it.
+OFFICIAL_SPACE = "official"
+OFFICIAL_TOPIC = "official_instafeed"
+OFFICIAL_PUBLISH_KEY = os.getenv("OFFICIAL_PUBLISH_KEY", "")
+OFFICIAL_IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp"})
+MAX_OFFICIAL_CAPTION = 300
+MAX_OFFICIAL_DURATION_SECONDS = 3600
+
 PUBLIC_OR_USER_SPACES = frozenset({
-    "profiles", "users", "general", "explorer", "trip_logs"
+    "profiles", "users", "general", "explorer", "trip_logs", OFFICIAL_SPACE,
 })
 
 # Private media. The secret derives each person's link key (media_access.py). With
@@ -682,6 +691,91 @@ async def upload_media(
         "bytes": total_bytes,
         "contentType": file.content_type,
     }
+
+
+def _require_official_publisher(provided_key: Optional[str], authorization: Optional[str]) -> None:
+    """Lets only the team publish to the official feed: with the publish key, or as a platform admin."""
+    if OFFICIAL_PUBLISH_KEY and provided_key and secrets.compare_digest(
+        provided_key.encode("utf-8"), OFFICIAL_PUBLISH_KEY.encode("utf-8")
+    ):
+        return
+    require_platform_admin(authenticate(authorization))
+
+
+async def store_official_file(upload: UploadFile, folder: str, filename: str, max_allowed: int) -> str:
+    """Stores one file of the official feed and returns its public address."""
+    target_dir = MEDIA_ROOT / OFFICIAL_SPACE / folder
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / filename
+    part = target_dir / f".{filename}.{uuid.uuid4().hex}.part"
+    try:
+        await store_stream(upload, part, max_allowed)
+        # A hard link never replaces an existing file.
+        os.link(part, target)
+    finally:
+        part.unlink(missing_ok=True)
+    return f"{BASE_URL.rstrip('/')}/{OFFICIAL_SPACE}/{folder}/{filename}"
+
+
+def create_official_post(
+    post_id: str,
+    caption: str,
+    video_url: str,
+    cover_url: Optional[str],
+    duration_seconds: Optional[int],
+) -> None:
+    """Writes the feed entry the app reads. Only the server writes these."""
+    backend._client().collection("official_instafeed").document(post_id).set({
+        "videoUrl": video_url,
+        "coverUrl": cover_url,
+        "caption": caption,
+        "durationSeconds": duration_seconds,
+        "kind": "reel",
+        "publisher": "Bhromon",
+        "createdAt": datetime.now(timezone.utc),
+    })
+
+
+@app.post("/official/posts")
+async def publish_official_post(
+    file: UploadFile = File(...),
+    caption: str = Form(""),
+    durationSeconds: Optional[int] = Form(None),
+    cover: Optional[UploadFile] = File(None),
+    x_official_key: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Publishes a video to the official feed, for everyone signed in to read."""
+    await run_in_threadpool(_require_official_publisher, x_official_key, authorization)
+    text = caption.strip()
+    if len(text) > MAX_OFFICIAL_CAPTION:
+        raise HTTPException(status_code=400, detail="The caption is too long.")
+    if durationSeconds is not None and not 0 < durationSeconds <= MAX_OFFICIAL_DURATION_SECONDS:
+        raise HTTPException(status_code=400, detail="The duration is out of range.")
+    ext = extension_of(file.filename)
+    if ext not in VIDEO_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="The post must be a video.")
+    cover_ext = ""
+    if cover is not None and cover.filename:
+        cover_ext = extension_of(cover.filename)
+        if cover_ext not in OFFICIAL_IMAGE_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="The cover must be an image.")
+
+    post_id = uuid.uuid4().hex
+    video_url = await store_official_file(file, "reels", f"{post_id}{ext}", MAX_VIDEO_BYTES)
+    cover_url = None
+    if cover_ext:
+        cover_url = await store_official_file(cover, "covers", f"{post_id}{cover_ext}", MAX_IMAGE_BYTES)
+    await run_in_threadpool(create_official_post, post_id, text, video_url, cover_url, durationSeconds)
+    # Best effort: the post is live even if the push cannot be sent.
+    await run_in_threadpool(
+        notification_engine.send_topic_push,
+        OFFICIAL_TOPIC,
+        "Bhromon",
+        text or "A new post in the official feed",
+        {"action": "official", "postId": post_id},
+    )
+    return {"status": "success", "id": post_id, "videoUrl": video_url, "coverUrl": cover_url}
 
 
 def read_cdn_config() -> Optional[Dict]:
