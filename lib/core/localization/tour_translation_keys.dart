@@ -2414,6 +2414,21 @@ class TourTranslationKeys {
       'journey_alarm_stop_mute': 'Notices for {stop}',
       'journey_alarm_cancel': 'Cancel',
       'journey_alarm_save': 'Save',
+      'journey_live_replan': 'Open in Google Maps',
+      'journey_live_speed': '{kmh} km/h',
+      'journey_suggest_depart':
+          'Looks like you left {place}. Mark it departed?',
+      'journey_suggest_arrive':
+          'Looks like you reached {place}. Mark it arrived?',
+      'journey_suggest_yes': 'Yes, mark it',
+      'journey_suggest_no': 'Not now',
+      'journey_stop_distance': '{km} km away',
+      'journey_stop_checkpoints': 'Places on the way',
+      'journey_stop_notices': 'Notices for this stop',
+      'journey_stop_no_notices': 'No notices for this stop yet.',
+      'journey_stop_alarm': 'Set alarm for this stop',
+      'journey_stop_alarm_hint':
+          'Notices and wake-ups for this stop ring on this phone only.',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -4812,6 +4827,21 @@ class TourTranslationKeys {
       'journey_alarm_stop_mute': '{stop} এর সতর্কবার্তা',
       'journey_alarm_cancel': 'বাতিল',
       'journey_alarm_save': 'সেভ করুন',
+      'journey_live_replan': 'গুগল ম্যাপে খুলুন',
+      'journey_live_speed': '{kmh} কিমি/ঘণ্টা',
+      'journey_suggest_depart':
+          'মনে হচ্ছে আপনি {place} ছেড়েছেন। এটি ছাড়া হিসেবে চিহ্নিত করব?',
+      'journey_suggest_arrive':
+          'মনে হচ্ছে আপনি {place} পৌঁছেছেন। এটি পৌঁছানো হিসেবে চিহ্নিত করব?',
+      'journey_suggest_yes': 'হ্যাঁ, চিহ্নিত করুন',
+      'journey_suggest_no': 'এখন নয়',
+      'journey_stop_distance': '{km} কিমি দূরে',
+      'journey_stop_checkpoints': 'পথে যা আছে',
+      'journey_stop_notices': 'এই স্টপের সতর্কবার্তা',
+      'journey_stop_no_notices': 'এই স্টপের এখনো কোনো নোটিশ নেই।',
+      'journey_stop_alarm': 'এই স্টপের জন্য অ্যালার্ম দিন',
+      'journey_stop_alarm_hint':
+          'এই স্টপের সতর্কবার্তা ও জাগানো শুধু এই ফোনে বাজে।',
     },
   };
 }

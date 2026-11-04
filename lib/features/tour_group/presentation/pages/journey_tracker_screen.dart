@@ -18,6 +18,7 @@ import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/destination_catalog.dart';
 import '../../domain/services/journey_geometry.dart';
+import '../../domain/services/leg_suggestions.dart';
 import '../../domain/services/live_journey_tracker.dart';
 import '../../domain/services/route_engine.dart';
 import '../../domain/services/route_suggestions.dart';
@@ -28,6 +29,7 @@ import '../live_journey_runtime.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
 import '../widgets/journey/journey_alarm_settings_sheet.dart';
 import '../widgets/journey/journey_live_card.dart';
+import '../widgets/journey/journey_stop_sheet.dart';
 import '../../../../core/localization/localized_date.dart';
 
 String transportModeKey(TransportMode m) => 'route_mode_${m.name}';
@@ -73,6 +75,11 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   /// The group's last live reading. It is used only while a trip runs.
   GeoPoint? _livePoint;
 
+  /// Suggests that a leg has started or ended. Nothing changes until the user
+  /// confirms it (roadmap LJ-5.2).
+  final LegSuggestionEngine _suggestions = LegSuggestionEngine();
+  ({LegSuggestion suggestion, RouteLeg leg})? _suggested;
+
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
   @override
@@ -116,8 +123,98 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     if (!mounted) return;
     setState(() => _session = session);
     _liveSub = session.readings.listen((fix) {
-      if (mounted) setState(() => _livePoint = fix.point);
+      if (!mounted) return;
+      setState(() => _livePoint = fix.point);
+      _observeLegs(fix);
     });
+  }
+
+  /// Feeds one reading to the leg suggestions: has the group left the place it
+  /// was at, or reached the place it is going to?
+  void _observeLegs(JourneyFix fix) {
+    final g = _group;
+    if (g == null || _suggested != null) return;
+    final plan = RoutePlan.of(g);
+    final leg = plan.currentLeg ?? plan.nextLeg;
+    if (leg == null) return;
+    final from =
+        leg.from.hasLocation ? GeoPoint(leg.from.lat!, leg.from.lng!) : null;
+    final to = leg.to.hasLocation ? GeoPoint(leg.to.lat!, leg.to.lng!) : null;
+    final suggestion = _suggestions.observe(
+      legKey: leg.key,
+      underway: leg.status == LegStatus.underway,
+      from: from,
+      to: to,
+      at: fix.point,
+      now: fix.time,
+    );
+    if (suggestion != null) {
+      setState(() => _suggested = (suggestion: suggestion, leg: leg));
+    }
+  }
+
+  Widget _suggestionBanner(AppLocalizations l10n) {
+    final s = _suggested!;
+    final f = context.forest;
+    final departed = s.suggestion.kind == LegSuggestionKind.depart;
+    final place = departed ? s.leg.from.name : s.leg.to.name;
+    return Material(
+      color: f.card,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.translate(
+                departed ? 'journey_suggest_depart' : 'journey_suggest_arrive',
+                args: {'place': place},
+              ),
+              style: TextStyle(color: f.text, height: 1.4),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => setState(() => _suggested = null),
+                  child: Text(l10n.translate('journey_suggest_no')),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () {
+                    final leg = s.leg;
+                    setState(() => _suggested = null);
+                    unawaited(_markLeg(leg, depart: departed));
+                  },
+                  child: Text(l10n.translate('journey_suggest_yes')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showStopSheet(RoutePoint p) async {
+    final g = _group;
+    if (g == null) return;
+    final incoming = RoutePlan.of(g).legs.where((l) => l.to.id == p.id);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.forest.sheet,
+      builder: (_) => JourneyStopSheet(
+        stop: p,
+        incoming: incoming.isEmpty ? null : incoming.first,
+        checkpoints: _checkpoints,
+        notices: _repository.watchNotices(widget.tourId),
+        livePoint: _session?.isTracking ?? false ? _livePoint : null,
+        session: _session,
+      ),
+    );
   }
 
   Future<void> _startJourney(TourGroup g) async {
@@ -474,6 +571,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
         if (session != null) ...[
           JourneyLiveCard(
             session: session,
+            replanUri: plan.directionsUri,
             onStart: () => _startJourney(g),
             onAlarmSettings: () => unawaited(showJourneyAlarmSettings(
               context,
@@ -482,6 +580,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             )),
           ),
           const SizedBox(height: 10),
+          if (_suggested != null) ...[
+            _suggestionBanner(l10n),
+            const SizedBox(height: 10),
+          ],
         ],
         _header(l10n, g, plan, live),
         _prayerAndQiblaCard(l10n, g, pos),
@@ -848,6 +950,16 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   }
 
   Widget _pointTile(AppLocalizations l10n, RoutePoint p, bool isStart) {
+    final tile = _pointTileBody(l10n, p, isStart);
+    if (!kLiveJourney || p.stop == null) return tile;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => unawaited(_showStopSheet(p)),
+      child: tile,
+    );
+  }
+
+  Widget _pointTileBody(AppLocalizations l10n, RoutePoint p, bool isStart) {
     final s = p.stop;
     final days = localizedDateFormat('EEE d MMM');
     return Row(

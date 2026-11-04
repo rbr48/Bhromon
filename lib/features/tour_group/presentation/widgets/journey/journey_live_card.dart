@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
@@ -18,6 +19,7 @@ class JourneyLiveCard extends StatelessWidget {
     required this.session,
     required this.onStart,
     required this.onAlarmSettings,
+    this.replanUri,
   });
 
   final LiveJourneySession session;
@@ -26,6 +28,10 @@ class JourneyLiveCard extends StatelessWidget {
   final Future<void> Function() onStart;
 
   final VoidCallback onAlarmSettings;
+
+  /// Google Maps directions from the group's place, for re-planning when the group
+  /// is off the route. The app never changes the route on its own (roadmap LJ-5.5).
+  final Uri? replanUri;
 
   @override
   Widget build(BuildContext context) {
@@ -38,91 +44,124 @@ class JourneyLiveCard extends StatelessWidget {
   Widget _card(BuildContext context) {
     final l10n = context.l10n;
     final f = context.forest;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: f.card,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.route_rounded, color: f.accentText, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l10n.translate('journey_live_title'),
-                  style: TextStyle(
-                    color: f.text,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (!session.isTracking) ...[
-            Text(
-              l10n.translate('journey_live_idle'),
-              style: TextStyle(color: f.text70, fontSize: 13, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () => unawaited(onStart()),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(l10n.translate('journey_live_start')),
-            ),
-          ] else ...[
-            Text(
-              _status(context),
-              style: TextStyle(color: f.text, fontSize: 14, height: 1.4),
-            ),
-            if (session.longStopPrompt) ...[
-              const SizedBox(height: 10),
-              _stillBanner(context),
-            ],
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: session.isSharing,
-              onChanged: (on) => unawaited(session.setSharing(on: on)),
-              title: Text(
-                l10n.translate('journey_live_share'),
-                style: TextStyle(color: f.text),
-              ),
-              subtitle: Text(
-                l10n.translate('journey_live_share_hint'),
-                style: TextStyle(color: f.text54, fontSize: 12),
-              ),
-            ),
+    // A Material surface, not a decorated box: the switch and the buttons paint
+    // their ink on the nearest Material, and a box in between would hide it.
+    return Material(
+      color: f.card,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Row(
               children: [
+                Icon(Icons.route_rounded, color: f.accentText, size: 20),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onAlarmSettings,
-                    icon: const Icon(Icons.alarm_rounded),
-                    label: Text(l10n.translate('journey_live_alarms')),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.tonal(
-                    onPressed: () => _confirmEnd(context),
-                    child: Text(l10n.translate('journey_live_end')),
+                  child: Text(
+                    l10n.translate('journey_live_title'),
+                    style: TextStyle(
+                      color: f.text,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            if (!session.isTracking) ...[
+              Text(
+                l10n.translate('journey_live_idle'),
+                style: TextStyle(color: f.text70, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => unawaited(onStart()),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(l10n.translate('journey_live_start')),
+              ),
+            ] else ...[
+              Text(
+                _status(context),
+                style: TextStyle(color: f.text, fontSize: 14, height: 1.4),
+              ),
+              if (_progress() case final double fraction) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: fraction,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(3),
+                  color: f.accentText,
+                  backgroundColor: f.divider12,
+                ),
+              ],
+              if (_isOffRoute && replanUri != null) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => unawaited(launchUrl(
+                    replanUri!,
+                    mode: LaunchMode.externalApplication,
+                  )),
+                  icon: const Icon(Icons.map_rounded),
+                  label: Text(l10n.translate('journey_live_replan')),
+                ),
+              ],
+              if (session.longStopPrompt) ...[
+                const SizedBox(height: 10),
+                _stillBanner(context),
+              ],
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: session.isSharing,
+                onChanged: (on) => unawaited(session.setSharing(on: on)),
+                title: Text(
+                  l10n.translate('journey_live_share'),
+                  style: TextStyle(color: f.text),
+                ),
+                subtitle: Text(
+                  l10n.translate('journey_live_share_hint'),
+                  style: TextStyle(color: f.text54, fontSize: 12),
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onAlarmSettings,
+                      icon: const Icon(Icons.alarm_rounded),
+                      label: Text(l10n.translate('journey_live_alarms')),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.tonal(
+                      onPressed: () => _confirmEnd(context),
+                      child: Text(l10n.translate('journey_live_end')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 
+  bool get _isOffRoute => session.snapshot?.status == JourneyStatus.offRoute;
+
+  /// How far along the route the group is, from 0 to 1, when the tracker knows.
+  double? _progress() {
+    final snap = session.snapshot;
+    if (snap == null || snap.totalM <= 0 || _isOffRoute) return null;
+    return (snap.alongM / snap.totalM).clamp(0.0, 1.0);
+  }
+
   /// The status lines: the distance to the destination, the next stop, the
-  /// arrival time and whether the group is still.
+  /// arrival time, the speed and whether the group is still.
   String _status(BuildContext context) {
     final l10n = context.l10n;
     final targets = session.targets;
@@ -152,7 +191,13 @@ class JourneyLiveCard extends StatelessWidget {
       );
       lines.add(l10n.translate('journey_live_eta', args: {'time': time}));
     }
-    if (snap.isStopped) lines.add(l10n.translate('journey_live_stopped'));
+    if (snap.isStopped) {
+      lines.add(l10n.translate('journey_live_stopped'));
+    } else {
+      final kmh = (snap.speedMps * 3.6).round();
+      lines.add(l10n
+          .translate('journey_live_speed', args: {'kmh': l10n.number(kmh)}));
+    }
     if (lines.isEmpty) return l10n.translate('journey_live_running');
     return lines.join('\n');
   }
