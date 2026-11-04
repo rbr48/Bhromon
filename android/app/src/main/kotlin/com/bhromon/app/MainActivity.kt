@@ -245,11 +245,25 @@ class MainActivity: FlutterFragmentActivity() {
             "mode" to audioManager.mode,
             "speakerphoneOn" to audioManager.isSpeakerphoneOn,
             "communicationDevice" to communication,
-            "pluginDevice" to AudioSwitchManager.instance?.selectedAudioDevice()?.javaClass?.simpleName,
+            "pluginDevice" to pluginDeviceName(),
             "voiceCallVolume" to audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL),
             "voiceCallMax" to audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL),
             "outputs" to outputs,
         )
+    }
+
+    /**
+     * The class name of the output the WebRTC plugin's audio switch selected. It is read by
+     * reflection because the device type comes from a library this module does not compile
+     * against. Null when it cannot be read; the route check then uses the phone's route alone.
+     */
+    private fun pluginDeviceName(): String? {
+        val manager = AudioSwitchManager.instance ?: return null
+        return try {
+            manager.javaClass.getMethod("selectedAudioDevice").invoke(manager)?.javaClass?.simpleName
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /** The output kind of an audio device type, named the way the app reads it. */
