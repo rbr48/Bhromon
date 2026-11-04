@@ -13,6 +13,7 @@ import '../../domain/models/samity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/samity_engine.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../samity_pdf_export.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -103,6 +104,7 @@ class _SamityScreenState extends State<SamityScreen> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 560),
       backgroundColor: context.forest.surfaceFor(_card),
       shape: _sheetShape,
       builder: (_) => _SetupSheet(
@@ -121,6 +123,7 @@ class _SamityScreenState extends State<SamityScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 560),
       backgroundColor: context.forest.surfaceFor(_card),
       shape: _sheetShape,
       builder: (_) => _CycleSheet(
@@ -148,6 +151,18 @@ class _SamityScreenState extends State<SamityScreen> {
         foregroundColor: context.forest.text,
         elevation: 0,
         actions: [
+          if (samityOn && group.samity.isSetUp)
+            IconButton(
+              tooltip: l10n.translate('samity_export_pdf'),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              onPressed: () => exportSamityPdf(
+                context,
+                group: group,
+                members: _members,
+                payments: _payments,
+                payouts: _payouts,
+              ),
+            ),
           if (_isAdmin && samityOn)
             IconButton(
               tooltip: l10n.translate('samity_setup'),
