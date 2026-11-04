@@ -2350,6 +2350,17 @@ class TourTranslationKeys {
       'server_patron_qr_chip': 'Bangla QR',
       'server_patron_qr_caption':
           'Scan with bKash, Nagad, Rocket or any bank app to donate',
+      'alarm_title_approach': 'Approaching {place}',
+      'alarm_title_arrive': 'Arrived at {place}',
+      'alarm_title_final': 'You have reached your destination',
+      'alarm_title_overshoot': 'You have passed your destination',
+      'alarm_body_distance': '{km} km to go',
+      'alarm_body_arrived': 'Open the stop for its notices',
+      'alarm_body_place': 'Destination: {place}',
+      'alarm_dismiss': 'Dismiss',
+      'alarm_snooze': 'Snooze 5 min',
+      'alarm_im_awake': 'I am awake',
+      'alarm_snooze_used_up': 'No snoozes left',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -4684,6 +4695,17 @@ class TourTranslationKeys {
       'server_patron_qr_chip': 'বাংলা কিউআর',
       'server_patron_qr_caption':
           'অনুদান দিতে বিকাশ, নগদ, রকেট বা যেকোনো ব্যাংক অ্যাপ দিয়ে স্ক্যান করুন',
+      'alarm_title_approach': '{place} এর কাছাকাছি',
+      'alarm_title_arrive': '{place} এ পৌঁছেছেন',
+      'alarm_title_final': 'আপনি গন্তব্যে পৌঁছেছেন',
+      'alarm_title_overshoot': 'আপনি গন্তব্য পেরিয়ে গেছেন',
+      'alarm_body_distance': 'আর {km} কিমি বাকি',
+      'alarm_body_arrived': 'স্টপের নোটিশ দেখতে স্টপটি খুলুন',
+      'alarm_body_place': 'গন্তব্য: {place}',
+      'alarm_dismiss': 'বন্ধ করুন',
+      'alarm_snooze': '৫ মিনিট পরে আবার',
+      'alarm_im_awake': 'আমি জেগেছি',
+      'alarm_snooze_used_up': 'আর স্নুজ করা যাবে না',
     },
   };
 }
