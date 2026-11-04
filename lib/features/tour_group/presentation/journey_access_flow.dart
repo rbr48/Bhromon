@@ -104,6 +104,7 @@ Future<bool?> _showDisclosure(BuildContext context) {
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: f.sheet,
     builder: (sheetContext) => SafeArea(
       child: Padding(
