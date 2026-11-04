@@ -10,6 +10,7 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/destination_catalog.dart';
 import '../../../data/predefined_spots_repository.dart';
 import '../../../../../core/localization/localized_date.dart';
+import '../transport/local_fare_guide_sheet.dart';
 
 /// The result of editing an itinerary.
 class ItineraryEdit {
@@ -133,6 +134,11 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
         foregroundColor: context.forest.text,
         title: Text(l10n.translate('itin_title')),
         actions: [
+          IconButton(
+            tooltip: 'লোকাল পরিবহন ভাড়া গাইড',
+            icon: const Icon(Icons.calculate_outlined),
+            onPressed: () => showLocalFareGuideSheet(context),
+          ),
           TextButton(
             onPressed: _stops.isEmpty
                 ? null
