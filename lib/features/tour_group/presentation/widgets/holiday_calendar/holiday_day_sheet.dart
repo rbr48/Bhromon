@@ -22,7 +22,7 @@ Future<void> showHolidayDaySheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: kHolidayCard,
+    backgroundColor: context.forest.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),

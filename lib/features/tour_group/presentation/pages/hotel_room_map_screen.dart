@@ -699,113 +699,121 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+          // Fill the screen width (up to 560) instead of shrinking to the 280 minimum.
+          constraints: const BoxConstraints(minWidth: 280, maxWidth: 560),
           title: Text(
               l10n.translate(existing == null ? 'room_add' : 'room_edit'),
               style: TextStyle(color: context.forest.text)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: hotelCtrl,
-                  style: TextStyle(color: context.forest.text),
-                  decoration: InputDecoration(
-                      labelText: l10n.translate('room_hotel_name'),
-                      helperText: l10n.translate('room_hotel_name_help'),
-                      helperStyle: TextStyle(color: context.forest.text38)),
-                ),
-                if (hotels.where((h) => h.isNotEmpty).isNotEmpty)
-                  Wrap(
-                    spacing: 6,
-                    children: [
-                      for (final h in hotels.where((h) => h.isNotEmpty))
-                        ActionChip(
-                          label: Text(h),
-                          onPressed: () =>
-                              setDialogState(() => hotelCtrl.text = h),
-                        ),
-                    ],
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: hotelCtrl,
+                    style: TextStyle(color: context.forest.text),
+                    decoration: InputDecoration(
+                        labelText: l10n.translate('room_hotel_name'),
+                        helperText: l10n.translate('room_hotel_name_help'),
+                        helperStyle: TextStyle(color: context.forest.text38)),
                   ),
-                TextField(
-                  controller: numberCtrl,
-                  style: TextStyle(color: context.forest.text),
-                  decoration:
-                      InputDecoration(labelText: l10n.translate('room_number')),
-                ),
-                TextField(
-                  controller: titleCtrl,
-                  style: TextStyle(color: context.forest.text),
-                  decoration:
-                      InputDecoration(labelText: l10n.translate('room_type')),
-                ),
-                DropdownButtonFormField<int>(
-                  initialValue: capacity,
-                  dropdownColor: const Color(0xFF1B4332),
-                  decoration: InputDecoration(
-                      labelText: l10n.translate('room_capacity')),
-                  items: [
-                    for (var c = 1; c <= 10; c++)
+                  if (hotels.where((h) => h.isNotEmpty).isNotEmpty)
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (final h in hotels.where((h) => h.isNotEmpty))
+                          ActionChip(
+                            label: Text(h),
+                            onPressed: () =>
+                                setDialogState(() => hotelCtrl.text = h),
+                          ),
+                      ],
+                    ),
+                  TextField(
+                    controller: numberCtrl,
+                    style: TextStyle(color: context.forest.text),
+                    decoration: InputDecoration(
+                        labelText: l10n.translate('room_number')),
+                  ),
+                  TextField(
+                    controller: titleCtrl,
+                    style: TextStyle(color: context.forest.text),
+                    decoration:
+                        InputDecoration(labelText: l10n.translate('room_type')),
+                  ),
+                  DropdownButtonFormField<int>(
+                    initialValue: capacity,
+                    dropdownColor:
+                        context.forest.surfaceFor(const Color(0xFF14241B)),
+                    decoration: InputDecoration(
+                        labelText: l10n.translate('room_capacity')),
+                    items: [
+                      for (var c = 1; c <= 10; c++)
+                        DropdownMenuItem(
+                            value: c,
+                            child: Text(l10n.translate('room_capacity_n',
+                                args: {'n': l10n.number(c)}))),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => capacity = v);
+                    },
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: bedType,
+                    dropdownColor:
+                        context.forest.surfaceFor(const Color(0xFF14241B)),
+                    decoration:
+                        InputDecoration(labelText: l10n.translate('room_bed')),
+                    items: [
                       DropdownMenuItem(
-                          value: c,
-                          child: Text(l10n.translate('room_capacity_n',
-                              args: {'n': l10n.number(c)}))),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) setDialogState(() => capacity = v);
-                  },
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: bedType,
-                  dropdownColor: const Color(0xFF1B4332),
-                  decoration:
-                      InputDecoration(labelText: l10n.translate('room_bed')),
-                  items: [
-                    DropdownMenuItem(
-                        value: '',
-                        child: Text(l10n.translate('room_bed_none'))),
-                    for (final b in kBedTypes)
-                      DropdownMenuItem(
-                          value: b, child: Text(l10n.translate('room_bed_$b'))),
-                  ],
-                  onChanged: (v) => setDialogState(() => bedType = v ?? ''),
-                ),
-                TextField(
-                  controller: floorCtrl,
-                  keyboardType: TextInputType.number,
-                  style: TextStyle(color: context.forest.text),
-                  decoration: InputDecoration(
-                      labelText: l10n.translate('room_floor_label')),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.translate('room_ac'),
-                      style: TextStyle(color: context.forest.text)),
-                  value: isAc,
-                  activeThumbColor: AppColors.mintGreen,
-                  onChanged: (v) => setDialogState(() => isAc = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.translate('room_sea_view'),
-                      style: TextStyle(color: context.forest.text)),
-                  value: hasSeaView,
-                  activeThumbColor: AppColors.gold,
-                  onChanged: (v) => setDialogState(() => hasSeaView = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.translate('room_balcony'),
-                      style: TextStyle(color: context.forest.text)),
-                  value: hasBalcony,
-                  activeThumbColor: AppColors.gold,
-                  onChanged: (v) => setDialogState(() => hasBalcony = v),
-                ),
-                if (error != null)
-                  Text(error!,
-                      style: TextStyle(
-                          color: context.forest.readable(Colors.redAccent),
-                          fontSize: 12)),
-              ],
+                          value: '',
+                          child: Text(l10n.translate('room_bed_none'))),
+                      for (final b in kBedTypes)
+                        DropdownMenuItem(
+                            value: b,
+                            child: Text(l10n.translate('room_bed_$b'))),
+                    ],
+                    onChanged: (v) => setDialogState(() => bedType = v ?? ''),
+                  ),
+                  TextField(
+                    controller: floorCtrl,
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(color: context.forest.text),
+                    decoration: InputDecoration(
+                        labelText: l10n.translate('room_floor_label')),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.translate('room_ac'),
+                        style: TextStyle(color: context.forest.text)),
+                    value: isAc,
+                    activeThumbColor: AppColors.mintGreen,
+                    onChanged: (v) => setDialogState(() => isAc = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.translate('room_sea_view'),
+                        style: TextStyle(color: context.forest.text)),
+                    value: hasSeaView,
+                    activeThumbColor: AppColors.gold,
+                    onChanged: (v) => setDialogState(() => hasSeaView = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.translate('room_balcony'),
+                        style: TextStyle(color: context.forest.text)),
+                    value: hasBalcony,
+                    activeThumbColor: AppColors.gold,
+                    onChanged: (v) => setDialogState(() => hasBalcony = v),
+                  ),
+                  if (error != null)
+                    Text(error!,
+                        style: TextStyle(
+                            color: context.forest.readable(Colors.redAccent),
+                            fontSize: 12)),
+                ],
+              ),
             ),
           ),
           actions: [
