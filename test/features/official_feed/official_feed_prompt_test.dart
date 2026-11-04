@@ -56,7 +56,7 @@ void main() {
     await pumpOpener(tester);
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(find.text('Follow the official feed?'), findsOneWidget);
+    expect(find.text('Follow Bhromon Official Feed?'), findsOneWidget);
 
     await tester.tap(find.text('Follow'));
     await tester.pumpAndSettle();
@@ -65,7 +65,7 @@ void main() {
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(find.text('Follow the official feed?'), findsNothing);
+    expect(find.text('Follow Bhromon Official Feed?'), findsNothing);
     expect(followed, [true]);
   });
 
@@ -88,7 +88,7 @@ void main() {
 
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
-    expect(find.text('Follow the official feed?'), findsOneWidget);
+    expect(find.text('Follow Bhromon Official Feed?'), findsOneWidget);
     expect(followed, isEmpty);
   });
 }
