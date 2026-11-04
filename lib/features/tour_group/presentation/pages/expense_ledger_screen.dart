@@ -21,6 +21,8 @@ import '../../domain/services/debt_simplifier.dart';
 import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/media_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../../domain/services/bangla_qr_engine.dart';
+import '../widgets/bangla_qr_view.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -2193,6 +2195,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       context: context,
       backgroundColor: context.forest.surfaceFor(_card),
       isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 560),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2361,6 +2364,38 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.mintGreen,
+                    foregroundColor: AppColors.darkGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                  label: const Text('Generate Bangla QR',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    final parsedTaka =
+                        int.tryParse(amountTaka.replaceAll(',', ''));
+                    showBanglaQrSheet(
+                      context,
+                      payload: BanglaQrPayload(
+                        accountNumber: (s.toId != null && s.toId!.isNotEmpty)
+                            ? s.toId!
+                            : recipientName,
+                        payeeName: recipientName,
+                        amountTaka: parsedTaka,
+                        reference: 'Settlement',
+                      ),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 12),
               Row(
