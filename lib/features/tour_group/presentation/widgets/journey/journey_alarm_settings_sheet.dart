@@ -20,6 +20,7 @@ Future<void> showJourneyAlarmSettings(
   final result = await showModalBottomSheet<JourneyAlarmSettings>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: context.forest.sheet,
     builder: (_) => _JourneyAlarmSheet(
       initial: session.settings,

@@ -33,6 +33,7 @@ Future<bool> showFamilyDateEditor(
   final changed = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: context.forest.surfaceFor(_sheet),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
