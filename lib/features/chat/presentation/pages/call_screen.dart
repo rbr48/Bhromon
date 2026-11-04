@@ -19,6 +19,7 @@ import '../../data/call_signaling_service.dart';
 import '../../data/call_telemetry.dart';
 import '../../data/system_call_bridge.dart';
 import '../../domain/call_display.dart';
+import '../../domain/call_ringback_audio.dart';
 import '../../domain/speaker_route.dart';
 import '../widgets/packet_loss_meter.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
@@ -107,22 +108,49 @@ class _CallScreenState extends State<CallScreen> {
   Timer? _controlsHideTimer;
   AudioPlayer? _ringbackPlayer;
 
-  void _startRingback() {
+  Future<void> _startRingback() async {
     if (!widget.isCaller || _ringbackPlayer != null) return;
     try {
-      _ringbackPlayer = AudioPlayer();
-      _ringbackPlayer?.setReleaseMode(ReleaseMode.loop);
-      _ringbackPlayer?.play(AssetSource('audio/ringback.mp3'));
-    } catch (e) {
-      logWarning('Failed to start ringback tone: $e');
+      final player = AudioPlayer();
+      _ringbackPlayer = player;
+      if (!kIsWeb) {
+        await player.setAudioContext(
+          buildRingbackAudioContext(isSpeaker: _isSpeakerOn),
+        );
+      }
+      // If the call connected or exited while the player was initializing,
+      // dispose immediately to prevent ringing after connection.
+      if (!mounted || _ringbackPlayer != player || _hasExited || _isConnected) {
+        await player.dispose();
+        return;
+      }
+      await player.setReleaseMode(ReleaseMode.loop);
+      await player.setVolume(1.0);
+      await player.play(AssetSource('audio/ringback.mp3'));
+    } catch (e, st) {
+      logWarning('Failed to start ringback tone: $e', e, st);
+    }
+  }
+
+  void _syncRingbackAudioRoute() {
+    if (kIsWeb || _ringbackPlayer == null) return;
+    try {
+      unawaited(_ringbackPlayer?.setAudioContext(
+        buildRingbackAudioContext(isSpeaker: _isSpeakerOn),
+      ));
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
     }
   }
 
   void _stopRingback() {
     try {
-      _ringbackPlayer?.stop();
-      _ringbackPlayer?.dispose();
+      final player = _ringbackPlayer;
       _ringbackPlayer = null;
+      if (player != null) {
+        unawaited(player.stop());
+        unawaited(player.dispose());
+      }
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
     }
@@ -307,7 +335,7 @@ class _CallScreenState extends State<CallScreen> {
             _statusKey =
                 widget.isCaller ? 'call_status_ringing' : 'call_incoming';
             if (widget.isCaller) {
-              _startRingback();
+              unawaited(_startRingback());
             }
           case 'answered':
             // Accepted, but the media has not connected yet.
@@ -722,6 +750,7 @@ class _CallScreenState extends State<CallScreen> {
       _applyAudioRouting();
     }
     _updateProximity();
+    _syncRingbackAudioRoute();
   }
 
   String _outputName(BuildContext context, MediaDeviceInfo output) {
@@ -744,6 +773,7 @@ class _CallScreenState extends State<CallScreen> {
     });
     _applyAudioRouting();
     _updateProximity();
+    _syncRingbackAudioRoute();
   }
 
   /// On the earpiece of an audio call the phone is held to the ear, so the
