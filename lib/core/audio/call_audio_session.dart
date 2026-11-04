@@ -91,6 +91,26 @@ class CallAudioSession {
     }
   }
 
+  /// What the phone reports about the call's audio route: the mode, the device the
+  /// communication route is on, the device the WebRTC plugin selected, the in-call volume
+  /// and the output kinds. Device types only, never names. Null off Android, or when the
+  /// phone does not answer. Read after a call connects, to check the loudspeaker route.
+  static Future<Map<String, Object?>?> routeSnapshot() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      final raw =
+          await _channel.invokeMethod<Map<Object?, Object?>>('routeSnapshot');
+      if (raw == null) return null;
+      return {for (final entry in raw.entries) '${entry.key}': entry.value};
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: no native handler: $e');
+      return null;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: routeSnapshot failed: ${e.message}');
+      return null;
+    }
+  }
+
   static void Function()? _onHangUp;
   static void Function(bool inPip)? _onPipChanged;
   static bool _listening = false;

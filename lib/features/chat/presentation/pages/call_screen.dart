@@ -16,8 +16,10 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
+import '../../data/call_telemetry.dart';
 import '../../data/system_call_bridge.dart';
 import '../../domain/call_display.dart';
+import '../../domain/speaker_route.dart';
 import '../widgets/packet_loss_meter.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
@@ -185,6 +187,39 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
+  /// Reads the phone's route once a connected call has settled, while the speaker is on.
+  /// A route that is not the loudspeaker is applied once more, and the outcome goes to
+  /// the call's Crashlytics keys. A route that still did not take is also recorded as a
+  /// non-fatal, with the route as it was found.
+  Future<void> _checkSpeakerRoute() async {
+    if (kIsWeb || !_isConnected || !_isSpeakerOn || _outputDeviceId != null) {
+      return;
+    }
+    final first = await CallAudioSession.routeSnapshot();
+    if (!mounted || first == null) return;
+    if (readSpeakerRoute(first) == SpeakerRoute.onSpeaker) {
+      await CallTelemetry.speakerRoute(outcome: 'ok', systemCall: _systemCall);
+      return;
+    }
+    _applyAudioRouting();
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    final second = await CallAudioSession.routeSnapshot();
+    final outcome = second == null
+        ? 'unknown'
+        : readSpeakerRoute(second) == SpeakerRoute.onSpeaker
+            ? 'retry_ok'
+            : 'failed';
+    await CallTelemetry.speakerRoute(
+      outcome: outcome,
+      systemCall: _systemCall,
+      detail: describeSpeakerRoute(first),
+    );
+    if (outcome == 'failed') {
+      logWarning('The loudspeaker route did not take on a connected call');
+    }
+  }
+
   /// Puts the call on the loudspeaker, or off it. On Android, the phone's own audio
   /// manager configures the platform communication device and routing mode, while
   /// the WebRTC plugin's AudioSwitch must also be synchronized so it does not
@@ -288,6 +323,10 @@ class _CallScreenState extends State<CallScreen> {
             // Reaffirm speaker routing after connection settles.
             Future.delayed(const Duration(milliseconds: 250), () {
               if (mounted) _applyAudioRouting();
+            });
+            // Checks the route once the re-applications above have settled.
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (mounted) unawaited(_checkSpeakerRoute());
             });
             _startDurationTimer();
             if (_systemCall) {

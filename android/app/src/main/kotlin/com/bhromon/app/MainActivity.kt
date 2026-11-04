@@ -161,6 +161,11 @@ class MainActivity: FlutterFragmentActivity() {
                     // Answers whether the route took, so the app can fall back to the plugin.
                     result.success(setSpeakerphone(call.argument<Boolean>("enabled") ?: false))
                 }
+                "routeSnapshot" -> {
+                    // What the phone and the WebRTC plugin say the call is routed to, read
+                    // after a call connects to check the loudspeaker route.
+                    result.success(routeSnapshot())
+                }
                 else -> result.notImplemented()
             }
         }
@@ -232,6 +237,56 @@ class MainActivity: FlutterFragmentActivity() {
         }
         audioManager.isSpeakerphoneOn = enabled
         return audioManager.isSpeakerphoneOn == enabled
+    }
+
+    /**
+     * The call's audio route as the phone and the WebRTC plugin report it. It holds
+     * types and volumes only, never device names.
+     */
+    private fun routeSnapshot(): Map<String, Any?> {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val communication = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.communicationDevice?.let { routeName(it.type) }
+        } else {
+            null
+        }
+        val outputs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { routeName(it.type) }.distinct()
+        } else {
+            emptyList<String>()
+        }
+        return mapOf(
+            "mode" to audioManager.mode,
+            "speakerphoneOn" to audioManager.isSpeakerphoneOn,
+            "communicationDevice" to communication,
+            "pluginDevice" to pluginDeviceName(),
+            "voiceCallVolume" to audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL),
+            "voiceCallMax" to audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL),
+            "outputs" to outputs,
+        )
+    }
+
+    /**
+     * The class name of the output the WebRTC plugin's audio switch selected. It is read by
+     * reflection because the device type comes from a library this module does not compile
+     * against. Null when it cannot be read; the route check then uses the phone's route alone.
+     */
+    private fun pluginDeviceName(): String? {
+        val manager = AudioSwitchManager.instance ?: return null
+        return try {
+            manager.javaClass.getMethod("selectedAudioDevice").invoke(manager)?.javaClass?.simpleName
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** The output kind of an audio device type, named the way the app reads it. */
+    private fun routeName(type: Int): String = when (type) {
+        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "speaker"
+        AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "earpiece"
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "bluetooth"
+        AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "wired"
+        else -> "other"
     }
 
     /** Gives back the route that [setSpeakerphone] set, once the call is over. */
