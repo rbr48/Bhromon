@@ -55,11 +55,14 @@
 		<false/>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Bhromon uses your location to show your place on the trip route and the distance to the next stop.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>During a journey you start, Bhromon uses your location in the background to warn you before each stop and to wake you at your destination. Sharing with the group is off unless you turn it on.</string>
 		<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
 		<string>remote-notification</string>
 		<string>voip</string>
+		<string>location</string>
 	</array>
 </dict>
 </plist>
