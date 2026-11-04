@@ -90,6 +90,37 @@ class HubAlertEngine {
   /// overshoot alert fires.
   final double overshootM;
 
+  /// The targets the group is inside the arrival radius of now.
+  Set<String> get arrivedNowIds => {
+        for (final e in _state.entries)
+          if (e.value.arrived) e.key,
+      };
+
+  /// The targets the group has arrived at at some point on this trip.
+  Set<String> get everArrivedIds => {
+        for (final e in _state.entries)
+          if (e.value.everArrived) e.key,
+      };
+
+  /// Restores the arrival state of a trip stored before the app closed, so an
+  /// arrival does not ring again after a restart. Thresholds already passed
+  /// while the group was inside a target's arrival radius stay fired.
+  void restoreState({
+    required Set<String> arrivedNow,
+    required Set<String> everArrived,
+  }) {
+    for (final target in _targets) {
+      final s = _state[target.id]!;
+      if (arrivedNow.contains(target.id)) {
+        s.arrived = true;
+        s.fired.addAll(target.approachThresholdsM);
+      }
+      if (everArrived.contains(target.id) || arrivedNow.contains(target.id)) {
+        s.everArrived = true;
+      }
+    }
+  }
+
   /// Checks every target against [at]. [pastEndM] is how far past the end of the
   /// route the group is, from the tracker. It drives the overshoot alert.
   List<HubAlert> evaluate({required GeoPoint at, double pastEndM = 0}) {

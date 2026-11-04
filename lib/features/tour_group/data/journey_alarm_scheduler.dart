@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -163,6 +165,12 @@ class JourneyAlarmScheduler {
   }
 }
 
+/// The payload of a journey alarm notification. A tap on it opens the alarm
+/// page with the same text (see `journey_notifications.dart`).
+String journeyAlarmPayload({required String title, required String body}) {
+  return jsonEncode({'kind': 'journey_alarm', 'title': title, 'body': body});
+}
+
 /// The real port, on flutter_local_notifications.
 ///
 /// The fire time is an absolute instant. It is converted to UTC, so the alarm
@@ -189,6 +197,7 @@ class FlutterJourneyNotificationPort implements JourneyNotificationPort {
       body,
       tz.TZDateTime.from(fireAt.toUtc(), tz.UTC),
       journeyNotificationDetails(channel: channel, rings: rings),
+      payload: journeyAlarmPayload(title: title, body: body),
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       androidScheduleMode: AndroidScheduleMode.alarmClock,
