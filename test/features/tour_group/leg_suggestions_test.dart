@@ -6,8 +6,8 @@ import 'package:bhromon/features/tour_group/domain/services/leg_suggestions.dart
 import 'live_journey_test_support.dart';
 
 void main() {
-  final start = kRouteA;
-  final end = kRouteC;
+  const start = kRouteA;
+  const end = kRouteC;
   final t0 = DateTime.utc(2027, 1, 13, 8);
 
   LegSuggestion? depart(LegSuggestionEngine e, GeoPoint at, DateTime now) =>

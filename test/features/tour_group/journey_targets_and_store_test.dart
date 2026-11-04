@@ -112,12 +112,12 @@ void main() {
   });
 
   group('hub alert engine restore', () {
-    final target = AlertTarget(
+    const target = AlertTarget(
       id: 'hub',
       name: 'Hub',
       point: kRouteB,
       kind: AlertTargetKind.stop,
-      approachThresholdsM: const [5000, 1000],
+      approachThresholdsM: [5000, 1000],
     );
 
     test('a target restored as arrived does not announce its arrival again',
@@ -130,7 +130,7 @@ void main() {
     });
 
     test('a restored destination that was reached blocks the overshoot', () {
-      final destination = AlertTarget(
+      const destination = AlertTarget(
         id: 'end',
         name: 'End',
         point: kRouteC,
