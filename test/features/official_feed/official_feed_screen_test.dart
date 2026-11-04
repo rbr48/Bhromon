@@ -6,6 +6,7 @@ import 'package:bhromon/features/official_feed/domain/official_feed_choice.dart'
 import 'package:bhromon/features/official_feed/domain/official_reel.dart';
 import 'package:bhromon/features/official_feed/presentation/official_feed_entry_card.dart';
 import 'package:bhromon/features/official_feed/presentation/official_feed_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -114,6 +115,25 @@ void main() {
 
     expect(find.text('Welcome to Bhromon'), findsOneWidget);
     expect(find.text('Official'), findsOneWidget);
+  });
+
+  testWidgets(
+      'an image post renders its image with BoxFit.contain so photos are not cropped',
+      (tester) async {
+    const imageReel = OfficialReel(
+      id: 'img1',
+      imageUrl: 'https://bhromon.fun/media/official/images/img1.webp',
+      caption: 'Landscape Photo',
+    );
+    await _pump(
+      tester,
+      _screen(_FakeFeed((_) => Stream.value(const [imageReel]))),
+    );
+
+    expect(find.text('Landscape Photo'), findsOneWidget);
+    final cachedImage =
+        tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+    expect(cachedImage.fit, BoxFit.contain);
   });
 
   testWidgets('the bell turns new-post notifications on and off',

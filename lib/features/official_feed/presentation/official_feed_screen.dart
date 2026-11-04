@@ -349,7 +349,10 @@ class _OfficialReelPageState extends State<_OfficialReelPage> {
         fit: StackFit.expand,
         children: [
           if (isImage)
-            _CoverImage(url: widget.reel.displayImageUrl)
+            _CoverImage(
+              url: widget.reel.displayImageUrl,
+              isImage: true,
+            )
           else if (!showVideo)
             _CoverImage(url: widget.reel.coverUrl),
           if (showVideo) _VideoFill(controller: controller),
@@ -416,9 +419,10 @@ class _OfficialReelPageState extends State<_OfficialReelPage> {
 }
 
 class _CoverImage extends StatelessWidget {
-  const _CoverImage({required this.url});
+  const _CoverImage({required this.url, this.isImage = false});
 
   final String? url;
+  final bool isImage;
 
   @override
   Widget build(BuildContext context) {
@@ -426,7 +430,12 @@ class _CoverImage extends StatelessWidget {
     if (cover == null) return const ColoredBox(color: Colors.black);
     return CachedNetworkImage(
       imageUrl: signedMediaUrl(cover),
-      fit: BoxFit.cover,
+      imageBuilder: (context, imageProvider) => _CoverImageAdaptive(
+        imageProvider: imageProvider,
+        forceContain: isImage,
+      ),
+      fit: isImage ? BoxFit.contain : BoxFit.cover,
+      alignment: Alignment.center,
       placeholder: (context, url) => const ColoredBox(color: Colors.black),
       errorWidget: (context, url, error) =>
           const ColoredBox(color: Colors.black),
@@ -434,7 +443,80 @@ class _CoverImage extends StatelessWidget {
   }
 }
 
-/// The video, scaled to cover the page and cropped to fit it.
+class _CoverImageAdaptive extends StatefulWidget {
+  const _CoverImageAdaptive({
+    required this.imageProvider,
+    required this.forceContain,
+  });
+
+  final ImageProvider imageProvider;
+  final bool forceContain;
+
+  @override
+  State<_CoverImageAdaptive> createState() => _CoverImageAdaptiveState();
+}
+
+class _CoverImageAdaptiveState extends State<_CoverImageAdaptive> {
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+  bool _isLandscape = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CoverImageAdaptive oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.imageProvider != oldWidget.imageProvider) {
+      _resolve();
+    }
+  }
+
+  void _resolve() {
+    if (_stream != null && _listener != null) {
+      _stream!.removeListener(_listener!);
+    }
+    final stream = widget.imageProvider.resolve(const ImageConfiguration());
+    _stream = stream;
+    _listener = ImageStreamListener((ImageInfo info, bool _) {
+      if (!mounted) return;
+      final w = info.image.width;
+      final h = info.image.height;
+      if (w > 0 && h > 0) {
+        setState(() => _isLandscape = w >= h);
+      }
+    });
+    stream.addListener(_listener!);
+  }
+
+  @override
+  void dispose() {
+    if (_stream != null && _listener != null) {
+      _stream!.removeListener(_listener!);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fit = (widget.forceContain || _isLandscape)
+        ? BoxFit.contain
+        : BoxFit.cover;
+    return Center(
+      child: Image(
+        image: widget.imageProvider,
+        fit: fit,
+        alignment: Alignment.center,
+      ),
+    );
+  }
+}
+
+/// The video, scaled to cover the page for vertical reels,
+/// or fitted within the page (letterboxed) for landscape / square videos.
 class _VideoFill extends StatelessWidget {
   const _VideoFill({required this.controller});
 
@@ -444,6 +526,17 @@ class _VideoFill extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = controller.value.size;
     if (size.isEmpty) return const SizedBox.expand();
+
+    final isLandscape = size.width >= size.height;
+    if (isLandscape) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: VideoPlayer(controller),
+        ),
+      );
+    }
+
     return FittedBox(
       fit: BoxFit.cover,
       clipBehavior: Clip.hardEdge,
