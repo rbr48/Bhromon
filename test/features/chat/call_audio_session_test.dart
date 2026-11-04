@@ -69,4 +69,27 @@ void main() {
     await CallAudioSession.release();
     expect(seen?.method, 'release');
   });
+
+  test('reads the route the phone reports, with text keys', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'routeSnapshot');
+      return {
+        'communicationDevice': 'speaker',
+        'mode': 3,
+        'outputs': ['speaker'],
+      };
+    });
+
+    expect(await CallAudioSession.routeSnapshot(), {
+      'communicationDevice': 'speaker',
+      'mode': 3,
+      'outputs': ['speaker'],
+    });
+  });
+
+  test('has no route to read off Android', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    expect(await CallAudioSession.routeSnapshot(), isNull);
+  });
 }
