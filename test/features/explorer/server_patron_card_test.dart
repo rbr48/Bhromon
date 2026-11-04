@@ -21,58 +21,69 @@ void main() {
     );
   }
 
-  testWidgets('ServerPatronCard renders title and payment options in English',
+  testWidgets('ServerPatronCard renders title and the QR option in English',
       (tester) async {
     await tester.pumpWidget(buildCard(locale: const Locale('en')));
     await tester.pumpAndSettle();
 
     expect(find.text('Keep Bhromon Running'), findsOneWidget);
-    expect(find.text('bKash'), findsOneWidget);
-    expect(find.text('Nagad'), findsOneWidget);
+    expect(find.text('Bangla QR'), findsOneWidget);
     expect(find.text('Open Source'), findsOneWidget);
     expect(find.byIcon(Icons.volunteer_activism_rounded), findsOneWidget);
   });
 
-  testWidgets('Tapping bKash triggers clipboard copy and snackbar',
-      (tester) async {
+  testWidgets('the card shows no bKash or Nagad number', (tester) async {
     await tester.pumpWidget(buildCard(locale: const Locale('en')));
     await tester.pumpAndSettle();
 
-    final bkashBtn = find.text('bKash');
-    expect(bkashBtn, findsOneWidget);
-
-    await tester.tap(bkashBtn);
-    await tester.pump(); // Start snackbar animation
-
-    expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining('01737910040'), findsOneWidget);
+    expect(find.textContaining('01737910040'), findsNothing);
+    expect(find.text('bKash'), findsNothing);
+    expect(find.text('Nagad'), findsNothing);
   });
 
-  testWidgets('Tapping info icon opens support details bottom sheet',
+  testWidgets('tapping the Bangla QR option opens the QR sheet',
       (tester) async {
     await tester.pumpWidget(buildCard(locale: const Locale('en')));
     await tester.pumpAndSettle();
 
-    final infoIcon = find.byIcon(Icons.info_outline_rounded);
-    expect(infoIcon, findsOneWidget);
-
-    await tester.tap(infoIcon);
+    await tester.tap(find.text('Bangla QR'));
     await tester.pumpAndSettle();
 
-    expect(find.text('bKash (Personal)'), findsOneWidget);
-    expect(find.text('Nagad (Personal)'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+    expect(
+      find.text('Scan with bKash, Nagad, Rocket or any bank app to donate'),
+      findsOneWidget,
+    );
     expect(find.text('GitHub Sponsors'), findsOneWidget);
   });
 
-  test('Translation keys in Bengali are accurate and non-empty', () {
+  testWidgets('the QR sits on a white tile so it scans from the dark card',
+      (tester) async {
+    await tester.pumpWidget(buildCard(locale: const Locale('en')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.info_outline_rounded));
+    await tester.pumpAndSettle();
+
+    final whiteTile = find.ancestor(
+      of: find.byType(Image),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color == Colors.white,
+      ),
+    );
+    expect(whiteTile, findsOneWidget);
+  });
+
+  test('Bengali strings for the QR are accurate and non-empty', () {
     final bn = AppLocalizations(const Locale('bn'));
     expect(
         bn.translate('server_patron_title'), 'ভ্রমণ সার্ভার সচল রাখতে সহায়তা');
-    expect(bn.translate('server_patron_bkash'), 'বিকাশ');
-    expect(bn.translate('server_patron_nagad'), 'নগদ');
+    expect(bn.translate('server_patron_qr_chip'), 'বাংলা কিউআর');
     expect(bn.translate('server_patron_github'), 'গিটহাব স্পনসর');
-    expect(
-        bn.translate('server_patron_copied', args: {'number': '01737910040'}),
-        'নম্বর কপি হয়েছে: 01737910040');
+    expect(bn.translate('server_patron_qr_caption'),
+        'অনুদান দিতে বিকাশ, নগদ, রকেট বা যেকোনো ব্যাংক অ্যাপ দিয়ে স্ক্যান করুন');
   });
 }

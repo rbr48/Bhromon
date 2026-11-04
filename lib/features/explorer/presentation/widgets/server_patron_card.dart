@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -8,32 +7,18 @@ import '../../../../core/theme/colors.dart';
 
 /// A transparent, non-intrusive patronage card encouraging community support
 /// to keep Bhromon's self-hosted VPS and open-source infrastructure running.
+///
+/// Donations go through one Bangla QR code, which bKash, Nagad, Rocket and bank apps
+/// can all scan. It is shown on white, so it scans from the dark card.
 class ServerPatronCard extends StatelessWidget {
   const ServerPatronCard({super.key});
 
-  static const String bKashNumber = '01737910040';
-  static const String nagadNumber = '01737910040';
+  static const String donationQrAsset =
+      'assets/donation/krishi_bank_bangla_qr.png';
   static const String githubRepoUrl = 'https://github.com/rbr48/Bhromon';
-
-  void _copyToClipboard(
-      BuildContext context, String number, String serviceName) {
-    Clipboard.setData(ClipboardData(text: number));
-    final l10n = context.l10n;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          l10n.translate('server_patron_copied', args: {'number': number}),
-        ),
-        backgroundColor: AppColors.midGreen,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 
   void _openSupportSheet(BuildContext context) {
     final l10n = context.l10n;
-    final isBn = Localizations.localeOf(context).languageCode == 'bn';
 
     showModalBottomSheet<void>(
       context: context,
@@ -86,30 +71,18 @@ class ServerPatronCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _buildMethodTile(
-                  context,
-                  title: isBn ? 'বিকাশ (পার্সোনাল)' : 'bKash (Personal)',
-                  number: bKashNumber,
-                  icon: Icons.account_balance_wallet_rounded,
-                  color: const Color(0xFFE2136E),
-                  subtitle: l10n.translate('server_patron_ref_hint'),
-                  onCopy: () {
-                    Navigator.of(ctx).pop();
-                    _copyToClipboard(context, bKashNumber, 'bKash');
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildMethodTile(
-                  context,
-                  title: isBn ? 'নগদ (পার্সোনাল)' : 'Nagad (Personal)',
-                  number: nagadNumber,
-                  icon: Icons.phone_android_rounded,
-                  color: const Color(0xFFF7941D),
-                  subtitle: l10n.translate('server_patron_ref_hint'),
-                  onCopy: () {
-                    Navigator.of(ctx).pop();
-                    _copyToClipboard(context, nagadNumber, 'Nagad');
-                  },
+                Center(child: _buildQr(context)),
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    l10n.translate('server_patron_qr_caption'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: context.forest.text70,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Center(
@@ -137,72 +110,19 @@ class ServerPatronCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMethodTile(
-    BuildContext context, {
-    required String title,
-    required String number,
-    required IconData icon,
-    required Color color,
-    required String subtitle,
-    required VoidCallback onCopy,
-  }) {
+  /// The Bangla QR on a white tile, so it scans from the dark card.
+  Widget _buildQr(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black26,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  number,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.copy_rounded,
-                color: AppColors.mintGreen, size: 20),
-            tooltip: 'Copy',
-            onPressed: onCopy,
-          ),
-        ],
+      child: Image.asset(
+        donationQrAsset,
+        width: 220,
+        height: 220,
+        semanticLabel: context.l10n.translate('server_patron_qr_chip'),
       ),
     );
   }
@@ -295,68 +215,31 @@ class ServerPatronCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // Action Chips / Quick Copy
+          // The donation QR opens from here, and so does the details sheet.
           Row(
             children: [
-              // bKash Button
               Expanded(
                 child: InkWell(
-                  onTap: () => _copyToClipboard(context, bKashNumber, 'bKash'),
+                  onTap: () => _openSupportSheet(context),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2136E).withValues(alpha: 0.15),
+                      color: AppColors.mintGreen.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: const Color(0xFFE2136E).withValues(alpha: 0.4),
+                        color: AppColors.mintGreen.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.account_balance_wallet_rounded,
-                            color: Color(0xFFE2136E), size: 14),
+                        const Icon(Icons.qr_code_2_rounded,
+                            color: AppColors.mintGreen, size: 16),
                         const SizedBox(width: 6),
                         Text(
-                          l10n.translate('server_patron_bkash'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Nagad Button
-              Expanded(
-                child: InkWell(
-                  onTap: () => _copyToClipboard(context, nagadNumber, 'Nagad'),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF7941D).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFF7941D).withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.phone_android_rounded,
-                            color: Color(0xFFF7941D), size: 14),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.translate('server_patron_nagad'),
+                          l10n.translate('server_patron_qr_chip'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,

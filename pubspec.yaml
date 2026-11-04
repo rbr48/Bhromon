@@ -149,6 +149,7 @@ flutter:
     - assets/brand_header_logo.jpg
     - assets/Bhromon.png
     - assets/audio/
+    - assets/donation/
 
   fonts:
     - family: HindSiliguri

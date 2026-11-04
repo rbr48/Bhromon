@@ -2346,11 +2346,10 @@ class TourTranslationKeys {
       'server_patron_title': 'Keep Bhromon Running',
       'server_patron_desc':
           'Bhromon is 100% free, open-source, and ad-free. Support our uptime with a voluntary contribution.',
-      'server_patron_bkash': 'bKash',
-      'server_patron_nagad': 'Nagad',
       'server_patron_github': 'GitHub Sponsors',
-      'server_patron_copied': 'Number copied: {number}',
-      'server_patron_ref_hint': 'Personal (Send Money) • Ref: Bhromon',
+      'server_patron_qr_chip': 'Bangla QR',
+      'server_patron_qr_caption':
+          'Scan with bKash, Nagad, Rocket or any bank app to donate',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -4681,11 +4680,10 @@ class TourTranslationKeys {
       'server_patron_title': 'ভ্রমণ সার্ভার সচল রাখতে সহায়তা',
       'server_patron_desc':
           'ভ্রমণ সম্পূর্ণ ফ্রি, বিজ্ঞাপনমুক্ত ও ওপেন-সোর্স। সার্ভার সচল রাখতে আপনিও স্বেচ্ছায় পাশে থাকতে পারেন।',
-      'server_patron_bkash': 'বিকাশ',
-      'server_patron_nagad': 'নগদ',
       'server_patron_github': 'গিটহাব স্পনসর',
-      'server_patron_copied': 'নম্বর কপি হয়েছে: {number}',
-      'server_patron_ref_hint': 'পার্সোনাল (সেন্ড মানি) • রেফারেন্স: Bhromon',
+      'server_patron_qr_chip': 'বাংলা কিউআর',
+      'server_patron_qr_caption':
+          'অনুদান দিতে বিকাশ, নগদ, রকেট বা যেকোনো ব্যাংক অ্যাপ দিয়ে স্ক্যান করুন',
     },
   };
 }
