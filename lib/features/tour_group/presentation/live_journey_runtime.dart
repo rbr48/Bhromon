@@ -15,7 +15,9 @@ import '../data/journey_alarm_scheduler.dart';
 import '../data/journey_alarm_sound.dart';
 import '../data/journey_location_source.dart';
 import '../data/journey_notifications.dart';
+import '../data/firestore_journey_event_sink.dart';
 import '../data/journey_prefs_store.dart';
+import '../data/journey_relay_client.dart';
 import '../data/live_journey_session.dart';
 import '../data/tour_group_repository.dart';
 import '../domain/models/tour_group.dart';
@@ -55,7 +57,13 @@ class LiveJourneyRuntime {
       scheduler:
           JourneyAlarmScheduler(port: FlutterJourneyNotificationPort(plugin)),
       notices: FlutterJourneyNoticePort(plugin),
-      events: const NoopJourneyEventSink(),
+      events: FirestoreJourneyEventSink(),
+      relay: JourneyRelayClient(
+        open: openJourneyRelaySocket,
+        authToken: () =>
+            FirebaseAuth.instance.currentUser?.getIdToken() ??
+            Future<String?>.value(null),
+      ),
       text: _translate,
       formatNumber: _formatNumber,
       onRing: (ring) => openAlarm(
@@ -138,19 +146,6 @@ String _translate(JourneyText text) {
 
 String _formatNumber(num value) {
   return AppLocalizations(LocaleController.instance.locale).number(value);
-}
-
-/// Records nothing. The Firestore sink replaces it when group events ship
-/// (roadmap LJ-4.2).
-class NoopJourneyEventSink implements JourneyEventSink {
-  const NoopJourneyEventSink();
-
-  @override
-  Future<void> record({
-    required String tourId,
-    required String stopId,
-    required JourneyEventType type,
-  }) async {}
 }
 
 /// Creates the journey's time zones, channels and tap handler. The app calls

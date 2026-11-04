@@ -102,6 +102,25 @@ class _FakeNotices implements JourneyNoticePort {
   }
 }
 
+class _FakeRelay implements JourneyRelayPort {
+  final List<String> calls = [];
+
+  @override
+  Future<void> connect(String tourId) async {
+    calls.add('connect:$tourId');
+  }
+
+  @override
+  void offer(JourneyFix fix) {
+    calls.add('offer');
+  }
+
+  @override
+  Future<void> close() async {
+    calls.add('close');
+  }
+}
+
 class _FakeEvents implements JourneyEventSink {
   final List<String> recorded = [];
 
@@ -126,6 +145,7 @@ class _Harness {
   final _FakeAlarmPort alarmPort = _FakeAlarmPort();
   final _FakeNotices notices = _FakeNotices();
   final _FakeEvents events = _FakeEvents();
+  final _FakeRelay relay = _FakeRelay();
   final List<JourneyPresentation> rings = [];
   final List<int> sampling = [];
   late LiveJourneySession session;
@@ -140,6 +160,7 @@ class _Harness {
       scheduler: JourneyAlarmScheduler(port: alarmPort),
       notices: notices,
       events: events,
+      relay: relay,
       text: (t) => t.key,
       formatNumber: (n) => '$n',
       onRing: rings.add,
@@ -338,6 +359,43 @@ void main() {
           reason: 'the stream restarts with the resting plan');
       h.session.dismissLongStopPrompt();
       expect(h.session.longStopPrompt, isFalse);
+    });
+
+    test('sharing connects the relay and offers each accepted reading',
+        () async {
+      final h = _Harness();
+      await h.start();
+      await h.step(_westOfHub);
+      expect(h.relay.calls, isEmpty,
+          reason: 'nothing is relayed while sharing is off');
+
+      await h.session.setSharing(on: true);
+      expect(h.relay.calls, ['connect:tour-1']);
+      await h.step(eastOf(kRouteB, -10000));
+      expect(h.relay.calls.last, 'offer');
+
+      await h.session.setSharing(on: false);
+      expect(h.relay.calls.last, 'close');
+    });
+
+    test('ending the trip closes the relay', () async {
+      final h = _Harness();
+      await h.start();
+      await h.session.setSharing(on: true);
+      await h.session.stop();
+      expect(h.relay.calls.last, 'close');
+    });
+
+    test('a restored trip that was sharing reconnects the relay', () async {
+      final backend = MemoryJourneyPrefsBackend();
+      final first = _Harness(backend: backend);
+      await first.start();
+      await first.session.setSharing(on: true);
+
+      final second = _Harness(backend: backend);
+      second.clock.now = first.clock.now;
+      await second.session.restore(group: _group(), copy: _copy);
+      expect(second.relay.calls, ['connect:tour-1']);
     });
 
     test('settings persist and apply to the running trip', () async {

@@ -62,6 +62,28 @@ abstract class JourneyEventSink {
   });
 }
 
+/// Sends this member's position to the group and receives the others' (roadmap
+/// LJ-4.5). Called only while sharing is on (rule 2).
+abstract class JourneyRelayPort {
+  Future<void> connect(String tourId);
+  void offer(JourneyFix fix);
+  Future<void> close();
+}
+
+/// Relays nothing. The session uses it when the live relay is off.
+class NoopJourneyRelayPort implements JourneyRelayPort {
+  const NoopJourneyRelayPort();
+
+  @override
+  Future<void> connect(String tourId) async {}
+
+  @override
+  void offer(JourneyFix fix) {}
+
+  @override
+  Future<void> close() async {}
+}
+
 /// Runs one live journey: the trip, the GPS readings, the stop notices, the
 /// wake-up alarms and the group events (roadmap phases 2 and 3).
 ///
@@ -78,6 +100,7 @@ class LiveJourneySession extends ChangeNotifier {
     required this.text,
     required this.formatNumber,
     required this.onRing,
+    this.relay = const NoopJourneyRelayPort(),
     DateTime Function()? now,
     JourneyTripLifecycle? lifecycle,
     this.idleCheckEvery = const Duration(minutes: 5),
@@ -90,6 +113,7 @@ class LiveJourneySession extends ChangeNotifier {
   final JourneyAlarmScheduler scheduler;
   final JourneyNoticePort notices;
   final JourneyEventSink events;
+  final JourneyRelayPort relay;
 
   /// Translates a presentation text.
   final String Function(JourneyText) text;
@@ -197,6 +221,7 @@ class LiveJourneySession extends ChangeNotifier {
     _group = group;
     _copy = copy;
     _settings = store.readSettings();
+    if (stored.sharing) unawaited(relay.connect(stored.tourId));
     final arrivals = store.readArrivals();
     final kept = arrivals != null && arrivals.tripId == stored.id;
     _arrivedNow = kept ? {...arrivals.arrivedNow} : {};
@@ -222,6 +247,12 @@ class LiveJourneySession extends ChangeNotifier {
     if (!_lifecycle.setSharing(on: on)) return;
     await _persistTrip(_now(), force: true);
     if (isTracking) _startStream();
+    if (on) {
+      final tourId = trip?.tourId;
+      if (tourId != null) unawaited(relay.connect(tourId));
+    } else {
+      unawaited(relay.close());
+    }
     notifyListeners();
   }
 
@@ -270,8 +301,9 @@ class LiveJourneySession extends ChangeNotifier {
     }
     _snapshot = update.snapshot;
     final snap = update.snapshot;
-    if (update.verdict == FixVerdict.accepted && !_readings.isClosed) {
-      _readings.add(fix);
+    if (update.verdict == FixVerdict.accepted) {
+      if (!_readings.isClosed) _readings.add(fix);
+      if (isSharing) relay.offer(fix);
     }
     _still.observe(speedMps: snap.speedMps, at: now);
     _updateLongStop(now);
@@ -523,6 +555,7 @@ class LiveJourneySession extends ChangeNotifier {
     await store.saveTrip(null);
     await store.clearArrivals();
     _lastPersistAt = null;
+    unawaited(relay.close());
     notifyListeners();
   }
 
