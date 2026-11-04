@@ -23,6 +23,7 @@ import '../../domain/services/media_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
+import '../widgets/mess/mess_balance_sheet.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/utils/logger.dart';
 
@@ -1657,13 +1658,20 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   l10n.translate('campus_quick_snacks_sub'),
                   () => _editExpense(null, false,
                       l10n.translate('campus_quick_snacks'), 'Food')),
-            if (group?.isMess == true)
+            if (group?.isMess == true) ...[
               item(
                   Icons.shopping_basket_rounded,
                   AppColors.gold,
                   l10n.translate('mess_quick_bazar'),
                   l10n.translate('mess_quick_bazar_sub'),
                   () => _addMessBazar(l10n.translate('mess_quick_bazar'))),
+              item(
+                  Icons.receipt_long_rounded,
+                  AppColors.mintGreen,
+                  'মেস মিল ও ব্যালেন্স',
+                  'স্বয়ংক্রিয় মিল রেট ও সদস্যভিত্তিক বকেয়া/ফেরত হিসাব',
+                  () => showMessBalanceSheet(context, tourId: widget.tourId)),
+            ],
             item(
                 Icons.savings_rounded,
                 AppColors.gold,
