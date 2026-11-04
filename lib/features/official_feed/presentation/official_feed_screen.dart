@@ -502,9 +502,8 @@ class _CoverImageAdaptiveState extends State<_CoverImageAdaptive> {
 
   @override
   Widget build(BuildContext context) {
-    final fit = (widget.forceContain || _isLandscape)
-        ? BoxFit.contain
-        : BoxFit.cover;
+    final fit =
+        (widget.forceContain || _isLandscape) ? BoxFit.contain : BoxFit.cover;
     return Center(
       child: Image(
         image: widget.imageProvider,
