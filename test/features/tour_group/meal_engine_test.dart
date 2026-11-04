@@ -37,7 +37,7 @@ void main() {
   group('Mess Meal Engine Calculations', () {
     test('calculates meal rate accurately and splits member balances', () {
       // 1. Logs: Fahim ate 40 meals, Shakil ate 50 meals, Tanvir ate 10 meals (Total = 100 meals)
-      final logs = [
+      const logs = [
         MealLog(
             dateKey: '2026-11-01',
             email: 'fahim@example.com',
