@@ -86,6 +86,9 @@ class _PendingUpload {
   final String? fileName;
   final int? fileSizeBytes;
 
+  /// The length of a voice message that is being sent.
+  final int? durationSeconds;
+
   _PendingUpload({
     required this.id,
     this.file,
@@ -93,6 +96,7 @@ class _PendingUpload {
     required this.type,
     this.fileName,
     this.fileSizeBytes,
+    this.durationSeconds,
   });
 }
 
@@ -1277,10 +1281,20 @@ class _ChatScreenState extends State<ChatScreen> {
           : await File(filePath).readAsBytes();
 
       final cleanUploadId = uploadId.replaceAll('-', '');
+      // Shown in the chat while the voice message uploads, so the sender can see it is on its way.
+      final pending = _PendingUpload(
+        id: uploadId,
+        type: 'audio',
+        durationSeconds: duration.inSeconds,
+      );
+      if (mounted) setState(() => _pendingUploads.add(pending));
       final downloadUrl = await MediaUploadService.uploadBytes(
         bytes: voiceBytes,
         path: 'chat_voice/${widget.chatId}/$cleanUploadId.m4a',
         contentType: 'audio/mp4',
+        onProgress: (progress) {
+          if (mounted) setState(() => pending.progress = progress);
+        },
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
@@ -1355,6 +1369,11 @@ class _ChatScreenState extends State<ChatScreen> {
             backgroundColor: Colors.redAccent,
           ),
         );
+      }
+    } finally {
+      // The bubble leaves the list once the message is saved, or the send has failed.
+      if (mounted) {
+        setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
       }
     }
   }
@@ -3028,13 +3047,23 @@ class _ChatScreenState extends State<ChatScreen> {
                                             timeStr: '',
                                             uploadProgress: pending.progress,
                                           )
-                                        : ChatMediaBubble(
-                                            localFile: pending.file,
-                                            bytes: pending.bytes,
-                                            type: pending.type,
-                                            uploadProgress: pending.progress,
-                                            isMe: true,
-                                          ),
+                                        : pending.type == 'audio'
+                                            ? VoiceMessageBubble(
+                                                audioUrl: '',
+                                                durationSeconds:
+                                                    pending.durationSeconds,
+                                                isMe: true,
+                                                uploadProgress:
+                                                    pending.progress,
+                                              )
+                                            : ChatMediaBubble(
+                                                localFile: pending.file,
+                                                bytes: pending.bytes,
+                                                type: pending.type,
+                                                uploadProgress:
+                                                    pending.progress,
+                                                isMe: true,
+                                              ),
                                   ),
                                 ),
                               );
