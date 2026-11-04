@@ -1646,6 +1646,14 @@ class _LockedChatTile extends StatelessWidget {
   }
 }
 
+/// The photo for a chat row: the chat's own copy when it has one, else the person's
+/// live profile. Null when neither has a photo, so the row shows initials.
+String? chatAvatarUrl(String? fromChat, String? fromProfile) {
+  if (fromChat != null && fromChat.isNotEmpty) return fromChat;
+  if (fromProfile != null && fromProfile.isNotEmpty) return fromProfile;
+  return null;
+}
+
 class ChatTile extends StatelessWidget {
   final String chatId;
   final String otherUserUid;
@@ -1683,13 +1691,15 @@ class ChatTile extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (cachedOtherProfile != null) {
-      final name = (cachedOtherProfile!['displayName'] as String?) ??
-          context.l10n.translate('chats_member');
-      final avatar = cachedOtherProfile!['avatarUrl'] as String?;
-      final inits = _initialsOf(name);
+    // The chat keeps its own copy of the other person's name and photo. A copy made
+    // before they had a photo has none, so the photo then comes from their live profile.
+    final chatName = cachedOtherProfile?['displayName'] as String?;
+    final chatAvatar = cachedOtherProfile?['avatarUrl'] as String?;
+    if (chatName != null && chatAvatar != null && chatAvatar.isNotEmpty) {
       return _buildTile(context,
-          displayName: name, avatarUrl: avatar, initials: inits);
+          displayName: chatName,
+          avatarUrl: chatAvatar,
+          initials: _initialsOf(chatName));
     }
 
     // Cached one-time fetch using DocFutureCache (zero long-lived stream overhead)
@@ -1701,9 +1711,10 @@ class ChatTile extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
-        final name = (data?['displayName'] as String?) ??
+        final name = chatName ??
+            (data?['displayName'] as String?) ??
             context.l10n.translate('chats_member');
-        final avatar = data?['avatarUrl'] as String?;
+        final avatar = chatAvatarUrl(chatAvatar, data?['avatarUrl'] as String?);
         final inits = _initialsOf(name);
         return _buildTile(context,
             displayName: name, avatarUrl: avatar, initials: inits);

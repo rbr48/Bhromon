@@ -347,15 +347,14 @@ class NotificationEngine:
         attachments: Optional[List[Dict[str, Any]]] = None,
         kind: str = "text",
     ) -> Dict[str, Any]:
-        """Notify emergency channel or mentioned members."""
+        """Push a channel message to the other active members of the tour.
+
+        Everyone hears about a message in a group channel. The emergency
+        channel is high priority.
+        """
         try:
             members = self.get_active_tour_members(tour_id, except_email=sender_email)
-            mentions_set = {str(m).strip().lower() for m in (mentions or [])}
-
-            if channel_id == EVERYONE_CHANNEL_ID:
-                recipients = members
-            else:
-                recipients = [m for m in members if m in mentions_set or "everyone" in mentions_set]
+            recipients = members
 
             if not recipients:
                 return {"status": "no_recipients"}

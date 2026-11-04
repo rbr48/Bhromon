@@ -82,11 +82,21 @@ class _PendingUpload {
   final String type;
   double progress = 0.0;
 
+  /// The name and size of a document that is being sent.
+  final String? fileName;
+  final int? fileSizeBytes;
+
+  /// The length of a voice message that is being sent.
+  final int? durationSeconds;
+
   _PendingUpload({
     required this.id,
     this.file,
     this.bytes,
     required this.type,
+    this.fileName,
+    this.fileSizeBytes,
+    this.durationSeconds,
   });
 }
 
@@ -1271,10 +1281,20 @@ class _ChatScreenState extends State<ChatScreen> {
           : await File(filePath).readAsBytes();
 
       final cleanUploadId = uploadId.replaceAll('-', '');
+      // Shown in the chat while the voice message uploads, so the sender can see it is on its way.
+      final pending = _PendingUpload(
+        id: uploadId,
+        type: 'audio',
+        durationSeconds: duration.inSeconds,
+      );
+      if (mounted) setState(() => _pendingUploads.add(pending));
       final downloadUrl = await MediaUploadService.uploadBytes(
         bytes: voiceBytes,
         path: 'chat_voice/${widget.chatId}/$cleanUploadId.m4a',
         contentType: 'audio/mp4',
+        onProgress: (progress) {
+          if (mounted) setState(() => pending.progress = progress);
+        },
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
@@ -1350,6 +1370,11 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         );
       }
+    } finally {
+      // The bubble leaves the list once the message is saved, or the send has failed.
+      if (mounted) {
+        setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
+      }
     }
   }
 
@@ -1385,10 +1410,21 @@ class _ChatScreenState extends State<ChatScreen> {
           : (pFile.name.contains('.')
               ? '.${pFile.name.split('.').last.toLowerCase()}'
               : '.bin');
+      // Shown in the chat while the file uploads, so the sender can see it is on its way.
+      final pending = _PendingUpload(
+        id: uploadId,
+        type: 'document',
+        fileName: pFile.name,
+        fileSizeBytes: pFile.size,
+      );
+      if (mounted) setState(() => _pendingUploads.add(pending));
       final downloadUrl = await MediaUploadService.uploadBytes(
         bytes: docBytes,
         path: 'chat_docs/${widget.chatId}/$cleanUploadId$ext',
         contentType: 'application/octet-stream',
+        onProgress: (progress) {
+          if (mounted) setState(() => pending.progress = progress);
+        },
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
@@ -1463,6 +1499,11 @@ class _ChatScreenState extends State<ChatScreen> {
             backgroundColor: Colors.redAccent,
           ),
         );
+      }
+    } finally {
+      // The bubble leaves the list once the message is saved, or the send has failed.
+      if (mounted) {
+        setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
       }
     }
   }
@@ -2996,13 +3037,33 @@ class _ChatScreenState extends State<ChatScreen> {
                                   child: Padding(
                                     padding: const EdgeInsets.only(
                                         bottom: 8, left: 48),
-                                    child: ChatMediaBubble(
-                                      localFile: pending.file,
-                                      bytes: pending.bytes,
-                                      type: pending.type,
-                                      uploadProgress: pending.progress,
-                                      isMe: true,
-                                    ),
+                                    child: pending.type == 'document'
+                                        ? ChatDocumentBubble(
+                                            documentUrl: '',
+                                            fileName: pending.fileName ?? '',
+                                            fileSizeBytes:
+                                                pending.fileSizeBytes ?? 0,
+                                            isMe: true,
+                                            timeStr: '',
+                                            uploadProgress: pending.progress,
+                                          )
+                                        : pending.type == 'audio'
+                                            ? VoiceMessageBubble(
+                                                audioUrl: '',
+                                                durationSeconds:
+                                                    pending.durationSeconds,
+                                                isMe: true,
+                                                uploadProgress:
+                                                    pending.progress,
+                                              )
+                                            : ChatMediaBubble(
+                                                localFile: pending.file,
+                                                bytes: pending.bytes,
+                                                type: pending.type,
+                                                uploadProgress:
+                                                    pending.progress,
+                                                isMe: true,
+                                              ),
                                   ),
                                 ),
                               );
