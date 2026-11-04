@@ -180,7 +180,20 @@ class _CallScreenState extends State<CallScreen> {
       // Bluetooth or headphones the user chose stay chosen.
       unawaited(Helper.selectAudioOutput(picked));
     } else {
-      Helper.setSpeakerphoneOn(_isSpeakerOn);
+      unawaited(_routeToSpeaker(_isSpeakerOn));
+    }
+  }
+
+  /// Puts the call on the loudspeaker, or off it. On Android the phone's own audio
+  /// manager does it: the WebRTC plugin's request is dropped without an error when its
+  /// device list has no loudspeaker yet. The plugin's request is the fallback, and the
+  /// only one off Android.
+  Future<void> _routeToSpeaker(bool speaker) async {
+    try {
+      final done = await CallAudioSession.setSpeakerphone(speaker);
+      if (!done) await Helper.setSpeakerphoneOn(speaker);
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
     }
   }
 
@@ -691,7 +704,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _switchCamera() {
-    _signaling.switchCamera();
+    unawaited(_signaling.switchCamera());
   }
 
   void _endCall() {
@@ -952,12 +965,6 @@ class _CallScreenState extends State<CallScreen> {
                                 ],
                               ),
                             ),
-                            if (isVideo)
-                              IconButton(
-                                icon: const Icon(Icons.cameraswitch,
-                                    color: Colors.white, size: 24),
-                                onPressed: _switchCamera,
-                              ),
                           ],
                         ),
                       ),
@@ -1098,6 +1105,17 @@ class _CallScreenState extends State<CallScreen> {
                                 : context.l10n.translate('call_video_off'),
                             onTap: _toggleVideo,
                           ),
+
+                          // Front and rear camera, while the camera is on.
+                          if (cameraOn)
+                            _buildCallActionBtn(
+                              icon: Icons.cameraswitch,
+                              color: Colors.white,
+                              bgColor: const Color(0xFF2A3942),
+                              tooltip:
+                                  context.l10n.translate('call_switch_camera'),
+                              onTap: _switchCamera,
+                            ),
 
                           // End Call Button (Red Circle)
                           _buildCallActionBtn(

@@ -54,6 +54,27 @@ class CallAudioSession {
   static Future<void> setPipAllowed(bool allowed) =>
       _invoke('setPipAllowed', {'allowed': allowed});
 
+  /// Puts the call's audio on the loudspeaker, or back on the default route, through
+  /// the phone's own audio manager. The WebRTC plugin drops a speaker request without an
+  /// error when its device list has no loudspeaker yet, so the phone answers whether the
+  /// route took. False when it did not, and off Android.
+  static Future<bool> setSpeakerphone(bool enabled) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      final done = await _channel.invokeMethod<bool>(
+        'setSpeakerphone',
+        {'enabled': enabled},
+      );
+      return done ?? false;
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: no native handler: $e');
+      return false;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: setSpeakerphone failed: ${e.message}');
+      return false;
+    }
+  }
+
   static void Function()? _onHangUp;
   static void Function(bool inPip)? _onPipChanged;
   static bool _listening = false;

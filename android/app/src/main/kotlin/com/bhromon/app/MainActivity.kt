@@ -5,6 +5,8 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
@@ -96,6 +98,8 @@ class MainActivity: FlutterFragmentActivity() {
                     // Ends the plugin's audio session: the phone goes back to its normal
                     // audio mode and the audio focus is given up.
                     AudioSwitchManager.instance?.stop()
+                    // The route this app set for the call is given back too.
+                    clearCallRoute()
                     result.success(null)
                 }
                 "startOngoing" -> {
@@ -139,6 +143,10 @@ class MainActivity: FlutterFragmentActivity() {
                     setProximityScreenOff(call.argument<Boolean>("enabled") ?: false)
                     result.success(null)
                 }
+                "setSpeakerphone" -> {
+                    // Answers whether the route took, so the app can fall back to the plugin.
+                    result.success(setSpeakerphone(call.argument<Boolean>("enabled") ?: false))
+                }
                 else -> result.notImplemented()
             }
         }
@@ -175,6 +183,42 @@ class MainActivity: FlutterFragmentActivity() {
             val flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             if (enabled) window.addFlags(flags) else window.clearFlags(flags)
+        }
+    }
+
+    /**
+     * Puts call audio on the loudspeaker, or back on the default route: the earpiece, or a
+     * headset or Bluetooth device the phone picks. Returns whether the route took.
+     */
+    @Suppress("DEPRECATION")
+    private fun setSpeakerphone(enabled: Boolean): Boolean {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        // A call needs the communication mode before its route can change.
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (enabled) {
+                val speaker = audioManager.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                    ?: return false
+                audioManager.setCommunicationDevice(speaker)
+            } else {
+                audioManager.clearCommunicationDevice()
+            }
+            val onSpeaker = audioManager.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+            return onSpeaker == enabled
+        }
+        audioManager.isSpeakerphoneOn = enabled
+        return audioManager.isSpeakerphoneOn == enabled
+    }
+
+    /** Gives back the route that [setSpeakerphone] set, once the call is over. */
+    @Suppress("DEPRECATION")
+    private fun clearCallRoute() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.clearCommunicationDevice()
+        } else {
+            audioManager.isSpeakerphoneOn = false
         }
     }
 
