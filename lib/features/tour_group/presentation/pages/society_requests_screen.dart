@@ -1,12 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_uploader.dart';
 import '../../domain/models/service_request_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/media_rules.dart';
 import '../../domain/services/service_request_rules.dart';
 
 const _bg = Color(0xFF0F1A1C);
@@ -201,13 +207,30 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
         title: Text(request.title,
             style: TextStyle(
                 color: context.forest.text, fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          [
-            _categoryLabel(l10n, request.category),
-            if (who.isNotEmpty)
-              l10n.translate('society_request_by', args: {'name': who}),
-          ].join(' · '),
-          style: TextStyle(color: context.forest.text54, fontSize: 12),
+        subtitle: Row(
+          children: [
+            Expanded(
+              child: Text(
+                [
+                  _categoryLabel(l10n, request.category),
+                  if (who.isNotEmpty)
+                    l10n.translate('society_request_by', args: {'name': who}),
+                ].join(' · '),
+                style: TextStyle(color: context.forest.text54, fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (request.photoUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Icon(
+                  Icons.photo_camera_outlined,
+                  size: 14,
+                  color: context.forest.accentText,
+                ),
+              ),
+          ],
         ),
         trailing: _StatusChip(
           label: _statusLabel(l10n, request.status),
@@ -330,12 +353,35 @@ class _RequestSheetState extends State<_RequestSheet> {
       widget.existing?.category ?? ServiceRequestCategory.lift;
   bool _saving = false;
   String? _error;
+  XFile? _pickedImage;
+  Uint8List? _pickedBytes;
+  late String? _photoUrl = widget.existing?.photoUrl;
 
   @override
   void dispose() {
     _title.dispose();
     _details.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      setState(() {
+        _pickedImage = file;
+        _pickedBytes = bytes;
+      });
+    } catch (err) {
+      logError('Service request photo pick error: $err');
+    }
   }
 
   Future<void> _submit() async {
@@ -350,6 +396,21 @@ class _RequestSheetState extends State<_RequestSheet> {
       _error = null;
     });
     try {
+      String? finalPhotoUrl = _photoUrl;
+      if (_pickedImage != null) {
+        final ext = storedExtension(_pickedImage!.name, 'jpg');
+        final cType = imageContentType(_pickedImage!.name) ?? 'image/jpeg';
+        final upload = await TourMediaUploader.start(
+          tourId: widget.tourId,
+          folder: 'media',
+          file: _pickedImage!,
+          contentType: cType,
+          extension: ext,
+          maxBytes: kMaxImageBytes,
+        );
+        finalPhotoUrl = await upload.finish();
+      }
+
       final existing = widget.existing;
       if (existing == null) {
         await widget.repository.addServiceRequest(
@@ -357,6 +418,7 @@ class _RequestSheetState extends State<_RequestSheet> {
           title: title,
           details: _details.text,
           category: _category,
+          photoUrl: finalPhotoUrl,
         );
       } else {
         await widget.repository.editServiceRequestText(
@@ -365,6 +427,7 @@ class _RequestSheetState extends State<_RequestSheet> {
           title: title,
           details: _details.text,
           category: _category,
+          photoUrl: finalPhotoUrl,
         );
       }
       if (!mounted) return;
@@ -383,89 +446,158 @@ class _RequestSheetState extends State<_RequestSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final editing = widget.existing != null;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-            16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                  editing
-                      ? l10n.translate('society_request_edit')
-                      : l10n.translate('society_request_new'),
-                  style: TextStyle(
-                      color: context.forest.text,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _title,
-                maxLength: kServiceRequestTitleMax,
-                style: TextStyle(color: context.forest.text),
-                decoration: InputDecoration(
-                  labelText: l10n.translate('society_request_title_label'),
-                  hintText: l10n.translate('society_request_title_hint'),
-                  hintStyle: TextStyle(color: context.forest.text38),
-                  labelStyle: TextStyle(color: context.forest.text70),
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _details,
-                maxLines: 3,
-                maxLength: kServiceRequestDetailsMax,
-                style: TextStyle(color: context.forest.text),
-                decoration: InputDecoration(
-                  labelText: l10n.translate('society_request_details_label'),
-                  hintText: l10n.translate('society_request_details_hint'),
-                  hintStyle: TextStyle(color: context.forest.text38),
-                  labelStyle: TextStyle(color: context.forest.text70),
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(l10n.translate('society_request_category_label'),
-                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+                16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final category in ServiceRequestCategory.values)
-                    ChoiceChip(
-                      label: Text(_categoryLabel(l10n, category),
-                          style: const TextStyle(fontSize: 12)),
-                      selected: _category == category,
-                      selectedColor: AppColors.mintGreen,
-                      backgroundColor:
-                          context.forest.surfaceFor(const Color(0xFF1E3326)),
-                      onSelected: (_) => setState(() => _category = category),
+                  Text(
+                      editing
+                          ? l10n.translate('society_request_edit')
+                          : l10n.translate('society_request_new'),
+                      style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _title,
+                    maxLength: kServiceRequestTitleMax,
+                    style: TextStyle(color: context.forest.text),
+                    decoration: InputDecoration(
+                      labelText: l10n.translate('society_request_title_label'),
+                      hintText: l10n.translate('society_request_title_hint'),
+                      hintStyle: TextStyle(color: context.forest.text38),
+                      labelStyle: TextStyle(color: context.forest.text70),
+                      border: const OutlineInputBorder(),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _details,
+                    maxLines: 3,
+                    maxLength: kServiceRequestDetailsMax,
+                    style: TextStyle(color: context.forest.text),
+                    decoration: InputDecoration(
+                      labelText:
+                          l10n.translate('society_request_details_label'),
+                      hintText: l10n.translate('society_request_details_hint'),
+                      hintStyle: TextStyle(color: context.forest.text38),
+                      labelStyle: TextStyle(color: context.forest.text70),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(l10n.translate('society_request_category_label'),
+                      style: TextStyle(
+                          color: context.forest.text70, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final category in ServiceRequestCategory.values)
+                        ChoiceChip(
+                          label: Text(_categoryLabel(l10n, category),
+                              style: const TextStyle(fontSize: 12)),
+                          selected: _category == category,
+                          selectedColor: AppColors.mintGreen,
+                          backgroundColor: context.forest
+                              .surfaceFor(const Color(0xFF1E3326)),
+                          onSelected: (_) =>
+                              setState(() => _category = category),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_pickedBytes != null ||
+                      (_photoUrl != null && _photoUrl!.isNotEmpty))
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      height: 140,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: context.forest.divider10),
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: _pickedBytes != null
+                                  ? Image.memory(_pickedBytes!,
+                                      fit: BoxFit.cover)
+                                  : Image.network(_photoUrl!,
+                                      fit: BoxFit.cover),
+                            ),
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _pickedImage = null;
+                                  _pickedBytes = null;
+                                  _photoUrl = null;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close,
+                                    size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: _saving ? null : _pickPhoto,
+                      icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                      label: const Text('সমস্যার ছবি যুক্ত করুন (ঐচ্ছিক)'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.forest.text,
+                        side: BorderSide(color: context.forest.text24),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(_error!,
+                        style: TextStyle(
+                            color: context.forest.readable(Colors.redAccent),
+                            fontSize: 12)),
+                  ],
+                  const SizedBox(height: 14),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.mintGreen,
+                      foregroundColor: AppColors.darkGreen,
+                    ),
+                    onPressed: _saving ? null : _submit,
+                    child: Text(editing
+                        ? l10n.translate('society_request_save')
+                        : l10n.translate('society_request_submit')),
+                  ),
                 ],
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 10),
-                Text(_error!,
-                    style: TextStyle(
-                        color: context.forest.readable(Colors.redAccent),
-                        fontSize: 12)),
-              ],
-              const SizedBox(height: 14),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.mintGreen,
-                  foregroundColor: AppColors.darkGreen,
-                ),
-                onPressed: _saving ? null : _submit,
-                child: Text(editing
-                    ? l10n.translate('society_request_save')
-                    : l10n.translate('society_request_submit')),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -573,6 +705,135 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
     }
   }
 
+  Widget _buildStatusTimeline(BuildContext context, ServiceRequest request) {
+    final dateFormat = localizedDateFormat('d MMM, h:mm a');
+    final isProgress = request.status == ServiceRequestStatus.inProgress ||
+        request.status == ServiceRequestStatus.resolved;
+    final isDone = request.status == ServiceRequestStatus.resolved;
+
+    Widget node({
+      required String title,
+      required String time,
+      required bool active,
+      required Color activeColor,
+      required IconData icon,
+    }) {
+      final color = active ? activeColor : context.forest.text38;
+      return Expanded(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: active
+                    ? activeColor.withValues(alpha: 0.15)
+                    : context.forest.surfaceFor(const Color(0xFF1E3326)),
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: active ? 2 : 1),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: active ? context.forest.text : context.forest.text54,
+                fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                fontSize: 11,
+              ),
+            ),
+            if (time.isNotEmpty)
+              Text(
+                time,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.forest.text54, fontSize: 10),
+              ),
+          ],
+        ),
+      );
+    }
+
+    Widget connector({required bool active}) {
+      return Container(
+        width: 24,
+        height: 2,
+        margin: const EdgeInsets.only(bottom: 24),
+        color: active ? AppColors.mintGreen : context.forest.divider10,
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.forest.surfaceFor(const Color(0xFF162B20)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.forest.divider10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'অগ্রগতি টাইমলাইন',
+            style: TextStyle(
+              color: context.forest.accentText,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              node(
+                title: 'অনুরোধ গৃহীত',
+                time: request.createdAt != null
+                    ? dateFormat.format(request.createdAt!)
+                    : '',
+                active: true,
+                activeColor: AppColors.mintGreen,
+                icon: Icons.assignment_turned_in_rounded,
+              ),
+              connector(active: isProgress),
+              node(
+                title: 'কাজ চলমান',
+                time: request.inProgressAt != null
+                    ? dateFormat.format(request.inProgressAt!)
+                    : (isProgress ? 'চলমান' : 'অপেক্ষমান'),
+                active: isProgress,
+                activeColor: isDone ? AppColors.mintGreen : AppColors.gold,
+                icon: Icons.engineering_rounded,
+              ),
+              connector(active: isDone),
+              node(
+                title: 'সমাধান সম্পন্ন',
+                time: request.resolvedAt != null
+                    ? dateFormat.format(request.resolvedAt!)
+                    : (isDone ? 'সম্পন্ন' : 'অপেক্ষমান'),
+                active: isDone,
+                activeColor: AppColors.mintGreen,
+                icon: Icons.check_circle_rounded,
+              ),
+            ],
+          ),
+          if (request.resolvedByName != null &&
+              request.resolvedByName!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'সমাধানকারী: ${request.resolvedByName}',
+                style: TextStyle(
+                  color: context.forest.readable(AppColors.gold),
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -584,134 +845,171 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
     final who = request.createdByName.isEmpty
         ? request.createdByEmail
         : request.createdByName;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-            16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+                16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(_categoryIcon(request.category),
-                      color: context.forest.accentText),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(request.title,
-                        style: TextStyle(
-                            color: context.forest.text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
+                  Row(
+                    children: [
+                      Icon(_categoryIcon(request.category),
+                          color: context.forest.accentText),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(request.title,
+                            style: TextStyle(
+                                color: context.forest.text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 6),
+                  Text(
+                    [
+                      _categoryLabel(l10n, request.category),
+                      if (who.isNotEmpty)
+                        l10n.translate('society_request_by',
+                            args: {'name': who}),
+                    ].join(' · '),
+                    style:
+                        TextStyle(color: context.forest.text54, fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
+                  _StatusChip(
+                    label: _statusLabel(l10n, request.status),
+                    color: _statusColor(request.status),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildStatusTimeline(context, request),
+                  if (request.details.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(request.details,
+                        style: TextStyle(
+                            color: context.forest.text70, height: 1.4)),
+                  ],
+                  if (request.photoUrl != null &&
+                      request.photoUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text('সমস্যার ছবি',
+                        style: TextStyle(
+                            color: context.forest.accentText,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 180,
+                        width: double.infinity,
+                        color: Colors.black26,
+                        child: Image.network(
+                          request.photoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Icon(Icons.broken_image_rounded,
+                                color: context.forest.text38, size: 36),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (!widget.isAdmin && request.adminNote.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(l10n.translate('society_request_note_label'),
+                        style: TextStyle(
+                            color: context.forest.accentText,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(request.adminNote,
+                        style: TextStyle(color: context.forest.text)),
+                  ],
+                  if (widget.isAdmin) ...[
+                    const SizedBox(height: 16),
+                    Text(l10n.translate('society_request_status'),
+                        style: TextStyle(
+                            color: context.forest.text70, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final status in ServiceRequestStatus.values)
+                          ChoiceChip(
+                            label: Text(_statusLabel(l10n, status),
+                                style: const TextStyle(fontSize: 12)),
+                            selected: _status == status,
+                            selectedColor: AppColors.mintGreen,
+                            backgroundColor: context.forest
+                                .surfaceFor(const Color(0xFF1E3326)),
+                            onSelected: _busy
+                                ? null
+                                : (_) => setState(() => _status = status),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _note,
+                      maxLines: 2,
+                      maxLength: kServiceRequestNoteMax,
+                      style: TextStyle(color: context.forest.text),
+                      decoration: InputDecoration(
+                        labelText: l10n.translate('society_request_note_label'),
+                        hintText: l10n.translate('society_request_note_hint'),
+                        hintStyle: TextStyle(color: context.forest.text38),
+                        labelStyle: TextStyle(color: context.forest.text70),
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.mintGreen,
+                        foregroundColor: AppColors.darkGreen,
+                      ),
+                      onPressed: _busy ? null : _saveStatus,
+                      child:
+                          Text(l10n.translate('society_request_save_status')),
+                    ),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(_error!,
+                        style: TextStyle(
+                            color: context.forest.readable(Colors.redAccent),
+                            fontSize: 12)),
+                  ],
+                  if (canEdit)
+                    TextButton.icon(
+                      onPressed:
+                          _busy ? null : () => Navigator.pop(context, 'edit'),
+                      icon: Icon(Icons.edit_rounded,
+                          color: context.forest.accentText),
+                      label: Text(l10n.translate('society_request_edit'),
+                          style: TextStyle(color: context.forest.accentText)),
+                    ),
+                  if (canDelete)
+                    TextButton.icon(
+                      onPressed: _busy ? null : _remove,
+                      icon: Icon(Icons.delete_outline_rounded,
+                          color: context.forest.readable(Colors.redAccent)),
+                      label: Text(l10n.translate('society_request_delete'),
+                          style: TextStyle(
+                              color:
+                                  context.forest.readable(Colors.redAccent))),
+                    ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                [
-                  _categoryLabel(l10n, request.category),
-                  if (who.isNotEmpty)
-                    l10n.translate('society_request_by', args: {'name': who}),
-                ].join(' · '),
-                style: TextStyle(color: context.forest.text54, fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              _StatusChip(
-                label: _statusLabel(l10n, request.status),
-                color: _statusColor(request.status),
-              ),
-              if (request.details.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(request.details,
-                    style:
-                        TextStyle(color: context.forest.text70, height: 1.4)),
-              ],
-              if (!widget.isAdmin && request.adminNote.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text(l10n.translate('society_request_note_label'),
-                    style: TextStyle(
-                        color: context.forest.accentText,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(request.adminNote,
-                    style: TextStyle(color: context.forest.text)),
-              ],
-              if (widget.isAdmin) ...[
-                const SizedBox(height: 16),
-                Text(l10n.translate('society_request_status'),
-                    style:
-                        TextStyle(color: context.forest.text70, fontSize: 12)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final status in ServiceRequestStatus.values)
-                      ChoiceChip(
-                        label: Text(_statusLabel(l10n, status),
-                            style: const TextStyle(fontSize: 12)),
-                        selected: _status == status,
-                        selectedColor: AppColors.mintGreen,
-                        backgroundColor:
-                            context.forest.surfaceFor(const Color(0xFF1E3326)),
-                        onSelected: _busy
-                            ? null
-                            : (_) => setState(() => _status = status),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _note,
-                  maxLines: 2,
-                  maxLength: kServiceRequestNoteMax,
-                  style: TextStyle(color: context.forest.text),
-                  decoration: InputDecoration(
-                    labelText: l10n.translate('society_request_note_label'),
-                    hintText: l10n.translate('society_request_note_hint'),
-                    hintStyle: TextStyle(color: context.forest.text38),
-                    labelStyle: TextStyle(color: context.forest.text70),
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.mintGreen,
-                    foregroundColor: AppColors.darkGreen,
-                  ),
-                  onPressed: _busy ? null : _saveStatus,
-                  child: Text(l10n.translate('society_request_save_status')),
-                ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 10),
-                Text(_error!,
-                    style: TextStyle(
-                        color: context.forest.readable(Colors.redAccent),
-                        fontSize: 12)),
-              ],
-              if (canEdit)
-                TextButton.icon(
-                  onPressed:
-                      _busy ? null : () => Navigator.pop(context, 'edit'),
-                  icon: Icon(Icons.edit_rounded,
-                      color: context.forest.accentText),
-                  label: Text(l10n.translate('society_request_edit'),
-                      style: TextStyle(color: context.forest.accentText)),
-                ),
-              if (canDelete)
-                TextButton.icon(
-                  onPressed: _busy ? null : _remove,
-                  icon: Icon(Icons.delete_outline_rounded,
-                      color: context.forest.readable(Colors.redAccent)),
-                  label: Text(l10n.translate('society_request_delete'),
-                      style: TextStyle(
-                          color: context.forest.readable(Colors.redAccent))),
-                ),
-            ],
+            ),
           ),
         ),
       ),

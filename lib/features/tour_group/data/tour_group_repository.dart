@@ -1923,6 +1923,7 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
+    String? photoUrl,
   }) async {
     final email = _requireEmail();
     await _sub(tourId, 'service_requests').add({
@@ -1931,6 +1932,7 @@ class TourGroupRepository {
       'category': category.name,
       'status': ServiceRequestStatus.open.stored,
       'adminNote': '',
+      if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
       'createdByEmail': email,
       'createdByName': currentDisplayName,
       'createdAt': FieldValue.serverTimestamp(),
@@ -1947,12 +1949,14 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
+    String? photoUrl,
   }) async {
     final email = _requireEmail();
     await _sub(tourId, 'service_requests').doc(requestId).update({
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
+      if (photoUrl != null) 'photoUrl': photoUrl,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
     });
@@ -1966,12 +1970,19 @@ class TourGroupRepository {
     required String note,
   }) async {
     final email = _requireEmail();
-    await _sub(tourId, 'service_requests').doc(requestId).update({
+    final updates = <String, dynamic>{
       'status': status.stored,
       'adminNote': note.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
-    });
+    };
+    if (status == ServiceRequestStatus.inProgress) {
+      updates['inProgressAt'] = FieldValue.serverTimestamp();
+    } else if (status == ServiceRequestStatus.resolved) {
+      updates['resolvedAt'] = FieldValue.serverTimestamp();
+      updates['resolvedByName'] = currentDisplayName;
+    }
+    await _sub(tourId, 'service_requests').doc(requestId).update(updates);
   }
 
   /// Removes a request. Its author or an owner or admin does this.

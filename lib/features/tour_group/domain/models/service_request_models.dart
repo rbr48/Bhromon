@@ -63,6 +63,10 @@ class ServiceRequest {
     this.createdAt,
     this.updatedAt,
     this.adminNote = '',
+    this.photoUrl,
+    this.inProgressAt,
+    this.resolvedAt,
+    this.resolvedByName,
   });
 
   final String id;
@@ -88,13 +92,57 @@ class ServiceRequest {
   /// The committee's note for the residents: what was done, or what is needed.
   final String adminNote;
 
+  /// Optional photo attachment showing the issue / repair needed.
+  final String? photoUrl;
+
+  /// When the status changed to [ServiceRequestStatus.inProgress].
+  final DateTime? inProgressAt;
+
+  /// When the status changed to [ServiceRequestStatus.resolved].
+  final DateTime? resolvedAt;
+
+  /// Name of the committee member or admin who resolved the issue.
+  final String? resolvedByName;
+
   bool get isOpen => status == ServiceRequestStatus.open;
+  bool get isInProgress => status == ServiceRequestStatus.inProgress;
+  bool get isResolved => status == ServiceRequestStatus.resolved;
+
+  ServiceRequest copyWith({
+    String? title,
+    String? details,
+    ServiceRequestCategory? category,
+    ServiceRequestStatus? status,
+    String? adminNote,
+    String? photoUrl,
+    DateTime? inProgressAt,
+    DateTime? resolvedAt,
+    String? resolvedByName,
+  }) {
+    return ServiceRequest(
+      id: id,
+      title: title ?? this.title,
+      details: details ?? this.details,
+      category: category ?? this.category,
+      status: status ?? this.status,
+      createdByEmail: createdByEmail,
+      createdByName: createdByName,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      adminNote: adminNote ?? this.adminNote,
+      photoUrl: photoUrl ?? this.photoUrl,
+      inProgressAt: inProgressAt ?? this.inProgressAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
+      resolvedByName: resolvedByName ?? this.resolvedByName,
+    );
+  }
 
   /// The fields an author writes when raising or correcting a request.
   Map<String, dynamic> toTextFields() => {
         'title': title,
         'details': details,
         'category': category.name,
+        if (photoUrl != null) 'photoUrl': photoUrl,
       };
 
   /// Reads one stored request. Returns null when it has no title, so a damaged request
@@ -102,6 +150,8 @@ class ServiceRequest {
   static ServiceRequest? fromMap(String id, Map<String, dynamic> data) {
     final title = _text(data['title']).trim();
     if (title.isEmpty) return null;
+    final photo = _text(data['photoUrl']).trim();
+    final resolver = _text(data['resolvedByName']).trim();
     return ServiceRequest(
       id: id,
       title: title,
@@ -113,6 +163,10 @@ class ServiceRequest {
       createdAt: readDate(data['createdAt']),
       updatedAt: readDate(data['updatedAt']),
       adminNote: _text(data['adminNote']).trim(),
+      photoUrl: photo.isEmpty ? null : photo,
+      inProgressAt: readDate(data['inProgressAt']),
+      resolvedAt: readDate(data['resolvedAt']),
+      resolvedByName: resolver.isEmpty ? null : resolver,
     );
   }
 
