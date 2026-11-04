@@ -112,5 +112,4 @@ void main() {
 
     expect(await CallAudioSession.enterPip(), isFalse);
   });
-  });
 }
