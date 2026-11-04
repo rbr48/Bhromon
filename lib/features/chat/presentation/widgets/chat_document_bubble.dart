@@ -19,6 +19,10 @@ class ChatDocumentBubble extends StatefulWidget {
   final String timeStr;
   final Widget? deliveryIcon;
 
+  /// Set while the file is still being sent (0 to 1). The bubble then shows the
+  /// progress and cannot be opened until the message is saved.
+  final double? uploadProgress;
+
   const ChatDocumentBubble({
     super.key,
     required this.documentUrl,
@@ -27,6 +31,7 @@ class ChatDocumentBubble extends StatefulWidget {
     required this.isMe,
     required this.timeStr,
     this.deliveryIcon,
+    this.uploadProgress,
   });
 
   @override
@@ -134,6 +139,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
   Widget build(BuildContext context) {
     final ext = _getFileExtension(widget.fileName);
     final extColor = _getExtensionColor(ext);
+    final sending = widget.uploadProgress != null;
 
     return Container(
       width: 260,
@@ -147,7 +153,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
         children: [
           // Inner card
           InkWell(
-            onTap: _isDownloading ? null : _openOrDownload,
+            onTap: (_isDownloading || sending) ? null : _openOrDownload,
             borderRadius: BorderRadius.circular(8),
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -203,16 +209,32 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                             fontSize: 10.5,
                           ),
                         ),
+                        if (sending) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            '${context.l10n.number(((widget.uploadProgress ?? 0) * 100).round())}%',
+                            style: TextStyle(
+                              color: context.chat.text70,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   const SizedBox(width: 6),
-                  if (_isDownloading)
+                  if (_isDownloading || sending)
                     SizedBox(
                       width: 28,
                       height: 28,
                       child: CircularProgressIndicator(
-                        value: _downloadProgress > 0 ? _downloadProgress : null,
+                        value: sending
+                            ? (widget.uploadProgress ?? 0)
+                                .clamp(0.0, 1.0)
+                                .toDouble()
+                            : (_downloadProgress > 0
+                                ? _downloadProgress
+                                : null),
                         color: const Color(0xFF00A884),
                         strokeWidth: 2.5,
                       ),
