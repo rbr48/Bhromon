@@ -84,5 +84,21 @@ void main() {
       expect(reel.createdAt, isNull);
       expect(reel.durationSeconds, isNull);
     });
+
+    test('keeps an image post with an official image URL', () {
+      final post = OfficialReel.fromMap('img1', {
+        'imageUrl': 'https://bhromon.fun/media/official/images/img1.jpg',
+        'caption': 'Photo Announcement',
+      });
+
+      expect(post, isNotNull);
+      expect(post!.isImage, isTrue);
+      expect(post.isVideo, isFalse);
+      expect(
+          post.imageUrl, 'https://bhromon.fun/media/official/images/img1.jpg');
+      expect(post.displayImageUrl,
+          'https://bhromon.fun/media/official/images/img1.jpg');
+      expect(post.caption, 'Photo Announcement');
+    });
   });
 }

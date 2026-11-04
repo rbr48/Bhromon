@@ -124,7 +124,7 @@ def test_a_platform_admin_may_publish_with_a_token(published):
     assert ("official_instafeed", response.json()["id"]) in firestore.writes
 
 
-def test_only_a_video_is_published(published):
+def test_unsupported_file_types_are_refused(published):
     client, firestore, _pushes = published
 
     response = client.post(
@@ -135,6 +135,32 @@ def test_only_a_video_is_published(published):
 
     assert response.status_code == 400
     assert firestore.writes == {}
+
+
+def test_an_image_is_published_as_an_image_post(published):
+    client, firestore, pushes = published
+
+    response = client.post(
+        "/official/posts",
+        files=[_part("photo.jpg", "image/jpeg")],
+        data={"caption": "Official Photo"},
+        headers={"X-Official-Key": "the-publish-key"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["imageUrl"] == f"https://bhromon.fun/media/official/images/{body['id']}.jpg"
+    assert body["kind"] == "image"
+    stored = main.MEDIA_ROOT / "official" / "images" / f"{body['id']}.jpg"
+    assert stored.read_bytes() == b"\x00" * 2048
+    entry = firestore.writes[("official_instafeed", body["id"])]
+    assert entry["caption"] == "Official Photo"
+    assert entry["kind"] == "image"
+    assert entry["imageUrl"] == body["imageUrl"]
+    assert entry["coverUrl"] == body["imageUrl"]
+    assert pushes == [
+        ("official_instafeed", "Bhromon", "Official Photo", {"action": "official", "postId": body["id"]}),
+    ]
 
 
 def test_a_cover_must_be_an_image(published):

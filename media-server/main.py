@@ -720,20 +720,29 @@ async def store_official_file(upload: UploadFile, folder: str, filename: str, ma
 def create_official_post(
     post_id: str,
     caption: str,
-    video_url: str,
-    cover_url: Optional[str],
-    duration_seconds: Optional[int],
+    video_url: Optional[str] = None,
+    cover_url: Optional[str] = None,
+    duration_seconds: Optional[int] = None,
+    image_url: Optional[str] = None,
+    kind: str = "reel",
 ) -> None:
     """Writes the feed entry the app reads. Only the server writes these."""
-    backend._client().collection("official_instafeed").document(post_id).set({
-        "videoUrl": video_url,
-        "coverUrl": cover_url,
+    data = {
         "caption": caption,
-        "durationSeconds": duration_seconds,
-        "kind": "reel",
+        "kind": kind,
         "publisher": "Bhromon",
         "createdAt": datetime.now(timezone.utc),
-    })
+        "videoUrl": video_url,
+        "coverUrl": cover_url,
+    }
+    if image_url is not None:
+        data["imageUrl"] = image_url
+        if not data["coverUrl"]:
+            data["coverUrl"] = image_url
+    if duration_seconds is not None:
+        data["durationSeconds"] = duration_seconds
+
+    backend._client().collection("official_instafeed").document(post_id).set(data)
 
 
 @app.post("/official/posts")
@@ -745,7 +754,7 @@ async def publish_official_post(
     x_official_key: Optional[str] = Header(None),
     authorization: Optional[str] = Header(None),
 ):
-    """Publishes a video to the official feed, for everyone signed in to read."""
+    """Publishes a video or image to the official feed, for everyone signed in to read."""
     await run_in_threadpool(_require_official_publisher, x_official_key, authorization)
     text = caption.strip()
     if len(text) > MAX_OFFICIAL_CAPTION:
@@ -753,8 +762,10 @@ async def publish_official_post(
     if durationSeconds is not None and not 0 < durationSeconds <= MAX_OFFICIAL_DURATION_SECONDS:
         raise HTTPException(status_code=400, detail="The duration is out of range.")
     ext = extension_of(file.filename)
-    if ext not in VIDEO_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="The post must be a video.")
+    is_video = ext in VIDEO_EXTENSIONS
+    is_image = ext in OFFICIAL_IMAGE_EXTENSIONS
+    if not is_video and not is_image:
+        raise HTTPException(status_code=400, detail="The post must be a video or an image.")
     cover_ext = ""
     if cover is not None and cover.filename:
         cover_ext = extension_of(cover.filename)
@@ -762,20 +773,46 @@ async def publish_official_post(
             raise HTTPException(status_code=400, detail="The cover must be an image.")
 
     post_id = uuid.uuid4().hex
-    video_url = await store_official_file(file, "reels", f"{post_id}{ext}", MAX_VIDEO_BYTES)
-    cover_url = None
-    if cover_ext:
-        cover_url = await store_official_file(cover, "covers", f"{post_id}{cover_ext}", MAX_IMAGE_BYTES)
-    await run_in_threadpool(create_official_post, post_id, text, video_url, cover_url, durationSeconds)
-    # Best effort: the post is live even if the push cannot be sent.
-    await run_in_threadpool(
-        notification_engine.send_topic_push,
-        OFFICIAL_TOPIC,
-        "Bhromon",
-        text or "A new post in the official feed",
-        {"action": "official", "postId": post_id},
-    )
-    return {"status": "success", "id": post_id, "videoUrl": video_url, "coverUrl": cover_url}
+    if is_video:
+        video_url = await store_official_file(file, "reels", f"{post_id}{ext}", MAX_VIDEO_BYTES)
+        cover_url = None
+        if cover_ext:
+            cover_url = await store_official_file(cover, "covers", f"{post_id}{cover_ext}", MAX_IMAGE_BYTES)
+        await run_in_threadpool(
+            create_official_post,
+            post_id,
+            text,
+            video_url=video_url,
+            cover_url=cover_url,
+            duration_seconds=durationSeconds,
+            kind="reel",
+        )
+        await run_in_threadpool(
+            notification_engine.send_topic_push,
+            OFFICIAL_TOPIC,
+            "Bhromon",
+            text or "A new post in the official feed",
+            {"action": "official", "postId": post_id},
+        )
+        return {"status": "success", "id": post_id, "videoUrl": video_url, "coverUrl": cover_url, "kind": "reel"}
+    else:
+        image_url = await store_official_file(file, "images", f"{post_id}{ext}", MAX_IMAGE_BYTES)
+        await run_in_threadpool(
+            create_official_post,
+            post_id,
+            text,
+            image_url=image_url,
+            cover_url=image_url,
+            kind="image",
+        )
+        await run_in_threadpool(
+            notification_engine.send_topic_push,
+            OFFICIAL_TOPIC,
+            "Bhromon",
+            text or "A new post in the official feed",
+            {"action": "official", "postId": post_id},
+        )
+        return {"status": "success", "id": post_id, "imageUrl": image_url, "coverUrl": image_url, "kind": "image"}
 
 
 def read_cdn_config() -> Optional[Dict]:
