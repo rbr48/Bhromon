@@ -7,15 +7,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 
+import '../../../../app/di/injection.dart';
 import '../../../../app/router.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/locale_controller.dart';
+import '../../../../core/services/feature_flags.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../data/firestore_journey_event_sink.dart';
 import '../data/journey_alarm_scheduler.dart';
 import '../data/journey_alarm_sound.dart';
+import '../data/journey_analytics.dart';
 import '../data/journey_location_source.dart';
 import '../data/journey_notifications.dart';
-import '../data/firestore_journey_event_sink.dart';
 import '../data/journey_prefs_store.dart';
 import '../data/journey_relay_client.dart';
 import '../data/live_journey_session.dart';
@@ -24,12 +27,13 @@ import '../domain/models/tour_group.dart';
 import '../domain/services/journey_alarm_ring.dart';
 import '../domain/services/journey_alert_presentation.dart';
 import '../domain/services/journey_targets.dart';
+import '../domain/services/live_journey_tracker.dart';
 import 'pages/journey_alarm_page.dart';
 
-/// The one live journey of the app (roadmap phases 2 and 3). It wires the
-/// session to the platform: the location stream, the notifications, the Hive
-/// box, the localizer and the navigator. Nothing starts until the user starts a
-/// trip, and the whole runtime stays off unless `kLiveJourney` is set.
+/// The one live journey of the app (roadmap phases 2 and 3). It wires the session
+/// to the platform: the location stream, the notifications, the Hive box, the
+/// localizer and the navigator. Nothing starts until the user starts a trip, and
+/// the whole runtime stays off unless `kLiveJourney` is set.
 class LiveJourneyRuntime {
   LiveJourneyRuntime._();
 
@@ -46,6 +50,12 @@ class LiveJourneyRuntime {
     final plugin = FlutterLocalNotificationsPlugin();
     final location = JourneyLocationSource();
     final isAndroid = defaultTargetPlatform == TargetPlatform.android;
+    final relay = JourneyRelayClient(
+      open: openJourneyRelaySocket,
+      authToken: () =>
+          FirebaseAuth.instance.currentUser?.getIdToken() ??
+          Future<String?>.value(null),
+    );
     return LiveJourneySession(
       store: store,
       fixes: (sampling, title, text) => location.fixes(
@@ -54,16 +64,12 @@ class LiveJourneyRuntime {
         notificationTitle: title,
         notificationText: text,
       ),
-      scheduler:
-          JourneyAlarmScheduler(port: FlutterJourneyNotificationPort(plugin)),
+      scheduler: JourneyAlarmScheduler(
+        port: _SwitchedNotificationPort(FlutterJourneyNotificationPort(plugin)),
+      ),
       notices: FlutterJourneyNoticePort(plugin),
       events: FirestoreJourneyEventSink(),
-      relay: JourneyRelayClient(
-        open: openJourneyRelaySocket,
-        authToken: () =>
-            FirebaseAuth.instance.currentUser?.getIdToken() ??
-            Future<String?>.value(null),
-      ),
+      relay: _SwitchedRelayPort(relay),
       text: _translate,
       formatNumber: _formatNumber,
       onRing: (ring) => openAlarm(
@@ -77,6 +83,7 @@ class LiveJourneyRuntime {
   /// Starts a trip on [group]. The caller has already settled the location
   /// permission (see `journey_access_flow.dart`).
   Future<void> startJourney(TourGroup group) async {
+    unawaited(_logUsage('journey_start'));
     final s = await session();
     final id = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
     await s.start(
@@ -88,7 +95,10 @@ class LiveJourneyRuntime {
   }
 
   /// Ends the running trip.
-  Future<void> stopJourney() async => (await session()).stop();
+  Future<void> stopJourney() async {
+    unawaited(_logUsage('journey_end'));
+    await (await session()).stop();
+  }
 
   /// Resumes a trip stored before the app closed (roadmap LJ-3.5). It needs a
   /// signed-in user, and the group the trip belongs to. Without them the trip
@@ -117,6 +127,7 @@ class LiveJourneyRuntime {
     final navigator = AppRouter.navigatorKey.currentState;
     if (navigator == null) return;
     _ringingId = id;
+    unawaited(_logUsage('journey_alarm_ring'));
     navigator.push<void>(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (_) => JourneyAlarmPage(
@@ -146,6 +157,83 @@ String _translate(JourneyText text) {
 
 String _formatNumber(num value) {
   return AppLocalizations(LocaleController.instance.locale).number(value);
+}
+
+/// Logs a usage count, when the remote switch allows it. The events carry no
+/// position, stop name or person's name (roadmap LJ-6.4).
+Future<void> _logUsage(String name) async {
+  if (!_remoteSwitch((flags) => flags.analyticsEnabled)) return;
+  await JourneyAnalytics.log(name);
+}
+
+/// A remote kill switch (roadmap LJ-6.3). It is on when the flags are not
+/// registered yet, or when Remote Config cannot be read, so a failed fetch keeps
+/// the feature as released.
+bool _remoteSwitch(bool Function(FeatureFlags flags) read) {
+  try {
+    if (!getIt.isRegistered<FeatureFlags>()) return true;
+    return read(getIt<FeatureFlags>());
+  } catch (error, stackTrace) {
+    logSkipped(error, stackTrace);
+    return true;
+  }
+}
+
+/// The alarm scheduler's port, behind the alarm kill switch.
+class _SwitchedNotificationPort implements JourneyNotificationPort {
+  _SwitchedNotificationPort(this._inner);
+
+  final JourneyNotificationPort _inner;
+
+  @override
+  Future<void> schedule({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime fireAt,
+    required JourneyChannel channel,
+    required bool rings,
+  }) {
+    if (!_remoteSwitch((flags) => flags.journeyAlarmsEnabled)) {
+      return Future<void>.value();
+    }
+    return _inner.schedule(
+      id: id,
+      title: title,
+      body: body,
+      fireAt: fireAt,
+      channel: channel,
+      rings: rings,
+    );
+  }
+
+  @override
+  Future<void> cancel(int id) => _inner.cancel(id);
+}
+
+/// The relay, behind the relay kill switch. Closing is always allowed.
+class _SwitchedRelayPort implements JourneyRelayPort {
+  _SwitchedRelayPort(this._inner);
+
+  final JourneyRelayPort _inner;
+
+  @override
+  Future<void> connect(String tourId) {
+    if (!_remoteSwitch((flags) => flags.journeyRelayEnabled)) {
+      return Future<void>.value();
+    }
+    return _inner.connect(tourId);
+  }
+
+  @override
+  void offer(JourneyFix fix) {
+    if (_remoteSwitch((flags) => flags.journeyRelayEnabled)) {
+      _inner.offer(fix);
+    }
+  }
+
+  @override
+  Future<void> close() => _inner.close();
 }
 
 /// Creates the journey's time zones, channels and tap handler. The app calls

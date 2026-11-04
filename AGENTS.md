@@ -274,6 +274,17 @@ static session while the user visits other screens, and asks before discarding a
 
 ---
 
+### I. Live journey and destination alarms (`kLiveJourney`, off in release)
+- **Off by default.** `kLiveJourney` is a compile-time flag (`bool.fromEnvironment('LIVE_JOURNEY')`). Remote Config switches can turn off the parts that matter in production: `journey_relay_enabled` (positions), `journey_alarms_enabled` (new alarms) and `analytics_enabled` (usage counts). A failed fetch keeps the feature as released.
+- **Tracking runs only during a trip the user starts** (roadmap rule 1). A trip ends when the user ends it or after 36 hours with no reading. Sharing is a separate switch, off by default (rule 2), and the relay is connected only while it is on.
+- **Alarms are per device** (rule 3). Stop notices (5 km and 1 km) and arrivals at each stop come from `HubAlertEngine`; the destination rings at 500 m, runs its overshoot alarm, and has a time alarm 25 minutes before the ETA. Scheduled alarms are absolute instants with the alarm clock mode, so no exact-alarm permission is used (D-3). The alarm page keeps the screen on and repeats up to ten rings.
+- **Pure logic lives in `domain/services`** (`journey_geometry`, `live_journey_tracker`, `hub_alert_engine`, `trip_alarm_plan`, `journey_trip`, `journey_access_policy`, `journey_alarm_ring`, `journey_targets`, `leg_suggestions`). `LiveJourneySession` (`data/live_journey_session.dart`) holds no plugin: its ports are injected, and `LiveJourneyRuntime` (`presentation/live_journey_runtime.dart`) wires the real ones.
+- **Group events** go to `tours/{id}/journey_events/{stop}__{email}__{type}` while sharing is on: no coordinates, one document per arrival or departure. The VPS pushes each event once and deletes events after 30 days. Account deletion removes the member's events.
+- **Live relay** (`media-server/live.py`, `/api/live/ws`) keeps positions in memory only, passes them to the other sharing members at most once per five seconds, and drops a member silent for two minutes. It needs the upgrade route in the server's nginx site and one worker process (see `media-server/README.md`).
+- **Route suggestions** (LJ-5.2) never change the shared plan by themselves: a suggestion appears after two stable minutes and changes the plan only when a person confirms it.
+- **Store declarations.** The background-location permissions and the `location` background mode are declared in the platform commit. Do not release that commit alone: Google Play and App Store review need the declarations and the in-app disclosure first.
+- **Tests:** `flutter test test/features/tour_group/` (the `live_journey*`, `journey_*` and `leg_suggestions` files), `cd media-server && pytest tests/test_live_relay.py tests/test_journey_events.py`, and the `journey_events_rules` and `account_erasure` suites under the emulators.
+
 ## 5. Testing & Quality Verification Checklist
 Before shipping or pushing changes:
 1. `flutter test test/features/game_zone/ test/features/tour_group/` -> All tests must pass.
