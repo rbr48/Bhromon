@@ -284,20 +284,20 @@ class TourChannelRepository {
       if (locationTitle != null && locationTitle.isNotEmpty)
         'locationTitle': locationTitle,
     });
-    if (channelId == 'emergency' || mentions.isNotEmpty) {
-      unawaited(VpsNotificationService().notifyChannelMessage(
-        tourId: tourId,
-        channelId: channelId,
-        messageId: id,
-        senderName: currentDisplayName,
-        text: trimmed.isEmpty && attachments.any((a) => a.isAudio)
-            ? '🎤 Voice message'
-            : trimmed,
-        mentions: mentions.map(normalizeEmail).toList(),
-        attachments: [for (final a in attachments) a.toMap()],
-        kind: ChannelMessageKind.text.name,
-      ));
-    }
+    // Every message is pushed to the other members of the tour. The server decides
+    // who hears it (see send_channel_message_notification).
+    unawaited(VpsNotificationService().notifyChannelMessage(
+      tourId: tourId,
+      channelId: channelId,
+      messageId: id,
+      senderName: currentDisplayName,
+      text: trimmed.isEmpty && attachments.any((a) => a.isAudio)
+          ? '🎤 Voice message'
+          : trimmed,
+      mentions: mentions.map(normalizeEmail).toList(),
+      attachments: [for (final a in attachments) a.toMap()],
+      kind: ChannelMessageKind.text.name,
+    ));
   }
 
   /// Changes the text of your own message, and the mentions it now holds.
