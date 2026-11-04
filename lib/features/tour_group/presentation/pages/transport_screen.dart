@@ -16,6 +16,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/models/vehicle_models.dart';
 import '../../domain/services/seat_layout_engine.dart';
 import '../../domain/services/seat_planner.dart';
+import '../widgets/transport/local_fare_guide_sheet.dart';
 import '../widgets/transport/vehicle_editor_sheet.dart';
 import '../widgets/transport/vehicle_seat_map.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -535,6 +536,19 @@ class _TransportScreenState extends State<TransportScreen> {
               side: const BorderSide(color: AppColors.gold),
               onPressed: _busy ? null : () => _addOrEdit(),
             ),
+          ActionChip(
+            avatar: const Icon(Icons.calculate_outlined,
+                size: 18, color: AppColors.mintGreen),
+            label: const Text('ভাড়া গাইড'),
+            backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+            labelStyle: const TextStyle(color: AppColors.mintGreen),
+            side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.5)),
+            onPressed: () => showLocalFareGuideSheet(
+              context,
+              initialPassengers:
+                  _members.fold<int>(0, (n, m) => n + m.familyCount),
+            ),
+          ),
         ],
       ),
     );
@@ -654,7 +668,7 @@ class _TransportScreenState extends State<TransportScreen> {
               if (_isAdmin && v != null)
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert, color: context.forest.text54),
-                  color: const Color(0xFF1B4332),
+                  color: context.forest.card,
                   onSelected: (choice) {
                     switch (choice) {
                       case 'edit':
@@ -752,6 +766,15 @@ class _TransportScreenState extends State<TransportScreen> {
           onPressed: () => _shareManifest(layout, seats),
           icon: const Icon(Icons.ios_share_rounded),
           label: Text(l10n.translate('veh_manifest')),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => showLocalFareGuideSheet(
+            context,
+            initialPassengers:
+                _members.fold<int>(0, (n, m) => n + m.familyCount),
+          ),
+          icon: const Icon(Icons.calculate_outlined),
+          label: const Text('ভাড়া গাইড'),
         ),
         if (_isAdmin && seats.any((s) => s.isOccupied))
           TextButton.icon(
