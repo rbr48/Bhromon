@@ -1,24 +1,33 @@
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/config/feature_flags.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../data/live_journey_session.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/destination_catalog.dart';
+import '../../domain/services/journey_geometry.dart';
+import '../../domain/services/live_journey_tracker.dart';
 import '../../domain/services/route_engine.dart';
 import '../../domain/services/route_suggestions.dart';
 import '../../domain/services/prayer_calculator.dart';
 import '../../domain/services/journey_audio_guide_service.dart';
+import '../journey_access_flow.dart';
+import '../live_journey_runtime.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
+import '../widgets/journey/journey_alarm_settings_sheet.dart';
+import '../widgets/journey/journey_live_card.dart';
 import '../../../../core/localization/localized_date.dart';
 
 String transportModeKey(TransportMode m) => 'route_mode_${m.name}';
@@ -57,6 +66,13 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   CheckpointKind? _filter;
   Timer? _clock;
 
+  /// The live journey, when the feature is on and the app has loaded it.
+  LiveJourneySession? _session;
+  StreamSubscription<JourneyFix>? _liveSub;
+
+  /// The group's last live reading. It is used only while a trip runs.
+  GeoPoint? _livePoint;
+
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
   @override
@@ -74,6 +90,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       if (mounted) setState(() => _myRole = r);
     });
     unawaited(_fetchGps());
+    if (kLiveJourney && !kIsWeb) unawaited(_attachLiveJourney());
     // ETAs and countdowns move on their own.
     _clock = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
@@ -83,11 +100,33 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   @override
   void dispose() {
     _clock?.cancel();
+    final live = _liveSub;
+    if (live != null) unawaited(live.cancel());
     JourneyAudioGuideService().stop();
     for (final s in _subs) {
       unawaited(s.cancel());
     }
     super.dispose();
+  }
+
+  /// Follows the live journey: the card's session, and the readings of a trip
+  /// that is running. The screen starts no stream of its own (rule 1).
+  Future<void> _attachLiveJourney() async {
+    final session = await LiveJourneyRuntime.instance.session();
+    if (!mounted) return;
+    setState(() => _session = session);
+    _liveSub = session.readings.listen((fix) {
+      if (mounted) setState(() => _livePoint = fix.point);
+    });
+  }
+
+  Future<void> _startJourney(TourGroup g) async {
+    final access = await ensureJourneyAccess(context);
+    if (!mounted || access == JourneyAccessResult.refused) return;
+    if (access == JourneyAccessResult.whileInUseOnly) {
+      _snack(context.l10n.translate('journey_access_limited'));
+    }
+    await _guard(() => LiveJourneyRuntime.instance.startJourney(g));
   }
 
   Future<void> _fetchGps() async {
@@ -422,12 +461,28 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   Widget _body(AppLocalizations l10n, TourGroup g) {
     final plan = RoutePlan.of(g);
     final pos = _position;
-    final live = pos == null
-        ? null
-        : plan.locate(pos.latitude, pos.longitude, DateTime.now());
+    final session = _session;
+    final livePoint =
+        (session != null && session.isTracking) ? _livePoint : null;
+    final at = livePoint ??
+        (pos == null ? null : GeoPoint(pos.latitude, pos.longitude));
+    final live =
+        at == null ? null : plan.locate(at.lat, at.lng, DateTime.now());
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 32),
       children: [
+        if (session != null) ...[
+          JourneyLiveCard(
+            session: session,
+            onStart: () => _startJourney(g),
+            onAlarmSettings: () => unawaited(showJourneyAlarmSettings(
+              context,
+              session: session,
+              group: g,
+            )),
+          ),
+          const SizedBox(height: 10),
+        ],
         _header(l10n, g, plan, live),
         _prayerAndQiblaCard(l10n, g, pos),
         const SizedBox(height: 10),
