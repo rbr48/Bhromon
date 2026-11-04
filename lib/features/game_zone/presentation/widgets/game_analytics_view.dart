@@ -389,15 +389,15 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
         const SizedBox(height: 6),
         Text(
           value,
-          style: TextStyle(
-            color: context.forest.text,
+          style: const TextStyle(
+            color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
-          style: TextStyle(color: context.forest.text54, fontSize: 11),
+          style: const TextStyle(color: Colors.white70, fontSize: 11),
         ),
       ],
     );
