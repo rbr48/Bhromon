@@ -92,4 +92,25 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     expect(await CallAudioSession.routeSnapshot(), isNull);
   });
+
+  test('asks the phone to enter Picture-in-Picture mode on Android', () async {
+    MethodCall? seen;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      seen = call;
+      return true;
+    });
+
+    final entered = await CallAudioSession.enterPip();
+    expect(entered, isTrue);
+    expect(seen?.method, 'enterPip');
+  });
+
+  test('enterPip returns false when phone fails or rejects PiP', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => false);
+
+    expect(await CallAudioSession.enterPip(), isFalse);
+  });
+  });
 }

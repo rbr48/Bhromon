@@ -30,6 +30,7 @@ import '../widgets/itinerary/itinerary_editor.dart';
 import '../widgets/journey/journey_alarm_settings_sheet.dart';
 import '../widgets/journey/journey_live_card.dart';
 import '../widgets/journey/journey_stop_sheet.dart';
+import '../widgets/map/offline_map_pack_sheet.dart';
 import '../../../../core/localization/localized_date.dart';
 
 String transportModeKey(TransportMode m) => 'route_mode_${m.name}';
@@ -541,6 +542,13 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               icon: const Icon(Icons.edit_road_rounded),
               onPressed: () => _editItinerary(g),
             ),
+          IconButton(
+            tooltip: l10n.locale.languageCode == 'bn'
+                ? 'অফলাইন ম্যাপ ও প্যাক'
+                : 'Offline Maps & Guides',
+            icon: const Icon(Icons.offline_pin_rounded),
+            onPressed: () => OfflineMapPackSheet.show(context),
+          ),
           IconButton(
             tooltip: l10n.translate('route_refresh_gps'),
             icon: const Icon(Icons.my_location),

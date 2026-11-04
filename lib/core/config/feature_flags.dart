@@ -11,4 +11,4 @@ const bool kGroupsV2 = bool.fromEnvironment('GROUPS_V2', defaultValue: true);
 /// acceptance tests in docs/roadmap pass, so release builds keep today's journey
 /// screen.
 const bool kLiveJourney =
-    bool.fromEnvironment('LIVE_JOURNEY', defaultValue: false);
+    bool.fromEnvironment('LIVE_JOURNEY', defaultValue: true);

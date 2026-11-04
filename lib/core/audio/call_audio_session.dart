@@ -54,6 +54,22 @@ class CallAudioSession {
   static Future<void> setPipAllowed(bool allowed) =>
       _invoke('setPipAllowed', {'allowed': allowed});
 
+  /// Explicitly enters Picture-in-Picture mode on Android (API 26+).
+  /// Returns true if PiP mode was successfully triggered.
+  static Future<bool> enterPip() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('enterPip');
+      return res ?? false;
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: enterPip not supported: $e');
+      return false;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: enterPip failed: ${e.message}');
+      return false;
+    }
+  }
+
   /// Puts the call's audio on the loudspeaker, or back on the default route, through
   /// the phone's own audio manager. The WebRTC plugin drops a speaker request without an
   /// error when its device list has no loudspeaker yet, so the phone answers whether the

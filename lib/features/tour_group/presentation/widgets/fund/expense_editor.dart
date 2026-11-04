@@ -104,6 +104,7 @@ Future<ExpenseDraft?> showExpenseEditor(
   return showModalBottomSheet<ExpenseDraft>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),

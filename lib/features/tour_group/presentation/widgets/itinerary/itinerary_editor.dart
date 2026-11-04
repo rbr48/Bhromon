@@ -5,9 +5,12 @@ import 'package:uuid/uuid.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/itinerary_models.dart';
+import '../../../domain/models/predefined_spot.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/destination_catalog.dart';
+import '../../../data/predefined_spots_repository.dart';
 import '../../../../../core/localization/localized_date.dart';
+import '../transport/local_fare_guide_sheet.dart';
 
 /// The result of editing an itinerary.
 class ItineraryEdit {
@@ -60,21 +63,45 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
       _stops.isEmpty ? widget.group.startDate : _stops.last.leave;
 
   Future<void> _add() async {
-    final preset = await showDestinationPicker(context);
-    if (preset == null || !mounted) return;
+    final pick = await showDestinationPicker(context);
+    if (pick == null || !mounted) return;
     final l10n = context.l10n;
     final start = _nextDay;
+    final String name;
+    final TourType kind;
+    final double? lat;
+    final double? lng;
+    final String? presetId;
+
+    if (pick.spot != null) {
+      name = pick.spot!.name;
+      kind = pick.spot!.kind;
+      lat = pick.spot!.lat;
+      lng = pick.spot!.lng;
+      presetId = pick.spot!.pinId;
+    } else if (pick.preset != null) {
+      name = pick.preset!.nameFor(l10n.locale.languageCode);
+      kind = pick.preset!.kind;
+      lat = pick.preset!.lat;
+      lng = pick.preset!.lng;
+      presetId = pick.preset!.id;
+    } else {
+      name = '';
+      kind = TourType.custom;
+      lat = null;
+      lng = null;
+      presetId = null;
+    }
+
     final stop = TourStop(
       id: const Uuid().v4(),
-      name: preset.isCustom
-          ? ''
-          : preset.preset!.nameFor(l10n.locale.languageCode),
-      kind: preset.preset?.kind ?? TourType.custom,
+      name: name,
+      kind: kind,
       arrive: start,
       leave: start.add(const Duration(days: 1)),
-      lat: preset.preset?.lat,
-      lng: preset.preset?.lng,
-      presetId: preset.preset?.id,
+      lat: lat,
+      lng: lng,
+      presetId: presetId,
     );
     final edited = await _editStop(stop);
     if (edited == null) return;
@@ -89,6 +116,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      constraints: const BoxConstraints(maxWidth: 560),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _StopSheet(stop: stop),
@@ -106,6 +134,11 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
         foregroundColor: context.forest.text,
         title: Text(l10n.translate('itin_title')),
         actions: [
+          IconButton(
+            tooltip: 'লোকাল পরিবহন ভাড়া গাইড',
+            icon: const Icon(Icons.calculate_outlined),
+            onPressed: () => showLocalFareGuideSheet(context),
+          ),
           TextButton(
             onPressed: _stops.isEmpty
                 ? null
@@ -380,21 +413,24 @@ class _StopSheetState extends State<_StopSheet> {
   }
 }
 
-/// A catalog pick, or a custom place.
+/// A catalog pick, verified spot, or a custom place.
 class DestinationPick {
-  const DestinationPick(this.preset);
+  const DestinationPick(this.preset, {this.spot});
 
   final DestinationPreset? preset;
-  bool get isCustom => preset == null;
+  final PredefinedSpot? spot;
+
+  bool get isCustom => preset == null && spot == null;
 }
 
-/// A searchable list of well-known places, grouped by kind, with a choice
-/// to type any other place.
+/// A searchable list of well-known places, grouped by kind, with verified
+/// tourist spots and division/category filtering, or a choice to type any other place.
 Future<DestinationPick?> showDestinationPicker(BuildContext context) {
   return showModalBottomSheet<DestinationPick>(
     context: context,
     isScrollControlled: true,
     backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+    constraints: const BoxConstraints(maxWidth: 560),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => const _DestinationPicker(),
@@ -410,29 +446,70 @@ class _DestinationPicker extends StatefulWidget {
 
 class _DestinationPickerState extends State<_DestinationPicker> {
   String _query = '';
+  String _selectedDivision = 'all';
+  List<PredefinedSpot> _verifiedSpots = const [];
+
+  static const _divisions = [
+    'all',
+    'Chattogram',
+    'Sylhet',
+    'Khulna',
+    'Dhaka',
+    'Rajshahi',
+    'Barishal',
+    'Rangpur',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSpots();
+  }
+
+  Future<void> _loadSpots() async {
+    final spots = await PredefinedSpotsRepository().loadSpots();
+    if (mounted) {
+      setState(() => _verifiedSpots = spots);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lang = l10n.locale.languageCode;
     final q = _query.trim().toLowerCase();
-    final matches = [
+
+    // Filter verified spots from assets
+    final matchingSpots = _verifiedSpots.where((s) {
+      if (_selectedDivision != 'all' &&
+          s.division.toLowerCase() != _selectedDivision.toLowerCase()) {
+        return false;
+      }
+      return s.matches(q);
+    }).toList(growable: false);
+
+    // Filter catalog presets
+    final matchingPresets = [
       for (final p in kDestinationCatalog)
-        if (q.isEmpty ||
-            p.nameEn.toLowerCase().contains(q) ||
-            p.nameBn.contains(q) ||
-            p.aliases.any((a) => a.contains(q)))
+        if ((_selectedDivision == 'all' ||
+                p.region.toLowerCase() == _selectedDivision.toLowerCase()) &&
+            (q.isEmpty ||
+                p.nameEn.toLowerCase().contains(q) ||
+                p.nameBn.contains(q) ||
+                p.aliases.any((a) => a.contains(q))))
           p,
     ];
+
     final byKind = <TourType, List<DestinationPreset>>{};
-    for (final p in matches) {
+    for (final p in matchingPresets) {
       byKind.putIfAbsent(p.kind, () => []).add(p);
     }
 
     return SafeArea(
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.85,
+        height: MediaQuery.of(context).size.height * 0.88,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -447,6 +524,43 @@ class _DestinationPickerState extends State<_DestinationPicker> {
                 ),
               ),
             ),
+            // Division filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  for (final div in _divisions) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(div == 'all'
+                            ? l10n.translate('itin_filter_all')
+                            : div),
+                        selected: _selectedDivision.toLowerCase() ==
+                            div.toLowerCase(),
+                        selectedColor:
+                            context.forest.readable(AppColors.mintGreen),
+                        labelStyle: TextStyle(
+                          color: _selectedDivision.toLowerCase() ==
+                                  div.toLowerCase()
+                              ? AppColors.darkGreen
+                              : context.forest.text,
+                          fontWeight: _selectedDivision.toLowerCase() ==
+                                  div.toLowerCase()
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 12,
+                        ),
+                        onSelected: (sel) {
+                          if (sel) setState(() => _selectedDivision = div);
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             ListTile(
               leading: Icon(Icons.edit_location_alt_rounded,
                   color: context.forest.readable(AppColors.gold)),
@@ -458,6 +572,54 @@ class _DestinationPickerState extends State<_DestinationPicker> {
             Expanded(
               child: ListView(
                 children: [
+                  // ── Verified Predefined Spots ───────────────────────
+                  if (matchingSpots.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.verified_rounded,
+                              size: 16,
+                              color:
+                                  context.forest.readable(AppColors.mintGreen)),
+                          const SizedBox(width: 6),
+                          Text(
+                            l10n.translate('itin_verified_spots', args: {
+                              'count': l10n.number(matchingSpots.length)
+                            }),
+                            style: TextStyle(
+                              color:
+                                  context.forest.readable(AppColors.mintGreen),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    for (final s in matchingSpots)
+                      ListTile(
+                        leading: Icon(tourTypeIcon(s.kind),
+                            color: context.forest.accentText),
+                        title: Text(s.name,
+                            style: TextStyle(
+                                color: context.forest.text,
+                                fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          '${s.district} · ${s.division} — ${s.description}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 12),
+                        ),
+                        trailing: Icon(Icons.add_circle_outline_rounded,
+                            size: 20, color: context.forest.accentText),
+                        onTap: () => Navigator.pop(
+                            context, DestinationPick(null, spot: s)),
+                      ),
+                    Divider(color: context.forest.divider12, height: 16),
+                  ],
+
+                  // ── Catalog Destinations ────────────────────────────
                   for (final kind in TourType.values)
                     if (byKind[kind] != null) ...[
                       Padding(
