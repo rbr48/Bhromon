@@ -9,6 +9,7 @@ public tree.
 There is no shared upload key. An old app build that still sends one is refused.
 """
 
+import asyncio
 import hashlib
 import os
 import json
@@ -41,6 +42,8 @@ from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from call_cleanup import run_call_cleanup
+from journey_cleanup import run_journey_event_cleanup
+import live
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
 
@@ -118,7 +121,18 @@ def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
     except Exception as error:
         logger.error("Call cleanup failed: %s", error)
         calls = {"deleted": 0, "errors": 1}
-    return {**stories, "calls_deleted": calls["deleted"], "call_errors": calls["errors"]}
+    try:
+        journey = run_journey_event_cleanup(db, now)
+    except Exception as error:
+        logger.error("Journey event cleanup failed: %s", error)
+        journey = {"deleted": 0, "errors": 1}
+    return {
+        **stories,
+        "calls_deleted": calls["deleted"],
+        "call_errors": calls["errors"],
+        "journey_events_deleted": journey["deleted"],
+        "journey_event_errors": journey["errors"],
+    }
 
 
 story_cleanup_scheduler = StoryCleanupScheduler(run_daily_cleanup)
@@ -157,8 +171,11 @@ async def lifespan(app: FastAPI):
         family_date_scheduler.start()
         story_cleanup_scheduler.start()
         ack_reminder_scheduler.start()
+    # The live relay drops members who have been silent for two minutes.
+    live_sweep = asyncio.create_task(live.sweep_forever())
     yield
     # Stop them on shutdown
+    live_sweep.cancel()
     ack_reminder_scheduler.stop()
     story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
@@ -177,6 +194,7 @@ app.include_router(quiz_router, prefix="/api/quiz")
 app.include_router(quiz_router, prefix="/quiz")
 app.include_router(news_router, prefix="/api/news")
 app.include_router(news_router, prefix="/news")
+app.include_router(live.router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -326,6 +344,13 @@ backend = FirebaseBackend()
 # Chat and call routes ask this before they reach another person. The lookup goes
 # through `backend` at call time, so tests that swap the backend swap this too.
 chat.shares_group = lambda uid_a, uid_b: backend.shares_group(uid_a, uid_b)
+
+# The live journey relay (roadmap LJ-4.4) checks a member's ID token, and that the
+# member is an active member of the tour, before it lets them in.
+live.configure(
+    identify=lambda token: backend.identity_for_token(token),
+    is_member=lambda tour_id, email: backend.role_for(tour_id, email) is not None,
+)
 
 # Only a platform admin may start a news sync.
 news.sync_guard = lambda authorization: require_platform_admin(authenticate(authorization))

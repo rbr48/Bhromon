@@ -48,6 +48,8 @@ export async function eraseOwnedDocuments(db: Firestore, uid: string): Promise<n
   for (const [collection, field] of OWNED_DOCUMENTS) {
     deleted += await deleteAll(db, db.collection(collection).where(field, '==', uid));
   }
+  // A member's arrivals and departures sit under each tour, so the query spans them (roadmap LJ-4.6).
+  deleted += await deleteAll(db, db.collectionGroup('journey_events').where('uid', '==', uid));
   for (const collection of UID_DOCUMENTS) {
     await db.recursiveDelete(db.collection(collection).doc(uid));
   }
