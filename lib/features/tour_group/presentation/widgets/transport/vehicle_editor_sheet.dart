@@ -260,7 +260,8 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
                           style: TextStyle(color: context.forest.text70))),
                   DropdownButton<String>(
                     value: _v.pattern,
-                    dropdownColor: const Color(0xFF1B4332),
+                    dropdownColor:
+                        context.forest.surfaceFor(const Color(0xFF1B4332)),
                     style: TextStyle(color: context.forest.text),
                     items: [
                       for (final p in kSeatPatterns)

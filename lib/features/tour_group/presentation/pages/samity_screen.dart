@@ -997,7 +997,8 @@ class _SetupSheetState extends State<_SetupSheet> {
               ),
               DropdownButtonFormField<int>(
                 initialValue: _dueDay,
-                dropdownColor: const Color(0xFF1B4332),
+                dropdownColor:
+                    context.forest.surfaceFor(const Color(0xFF1B4332)),
                 style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('samity_due_day_label'),

@@ -401,7 +401,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                   flex: 2,
                   child: DropdownButtonFormField<String>(
                     initialValue: _currency,
-                    dropdownColor: const Color(0xFF1B4332),
+                    dropdownColor:
+                        context.forest.surfaceFor(const Color(0xFF1B4332)),
                     decoration: InputDecoration(
                         labelText: l10n.translate('fund_currency')),
                     items: [
@@ -492,7 +493,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               DropdownButtonFormField<String?>(
                 initialValue:
                     stops.any((s) => s.id == _stopId) ? _stopId : null,
-                dropdownColor: const Color(0xFF1B4332),
+                dropdownColor:
+                    context.forest.surfaceFor(const Color(0xFF1B4332)),
                 decoration:
                     InputDecoration(labelText: l10n.translate('fund_where')),
                 items: [
@@ -522,7 +524,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                 initialValue: widget.members.any((m) => m.email == _payer)
                     ? _payer
                     : null,
-                dropdownColor: const Color(0xFF1B4332),
+                dropdownColor:
+                    context.forest.surfaceFor(const Color(0xFF1B4332)),
                 decoration:
                     InputDecoration(labelText: l10n.translate('fund_who_paid')),
                 items: [
