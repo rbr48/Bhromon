@@ -270,6 +270,7 @@ class VoiceRoomService {
     if (!kIsWeb) {
       _isSpeakerOn = true;
       await Helper.setSpeakerphoneOn(true);
+      await CallAudioSession.setSpeakerphone(true);
     }
   }
 
@@ -659,6 +660,7 @@ class VoiceRoomService {
     _isSpeakerOn = !_isSpeakerOn;
     if (!kIsWeb) {
       Helper.setSpeakerphoneOn(_isSpeakerOn);
+      unawaited(CallAudioSession.setSpeakerphone(_isSpeakerOn));
     }
     _notify();
   }

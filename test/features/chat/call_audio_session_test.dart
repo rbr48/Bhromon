@@ -43,4 +43,30 @@ void main() {
     // No handler is set, so the platform call throws MissingPluginException.
     expect(await CallAudioSession.setSpeakerphone(false), isFalse);
   });
+
+  test('asks the phone to turn off loudspeaker and reports that it took',
+      () async {
+    MethodCall? seen;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      seen = call;
+      return true;
+    });
+
+    expect(await CallAudioSession.setSpeakerphone(false), isTrue);
+    expect(seen?.method, 'setSpeakerphone');
+    expect(seen?.arguments, {'enabled': false});
+  });
+
+  test('releases the audio session cleanly', () async {
+    MethodCall? seen;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      seen = call;
+      return null;
+    });
+
+    await CallAudioSession.release();
+    expect(seen?.method, 'release');
+  });
 }

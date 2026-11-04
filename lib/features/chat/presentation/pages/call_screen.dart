@@ -184,14 +184,18 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  /// Puts the call on the loudspeaker, or off it. On Android the phone's own audio
-  /// manager does it: the WebRTC plugin's request is dropped without an error when its
-  /// device list has no loudspeaker yet. The plugin's request is the fallback, and the
-  /// only one off Android.
+  /// Puts the call on the loudspeaker, or off it. On Android, the phone's own audio
+  /// manager configures the platform communication device and routing mode, while
+  /// the WebRTC plugin's AudioSwitch must also be synchronized so it does not
+  /// override the route back to the earpiece when tracks activate.
   Future<void> _routeToSpeaker(bool speaker) async {
     try {
-      final done = await CallAudioSession.setSpeakerphone(speaker);
-      if (!done) await Helper.setSpeakerphoneOn(speaker);
+      await CallAudioSession.setSpeakerphone(speaker);
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
+    try {
+      await Helper.setSpeakerphoneOn(speaker);
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
     }
@@ -252,6 +256,10 @@ class _CallScreenState extends State<CallScreen> {
           _remoteVideoConnected = true;
         });
         _applyAudioRouting();
+        // Reaffirm speaker routing after remote WebRTC audio track initializes.
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (mounted) _applyAudioRouting();
+        });
       }
     };
 
@@ -276,6 +284,10 @@ class _CallScreenState extends State<CallScreen> {
             unawaited(BatteryGuidance.markCallAnswered());
             _statusKey = 'chat_connected';
             _applyAudioRouting();
+            // Reaffirm speaker routing after connection settles.
+            Future.delayed(const Duration(milliseconds: 250), () {
+              if (mounted) _applyAudioRouting();
+            });
             _startDurationTimer();
             if (_systemCall) {
               unawaited(SystemCallBridge.markConnected(widget.callId));
@@ -752,6 +764,7 @@ class _CallScreenState extends State<CallScreen> {
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     _signaling.dispose();
+    unawaited(CallAudioSession.release());
     unawaited(CallAudioSession.stopOngoing());
     unawaited(CallAudioSession.setProximityScreenOff(false));
     unawaited(CallAudioSession.showOverLockScreen(false));
