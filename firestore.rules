@@ -537,6 +537,77 @@ service cloud.firestore {
              get(/databases/$(database)/documents/tours/$(tId)).data.get('kind', 'tour') == 'family';
     }
     // An office or a campus is a family-style circle where only admins write notices.
+    // ------------------------------------------------------------------------
+    // MFS (bKash / Nagad / Rocket / Upay) validation for payments and settlements.
+    // ------------------------------------------------------------------------
+    function validMfsProvider(provider) {
+      return provider in ['cash', 'bkash', 'nagad', 'rocket', 'upay', 'bankTransfer'];
+    }
+
+    function validMfsTrxId(provider, trxId) {
+      return provider == 'cash'
+        ? (trxId == null || trxId == '')
+        : (
+            trxId is string &&
+            trxId.matches('^[A-Z0-9]{8,14}$') &&
+            (provider != 'bkash' || trxId.size() == 10)
+          );
+    }
+
+    function validMfsInfo(mfs, tId) {
+      return mfs is map &&
+        mfs.keys().hasOnly([
+          'provider',
+          'trxId',
+          'senderMaskedPhone',
+          'receiverMaskedPhone',
+          'feePaisa',
+          'feeAbsorbedByGroup',
+          'status',
+          'verifiedByUserId',
+          'verifiedByName',
+          'verifiedAt',
+          'disputeReason'
+        ]) &&
+        validMfsProvider(mfs.get('provider', '')) &&
+        validMfsTrxId(mfs.get('provider', ''), mfs.get('trxId', null)) &&
+        mfs.get('feePaisa', 0) is int &&
+        mfs.get('feePaisa', 0) >= 0 &&
+        mfs.get('feeAbsorbedByGroup', false) is bool &&
+        mfs.get('status', 'unverified') in ['unverified', 'verified', 'disputed'];
+    }
+
+    // Validates optional `mfsInfo` map on expenses, deposits, transfers, or samity_payments.
+    function validOptionalMfsInfo(data, tId) {
+      return !('mfsInfo' in data) ||
+        data.mfsInfo == null ||
+        validMfsInfo(data.mfsInfo, tId);
+    }
+
+    // On CREATE: Non-admin members can only submit MFS transactions as 'unverified'
+    // (unless paying via 'cash'). Only tour admins/managers can immediately mark 'verified'.
+    function canVerifyMfsOnCreate(data, tId) {
+      return !('mfsInfo' in data) ||
+        data.mfsInfo == null ||
+        data.mfsInfo.get('provider', 'cash') == 'cash' ||
+        data.mfsInfo.get('status', 'unverified') == 'unverified' ||
+        isTourAdmin(tId);
+    }
+
+    // On UPDATE, a member (the record's author or payer) may edit an MFS record only while it is
+    // unverified, and may never change its status. Once an admin verifies or disputes a record it is
+    // frozen for members, so the TrxID and amount the admin checked stay as they are. Admins are
+    // allowed separately by each rule, so this check does not look up memberships.
+    function memberMayEditMfs(beforeData, afterData) {
+      let oldStatus = ('mfsInfo' in beforeData && beforeData.mfsInfo != null)
+        ? beforeData.mfsInfo.get('status', 'unverified')
+        : 'unverified';
+      let newStatus = ('mfsInfo' in afterData && afterData.mfsInfo != null)
+        ? afterData.mfsInfo.get('status', 'unverified')
+        : 'unverified';
+      return oldStatus == 'unverified' && newStatus == 'unverified';
+    }
+
     function isManagedTour(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus'];
@@ -690,10 +761,17 @@ service cloud.firestore {
       match /expenses/{expenseId} {
         allow read: if isActiveMember(tourId);
         allow create: if isActiveMember(tourId) &&
-                         request.resource.data.addedByEmail == tourUserEmail();
+                         request.resource.data.addedByEmail == tourUserEmail() &&
+                         validOptionalMfsInfo(request.resource.data, tourId) &&
+                         canVerifyMfsOnCreate(request.resource.data, tourId);
         allow update: if isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == resource.data.get('addedByEmail', '') &&
-                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+                         validOptionalMfsInfo(request.resource.data, tourId) &&
+                         (
+                           (resource.data.get('addedByEmail', '') == tourUserEmail() &&
+                            memberMayEditMfs(resource.data, request.resource.data)) ||
+                           isTourAdmin(tourId)
+                         );
         allow delete: if isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
@@ -701,10 +779,17 @@ service cloud.firestore {
       match /deposits/{depositId} {
         allow read: if isActiveMember(tourId);
         allow create: if isActiveMember(tourId) &&
-                         request.resource.data.addedByEmail == tourUserEmail();
+                         request.resource.data.addedByEmail == tourUserEmail() &&
+                         validOptionalMfsInfo(request.resource.data, tourId) &&
+                         canVerifyMfsOnCreate(request.resource.data, tourId);
         allow update: if isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == resource.data.get('addedByEmail', '') &&
-                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+                         validOptionalMfsInfo(request.resource.data, tourId) &&
+                         (
+                           (resource.data.get('addedByEmail', '') == tourUserEmail() &&
+                            memberMayEditMfs(resource.data, request.resource.data)) ||
+                           isTourAdmin(tourId)
+                         );
         allow delete: if isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
@@ -719,7 +804,9 @@ service cloud.firestore {
                          request.resource.data.amountPaisa > 0 &&
                          (isTourAdmin(tourId) ||
                           request.resource.data.fromId == tourUserEmail() ||
-                          request.resource.data.toId == tourUserEmail());
+                          request.resource.data.toId == tourUserEmail()) &&
+                         validOptionalMfsInfo(request.resource.data, tourId) &&
+                         canVerifyMfsOnCreate(request.resource.data, tourId);
         allow update: if false;
         allow delete: if isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
@@ -892,21 +979,102 @@ service cloud.firestore {
       // may not exceed the contribution. The member or an admin removes a record.
       match /samity_payments/{paymentId} {
         function validPayment(d, tId) {
-          return d.keys().hasOnly(['cycleKey', 'email', 'amountTaka', 'recordedByEmail', 'updatedAt']) &&
+          return d.keys().hasOnly(['cycleKey', 'email', 'amountTaka', 'recordedByEmail', 'updatedAt', 'mfsInfo']) &&
                  d.cycleKey is string && d.cycleKey.matches('^[0-9]{3}$') &&
                  d.email is string && d.email.size() > 0 &&
                  paymentId == d.cycleKey + '__' + d.email &&
                  d.amountTaka is int && d.amountTaka >= 1 &&
                  d.amountTaka <= get(/databases/$(database)/documents/tours/$(tId)).data.samity.contributionTaka &&
                  d.recordedByEmail == tourUserEmail() &&
-                 d.updatedAt == request.time;
+                 d.updatedAt == request.time &&
+                 validOptionalMfsInfo(d, tId);
         }
         allow read: if isActiveMember(tourId);
-        allow create, update: if isSamityTour(tourId) && isActiveMember(tourId) &&
+        allow create: if isSamityTour(tourId) && isActiveMember(tourId) &&
                                  (request.resource.data.email == tourUserEmail() || isTourAdmin(tourId)) &&
-                                 validPayment(request.resource.data, tourId);
+                                 validPayment(request.resource.data, tourId) &&
+                                 canVerifyMfsOnCreate(request.resource.data, tourId);
+        allow update: if isSamityTour(tourId) && isActiveMember(tourId) &&
+                                 validPayment(request.resource.data, tourId) &&
+                                 (
+                                   (request.resource.data.email == tourUserEmail() &&
+                                    memberMayEditMfs(resource.data, request.resource.data)) ||
+                                   isTourAdmin(tourId)
+                                 );
         allow delete: if isSamityTour(tourId) && isActiveMember(tourId) &&
                          (resource.data.email == tourUserEmail() || isTourAdmin(tourId));
+      }
+
+      // Atomic Per-Group MFS TrxID Uniqueness Registry
+      // Document ID is the normalized uppercase TrxID (e.g., `BKL890XYZ1`).
+      // Creating a document here inside a writeBatch/transaction with an expense or
+      // settlement guarantees zero duplicate TrxIDs within the same tourId.
+      match /mfs_trx_registry/{trxId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+          trxId.matches('^[A-Z0-9]{8,14}$') &&
+          request.resource.data.keys().hasOnly([
+            'trxId',
+            'provider',
+            'recordType',
+            'recordId',
+            'amountPaisa',
+            'addedByEmail',
+            'createdAt'
+          ]) &&
+          request.resource.data.trxId == trxId &&
+          request.resource.data.addedByEmail == tourUserEmail() &&
+          validMfsProvider(request.resource.data.provider) &&
+          request.resource.data.amountPaisa is int &&
+          request.resource.data.amountPaisa > 0;
+        allow update: if false;
+        allow delete: if isActiveMember(tourId) && (
+          resource.data.get('addedByEmail', '') == tourUserEmail() ||
+          isTourAdmin(tourId)
+        );
+      }
+
+      // `/settlements/{settlementId}`: structured MFS settle-up records
+      // Stores `SettlementRecord.toMap()` documents with full MfsPaymentInfo support.
+      match /settlements/{settlementId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+          request.resource.data.tourId == tourId &&
+          request.resource.data.addedByEmail == tourUserEmail() &&
+          request.resource.data.amountPaisa is int &&
+          request.resource.data.amountPaisa > 0 &&
+          (
+            isTourAdmin(tourId) ||
+            request.resource.data.fromMemberId == tourUserEmail() ||
+            request.resource.data.toMemberId == tourUserEmail()
+          ) &&
+          validMfsInfo(request.resource.data.mfsInfo, tourId) &&
+          canVerifyMfsOnCreate(request.resource.data, tourId);
+        allow update: if isActiveMember(tourId) &&
+          request.resource.data.tourId == resource.data.tourId &&
+          request.resource.data.addedByEmail == resource.data.addedByEmail &&
+          request.resource.data.amountPaisa == resource.data.amountPaisa &&
+          request.resource.data.fromMemberId == resource.data.fromMemberId &&
+          request.resource.data.toMemberId == resource.data.toMemberId &&
+          validMfsInfo(request.resource.data.mfsInfo, tourId) &&
+          (
+            // Tour admin can verify/dispute any settlement
+            isTourAdmin(tourId) ||
+            // Original creator can edit notes or unverified MFS details before verification
+            (
+              resource.data.addedByEmail == tourUserEmail() &&
+              resource.data.mfsInfo.get('status', 'unverified') == 'unverified' &&
+              request.resource.data.mfsInfo.get('status', 'unverified') == 'unverified'
+            )
+          );
+        allow delete: if isActiveMember(tourId) &&
+          (
+            isTourAdmin(tourId) ||
+            (
+              resource.data.addedByEmail == tourUserEmail() &&
+              resource.data.mfsInfo.get('status', 'unverified') != 'verified'
+            )
+          );
       }
 
       // Samity payouts: the pot for a cycle, handed to its recipient. Only an owner or admin
