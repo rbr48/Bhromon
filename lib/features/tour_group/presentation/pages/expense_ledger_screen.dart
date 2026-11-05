@@ -21,10 +21,13 @@ import '../../domain/services/debt_simplifier.dart';
 import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/media_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../../data/monthly_ledger_pdf.dart';
 import '../../domain/services/bangla_qr_engine.dart';
+import '../monthly_ledger_pdf_export.dart';
 import '../widgets/bangla_qr_view.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
+import '../widgets/fund/mfs_settlement_sheet.dart';
 import '../widgets/mess/mess_balance_sheet.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/utils/logger.dart';
@@ -56,6 +59,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   List<ExpenseItem> _expenses = const [];
   List<DepositItem> _deposits = const [];
   List<TransferItem> _transfers = const [];
+  List<SettlementRecord> _settlements = const [];
   bool _loaded = false;
 
   // Expense list filters.
@@ -86,6 +90,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     on(_repository.watchMembers(widget.tourId), (m) => _members = m);
     on(_repository.watchDeposits(widget.tourId), (d) => _deposits = d);
     on(_repository.watchTransfers(widget.tourId), (t) => _transfers = t);
+    on(_repository.watchSettlements(widget.tourId), (s) => _settlements = s);
     on(_repository.watchExpenses(widget.tourId), (e) {
       _expenses = e;
       _loaded = true;
@@ -155,11 +160,29 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final allTransfers = [
+      ..._transfers,
+      for (final s in _settlements.where((x) => x.isVerified))
+        TransferItem(
+          id: s.id,
+          tourId: s.tourId,
+          fromId: s.fromMemberId,
+          fromName: s.fromMemberName,
+          toId: s.toMemberId,
+          toName: s.toMemberName,
+          amountPaisa: s.creditedPaisa,
+          date: s.date,
+          notes: s.mfsInfo.provider.requiresTrxId
+              ? '${s.mfsInfo.provider.name.toUpperCase()} TrxID: ${s.mfsInfo.trxId ?? ''}'
+              : (s.notes ?? 'MFS Settlement'),
+          addedByEmail: s.addedByEmail,
+        ),
+    ];
     final summary = TripLedgerEngine.computeLedger(
       members: _inputs,
       expenses: _expenses,
       deposits: _deposits,
-      transfers: _transfers,
+      transfers: allTransfers,
     );
     final group = _group;
     final report = group == null
@@ -169,7 +192,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             members: _inputs,
             expenses: _expenses,
             deposits: _deposits,
-            transfers: _transfers,
+            transfers: allTransfers,
           );
 
     return Scaffold(
@@ -187,6 +210,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               tooltip: l10n.translate('fund_budget_title'),
               onPressed: () => _editBudget(group),
             ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            tooltip: l10n.translate('fund_export_pdf'),
+            onPressed: _exportMonthlyPdf,
+          ),
           IconButton(
             icon: const Icon(Icons.table_view_rounded),
             tooltip: l10n.translate('fund_export_csv'),
@@ -373,6 +401,51 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         fontSize: 12)),
               ),
           ]),
+        ),
+        _box(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.mintGreen.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.picture_as_pdf_rounded,
+                    color: AppColors.mintGreen, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.translate('fund_export_pdf'),
+                      style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13),
+                    ),
+                    Text(
+                      '${BanglaLedgerFormatter.formatMonthYearBangla(_month.year, _month.month)} এর হিসাব ও অডিট স্টেটমেন্ট',
+                      style: TextStyle(
+                          color: context.forest.text54, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+                onPressed: _exportMonthlyPdf,
+                child: const Text('PDF',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
         ),
         if (mine != null) _myCard(l10n, mine, myDue),
         if (report != null) ..._budgetSection(l10n, report),
@@ -1327,17 +1400,40 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         ),
         _heading(
           l10n.translate('fund_payments'),
-          trailing: TextButton.icon(
-            onPressed: () => _transfer(),
-            icon: Icon(Icons.add_rounded, color: context.forest.accentText),
-            label: Text(l10n.translate('fund_record_payment'),
-                style: TextStyle(color: context.forest.accentText)),
+          trailing: Wrap(
+            spacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _openMfsSettlementSheet(),
+                icon: const Icon(Icons.receipt_long_rounded,
+                    size: 14, color: Color(0xFFE2136E)),
+                label: Text(l10n.translate('fund_record_mfs'),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE2136E))),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFE2136E)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _transfer(),
+                icon: Icon(Icons.add_rounded, color: context.forest.accentText),
+                label: Text(l10n.translate('fund_record_payment'),
+                    style: TextStyle(color: context.forest.accentText)),
+              ),
+            ],
           ),
         ),
-        if (_transfers.isEmpty)
+        if (_transfers.isEmpty && _settlements.isEmpty)
           Text(l10n.translate('fund_no_payments'),
               style: TextStyle(color: context.forest.text54, fontSize: 12))
-        else
+        else ...[
+          for (final s in _settlements) _mfsSettlementTile(l10n, s),
           for (final t in _transfers)
             _box(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1366,6 +1462,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         fontWeight: FontWeight.bold)),
               ),
             ),
+        ],
       ],
     );
   }
@@ -1854,6 +1951,299 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       );
       _toast(l10n.translate('fund_payment_saved'));
     }, 'fund_err_save');
+  }
+
+  void _openMfsSettlementSheet({SettlementTransaction? prefill}) {
+    final group = _group;
+    if (group == null) return;
+
+    final ledgerMembers = [
+      for (final m in _members)
+        LedgerMember(
+          id: m.email,
+          name: m.displayName,
+          familyCount: m.familyCount,
+        ),
+    ];
+
+    String? fromId = prefill?.fromId;
+    String? toId = prefill?.toId;
+    if (fromId == null && ledgerMembers.isNotEmpty) {
+      fromId = ledgerMembers.first.id;
+    }
+    if (toId == null && ledgerMembers.length > 1) {
+      toId = ledgerMembers[1].id;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.forest.surfaceFor(_card),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => MfsSettlementSheet(
+        tourId: widget.tourId,
+        members: ledgerMembers,
+        currentUserEmail: _me,
+        isGroupManager: _isAdmin,
+        existingExpenses: _expenses,
+        existingSettlements: _settlements,
+        initialFromMemberId: fromId,
+        initialToMemberId: toId,
+        initialAmountPaisa: prefill?.amountPaisa,
+        onSaveSettlement: (record) async {
+          final l10n = context.l10n;
+          await _run(() async {
+            await _repository.addSettlement(widget.tourId, record);
+            _toast(l10n.translate('fund_payment_saved'));
+          }, 'fund_err_save');
+        },
+      ),
+    );
+  }
+
+  Widget _mfsSettlementTile(AppLocalizations l10n, SettlementRecord s) {
+    Color providerColor;
+    switch (s.mfsInfo.provider) {
+      case MfsProvider.bkash:
+        providerColor = const Color(0xFFE2136E);
+        break;
+      case MfsProvider.nagad:
+        providerColor = const Color(0xFFF7931E);
+        break;
+      case MfsProvider.rocket:
+        providerColor = const Color(0xFF8C3494);
+        break;
+      case MfsProvider.upay:
+        providerColor = const Color(0xFF005696);
+        break;
+      case MfsProvider.bankTransfer:
+        providerColor = Colors.teal;
+        break;
+      case MfsProvider.cash:
+        providerColor = AppColors.mintGreen;
+        break;
+    }
+
+    final isVerified = s.isVerified;
+    final isDisputed = s.mfsInfo.status == MfsVerificationStatus.disputed;
+    final statusColor = isVerified
+        ? AppColors.mintGreen
+        : isDisputed
+            ? Colors.redAccent
+            : Colors.orangeAccent;
+    final statusText = isVerified
+        ? l10n.translate('fund_mfs_verified')
+        : isDisputed
+            ? l10n.translate('fund_mfs_disputed')
+            : l10n.translate('fund_mfs_unverified');
+
+    return _box(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: ListTile(
+        onLongPress: (_canEdit(s.addedByEmail) && !isVerified) || _isAdmin
+            ? () => _confirmDelete(
+                  '${s.fromMemberName} → ${s.toMemberName}',
+                  () => _repository.deleteSettlement(widget.tourId, s),
+                )
+            : null,
+        leading: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: providerColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: providerColor.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            s.mfsInfo.provider.banglaLabel,
+            style: TextStyle(
+              color: providerColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${s.fromMemberName} → ${s.toMemberName}',
+                style: TextStyle(
+                    color: context.forest.text, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isVerified
+                        ? Icons.check_circle_rounded
+                        : isDisputed
+                            ? Icons.warning_amber_rounded
+                            : Icons.schedule_rounded,
+                    size: 11,
+                    color: statusColor,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 2),
+            Text(
+              [
+                localizedDateFormat('d MMM, h:mm a').format(s.date),
+                if (s.mfsInfo.trxId != null) 'TrxID: ${s.mfsInfo.trxId}',
+                if (s.mfsInfo.feePaisa > 0)
+                  'ফি: ${_money(s.mfsInfo.feePaisa)}',
+                if ((s.notes ?? '').isNotEmpty) s.notes!,
+              ].join(' · '),
+              style: TextStyle(color: context.forest.text54, fontSize: 11),
+            ),
+            if (isDisputed && (s.mfsInfo.disputeReason ?? '').isNotEmpty)
+              Text(
+                'আপত্তি: ${s.mfsInfo.disputeReason}',
+                style: const TextStyle(color: Colors.redAccent, fontSize: 11),
+              ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _money(s.amountPaisa),
+              style: TextStyle(
+                color: context.forest.readable(AppColors.gold),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (_isAdmin && !isVerified) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.check_circle_rounded,
+                    color: AppColors.mintGreen, size: 20),
+                tooltip: l10n.translate('fund_verify_payment'),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => _verifySettlement(s),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.cancel_outlined,
+                    color: Colors.redAccent, size: 20),
+                tooltip: l10n.translate('fund_dispute_payment'),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => _disputeSettlement(s),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _verifySettlement(SettlementRecord s) async {
+    final l10n = context.l10n;
+    await _run(() async {
+      await _repository.updateSettlementStatus(
+        widget.tourId,
+        s.id,
+        MfsVerificationStatus.verified,
+      );
+      _toast(l10n.translate('fund_mfs_verified'));
+    }, 'fund_err_save');
+  }
+
+  Future<void> _disputeSettlement(SettlementRecord s) async {
+    final reasonController = TextEditingController();
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.forest.surfaceFor(_card),
+        title: Text(l10n.translate('fund_dispute_reason_prompt'),
+            style: TextStyle(color: context.forest.text)),
+        content: TextField(
+          controller: reasonController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: l10n.translate('fund_dispute_reason_hint'),
+            hintStyle: TextStyle(color: context.forest.text54),
+          ),
+          style: TextStyle(color: context.forest.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.translate('tour_cancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.translate('fund_dispute_payment')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _run(() async {
+        await _repository.updateSettlementStatus(
+          widget.tourId,
+          s.id,
+          MfsVerificationStatus.disputed,
+          disputeReason: reasonController.text.trim().isNotEmpty
+              ? reasonController.text.trim()
+              : null,
+        );
+        _toast(l10n.translate('fund_mfs_disputed'), error: true);
+      }, 'fund_err_save');
+    }
+  }
+
+  Future<void> _exportMonthlyPdf() async {
+    final group = _group;
+    if (group == null) return;
+    final ledgerMembers = [
+      for (final m in _members)
+        LedgerMember(
+          id: m.email,
+          name: m.displayName,
+          familyCount: m.familyCount,
+        ),
+    ];
+    await exportMonthlyLedgerPdf(
+      context,
+      group: group,
+      year: _month.year,
+      month: _month.month,
+      members: ledgerMembers,
+      allExpenses: _expenses,
+      allSettlements: _settlements,
+      preparedByName: _repository.currentDisplayName,
+    );
   }
 
   Future<void> _editBudget(TourGroup group) async {
@@ -2374,6 +2764,26 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 ],
               ),
               const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE2136E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                  label: Text(l10n.translate('fund_mfs_settle_up'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _openMfsSettlementSheet(prefill: s);
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(

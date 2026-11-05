@@ -18,6 +18,9 @@ class MfsSettlementSheet extends StatefulWidget {
   final List<ExpenseItem> existingExpenses;
   final List<SettlementRecord> existingSettlements;
   final ValueChanged<SettlementRecord> onSaveSettlement;
+  final String? initialFromMemberId;
+  final String? initialToMemberId;
+  final int? initialAmountPaisa;
 
   const MfsSettlementSheet({
     super.key,
@@ -28,6 +31,9 @@ class MfsSettlementSheet extends StatefulWidget {
     required this.existingExpenses,
     required this.existingSettlements,
     required this.onSaveSettlement,
+    this.initialFromMemberId,
+    this.initialToMemberId,
+    this.initialAmountPaisa,
   });
 
   @override
@@ -53,9 +59,14 @@ class _MfsSettlementSheetState extends State<MfsSettlementSheet> {
   @override
   void initState() {
     super.initState();
-    _fromMemberId = widget.members.isNotEmpty ? widget.members.first.id : '';
-    _toMemberId =
-        widget.members.length > 1 ? widget.members[1].id : _fromMemberId;
+    _fromMemberId = widget.initialFromMemberId ??
+        (widget.members.isNotEmpty ? widget.members.first.id : '');
+    _toMemberId = widget.initialToMemberId ??
+        (widget.members.length > 1 ? widget.members[1].id : _fromMemberId);
+    if (widget.initialAmountPaisa != null && widget.initialAmountPaisa! > 0) {
+      _amountController.text =
+          (widget.initialAmountPaisa! / 100).toStringAsFixed(2);
+    }
     _markVerifiedImmediately = widget.isGroupManager;
   }
 

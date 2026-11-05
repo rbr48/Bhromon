@@ -215,5 +215,29 @@ void main() {
         'নভেম্বর ২০২৬',
       );
     });
+
+    test('MonthlyLedgerPdfGenerator generates valid non-empty PDF bytes', () async {
+      const engine = TripLedgerEngine();
+      final statement = engine.computeMonthlyStatement(
+        tourId: 'samity_01',
+        groupTitle: 'ডাগনভূঞা মেস ও সমিতি তহবিল',
+        groupArchetype: 'mess',
+        year: 2026,
+        month: 11,
+        members: const [
+          LedgerMember(id: 'u1', name: 'শোহাগ রানা'),
+          LedgerMember(id: 'u2', name: 'তানভীর আহমেদ'),
+        ],
+        allExpenses: const [],
+        allSettlements: const [],
+      );
+
+      final pdfGenerator = MonthlyLedgerPdfGenerator();
+      final bytes =
+          await pdfGenerator.generate(statement, preparedByName: 'শোহাগ');
+      expect(bytes, isNotEmpty);
+      expect(bytes.length, greaterThan(1000));
+      expect(String.fromCharCodes(bytes.sublist(0, 4)), '%PDF');
+    });
   });
 }
