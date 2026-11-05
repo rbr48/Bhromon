@@ -1010,7 +1010,8 @@ class TourTranslationKeys {
       'fund_verify_payment': 'Verify',
       'fund_dispute_payment': 'Dispute',
       'fund_dispute_reason_prompt': 'Dispute payment',
-      'fund_dispute_reason_hint': 'Explain why this payment or TrxID is invalid',
+      'fund_dispute_reason_hint':
+          'Explain why this payment or TrxID is invalid',
       'fund_the_fund': 'Group fund',
       'fund_balance': 'Fund balance',
       'fund_spent': 'Spent',

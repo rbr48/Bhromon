@@ -1709,9 +1709,8 @@ class TourGroupRepository {
   /// Structured MFS settlements (bKash/Nagad/Rocket/Upay) and peer settlements, newest first.
   Stream<List<SettlementRecord>> watchSettlements(String tourId) {
     return _sub(tourId, 'settlements').snapshots().map((snapshot) {
-      final items = snapshot.docs
-          .map((d) => SettlementRecord.fromMap(d.data()))
-          .toList();
+      final items =
+          snapshot.docs.map((d) => SettlementRecord.fromMap(d.data())).toList();
       items.sort((a, b) => b.date.compareTo(a.date));
       return items;
     });
