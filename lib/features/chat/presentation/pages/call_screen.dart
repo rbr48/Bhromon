@@ -22,6 +22,7 @@ import '../../domain/call_display.dart';
 import '../../domain/call_ringback_audio.dart';
 import '../../domain/speaker_route.dart';
 import '../widgets/packet_loss_meter.dart';
+import '../widgets/whatsapp_call_widgets.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
 
@@ -372,7 +373,8 @@ class _CallScreenState extends State<CallScreen> {
               'failed' => 'call_status_failed',
               _ => 'call_status_ended',
             };
-            Future.delayed(const Duration(milliseconds: 300), _safeExit);
+            unawaited(HapticFeedback.mediumImpact());
+            Future.delayed(const Duration(milliseconds: 1200), _safeExit);
         }
       });
     };
@@ -538,73 +540,10 @@ class _CallScreenState extends State<CallScreen> {
     setState(() {});
   }
 
-  /// The link figures behind the quality badge, for anyone who wants the numbers.
+  /// The link figures behind the quality badge, shown in a WhatsApp details sheet.
   void _showLinkDetails() {
-    final sample = _signaling.linkSample;
-    String figure(double? value, String unit, {int digits = 0}) => value == null
-        ? context.l10n.translate('call_quality_no_data')
-        : '${value.toStringAsFixed(digits)} $unit';
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
-        title: Text(context.l10n.translate('call_quality_title'),
-            style: const TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _detailRow(
-                context.l10n.translate('chat_quality_link'),
-                switch (_signaling.networkQuality.value) {
-                  CallNetworkQuality.good =>
-                    context.l10n.translate('chat_quality_good'),
-                  CallNetworkQuality.fair =>
-                    context.l10n.translate('chat_quality_fair'),
-                  CallNetworkQuality.poor =>
-                    context.l10n.translate('chat_quality_weak'),
-                }),
-            _detailRow(context.l10n.translate('call_quality_rtt'),
-                figure(sample?.roundTripMs, 'ms')),
-            _detailRow(context.l10n.translate('chat_quality_jitter'),
-                figure(sample?.jitterMs, 'ms')),
-            _detailRow(
-              context.l10n.translate('call_quality_loss'),
-              sample?.lossRatio == null
-                  ? context.l10n.translate('call_quality_no_data')
-                  : '${(sample!.lossRatio! * 100).toStringAsFixed(1)} %',
-            ),
-            _detailRow(
-              context.l10n.translate('chat_quality_sending'),
-              figure(sample?.outboundKbps, 'kbps'),
-            ),
-            _detailRow(context.l10n.translate('chat_quality_loudness'),
-                '${_signaling.remoteGain.toStringAsFixed(0)}x'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(context.l10n.translate('call_close')),
-          ),
-        ],
-      ),
-    );
+    showWhatsAppCallDetailsSheet(context: context, signaling: _signaling);
   }
-
-  Widget _detailRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 110,
-              child: Text(label, style: const TextStyle(color: Colors.white70)),
-            ),
-            Text(value, style: const TextStyle(color: Colors.white)),
-          ],
-        ),
-      );
 
   void _toggleAudio() {
     setState(() {
