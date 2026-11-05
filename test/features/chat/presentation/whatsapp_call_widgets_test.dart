@@ -30,7 +30,8 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('renders end call styling when isEndCall is true', (tester) async {
+    testWidgets('renders end call styling when isEndCall is true',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -53,7 +54,8 @@ void main() {
   });
 
   group('WhatsAppPulsingAvatar', () {
-    testWidgets('renders initials when no avatar URL is provided', (tester) async {
+    testWidgets('renders initials when no avatar URL is provided',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -68,7 +70,8 @@ void main() {
       expect(find.text('R'), findsOneWidget);
     });
 
-    testWidgets('renders static initials without pulsing rings when inactive', (tester) async {
+    testWidgets('renders static initials without pulsing rings when inactive',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -88,7 +91,9 @@ void main() {
       expect(avatarTransforms, findsNothing);
     });
 
-    testWidgets('dynamically activates pulsing ripples when state changes to active', (tester) async {
+    testWidgets(
+        'dynamically activates pulsing ripples when state changes to active',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(

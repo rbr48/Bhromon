@@ -89,7 +89,8 @@ class _WhatsAppPulsingAvatarState extends State<WhatsAppPulsingAvatar>
               animation: _controller,
               builder: (context, _) {
                 final scale = 1.0 + (_controller.value * 0.45);
-                final opacity = (1.0 - _controller.value).clamp(0.0, 1.0) * 0.28;
+                final opacity =
+                    (1.0 - _controller.value).clamp(0.0, 1.0) * 0.28;
                 return Transform.scale(
                   scale: scale,
                   child: Container(
@@ -98,10 +99,12 @@ class _WhatsAppPulsingAvatarState extends State<WhatsAppPulsingAvatar>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: WhatsAppCallTheme.primary.withValues(alpha: opacity),
+                        color: WhatsAppCallTheme.primary
+                            .withValues(alpha: opacity),
                         width: 2.0,
                       ),
-                      color: WhatsAppCallTheme.primary.withValues(alpha: opacity * 0.3),
+                      color: WhatsAppCallTheme.primary
+                          .withValues(alpha: opacity * 0.3),
                     ),
                   ),
                 );
@@ -123,7 +126,8 @@ class _WhatsAppPulsingAvatarState extends State<WhatsAppPulsingAvatar>
                     height: avatarSize + 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: WhatsAppCallTheme.primary.withValues(alpha: opacity * 0.25),
+                      color: WhatsAppCallTheme.primary
+                          .withValues(alpha: opacity * 0.25),
                     ),
                   ),
                 );
@@ -239,7 +243,8 @@ class WhatsAppCallActionBtn extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isEndCall ? Colors.redAccent : WhatsAppCallTheme.textMuted,
+                color:
+                    isEndCall ? Colors.redAccent : WhatsAppCallTheme.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
@@ -316,8 +321,10 @@ class _WhatsAppDraggablePipState extends State<WhatsAppDraggablePip> {
         onPanUpdate: (details) {
           setState(() {
             _position = Offset(
-              (_position.dx + details.delta.dx).clamp(8.0, size.width - tileWidth - 8.0),
-              (_position.dy + details.delta.dy).clamp(40.0, size.height - tileHeight - 60.0),
+              (_position.dx + details.delta.dx)
+                  .clamp(8.0, size.width - tileWidth - 8.0),
+              (_position.dy + details.delta.dy)
+                  .clamp(40.0, size.height - tileHeight - 60.0),
             );
           });
         },
@@ -384,8 +391,9 @@ void showWhatsAppCallDetailsSheet({
   final sample = signaling.linkSample;
   final l10n = context.l10n;
 
-  String figure(double? val, String unit, {int digits = 0}) =>
-      val == null ? l10n.translate('call_quality_no_data') : '${val.toStringAsFixed(digits)} $unit';
+  String figure(double? val, String unit, {int digits = 0}) => val == null
+      ? l10n.translate('call_quality_no_data')
+      : '${val.toStringAsFixed(digits)} $unit';
 
   showModalBottomSheet<void>(
     context: context,
@@ -404,7 +412,8 @@ void showWhatsAppCallDetailsSheet({
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.info_outline_rounded, color: WhatsAppCallTheme.primary, size: 22),
+                    const Icon(Icons.info_outline_rounded,
+                        color: WhatsAppCallTheme.primary, size: 22),
                     const SizedBox(width: 10),
                     Text(
                       l10n.translate('chat_quality_details'),
@@ -416,32 +425,38 @@ void showWhatsAppCallDetailsSheet({
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close, color: WhatsAppCallTheme.textMuted, size: 20),
+                      icon: const Icon(Icons.close,
+                          color: WhatsAppCallTheme.textMuted, size: 20),
                       onPressed: () => Navigator.of(ctx).pop(),
                     ),
                   ],
                 ),
                 const Divider(color: Colors.white12, height: 24),
-                _sheetRow(l10n.translate('call_quality_rtt'), figure(sample?.roundTripMs, 'ms')),
-                _sheetRow(l10n.translate('chat_quality_jitter'), figure(sample?.jitterMs, 'ms')),
+                _sheetRow(l10n.translate('call_quality_rtt'),
+                    figure(sample?.roundTripMs, 'ms')),
+                _sheetRow(l10n.translate('chat_quality_jitter'),
+                    figure(sample?.jitterMs, 'ms')),
                 _sheetRow(
                   l10n.translate('call_quality_loss'),
                   sample?.lossRatio == null
                       ? l10n.translate('call_quality_no_data')
                       : '${(sample!.lossRatio! * 100).toStringAsFixed(1)} %',
                 ),
-                _sheetRow(l10n.translate('chat_quality_sending'), figure(sample?.outboundKbps, 'kbps')),
+                _sheetRow(l10n.translate('chat_quality_sending'),
+                    figure(sample?.outboundKbps, 'kbps')),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       l10n.translate('chat_quality_loudness'),
-                      style: const TextStyle(color: WhatsAppCallTheme.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                          color: WhatsAppCallTheme.textMuted, fontSize: 13),
                     ),
                     Row(
                       children: [1.0, 2.0, 3.0].map((gain) {
-                        final isSelected = (signaling.remoteGain - gain).abs() < 0.1;
+                        final isSelected =
+                            (signaling.remoteGain - gain).abs() < 0.1;
                         return Padding(
                           padding: const EdgeInsets.only(left: 8),
                           child: InkWell(
@@ -451,7 +466,8 @@ void showWhatsAppCallDetailsSheet({
                             },
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? WhatsAppCallTheme.primary
@@ -461,7 +477,9 @@ void showWhatsAppCallDetailsSheet({
                               child: Text(
                                 '${gain.toInt()}x',
                                 style: TextStyle(
-                                  color: isSelected ? Colors.white : WhatsAppCallTheme.textMuted,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : WhatsAppCallTheme.textMuted,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -488,8 +506,14 @@ Widget _sheetRow(String label, String value) => Padding(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: WhatsAppCallTheme.textMuted, fontSize: 13)),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(label,
+              style: const TextStyle(
+                  color: WhatsAppCallTheme.textMuted, fontSize: 13)),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
