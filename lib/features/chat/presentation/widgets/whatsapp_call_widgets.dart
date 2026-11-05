@@ -416,7 +416,7 @@ void showWhatsAppCallDetailsSheet({
                         color: WhatsAppCallTheme.primary, size: 22),
                     const SizedBox(width: 10),
                     Text(
-                      l10n.translate('chat_quality_details'),
+                      l10n.translate('call_quality_title'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 17,
