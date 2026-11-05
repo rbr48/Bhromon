@@ -165,6 +165,16 @@ const List<String> kCommitteeChannelIds = [
   kBuiltInVoiceChannelId,
 ];
 
+/// The built-in channels a friends circle starts with: adda, food & hangout plans,
+/// outings, emergency and the voice lounge.
+const List<String> kFriendsChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
 /// The built-in channels a circle starts with, in the order they are listed.
 List<String> builtInChannelIdsFor({
   required bool family,
@@ -177,6 +187,7 @@ List<String> builtInChannelIdsFor({
   bool sports = false,
   bool study = false,
   bool committee = false,
+  bool friends = false,
 }) =>
     campus
         ? kCampusChannelIds
@@ -194,11 +205,13 @@ List<String> builtInChannelIdsFor({
                                 ? kStudyChannelIds
                                 : committee
                                     ? kCommitteeChannelIds
-                                    : office
-                                        ? kOfficeChannelIds
-                                        : family
-                                            ? kFamilyChannelIds
-                                            : kBuiltInChannelIds;
+                                    : friends
+                                        ? kFriendsChannelIds
+                                        : office
+                                            ? kOfficeChannelIds
+                                            : family
+                                                ? kFamilyChannelIds
+                                                : kBuiltInChannelIds;
 
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }

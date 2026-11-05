@@ -141,6 +141,20 @@ const List<String> kCommitteeExpenseCategories = [
   'Others',
 ];
 
+/// The categories a friends circle's ledger offers: hangouts, dining, movies,
+/// games, snacks, transport and shared gifts.
+const List<String> kFriendsExpenseCategories = [
+  'Dining',
+  'Hangouts',
+  'Movie & tickets',
+  'Snacks & tea',
+  'Gaming',
+  'Transport',
+  'Shopping',
+  'Gifts',
+  'Others',
+];
+
 /// The categories a group's ledger offers. Each preset has its own list; family circles
 /// and trips keep theirs. No group means a trip.
 List<String> expenseCategoriesForGroup(TourGroup? group) {
@@ -154,6 +168,7 @@ List<String> expenseCategoriesForGroup(TourGroup? group) {
   if (group.isSports) return kSportsExpenseCategories;
   if (group.isStudy) return kStudyExpenseCategories;
   if (group.isCommittee) return kCommitteeExpenseCategories;
+  if (group.isFriends) return kFriendsExpenseCategories;
   return expenseCategoriesFor(family: group.isFamily);
 }
 
@@ -184,8 +199,10 @@ String splitCategoryFor({
   bool sports = false,
   bool study = false,
   bool committee = false,
+  bool friends = false,
 }) {
   if (channelId != 'food') return 'Others';
+  if (friends) return 'Dining';
   if (office) return 'Dining';
   if (campus) return 'Food';
   if (mess) return 'Groceries';

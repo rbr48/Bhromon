@@ -31,7 +31,7 @@ import '../widgets/tour_membership_guard.dart';
 import '../widgets/group_avatar.dart';
 import '../widgets/group_type.dart';
 import '../widgets/group_photo_sheet.dart';
-import '../widgets/family/family_home_card.dart';
+import '../widgets/hub/preset_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../tour_pdf_export.dart';
 import 'package:bhromon/features/official_feed/data/official_feed_repository.dart';
@@ -1413,9 +1413,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       // 1. Active Tour Card
                       _buildActiveTourBanner(context, current, groups),
                       const SizedBox(height: 18),
-                      if (current.isHousehold) ...[
-                        FamilyHomeCard(
-                            tourId: current.id, repository: _repository),
+                      if (current.isFamily) ...[
+                        PresetHomeCard(group: current, repository: _repository),
                         const SizedBox(height: 18),
                       ],
 

@@ -92,6 +92,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   bool _isSports = false;
   bool _isStudy = false;
   bool _isCommittee = false;
+  bool _isFriends = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -196,6 +197,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               _isSports = group?.isSports ?? false;
               _isStudy = group?.isStudy ?? false;
               _isCommittee = group?.isCommittee ?? false;
+              _isFriends = group?.isFriends ?? false;
             }),
         onError: (_) {}));
     unawaited(_markHere());
@@ -270,6 +272,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           sports: _isSports,
           study: _isStudy,
           committee: _isCommittee,
+          friends: _isFriends,
         ),
         docs: _channelDocs,
       );
@@ -347,49 +350,53 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       case 'general':
         return l10n.translate('tour_channel_general');
       case 'food':
-        return l10n.translate(_isOffice
-            ? 'office_channel_food'
-            : _isCampus
-                ? 'campus_channel_food'
-                : _isMess
-                    ? 'mess_channel_food'
-                    : _isSociety
-                        ? 'society_channel_food'
-                        : _isSamity
-                            ? 'samity_channel_food'
-                            : _isSchool
-                                ? 'school_channel_food'
-                                : _isSports
-                                    ? 'sports_channel_food'
-                                    : _isStudy
-                                        ? 'study_channel_food'
-                                        : _isCommittee
-                                            ? 'committee_channel_food'
-                                            : _isFamily
-                                                ? 'family_channel_food'
-                                                : 'tour_channel_food');
+        return l10n.translate(_isFriends
+            ? 'friends_channel_food'
+            : _isOffice
+                ? 'office_channel_food'
+                : _isCampus
+                    ? 'campus_channel_food'
+                    : _isMess
+                        ? 'mess_channel_food'
+                        : _isSociety
+                            ? 'society_channel_food'
+                            : _isSamity
+                                ? 'samity_channel_food'
+                                : _isSchool
+                                    ? 'school_channel_food'
+                                    : _isSports
+                                        ? 'sports_channel_food'
+                                        : _isStudy
+                                            ? 'study_channel_food'
+                                            : _isCommittee
+                                                ? 'committee_channel_food'
+                                                : _isFamily
+                                                    ? 'family_channel_food'
+                                                    : 'tour_channel_food');
       case 'sightseeing':
-        return l10n.translate(_isOffice
-            ? 'office_channel_events'
-            : _isCampus
-                ? 'campus_channel_events'
-                : _isMess
-                    ? 'mess_channel_bills'
-                    : _isSociety
-                        ? 'society_channel_events'
-                        : _isSamity
-                            ? 'samity_channel_events'
-                            : _isSchool
-                                ? 'school_channel_events'
-                                : _isSports
-                                    ? 'sports_channel_events'
-                                    : _isStudy
-                                        ? 'study_channel_events'
-                                        : _isCommittee
-                                            ? 'committee_channel_events'
-                                            : _isFamily
-                                                ? 'family_channel_sightseeing'
-                                                : 'tour_channel_places');
+        return l10n.translate(_isFriends
+            ? 'friends_channel_events'
+            : _isOffice
+                ? 'office_channel_events'
+                : _isCampus
+                    ? 'campus_channel_events'
+                    : _isMess
+                        ? 'mess_channel_bills'
+                        : _isSociety
+                            ? 'society_channel_events'
+                            : _isSamity
+                                ? 'samity_channel_events'
+                                : _isSchool
+                                    ? 'school_channel_events'
+                                    : _isSports
+                                        ? 'sports_channel_events'
+                                        : _isStudy
+                                            ? 'study_channel_events'
+                                            : _isCommittee
+                                                ? 'committee_channel_events'
+                                                : _isFamily
+                                                    ? 'family_channel_sightseeing'
+                                                    : 'tour_channel_places');
       case 'home':
         return l10n.translate('family_channel_home');
       case 'kids':
@@ -2149,6 +2156,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 sports: _isSports,
                 study: _isStudy,
                 committee: _isCommittee,
+                friends: _isFriends,
                 channelId: channel.id),
           );
           draft.clear();
