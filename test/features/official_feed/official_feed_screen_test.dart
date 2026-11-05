@@ -154,6 +154,15 @@ void main() {
     expect(fake.followCalls, [true, false]);
   });
 
+  testWidgets('the entry card shows the official feed picture', (tester) async {
+    await _pump(tester, const Scaffold(body: OfficialFeedEntryCard()));
+
+    final picture = tester.widget<Image>(find.byType(Image));
+    expect((picture.image as AssetImage).assetName,
+        'assets/official_feed_avatar.jpg');
+    expect(find.byIcon(Icons.play_circle_outline_rounded), findsNothing);
+  });
+
   testWidgets('the entry card opens the official feed', (tester) async {
     final router = GoRouter(routes: [
       GoRoute(
