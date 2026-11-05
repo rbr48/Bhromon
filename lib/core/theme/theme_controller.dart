@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/app_logger.dart';
 
-/// The theme the user picked: follow the system, light or dark. Dark stays the
+/// The theme the user picked: follow the system, light or dark. Light stays the
 /// default before a preference is loaded. The choice is kept on this device
 /// only, in the same box as the language.
 class ThemeController extends ChangeNotifier {
@@ -13,7 +13,7 @@ class ThemeController extends ChangeNotifier {
   static const String _boxName = 'app_prefs';
   static const String _key = 'app_theme';
 
-  ThemeMode _mode = ThemeMode.dark;
+  ThemeMode _mode = ThemeMode.light;
 
   ThemeMode get mode => _mode;
 
@@ -52,6 +52,8 @@ class ThemeController extends ChangeNotifier {
       if (parsed != null) {
         _mode = parsed;
         notifyListeners();
+      } else {
+        _mode = ThemeMode.light;
       }
     } catch (e, st) {
       logWarning('[ThemeController] Could not load theme preference', e, st);
