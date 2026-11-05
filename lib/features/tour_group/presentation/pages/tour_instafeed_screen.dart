@@ -1190,6 +1190,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           return StreamBuilder<List<TourStoryItem>>(
             stream: _storiesStream,
             builder: (context, storiesSnap) {
+              if (storiesSnap.hasError) {
+                logError(
+                    '[Instafeed] Error in stories stream: ${storiesSnap.error}',
+                    storiesSnap.error,
+                    storiesSnap.stackTrace);
+              }
               final now = DateTime.now();
               final stories = (storiesSnap.data ?? const <TourStoryItem>[])
                   .where((s) =>

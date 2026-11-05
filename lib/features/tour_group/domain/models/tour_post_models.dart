@@ -692,7 +692,9 @@ class TourStoryItem {
 List<List<TourStoryItem>> groupStoriesByAuthor(List<TourStoryItem> stories) {
   final byAuthor = <String, List<TourStoryItem>>{};
   for (final story in stories) {
-    byAuthor.putIfAbsent(story.authorEmail, () => []).add(story);
+    byAuthor
+        .putIfAbsent(normalizeEmail(story.authorEmail), () => [])
+        .add(story);
   }
   final groups = byAuthor.values.toList();
   for (final group in groups) {

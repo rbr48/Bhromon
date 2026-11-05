@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/domain/models/date_codec.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_share_sheet.dart';
 import 'tour_safe_network_image.dart';
@@ -99,7 +100,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
   bool get _isAuthor =>
       _currentStory != null &&
-      _currentStory!.authorEmail == widget.repository.currentEmail;
+      normalizeEmail(_currentStory!.authorEmail) ==
+          normalizeEmail(widget.repository.currentEmail);
 
   bool get _canDelete => _currentStory != null && (_isAuthor || widget.isAdmin);
 
@@ -119,6 +121,9 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
     final isVideo = story.isVideo ||
         story.mediaUrl.endsWith('.mp4') ||
+        story.mediaUrl.endsWith('.mov') ||
+        story.mediaUrl.endsWith('.webm') ||
+        story.mediaUrl.endsWith('.m4v') ||
         (story.videoUrl != null && story.videoUrl!.isNotEmpty);
 
     if (isVideo) {

@@ -3116,12 +3116,13 @@ class TourGroupRepository {
   /// Recent stories. The caller filters to those still within their 24 hours,
   /// which keeps the cutoff current instead of frozen at subscription time.
   Stream<List<TourStoryItem>> watchStories(String tourId) {
-    return _sub(tourId, 'stories')
-        .orderBy('createdAt', descending: true)
-        .limit(100)
-        .snapshots()
-        .map((s) =>
-            s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList());
+    return _sub(tourId, 'stories').snapshots().map((s) {
+      final items =
+          s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList();
+      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (items.length > 100) return items.sublist(0, 100);
+      return items;
+    });
   }
 
   Future<void> addStory({
