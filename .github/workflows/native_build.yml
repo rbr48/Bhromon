@@ -54,7 +54,8 @@ jobs:
 
       - name: Build debug APK
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
+          GRADLE_OPTS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
+          _JAVA_OPTIONS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
         run: flutter build apk --debug
 
   # ─────────────────────────────────────────────────────────────────────────────
