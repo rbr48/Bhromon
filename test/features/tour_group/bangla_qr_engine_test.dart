@@ -68,9 +68,38 @@ void main() {
       // Truncated to 25 chars
       expect(qr, contains('5925Very Long Name That Excee'));
     });
+
+    test(
+        'normalizePhone and isPhoneAccount correctly detect valid mobile numbers',
+        () {
+      expect(BanglaQrPayload.normalizePhone('+8801712345678'),
+          equals('01712345678'));
+      expect(BanglaQrPayload.normalizePhone('8801812345678'),
+          equals('01812345678'));
+      expect(BanglaQrPayload.normalizePhone('01912-345678'),
+          equals('01912345678'));
+      expect(BanglaQrPayload.normalizePhone(' 01300 123456 '),
+          equals('01300123456'));
+
+      const phonePayload = BanglaQrPayload(
+        accountNumber: '+8801712345678',
+        payeeName: 'Test Payee',
+      );
+      expect(phonePayload.isPhoneAccount, isTrue);
+
+      const emailPayload = BanglaQrPayload(
+        accountNumber: 'pahan1991@gmail.com',
+        payeeName: 'Test Payee',
+      );
+      expect(emailPayload.isPhoneAccount, isFalse);
+
+      final updated = emailPayload.copyWith(accountNumber: '01712345678');
+      expect(updated.isPhoneAccount, isTrue);
+      expect(updated.accountNumber, equals('01712345678'));
+    });
   });
 
-  group('BanglaQrView Widget', () {
+  group('BanglaQrView & Sheet Widgets', () {
     testWidgets('renders BanglaQrView cleanly without error', (tester) async {
       const payload = BanglaQrPayload(
         accountNumber: '01700000000',
@@ -92,6 +121,35 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
       expect(find.text('BANGLA QR'), findsOneWidget);
       expect(find.text('bKash'), findsOneWidget);
+    });
+
+    testWidgets('renders BanglaQrSheetModal with tabs and inputs',
+        (tester) async {
+      const payload = BanglaQrPayload(
+        accountNumber: 'pahan1991@gmail.com',
+        payeeName: 'Izhaan',
+        amountTaka: 750,
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: BanglaQrSheetModal(initialPayload: payload),
+          ),
+        ),
+      );
+
+      expect(find.text('Bangla QR & MFS Payment'), findsOneWidget);
+      expect(find.text('ডায়নামিক কিউআর'), findsOneWidget);
+      expect(find.text('কিউআর ছবি (গ্যালারি)'), findsOneWidget);
+      expect(find.text('৳ 750'), findsOneWidget);
+      expect(find.text('Izhaan'), findsOneWidget);
+
+      // Verify switching to custom QR image tab
+      await tester.tap(find.text('কিউআর ছবি (গ্যালারি)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('গ্যালারি থেকে ছবি বাছাই করুন'), findsOneWidget);
     });
   });
 }

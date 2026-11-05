@@ -43,6 +43,41 @@ class BanglaQrPayload {
 
   /// Merchant city (defaults to 'Dhaka').
   final String city;
+
+  /// Normalizes Bangladeshi phone numbers to the canonical 11-digit `01XXXXXXXXX` format.
+  static String normalizePhone(String raw) {
+    var cleaned = raw.replaceAll(RegExp(r'[\s\-]'), '').trim();
+    if (cleaned.startsWith('+8801')) {
+      cleaned = cleaned.substring(3);
+    } else if (cleaned.startsWith('8801')) {
+      cleaned = cleaned.substring(2);
+    }
+    return cleaned;
+  }
+
+  /// Returns true if [accountNumber] matches standard 11-digit Bangladeshi mobile format.
+  bool get isPhoneAccount {
+    final cleaned = normalizePhone(accountNumber);
+    return RegExp(r'^01[3-9]\d{8}$').hasMatch(cleaned);
+  }
+
+  BanglaQrPayload copyWith({
+    String? accountNumber,
+    String? payeeName,
+    BanglaQrProvider? provider,
+    int? amountTaka,
+    String? reference,
+    String? city,
+  }) {
+    return BanglaQrPayload(
+      accountNumber: accountNumber ?? this.accountNumber,
+      payeeName: payeeName ?? this.payeeName,
+      provider: provider ?? this.provider,
+      amountTaka: amountTaka ?? this.amountTaka,
+      reference: reference ?? this.reference,
+      city: city ?? this.city,
+    );
+  }
 }
 
 /// Generates interoperable Bangladesh Bank standard Bangla QR (EMVCo Merchant-Presented) codes.
@@ -84,8 +119,10 @@ class BanglaQrEngine {
 
     // 26: Merchant Account Information
     final sub00 = _tlv('00', payload.provider.guid);
-    final sub01 =
-        _tlv('01', payload.accountNumber.replaceAll(RegExp(r'\s+'), ''));
+    final accountStr = payload.isPhoneAccount
+        ? BanglaQrPayload.normalizePhone(payload.accountNumber)
+        : payload.accountNumber.replaceAll(RegExp(r'\s+'), '');
+    final sub01 = _tlv('01', accountStr);
     buffer.write(_tlv('26', '$sub00$sub01'));
 
     // 52: Merchant Category Code

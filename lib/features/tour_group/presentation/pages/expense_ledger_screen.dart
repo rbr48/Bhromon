@@ -429,8 +429,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ),
                     Text(
                       '${BanglaLedgerFormatter.formatMonthYearBangla(_month.year, _month.month)} এর হিসাব ও অডিট স্টেটমেন্ট',
-                      style: TextStyle(
-                          color: context.forest.text54, fontSize: 11),
+                      style:
+                          TextStyle(color: context.forest.text54, fontSize: 11),
                     ),
                   ],
                 ),
@@ -2114,8 +2114,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               [
                 localizedDateFormat('d MMM, h:mm a').format(s.date),
                 if (s.mfsInfo.trxId != null) 'TrxID: ${s.mfsInfo.trxId}',
-                if (s.mfsInfo.feePaisa > 0)
-                  'ফি: ${_money(s.mfsInfo.feePaisa)}',
+                if (s.mfsInfo.feePaisa > 0) 'ফি: ${_money(s.mfsInfo.feePaisa)}',
                 if ((s.notes ?? '').isNotEmpty) s.notes!,
               ].join(' · '),
               style: TextStyle(color: context.forest.text54, fontSize: 11),

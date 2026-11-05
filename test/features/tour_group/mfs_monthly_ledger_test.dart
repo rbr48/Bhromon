@@ -216,7 +216,8 @@ void main() {
       );
     });
 
-    test('MonthlyLedgerPdfGenerator generates valid non-empty PDF bytes', () async {
+    test('MonthlyLedgerPdfGenerator generates valid non-empty PDF bytes',
+        () async {
       const engine = TripLedgerEngine();
       final statement = engine.computeMonthlyStatement(
         tourId: 'samity_01',
