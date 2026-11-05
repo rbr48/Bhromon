@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:bhromon/core/localization/app_localizations.dart';
-import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -13,7 +11,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/audio/call_audio_session.dart';
 import '../../../../core/services/battery_guidance.dart';
 import '../../../../core/utils/app_logger.dart';
-import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
 import '../../data/call_telemetry.dart';
@@ -22,6 +19,7 @@ import '../../domain/call_display.dart';
 import '../../domain/call_ringback_audio.dart';
 import '../../domain/speaker_route.dart';
 import '../widgets/packet_loss_meter.dart';
+import '../widgets/whatsapp_call_widgets.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
 
@@ -100,9 +98,6 @@ class _CallScreenState extends State<CallScreen> {
   /// True while the media is up. The clock and the link badge show only then.
   bool _isConnected = false;
 
-  /// The remote volume steps the louder button cycles through.
-  static const List<double> _gainSteps = [1.0, 2.0, 3.0];
-
   Duration _callDuration = Duration.zero;
   Timer? _durationTimer;
   Timer? _controlsHideTimer;
@@ -166,9 +161,6 @@ class _CallScreenState extends State<CallScreen> {
       context.go('/chats');
     }
   }
-
-  // Draggable PIP local video offset
-  Offset _pipOffset = const Offset(20, 60);
 
   @override
   void initState() {
@@ -372,7 +364,8 @@ class _CallScreenState extends State<CallScreen> {
               'failed' => 'call_status_failed',
               _ => 'call_status_ended',
             };
-            Future.delayed(const Duration(milliseconds: 300), _safeExit);
+            unawaited(HapticFeedback.mediumImpact());
+            Future.delayed(const Duration(milliseconds: 1200), _safeExit);
         }
       });
     };
@@ -530,81 +523,10 @@ class _CallScreenState extends State<CallScreen> {
     });
   }
 
-  void _cycleRemoteGain() {
-    final current = _signaling.remoteGain;
-    final index = _gainSteps.indexWhere((step) => step > current);
-    final next = index == -1 ? _gainSteps.first : _gainSteps[index];
-    unawaited(_signaling.setRemoteGain(next));
-    setState(() {});
-  }
-
-  /// The link figures behind the quality badge, for anyone who wants the numbers.
+  /// The link figures behind the quality badge, shown in a WhatsApp details sheet.
   void _showLinkDetails() {
-    final sample = _signaling.linkSample;
-    String figure(double? value, String unit, {int digits = 0}) => value == null
-        ? context.l10n.translate('call_quality_no_data')
-        : '${value.toStringAsFixed(digits)} $unit';
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
-        title: Text(context.l10n.translate('call_quality_title'),
-            style: const TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _detailRow(
-                context.l10n.translate('chat_quality_link'),
-                switch (_signaling.networkQuality.value) {
-                  CallNetworkQuality.good =>
-                    context.l10n.translate('chat_quality_good'),
-                  CallNetworkQuality.fair =>
-                    context.l10n.translate('chat_quality_fair'),
-                  CallNetworkQuality.poor =>
-                    context.l10n.translate('chat_quality_weak'),
-                }),
-            _detailRow(context.l10n.translate('call_quality_rtt'),
-                figure(sample?.roundTripMs, 'ms')),
-            _detailRow(context.l10n.translate('chat_quality_jitter'),
-                figure(sample?.jitterMs, 'ms')),
-            _detailRow(
-              context.l10n.translate('call_quality_loss'),
-              sample?.lossRatio == null
-                  ? context.l10n.translate('call_quality_no_data')
-                  : '${(sample!.lossRatio! * 100).toStringAsFixed(1)} %',
-            ),
-            _detailRow(
-              context.l10n.translate('chat_quality_sending'),
-              figure(sample?.outboundKbps, 'kbps'),
-            ),
-            _detailRow(context.l10n.translate('chat_quality_loudness'),
-                '${_signaling.remoteGain.toStringAsFixed(0)}x'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(context.l10n.translate('call_close')),
-          ),
-        ],
-      ),
-    );
+    showWhatsAppCallDetailsSheet(context: context, signaling: _signaling);
   }
-
-  Widget _detailRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 110,
-              child: Text(label, style: const TextStyle(color: Colors.white70)),
-            ),
-            Text(value, style: const TextStyle(color: Colors.white)),
-          ],
-        ),
-      );
 
   void _toggleAudio() {
     setState(() {
@@ -931,6 +853,24 @@ class _CallScreenState extends State<CallScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.lock_rounded,
+                                          size: 11,
+                                          color: WhatsAppCallTheme.primary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        context.l10n
+                                            .translate('call_encrypted'),
+                                        style: const TextStyle(
+                                          color: WhatsAppCallTheme.textMuted,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
                                   Text(
                                     widget.remoteUserName,
                                     style: const TextStyle(
@@ -955,7 +895,7 @@ class _CallScreenState extends State<CallScreen> {
                                                 .translate(_statusKey),
                                         style: TextStyle(
                                           color: _isConnected
-                                              ? const Color(0xFF00A884)
+                                              ? WhatsAppCallTheme.primary
                                               : Colors.white70,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
@@ -1007,49 +947,9 @@ class _CallScreenState extends State<CallScreen> {
                     _signaling.hasLocalVideo &&
                     !_isVideoOff &&
                     !_inPip)
-                  Positioned(
-                    right: _pipOffset.dx,
-                    top: _pipOffset.dy,
-                    child: GestureDetector(
-                      onPanUpdate: (details) {
-                        setState(() {
-                          final size = MediaQuery.of(context).size;
-                          _pipOffset = Offset(
-                            clampWithin(_pipOffset.dx - details.delta.dx, 10,
-                                size.width - 120),
-                            clampWithin(_pipOffset.dy + details.delta.dy, 60,
-                                size.height - 200),
-                          );
-                        });
-                      },
-                      child: Container(
-                        width: 100,
-                        height: 145,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1F2C34),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                const Color(0xFF00A884).withValues(alpha: 0.5),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        clipBehavior: Clip.hardEdge,
-                        child: RTCVideoView(
-                          _localRenderer,
-                          mirror: true,
-                          objectFit:
-                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                        ),
-                      ),
-                    ),
+                  WhatsAppDraggablePip(
+                    renderer: _localRenderer,
+                    onDoubleTapOrTapFlip: _switchCamera,
                   ),
 
                 // ── Bottom Action Controls Bar ────────────────────────────────────
@@ -1061,99 +961,83 @@ class _CallScreenState extends State<CallScreen> {
                   child: SafeArea(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                          horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1F2C34).withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(32),
+                        color:
+                            WhatsAppCallTheme.surface.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(36),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Speaker Toggle
-                          _buildCallActionBtn(
-                            icon: _isSpeakerOn
-                                ? Icons.volume_up
-                                : Icons.volume_down_rounded,
-                            color: _isSpeakerOn
-                                ? const Color(0xFF00A884)
-                                : Colors.white,
-                            bgColor: _isSpeakerOn
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : const Color(0xFF2A3942),
-                            tooltip: context.l10n.translate('call_speaker'),
-                            onTap: _onSpeakerTap,
-                          ),
+                          if (cameraOn)
+                            // Flip Camera
+                            WhatsAppCallActionBtn(
+                              icon: Icons.cameraswitch_rounded,
+                              label:
+                                  context.l10n.translate('call_switch_camera'),
+                              iconColor: Colors.white,
+                              bgColor: WhatsAppCallTheme.surfaceElevated,
+                              onTap: _switchCamera,
+                            )
+                          else
+                            // Speaker Toggle
+                            WhatsAppCallActionBtn(
+                              icon: _isSpeakerOn
+                                  ? Icons.volume_up_rounded
+                                  : Icons.volume_down_rounded,
+                              label: context.l10n.translate('call_speaker'),
+                              iconColor: _isSpeakerOn
+                                  ? WhatsAppCallTheme.primary
+                                  : Colors.white,
+                              bgColor: _isSpeakerOn
+                                  ? Colors.white.withValues(alpha: 0.15)
+                                  : WhatsAppCallTheme.surfaceElevated,
+                              onTap: _onSpeakerTap,
+                            ),
 
-                          // Mute Audio Toggle
-                          _buildCallActionBtn(
-                            icon: _isAudioMuted ? Icons.mic_off : Icons.mic,
-                            color:
-                                _isAudioMuted ? Colors.redAccent : Colors.white,
-                            bgColor: _isAudioMuted
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : const Color(0xFF2A3942),
-                            tooltip: _isAudioMuted
-                                ? context.l10n.translate('chat_unmute')
-                                : context.l10n.translate('chat_mute'),
-                            onTap: _toggleAudio,
-                          ),
-
-                          // Louder: steps the other side's volume up to 3x.
-                          _buildCallActionBtn(
-                            icon: Icons.campaign_rounded,
-                            color: _signaling.remoteGain > 1
-                                ? const Color(0xFF00A884)
-                                : Colors.white,
-                            bgColor: _signaling.remoteGain > 1
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : const Color(0xFF2A3942),
-                            tooltip: context.l10n
-                                .translate('call_louder', args: {
-                              'gain': _signaling.remoteGain.toStringAsFixed(0)
-                            }),
-                            onTap: _cycleRemoteGain,
-                          ),
-
-                          // Camera: on and off, or on for the first time,
-                          // which turns a voice call into a video call.
-                          _buildCallActionBtn(
-                            icon:
-                                !cameraOn ? Icons.videocam_off : Icons.videocam,
-                            color: !cameraOn ? Colors.redAccent : Colors.white,
-                            bgColor: !cameraOn
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : const Color(0xFF2A3942),
-                            tooltip: !cameraOn
+                          // Camera On/Off
+                          WhatsAppCallActionBtn(
+                            icon: !cameraOn
+                                ? Icons.videocam_off_rounded
+                                : Icons.videocam_rounded,
+                            label: !cameraOn
                                 ? context.l10n.translate('call_video_on')
                                 : context.l10n.translate('call_video_off'),
+                            iconColor:
+                                !cameraOn ? Colors.redAccent : Colors.white,
+                            bgColor: WhatsAppCallTheme.surfaceElevated,
                             onTap: _toggleVideo,
                           ),
 
-                          // Front and rear camera, while the camera is on.
-                          if (cameraOn)
-                            _buildCallActionBtn(
-                              icon: Icons.cameraswitch,
-                              color: Colors.white,
-                              bgColor: const Color(0xFF2A3942),
-                              tooltip:
-                                  context.l10n.translate('call_switch_camera'),
-                              onTap: _switchCamera,
-                            ),
+                          // Mute Audio Toggle
+                          WhatsAppCallActionBtn(
+                            icon: _isAudioMuted
+                                ? Icons.mic_off_rounded
+                                : Icons.mic_rounded,
+                            label: _isAudioMuted
+                                ? context.l10n.translate('chat_unmute')
+                                : context.l10n.translate('chat_mute'),
+                            iconColor:
+                                _isAudioMuted ? Colors.redAccent : Colors.white,
+                            bgColor: WhatsAppCallTheme.surfaceElevated,
+                            onTap: _toggleAudio,
+                          ),
 
                           // End Call Button (Red Circle)
-                          _buildCallActionBtn(
-                            icon: Icons.call_end,
-                            color: Colors.white,
-                            bgColor: Colors.redAccent,
+                          WhatsAppCallActionBtn(
+                            icon: Icons.call_end_rounded,
+                            label: context.l10n.translate('call_end'),
+                            iconColor: Colors.white,
+                            bgColor: WhatsAppCallTheme.accentRed,
                             isEndCall: true,
-                            tooltip: context.l10n.translate('call_end'),
                             onTap: _endCall,
                           ),
                         ],
@@ -1170,7 +1054,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _buildAudioOrPlaceholderBackground() {
-    final initials = callInitial(widget.remoteUserName);
+    final isRingingOrActive = _isConnected ||
+        _statusKey == 'call_status_ringing' ||
+        _statusKey == 'call_status_connecting';
 
     return Container(
       width: double.infinity,
@@ -1180,8 +1066,8 @@ class _CallScreenState extends State<CallScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF1F2C34),
-            Color(0xFF0B141A),
+            WhatsAppCallTheme.surface,
+            WhatsAppCallTheme.background,
           ],
         ),
       ),
@@ -1189,120 +1075,53 @@ class _CallScreenState extends State<CallScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Avatar
-            Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF005C4B),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00A884).withValues(alpha: 0.3),
-                    blurRadius: 30,
-                    spreadRadius: 4,
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: (widget.remoteAvatarUrl != null &&
-                        widget.remoteAvatarUrl!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: signedMediaUrl(widget.remoteAvatarUrl!),
-                        fit: BoxFit.cover,
-                        memCacheWidth: context.decodeWidth(140),
-                        placeholder: (_, __) => Center(
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        errorWidget: (_, __, ___) => Center(
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Center(
-                        child: Text(
-                          initials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-              ),
+            WhatsAppPulsingAvatar(
+              userName: widget.remoteUserName,
+              avatarUrl: widget.remoteAvatarUrl,
+              isRingingOrActive: isRingingOrActive,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             Text(
               widget.remoteUserName,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(color: Colors.black54, blurRadius: 8),
+                ],
               ),
             ),
             const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_rounded,
+                    size: 12, color: WhatsAppCallTheme.primary),
+                const SizedBox(width: 5),
+                Text(
+                  context.l10n.translate('call_encrypted'),
+                  style: const TextStyle(
+                    color: WhatsAppCallTheme.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Text(
               _isConnected
                   ? _formatDuration(_callDuration)
                   : context.l10n.translate(_statusKey),
               style: TextStyle(
-                color: _isConnected ? const Color(0xFF00A884) : Colors.white60,
-                fontSize: 16,
+                color:
+                    _isConnected ? WhatsAppCallTheme.primary : Colors.white70,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCallActionBtn({
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required String tooltip,
-    required VoidCallback onTap,
-    bool isEndCall = false,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: isEndCall ? 60 : 50,
-          height: isEndCall ? 60 : 50,
-          decoration: BoxDecoration(
-            color: bgColor,
-            shape: BoxShape.circle,
-            boxShadow: isEndCall
-                ? [
-                    BoxShadow(
-                      color: Colors.redAccent.withValues(alpha: 0.4),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: isEndCall ? 28 : 22,
-          ),
         ),
       ),
     );
