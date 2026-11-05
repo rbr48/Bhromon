@@ -6,7 +6,7 @@ firebase.initializeApp({
   appId: '1:919602851188:web:2068356a638e28caf61021',
   messagingSenderId: '919602851188',
   projectId: 'bhromon-ff801',
-  authDomain: 'bhromon-ff801.firebaseapp.com',
+  authDomain: 'app.bhromon.fun',
   storageBucket: 'bhromon-ff801.firebasestorage.app',
 });
 
