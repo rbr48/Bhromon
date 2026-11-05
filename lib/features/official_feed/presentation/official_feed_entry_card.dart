@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/app_localizations.dart';
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/forest_palette.dart';
 
 /// A card on the groups hub that opens the official feed. It keeps the hub useful for a new
@@ -24,16 +23,15 @@ class OfficialFeedEntryCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.midGreen.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.play_circle_outline_rounded,
-                  size: 28,
-                  color: forest.accentText,
+              // The official account's picture, cropped to a circle at the size the icon had.
+              SizedBox.square(
+                dimension: 52,
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/official_feed_avatar.jpg',
+                    fit: BoxFit.cover,
+                    excludeFromSemantics: true,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
