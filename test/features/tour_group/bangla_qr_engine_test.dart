@@ -69,11 +69,17 @@ void main() {
       expect(qr, contains('5925Very Long Name That Excee'));
     });
 
-    test('normalizePhone and isPhoneAccount correctly detect valid mobile numbers', () {
-      expect(BanglaQrPayload.normalizePhone('+8801712345678'), equals('01712345678'));
-      expect(BanglaQrPayload.normalizePhone('8801812345678'), equals('01812345678'));
-      expect(BanglaQrPayload.normalizePhone('01912-345678'), equals('01912345678'));
-      expect(BanglaQrPayload.normalizePhone(' 01300 123456 '), equals('01300123456'));
+    test(
+        'normalizePhone and isPhoneAccount correctly detect valid mobile numbers',
+        () {
+      expect(BanglaQrPayload.normalizePhone('+8801712345678'),
+          equals('01712345678'));
+      expect(BanglaQrPayload.normalizePhone('8801812345678'),
+          equals('01812345678'));
+      expect(BanglaQrPayload.normalizePhone('01912-345678'),
+          equals('01912345678'));
+      expect(BanglaQrPayload.normalizePhone(' 01300 123456 '),
+          equals('01300123456'));
 
       const phonePayload = BanglaQrPayload(
         accountNumber: '+8801712345678',
@@ -117,7 +123,8 @@ void main() {
       expect(find.text('bKash'), findsOneWidget);
     });
 
-    testWidgets('renders BanglaQrSheetModal with tabs and inputs', (tester) async {
+    testWidgets('renders BanglaQrSheetModal with tabs and inputs',
+        (tester) async {
       const payload = BanglaQrPayload(
         accountNumber: 'pahan1991@gmail.com',
         payeeName: 'Izhaan',
