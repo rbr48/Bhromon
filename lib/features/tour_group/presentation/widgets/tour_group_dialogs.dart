@@ -151,7 +151,7 @@ class TourGroupDialogs {
     codeCtrl.dispose();
   }
 
-  /// Displays a modal sheet or dialog to quickly create a group of chosen kind.
+  /// Displays a modal dialog to quickly create a group of chosen kind.
   static Future<void> showCreateGroupChoiceDialog(
     BuildContext context, {
     TourGroupRepository? repository,
@@ -159,109 +159,124 @@ class TourGroupDialogs {
   }) async {
     final repo = repository ?? TourGroupRepository();
     final l10n = context.l10n;
+    final isBn = l10n.locale.languageCode == 'bn';
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      backgroundColor: context.forest.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (bottomSheetCtx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.locale.languageCode == 'bn'
-                          ? 'নতুন গ্রুপ তৈরি করুন'
-                          : 'Create New Group',
-                      style: TextStyle(
-                        color: context.forest.text,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 480,
+              maxHeight: screenHeight * 0.82,
+            ),
+            child: Material(
+              color: context.forest.card,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isBn ? 'নতুন গ্রুপ তৈরি করুন' : 'Create New Group',
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.5,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: context.forest.text54),
+                          onPressed: () => Navigator.pop(dialogCtx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                      height: 1, thickness: 1, color: context.forest.divider10),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _GroupTypeOptionTile(
+                            icon: '🌴',
+                            title: isBn
+                                ? 'ভ্রমণ ও ট্যুর গ্রুপ'
+                                : 'Trip & Tour Group',
+                            subtitle: isBn
+                                ? 'কক্সবাজার, সাজেক বা যেকোনো ভ্রমণের সূচি ও খরচ'
+                                : 'Itinerary, tracking & expenses for any trip',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateTour(context, repo, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '👨‍👩‍👧',
+                            title: isBn ? 'পারিবারিক সার্কেল' : 'Family Circle',
+                            subtitle: isBn
+                                ? 'পরিবারের কেনাকাটা, ক্যালেন্ডার ও ফটো অ্যালবাম'
+                                : 'Family tasks, dates & photo memories',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(
+                                  context, repo, null, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🍛',
+                            title: isBn
+                                ? 'ব্যাচেলর মেস ও ফ্ল্যাট'
+                                : 'Bachelor Mess & Flat',
+                            subtitle: isBn
+                                ? 'প্রতিদিনের মিল গণনা, বাজার খরচ ও মিল রেট'
+                                : 'Daily meal tracking, grocery split & meal rates',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(
+                                  context, repo, 'mess', onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🪙',
+                            title: isBn ? 'সঞ্চয় সমিতি' : 'Savings Samity',
+                            subtitle: isBn
+                                ? 'মাসিক ঘূর্ণায়মান কিস্তি ও পে-আউট রোটেশন'
+                                : 'Rotating monthly savings ledger & payouts',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(
+                                  context, repo, 'samity', onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🏢',
+                            title: isBn ? 'অফিস ও টিম' : 'Office & Team',
+                            subtitle: isBn
+                                ? 'অফিস নোটিশ বোর্ড, লাঞ্চ ও টিম আড্ডা'
+                                : 'Official notices, lunch ledger & channels',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(
+                                  context, repo, 'office', onCreated);
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: context.forest.text54),
-                      onPressed: () => Navigator.pop(bottomSheetCtx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _GroupTypeOptionTile(
-                  icon: '🌴',
-                  title: l10n.locale.languageCode == 'bn'
-                      ? 'ভ্রমণ ও ট্যুর গ্রুপ'
-                      : 'Trip & Tour Group',
-                  subtitle: l10n.locale.languageCode == 'bn'
-                      ? 'কক্সবাজার, সাজেক বা যেকোনো ভ্রমণের সূচি ও খরচ'
-                      : 'Itinerary, tracking & expenses for any trip',
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    _promptQuickCreateTour(context, repo, onCreated);
-                  },
-                ),
-                _GroupTypeOptionTile(
-                  icon: '👨‍👩‍👧',
-                  title: l10n.locale.languageCode == 'bn'
-                      ? 'পারিবারিক সার্কেল'
-                      : 'Family Circle',
-                  subtitle: l10n.locale.languageCode == 'bn'
-                      ? 'পরিবারের কেনাকাটা, ক্যালেন্ডার ও ফটো অ্যালবাম'
-                      : 'Family tasks, dates & photo memories',
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    _promptQuickCreateFamily(context, repo, null, onCreated);
-                  },
-                ),
-                _GroupTypeOptionTile(
-                  icon: '🍛',
-                  title: l10n.locale.languageCode == 'bn'
-                      ? 'ব্যাচেলর মেস ও ফ্ল্যাট'
-                      : 'Bachelor Mess & Flat',
-                  subtitle: l10n.locale.languageCode == 'bn'
-                      ? 'প্রতিদিনের মিল গণনা, বাজার খরচ ও মিল রেট'
-                      : 'Daily meal tracking, grocery split & meal rates',
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    _promptQuickCreateFamily(context, repo, 'mess', onCreated);
-                  },
-                ),
-                _GroupTypeOptionTile(
-                  icon: '🪙',
-                  title: l10n.locale.languageCode == 'bn'
-                      ? 'সঞ্চয় সমিতি'
-                      : 'Savings Samity',
-                  subtitle: l10n.locale.languageCode == 'bn'
-                      ? 'মাসিক ঘূর্ণায়মান কিস্তি ও পে-আউট রোটেশন'
-                      : 'Rotating monthly savings ledger & payouts',
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    _promptQuickCreateFamily(
-                        context, repo, 'samity', onCreated);
-                  },
-                ),
-                _GroupTypeOptionTile(
-                  icon: '🏢',
-                  title: l10n.locale.languageCode == 'bn'
-                      ? 'অফিস ও টিম'
-                      : 'Office & Team',
-                  subtitle: l10n.locale.languageCode == 'bn'
-                      ? 'অফিস নোটিশ বোর্ড, লাঞ্চ ও টিম আড্ডা'
-                      : 'Official notices, lunch ledger & channels',
-                  onTap: () {
-                    Navigator.pop(bottomSheetCtx);
-                    _promptQuickCreateFamily(
-                        context, repo, 'office', onCreated);
-                  },
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         );

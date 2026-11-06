@@ -637,28 +637,6 @@ class DesktopTourSidebar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          // Connection status
-          Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppColors.mintGreen,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  context.l10n.translate('desktop_sidebar_live_sync'),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.forest.text54, fontSize: 9.5),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

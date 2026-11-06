@@ -645,156 +645,13 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                             (p) => p != currentUid,
                             orElse: () => '');
 
-                        final profiles = data['participantProfiles']
-                            as Map<String, dynamic>?;
-                        final profile = profiles?[otherUid] as Map?;
-                        final otherName =
-                            (profile?['displayName'] as String?)?.trim() ??
-                                (isBn ? 'সদস্য' : 'Member');
-                        final avatarUrl = profile?['avatarUrl'] as String?;
-                        final lastMsg =
-                            (data['lastMessage'] as String?)?.trim() ?? '';
-                        final unreadCounts =
-                            data['unreadCounts'] as Map<String, dynamic>? ?? {};
-                        final unread =
-                            (unreadCounts[currentUid] as num?)?.toInt() ?? 0;
-                        final isOnline = profile?['isOnline'] as bool? ?? false;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: InkWell(
-                            onTap: () {
-                              context.push('/chat/$chatId', extra: {
-                                'otherUid': otherUid,
-                                'sharedTourId': data['sharedTourId'],
-                                'otherEmail':
-                                    (data['memberEmails'] as Map?)?[otherUid],
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 7),
-                              decoration: BoxDecoration(
-                                color: context.forest
-                                    .surfaceFor(const Color(0xFF132219)),
-                                borderRadius: BorderRadius.circular(10),
-                                border:
-                                    Border.all(color: context.forest.divider10),
-                              ),
-                              child: Row(
-                                children: [
-                                  // User Avatar with Online Dot
-                                  Stack(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 16,
-                                        backgroundColor: context.forest
-                                            .surfaceFor(
-                                                const Color(0xFF1D3B2A)),
-                                        backgroundImage: (avatarUrl != null &&
-                                                avatarUrl.isNotEmpty)
-                                            ? NetworkImage(
-                                                signedMediaUrl(avatarUrl))
-                                            : null,
-                                        child: (avatarUrl == null ||
-                                                avatarUrl.isEmpty)
-                                            ? Text(
-                                                otherName.isNotEmpty
-                                                    ? otherName[0].toUpperCase()
-                                                    : 'U',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              )
-                                            : null,
-                                      ),
-                                      Positioned(
-                                        bottom: 0,
-                                        right: 0,
-                                        child: Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: isOnline
-                                                ? const Color(0xFF10B981)
-                                                : Colors.grey[600],
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: context.forest.surfaceFor(
-                                                  const Color(0xFF0C1611)),
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(width: 8),
-
-                                  // Name and last message snippet
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          otherName,
-                                          style: TextStyle(
-                                            color: context.forest.text,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11.5,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 1),
-                                        Text(
-                                          lastMsg.isNotEmpty
-                                              ? lastMsg
-                                              : (isBn
-                                                  ? 'কোনো বার্তা নেই'
-                                                  : 'No messages yet'),
-                                          style: TextStyle(
-                                            color: unread > 0
-                                                ? context.forest.accentText
-                                                : context.forest.text38,
-                                            fontWeight: unread > 0
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
-                                            fontSize: 10,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Unread Count Badge
-                                  if (unread > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.mintGreen,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        '$unread',
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        return _DesktopDirectChatItem(
+                          key: ValueKey(chatId),
+                          chatId: chatId,
+                          data: data,
+                          currentUid: currentUid,
+                          otherUid: otherUid,
+                          isBn: isBn,
                         );
                       },
                     );
@@ -847,6 +704,214 @@ class DesktopDirectChatsPanel extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DesktopDirectChatItem extends StatelessWidget {
+  final String chatId;
+  final Map<String, dynamic> data;
+  final String currentUid;
+  final String otherUid;
+  final bool isBn;
+
+  const _DesktopDirectChatItem({
+    super.key,
+    required this.chatId,
+    required this.data,
+    required this.currentUid,
+    required this.otherUid,
+    required this.isBn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final profiles = data['participantProfiles'] as Map<String, dynamic>?;
+    final cached = profiles?[otherUid] as Map?;
+    final cachedName = (cached?['displayName'] as String?)?.trim();
+    final cachedAvatar = cached?['avatarUrl'] as String?;
+    final lastMsg = (data['lastMessage'] as String?)?.trim() ?? '';
+    final unreadCounts = data['unreadCounts'] as Map<String, dynamic>? ?? {};
+    final unread = (unreadCounts[currentUid] as num?)?.toInt() ?? 0;
+
+    Stream<DocumentSnapshot<Map<String, dynamic>>>? profileStream;
+    if (Firebase.apps.isNotEmpty && otherUid.isNotEmpty) {
+      try {
+        profileStream = FirebaseFirestore.instance
+            .collection('explorer_profiles')
+            .doc(otherUid)
+            .snapshots()
+            .handleError((_) {});
+      } catch (_) {
+        profileStream = null;
+      }
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: profileStream,
+      builder: (context, profileSnap) {
+        final pData = profileSnap.data?.data();
+        final pName = (pData?['displayName'] as String?)?.trim() ??
+            (pData?['name'] as String?)?.trim();
+        final pAvatar = (pData?['avatarUrl'] as String?)?.trim() ??
+            (pData?['photoUrl'] as String?)?.trim();
+        final isOnline = (pData?['isOnline'] as bool?) ??
+            (cached?['isOnline'] as bool? ?? false);
+
+        final displayName = (pName != null && pName.isNotEmpty)
+            ? pName
+            : ((cachedName != null && cachedName.isNotEmpty)
+                ? cachedName
+                : (isBn ? 'সদস্য' : 'Member'));
+
+        final avatarUrl = (pAvatar != null && pAvatar.isNotEmpty)
+            ? pAvatar
+            : cachedAvatar;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: InkWell(
+            onTap: () {
+              context.push('/chat/$chatId', extra: {
+                'otherUid': otherUid,
+                'sharedTourId': data['sharedTourId'],
+                'otherEmail': (data['memberEmails'] as Map?)?[otherUid],
+              });
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              decoration: BoxDecoration(
+                color: context.forest.surfaceFor(const Color(0xFF132219)),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: context.forest.divider10),
+              ),
+              child: Row(
+                children: [
+                  // User Avatar with Online Dot
+                  Stack(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: context.forest
+                              .surfaceFor(const Color(0xFF1D3B2A)),
+                          shape: BoxShape.circle,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                            ? Image.network(
+                                signedMediaUrl(avatarUrl),
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _avatarFallback(context, displayName),
+                              )
+                            : _avatarFallback(context, displayName),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: isOnline
+                                ? const Color(0xFF10B981)
+                                : Colors.grey[600],
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: context.forest.surfaceFor(
+                                const Color(0xFF0C1611),
+                              ),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Name and last message snippet
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayName,
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          lastMsg.isNotEmpty
+                              ? lastMsg
+                              : (isBn
+                                  ? 'কোনো বার্তা নেই'
+                                  : 'No messages yet'),
+                          style: TextStyle(
+                            color: unread > 0
+                                ? context.forest.accentText
+                                : context.forest.text38,
+                            fontWeight: unread > 0
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Unread Count Badge
+                  if (unread > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: AppColors.mintGreen,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$unread',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _avatarFallback(BuildContext context, String name) {
+    final initial =
+        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+    return Center(
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 }
