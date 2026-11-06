@@ -1,6 +1,7 @@
 import pytest
 
 from push_strings import (
+    CHAT_PUSH_TEXT_LIMIT,
     DEFAULT_LANGUAGE,
     SUPPORTED_LANGUAGES,
     _TEXTS,
@@ -60,6 +61,21 @@ def test_chat_preview_is_the_text_or_what_was_sent():
     assert chat_preview("en", "", "text") == "New message"
     assert chat_preview("en", "", "image") == "Sent a image"
     assert chat_preview("bn", "", "image") == "একটি image পাঠিয়েছেন"
+
+
+def test_a_long_chat_message_is_cut_for_the_push():
+    long_text = "ক" * 5000  # Bengali letters are three bytes each in UTF-8
+    body = chat_preview("bn", long_text, "text")
+    assert len(body) == CHAT_PUSH_TEXT_LIMIT
+    assert body == long_text[: CHAT_PUSH_TEXT_LIMIT - 1] + "…"
+    # Three copies of the body must fit in one FCM message of 4 KB.
+    assert len(body.encode("utf-8")) * 3 < 4096
+
+
+def test_a_chat_message_at_the_limit_is_sent_whole():
+    text = "a" * CHAT_PUSH_TEXT_LIMIT
+    assert chat_preview("en", text, "text") == text
+    assert chat_preview("en", text + "a", "text") == "a" * (CHAT_PUSH_TEXT_LIMIT - 1) + "…"
 
 
 def test_call_alert_in_both_languages():
