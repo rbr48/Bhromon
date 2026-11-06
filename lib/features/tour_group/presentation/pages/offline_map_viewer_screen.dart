@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
+import '../../../../core/utils/logger.dart';
 import '../../domain/services/map_cache_manager.dart';
 import '../../domain/services/offline_map_regions.dart';
 
@@ -67,7 +68,8 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
       });
 
       _checkIfInsideRegion(pos);
-    } catch (_) {
+    } catch (e, st) {
+      logWarning('[MapViewer] could not read the current location', e, st);
       if (mounted) setState(() => _isLocating = false);
     }
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as maplibre;
+import '../../../../core/utils/logger.dart';
 import 'offline_map_regions.dart';
 
 /// Manages offline vector map tile caching, downloaded region tracking,
@@ -123,9 +124,17 @@ class MapCacheManager {
               await maplibre.deleteOfflineRegion(r.id);
             }
           }
-        } catch (_) {}
+        } catch (e, st) {
+          logWarning(
+            '[MapCache] could not delete the native tiles of $regionId',
+            e,
+            st,
+          );
+        }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      logWarning('[MapCache] could not remove the region $regionId', e, st);
+    }
 
     await _removeDownloadedId(regionId);
   }
@@ -161,6 +170,8 @@ class MapCacheManager {
           ? Hive.box<dynamic>(boxName)
           : await Hive.openBox<dynamic>(boxName);
       await box.put(keyDownloaded, ids.toList());
-    } catch (_) {}
+    } catch (e, st) {
+      logWarning('[MapCache] could not save the downloaded regions', e, st);
+    }
   }
 }
