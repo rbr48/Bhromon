@@ -57,7 +57,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   maplibre_gl: ^0.26.2
   connectivity_plus: ^6.0.3
-  youtube_player_flutter: ^9.1.1
+  youtube_player_flutter: ^10.0.1
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.3.1
   image_picker: ^1.0.7
