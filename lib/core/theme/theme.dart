@@ -14,11 +14,7 @@ class AppTheme {
   // high-definition typography with full Unicode coverage and modern glyph rendering.
   // HindSiliguri and Roboto are the fallbacks.
   static const _fontFamily = 'NotoSansBengali';
-  static const _fontFamilyFallback = [
-    'HindSiliguri',
-    'Roboto',
-    'sans-serif'
-  ];
+  static const _fontFamilyFallback = ['HindSiliguri', 'Roboto', 'sans-serif'];
 
   // Shared shape language
   static const double radiusSmall = 10;

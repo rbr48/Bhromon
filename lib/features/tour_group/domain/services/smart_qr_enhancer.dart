@@ -307,8 +307,10 @@ class SmartQrEnhancer {
     }
     samples.sort();
 
-    final p10 = samples.isNotEmpty ? samples[(samples.length * 0.10).toInt()] : 30.0;
-    final p90 = samples.isNotEmpty ? samples[(samples.length * 0.90).toInt()] : 220.0;
+    final p10 =
+        samples.isNotEmpty ? samples[(samples.length * 0.10).toInt()] : 30.0;
+    final p90 =
+        samples.isNotEmpty ? samples[(samples.length * 0.90).toInt()] : 220.0;
     final range = math.max(20.0, p90 - p10);
 
     for (final pixel in result) {
