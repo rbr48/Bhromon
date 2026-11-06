@@ -209,21 +209,10 @@ class TourGroupDialogs {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _GroupTypeOptionTile(
-                            icon: '🌴',
-                            title: isBn
-                                ? 'ভ্রমণ ও ট্যুর গ্রুপ'
-                                : 'Trip & Tour Group',
-                            subtitle: isBn
-                                ? 'কক্সবাজার, সাজেক বা যেকোনো ভ্রমণের সূচি ও খরচ'
-                                : 'Itinerary, tracking & expenses for any trip',
-                            onTap: () {
-                              Navigator.pop(dialogCtx);
-                              _promptQuickCreateTour(context, repo, onCreated);
-                            },
-                          ),
-                          _GroupTypeOptionTile(
                             icon: '👨‍👩‍👧',
-                            title: isBn ? 'পারিবারিক সার্কেল' : 'Family Circle',
+                            title: isBn
+                                ? 'পরিবারের গ্রুপ তৈরি করুন'
+                                : 'Create Family Circle',
                             subtitle: isBn
                                 ? 'পরিবারের কেনাকাটা, ক্যালেন্ডার ও ফটো অ্যালবাম'
                                 : 'Family tasks, dates & photo memories',
@@ -234,41 +223,174 @@ class TourGroupDialogs {
                             },
                           ),
                           _GroupTypeOptionTile(
-                            icon: '🍛',
+                            icon: '👥',
                             title: isBn
-                                ? 'ব্যাচেলর মেস ও ফ্ল্যাট'
-                                : 'Bachelor Mess & Flat',
+                                ? 'বন্ধু বা ফ্রেন্ডস সার্কেল তৈরি করুন'
+                                : 'Create Friends Circle',
                             subtitle: isBn
-                                ? 'প্রতিদিনের মিল গণনা, বাজার খরচ ও মিল রেট'
-                                : 'Daily meal tracking, grocery split & meal rates',
+                                ? 'বন্ধুদের আড্ডা, ট্যুর প্ল্যান ও ফটো শেয়ারিং'
+                                : 'Friends hangout, plans & photo sharing',
                             onTap: () {
                               Navigator.pop(dialogCtx);
-                              _promptQuickCreateFamily(
-                                  context, repo, 'mess', onCreated);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.friendsPreset, onCreated);
                             },
                           ),
                           _GroupTypeOptionTile(
-                            icon: '🪙',
-                            title: isBn ? 'সঞ্চয় সমিতি' : 'Savings Samity',
-                            subtitle: isBn
-                                ? 'মাসিক ঘূর্ণায়মান কিস্তি ও পে-আউট রোটেশন'
-                                : 'Rotating monthly savings ledger & payouts',
-                            onTap: () {
-                              Navigator.pop(dialogCtx);
-                              _promptQuickCreateFamily(
-                                  context, repo, 'samity', onCreated);
-                            },
-                          ),
-                          _GroupTypeOptionTile(
-                            icon: '🏢',
-                            title: isBn ? 'অফিস ও টিম' : 'Office & Team',
+                            icon: '💼',
+                            title: isBn
+                                ? 'অফিস বা দলের গ্রুপ তৈরি করুন'
+                                : 'Create Office or Team',
                             subtitle: isBn
                                 ? 'অফিস নোটিশ বোর্ড, লাঞ্চ ও টিম আড্ডা'
                                 : 'Official notices, lunch ledger & channels',
                             onTap: () {
                               Navigator.pop(dialogCtx);
-                              _promptQuickCreateFamily(
-                                  context, repo, 'office', onCreated);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.officePreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🎓',
+                            title: isBn
+                                ? 'ক্যাম্পাস বা ব্যাচের গ্রুপ তৈরি করুন'
+                                : 'Create Campus or Batch',
+                            subtitle: isBn
+                                ? 'ক্যাম্পাস নোটিশ, ব্যাচ ইভেন্টস ও ক্যান্টিন আড্ডা'
+                                : 'Campus updates, batch events & tea chats',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.campusPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🍛',
+                            title: isBn
+                                ? 'মেস বা শেয়ার্ড বাসার গ্রুপ তৈরি করুন'
+                                : 'Create Mess or Shared Flat',
+                            subtitle: isBn
+                                ? 'প্রতিদিনের মিল গণনা, বাজার খরচ ও মিল রেট'
+                                : 'Daily meal tracking, grocery split & meal rates',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.messPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🏬',
+                            title: isBn
+                                ? 'হাউজিং সোসাইটি বা ভবনের গ্রুপ তৈরি করুন'
+                                : 'Create Housing Society / Building',
+                            subtitle: isBn
+                                ? 'বিল্ডিং মেইনটেন্যান্স, সার্ভিস রিকোয়েস্ট ও নোটিশ'
+                                : 'Building maintenance, service requests & notices',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.societyPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🪙',
+                            title: isBn
+                                ? 'ঘূর্ণায়মান সঞ্চয় গ্রুপ তৈরি করুন'
+                                : 'Create Rotating Savings Group',
+                            subtitle: isBn
+                                ? 'মাসিক ঘূর্ণায়মান কিস্তি ও পে-আউট রোটেশন'
+                                : 'Rotating monthly savings ledger & payouts',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.samityPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '📖',
+                            title: isBn
+                                ? 'স্কুল বা কোচিং ক্লাসের গ্রুপ তৈরি করুন'
+                                : 'Create School or Coaching Class',
+                            subtitle: isBn
+                                ? 'ক্লাস রুটিন, অ্যাসাইনমেন্ট ও নোটিশ বোর্ড'
+                                : 'Class schedule, assignments & notices',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.schoolPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '⚽',
+                            title: isBn
+                                ? 'খেলার দল বা জিমের গ্রুপ তৈরি করুন'
+                                : 'Create Sports Team or Gym',
+                            subtitle: isBn
+                                ? 'ম্যাচ শিডিউল, প্লেয়ার লিস্ট ও টুর্নামেন্ট প্ল্যান'
+                                : 'Match schedules, rosters & tournament plans',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.sportsPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '📚',
+                            title: isBn
+                                ? 'স্টাডি বা বুক ক্লাবের গ্রুপ তৈরি করুন'
+                                : 'Create Study or Book Club',
+                            subtitle: isBn
+                                ? 'পড়ার তালিকা, গ্রুপ ডিসকাশন ও বুক রিভিউ'
+                                : 'Reading lists, group discussions & reviews',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.studyPreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🗳️',
+                            title: isBn
+                                ? 'পাড়া-মহল্লা কমিটির গ্রুপ তৈরি করুন'
+                                : 'Create Neighborhood Committee',
+                            subtitle: isBn
+                                ? 'মহল্লার উন্নয়ন, মিটিং ও সামাজিক উদ্যোগ'
+                                : 'Community welfare, meetings & local initiatives',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateFamily(context, repo,
+                                  TourGroup.committeePreset, onCreated);
+                            },
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🌴',
+                            title: isBn
+                                ? 'নতুন ট্যুর গ্রুপ তৈরি করুন'
+                                : 'Create New Tour Group',
+                            subtitle: isBn
+                                ? 'কক্সবাজার, সাজেক বা যেকোনো ভ্রমণের সূচি ও খরচ'
+                                : 'Itinerary, tracking & expenses for any trip',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              _promptQuickCreateTour(context, repo, onCreated);
+                            },
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 6),
+                            child: Divider(height: 1),
+                          ),
+                          _GroupTypeOptionTile(
+                            icon: '🔑',
+                            title: isBn
+                                ? 'কোড দিয়ে যোগ দিন'
+                                : 'Join with Invite Code',
+                            subtitle: isBn
+                                ? 'ইনভাইট কোড দিয়ে অন্য গ্রুপে যুক্ত হন'
+                                : 'Enter an invite code to join an existing group',
+                            onTap: () {
+                              Navigator.pop(dialogCtx);
+                              showJoinDialog(context,
+                                  repository: repo, onJoined: onCreated);
                             },
                           ),
                         ],
@@ -420,11 +542,41 @@ class TourGroupDialogs {
   ) async {
     final nameCtrl = TextEditingController();
     bool isSaving = false;
+    final isBn = context.l10n.locale.languageCode == 'bn';
 
-    String defaultTitle = 'পারিবারিক সার্কেল';
-    if (preset == 'mess') defaultTitle = 'মেস গ্রুপ';
-    if (preset == 'samity') defaultTitle = 'সমিতি গ্রুপ';
-    if (preset == 'office') defaultTitle = 'টিম গ্রুপ';
+    String defaultTitle = isBn ? 'পরিবারের গ্রুপ তৈরি করুন' : 'Create Family Circle';
+    String hint = isBn ? 'যেমন: রানা ফ্যামিলি...' : 'e.g., Rana Family...';
+    if (preset == TourGroup.friendsPreset) {
+      defaultTitle = isBn ? 'বন্ধু বা ফ্রেন্ডস সার্কেল তৈরি করুন' : 'Create Friends Circle';
+      hint = isBn ? 'যেমন: নটরডেম ব্যাচ ফ্রেন্ডস...' : 'e.g., College Friends...';
+    } else if (preset == TourGroup.officePreset) {
+      defaultTitle = isBn ? 'অফিস বা দলের গ্রুপ তৈরি করুন' : 'Create Office or Team';
+      hint = isBn ? 'যেমন: টেক টিম, মার্কেটিং ডিপার্টমেন্ট...' : 'e.g., Tech Team, Marketing...';
+    } else if (preset == TourGroup.campusPreset) {
+      defaultTitle = isBn ? 'ক্যাম্পাস বা ব্যাচের গ্রুপ তৈরি করুন' : 'Create Campus or Batch';
+      hint = isBn ? 'যেমন: বুয়েট সিএসই ২১ ব্যাচ...' : 'e.g., CSE Batch 21...';
+    } else if (preset == TourGroup.messPreset) {
+      defaultTitle = isBn ? 'মেস বা শেয়ার্ড বাসার গ্রুপ তৈরি করুন' : 'Create Mess or Shared Flat';
+      hint = isBn ? 'যেমন: বনশ্রী মেস...' : 'e.g., Green Valley Mess...';
+    } else if (preset == TourGroup.societyPreset) {
+      defaultTitle = isBn ? 'হাউজিং সোসাইটি বা ভবনের গ্রুপ তৈরি করুন' : 'Create Housing Society / Building';
+      hint = isBn ? 'যেমন: রূপালী টাওয়ার সমিতি...' : 'e.g., Sunrise Apartments...';
+    } else if (preset == TourGroup.samityPreset) {
+      defaultTitle = isBn ? 'ঘূর্ণায়মান সঞ্চয় গ্রুপ তৈরি করুন' : 'Create Rotating Savings Group';
+      hint = isBn ? 'যেমন: মাসিক সঞ্চয় সমিতি...' : 'e.g., Monthly Savings Circle...';
+    } else if (preset == TourGroup.schoolPreset) {
+      defaultTitle = isBn ? 'স্কুল বা কোচিং ক্লাসের গ্রুপ তৈরি করুন' : 'Create School or Coaching Class';
+      hint = isBn ? 'যেমন: ম্যাথ কোচিং ব্যাচ ২০২৬...' : 'e.g., Math Batch 2026...';
+    } else if (preset == TourGroup.sportsPreset) {
+      defaultTitle = isBn ? 'খেলার দল বা জিমের গ্রুপ তৈরি করুন' : 'Create Sports Team or Gym';
+      hint = isBn ? 'যেমন: সানরাইজ ফুটবল ক্লাব...' : 'e.g., Sunrise FC, Gym Squad...';
+    } else if (preset == TourGroup.studyPreset) {
+      defaultTitle = isBn ? 'স্টাডি বা বুক ক্লাবের গ্রুপ তৈরি করুন' : 'Create Study or Book Club';
+      hint = isBn ? 'যেমন: সাহিত্য পাঠচক্র...' : 'e.g., Book Readers Club...';
+    } else if (preset == TourGroup.committeePreset) {
+      defaultTitle = isBn ? 'পাড়া-মহল্লা কমিটির গ্রুপ তৈরি করুন' : 'Create Neighborhood Committee';
+      hint = isBn ? 'যেমন: শান্তিবাগ কল্যাণ সমিতি...' : 'e.g., Community Board...';
+    }
 
     await showDialog<void>(
       context: context,
@@ -445,7 +597,7 @@ class TourGroupDialogs {
               labelText: context.l10n.locale.languageCode == 'bn'
                   ? 'গ্রুপের নাম'
                   : 'Group Name',
-              hintText: 'যেমন: রানা ফ্যামিলি, বনশ্রী মেস...',
+              hintText: hint,
               hintStyle: TextStyle(color: context.forest.text38),
               labelStyle: TextStyle(color: context.forest.text70),
               filled: true,
