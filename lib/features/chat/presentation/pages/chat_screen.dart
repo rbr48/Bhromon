@@ -20,6 +20,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:math' as math;
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../widgets/chat_media_picker.dart';
@@ -46,6 +47,8 @@ import '../../data/chat_draft_store.dart';
 import '../../data/chat_deletion_service.dart';
 import '../../domain/chat_deletion.dart';
 import '../widgets/chat_delete_dialogs.dart';
+import '../widgets/chat_formatting_toolbar.dart';
+import '../widgets/chat_rich_text.dart';
 import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../share_intake/domain/shared_file.dart';
@@ -134,6 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   bool _isRecordingVoice = false;
   bool _showEmojiPicker = false;
+  bool _showFormatting = false;
 
   // ── WhatsApp Parity State ──────────────────────────────────────────────────
   ReplyMessageInfo? _replyingMessage;
@@ -852,9 +856,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     isMe: true,
                     onTap: () {},
                   ),
-                Text(
-                  pending.text,
-                  style: TextStyle(color: context.chat.text, fontSize: 13.5),
+                ChatRichText(
+                  text: pending.text,
+                  baseStyle:
+                      TextStyle(color: context.chat.text, fontSize: 13.5),
+                  isMine: true,
                 ),
                 const SizedBox(height: 2),
                 Row(
@@ -3725,11 +3731,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                           onTap: () => _scrollToMessage(
                                               replyModel.messageId),
                                         ),
-                                      Text(
-                                        text,
-                                        style: TextStyle(
+                                      ChatRichText(
+                                        text: text,
+                                        baseStyle: TextStyle(
                                             color: context.chat.text,
                                             fontSize: 13.5),
+                                        isMine: isMe,
                                       ),
                                       const SizedBox(height: 2),
                                       metaRow(),
@@ -3952,6 +3959,13 @@ class _ChatScreenState extends State<ChatScreen> {
                                           ],
                                         ),
                                       ),
+                                    if (_showFormatting)
+                                      ChatFormattingToolbar(
+                                        controller: _messageController,
+                                        focusNode: _messageFocusNode,
+                                        onClose: () => setState(
+                                            () => _showFormatting = false),
+                                      ),
                                     Container(
                                       padding: EdgeInsets.fromLTRB(
                                           8,
@@ -4039,6 +4053,29 @@ class _ChatScreenState extends State<ChatScreen> {
                                                           _sendMessage(
                                                               currentUid,
                                                               currentName),
+                                                    ),
+                                                  ),
+                                                  Semantics(
+                                                    label: context.l10n.translate(
+                                                        'format_toolbar_toggle'),
+                                                    button: true,
+                                                    child: SizedBox(
+                                                      width: 44,
+                                                      height: 48,
+                                                      child: IconButton(
+                                                        icon: Icon(
+                                                          Icons
+                                                              .text_format_rounded,
+                                                          color: _showFormatting
+                                                              ? AppColors
+                                                                  .mintGreen
+                                                              : context
+                                                                  .chat.grey,
+                                                        ),
+                                                        onPressed: () => setState(
+                                                            () => _showFormatting =
+                                                                !_showFormatting),
+                                                      ),
                                                     ),
                                                   ),
                                                   Semantics(
