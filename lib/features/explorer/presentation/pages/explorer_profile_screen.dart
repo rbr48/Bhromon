@@ -31,6 +31,7 @@ import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/tour_choice.dart';
 import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+import '../../../tour_group/presentation/widgets/trip_shell.dart';
 import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
@@ -543,10 +544,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: BhromonBottomNav(
-          selectedIndex: 4,
-          tourId: _tourId,
-        ),
+        bottomNavigationBar:
+            MediaQuery.sizeOf(context).width < TripShell.railBreakpoint
+                ? BhromonBottomNav(
+                    selectedIndex: 4,
+                    tourId: _tourId,
+                  )
+                : null,
       ),
     );
   }
