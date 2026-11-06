@@ -76,7 +76,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
           successMessage,
           style: const TextStyle(
             fontFamily: 'NotoSansBengali',
-            fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
+            fontFamilyFallback: ['HindSiliguri', 'Roboto', 'sans-serif'],
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -440,7 +440,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
           widget.title ?? 'টেবিল ভিউ ($rowCount সারি, $colCount কলাম)',
           style: const TextStyle(
             fontFamily: 'NotoSansBengali',
-            fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
+            fontFamilyFallback: ['HindSiliguri', 'Roboto', 'sans-serif'],
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: Colors.white,
