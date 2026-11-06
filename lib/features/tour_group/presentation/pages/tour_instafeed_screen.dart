@@ -10,6 +10,7 @@ import '../../data/paged_post_feed.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
+import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_activity_models.dart';
@@ -27,6 +28,7 @@ import '../widgets/instafeed/instafeed_explore_grid.dart';
 import '../widgets/instafeed/instafeed_filter_sheet.dart';
 import '../widgets/instafeed/instafeed_image_viewer_modal.dart';
 import '../widgets/instafeed/instafeed_post_card.dart';
+import '../widgets/instafeed/reel_thumbnail_preview.dart';
 import '../widgets/instafeed/instafeed_reels_modal.dart';
 import '../widgets/instafeed/instafeed_share_sheet.dart';
 import '../widgets/instafeed/instafeed_story_viewer.dart';
@@ -1188,9 +1190,16 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           return StreamBuilder<List<TourStoryItem>>(
             stream: _storiesStream,
             builder: (context, storiesSnap) {
+              if (storiesSnap.hasError) {
+                logError(
+                    '[Instafeed] Error in stories stream: ${storiesSnap.error}',
+                    storiesSnap.error,
+                    storiesSnap.stackTrace);
+              }
               final now = DateTime.now();
               final stories = (storiesSnap.data ?? const <TourStoryItem>[])
-                  .where((s) => s.isActiveAt(now))
+                  .where((s) =>
+                      s.isActiveAt(now, tolerance: const Duration(minutes: 15)))
                   .toList();
               final authorGroups = groupStoriesByAuthor(stories);
 
@@ -1685,10 +1694,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     List<TourStoryHighlight> highlights,
   ) {
     // Your own stories open from the Your Story card, so they are not listed twice.
-    final me = _repository.currentEmail;
+    final me = normalizeEmail(_repository.currentEmail);
     final ownIndex = me.isEmpty
         ? -1
-        : authorGroups.indexWhere((g) => g.first.authorEmail == me);
+        : authorGroups
+            .indexWhere((g) => normalizeEmail(g.first.authorEmail) == me);
 
     return Container(
       height: 195,
@@ -1704,12 +1714,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           ...List.generate(authorGroups.length, (idx) {
             if (idx == ownIndex) return const SizedBox.shrink();
             final group = authorGroups[idx];
-            final first = group.first;
+            final latest = group.last;
             final isUnseen = group.any((s) => !_seenStoryIds.contains(s.id));
 
             return _buildFacebookStoryCard(
               context: context,
-              story: first,
+              story: latest,
               storyCount: group.length,
               isUnseen: isUnseen,
               onTap: () => _openStoryViewer(context, authorGroups, idx),
@@ -1741,7 +1751,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     // If the current user already has active stories posted:
     if (ownIndex >= 0) {
       final myGroup = authorGroups[ownIndex];
-      final latestStory = myGroup.first;
+      final latestStory = myGroup.last;
+      final isVideo = latestStory.isVideo ||
+          latestStory.mediaUrl.endsWith('.mp4') ||
+          latestStory.mediaUrl.endsWith('.mov') ||
+          latestStory.mediaUrl.endsWith('.webm') ||
+          (latestStory.videoUrl != null && latestStory.videoUrl!.isNotEmpty);
 
       return Container(
         width: cardWidth,
@@ -1755,15 +1770,21 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                TourSafeNetworkImage(
-                  imageUrl: latestStory.mediaUrl,
-                  fit: BoxFit.cover,
-                  placeholder: Container(color: context.forest.feedSurface),
-                  errorWidget: Container(
-                    color: context.forest.feedSurface,
-                    child: Icon(Icons.person, color: context.forest.text38),
+                if (isVideo)
+                  ReelThumbnailPreview(
+                    videoUrl: latestStory.videoUrl ?? latestStory.mediaUrl,
+                    fit: BoxFit.cover,
+                  )
+                else
+                  TourSafeNetworkImage(
+                    imageUrl: latestStory.mediaUrl,
+                    fit: BoxFit.cover,
+                    placeholder: Container(color: context.forest.feedSurface),
+                    errorWidget: Container(
+                      color: context.forest.feedSurface,
+                      child: Icon(Icons.person, color: context.forest.text38),
+                    ),
                   ),
-                ),
                 Container(
                   decoration: BoxDecoration(
                     border:
@@ -1950,6 +1971,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   }) {
     const cardWidth = 112.0;
     const cardHeight = 178.0;
+    final isVideo = story.isVideo ||
+        story.mediaUrl.endsWith('.mp4') ||
+        story.mediaUrl.endsWith('.mov') ||
+        story.mediaUrl.endsWith('.webm') ||
+        (story.videoUrl != null && story.videoUrl!.isNotEmpty);
 
     return Container(
       width: cardWidth,
@@ -1963,11 +1989,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              TourSafeNetworkImage(
-                imageUrl: story.mediaUrl,
-                fit: BoxFit.cover,
-                placeholder: Container(color: context.forest.feedSurface),
-              ),
+              if (isVideo)
+                ReelThumbnailPreview(
+                  videoUrl: story.videoUrl ?? story.mediaUrl,
+                  fit: BoxFit.cover,
+                )
+              else
+                TourSafeNetworkImage(
+                  imageUrl: story.mediaUrl,
+                  fit: BoxFit.cover,
+                  placeholder: Container(color: context.forest.feedSurface),
+                ),
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),

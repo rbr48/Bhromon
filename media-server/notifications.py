@@ -11,7 +11,7 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from push_strings import DEFAULT_LANGUAGE, normalize_language, push_text
 
@@ -66,6 +66,8 @@ def _preview_of(
 # How long after it is created a call can still be ringing on some phone: the
 # ring time plus room for a slow push. Older calls need no ring or ring-stop push.
 CALL_PUSH_WINDOW_SECONDS = 120
+# Journey events from around the start onwards are pushed; older ones are not.
+JOURNEY_PUSH_WINDOW_SECONDS = 60
 
 
 def call_may_still_ring(created_at: Any, now: Optional[datetime] = None) -> bool:
@@ -335,6 +337,64 @@ class NotificationEngine:
             logger.error("Error in send_sos_alert: %s", e)
             return {"status": "error", "error": str(e)}
 
+    def send_journey_event(
+        self,
+        tour_id: str,
+        event_id: str,
+        sender_email: str,
+        sender_name: str,
+        stop_name: str,
+        kind: str,
+    ) -> Dict[str, Any]:
+        """Tells the other active members of a tour that a member arrived at, or left, a
+        stop (roadmap LJ-4.3). The push carries the stop's name and no position."""
+        if kind not in ("arrive", "depart"):
+            return {"status": "ignored"}
+        logger.info("Journey %s for tour=%s sender=%s", kind, tour_id, sender_email)
+        try:
+            emails = self.get_active_tour_members(tour_id, except_email=sender_email)
+            if not emails:
+                return {"status": "no_recipients"}
+            uids = self.get_uids_for_emails(emails)
+            targets = self.get_push_targets_for_uids(uids)
+            data = {
+                "action": "journey",
+                "type": "journey",
+                "tourId": tour_id,
+                "eventId": event_id,
+            }
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, f"journey.{kind}.title", sender=sender_name, place=stop_name),
+                    push_text(lang, "journey.body"),
+                ),
+                data,
+            )
+            self.stats["journey_sent"] = self.stats.get("journey_sent", 0) + 1
+            return {"status": "success", "recipients": len(emails), "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_journey_event: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_topic_push(
+        self, topic: str, title: str, body: str, data: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """Pushes one message to every device subscribed to `topic`. The caller decides what a failure means."""
+        try:
+            messaging_mod = self._get_messaging()
+            message = messaging_mod.Message(
+                topic=topic,
+                notification=messaging_mod.Notification(title=title, body=body),
+                data={str(k): str(v) for k, v in data.items()},
+            )
+            return {"status": "success", "messageId": messaging_mod.send(message)}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_topic_push: %s", e)
+            return {"status": "error", "error": str(e)}
+
     def send_channel_message_notification(
         self,
         tour_id: str,
@@ -347,15 +407,14 @@ class NotificationEngine:
         attachments: Optional[List[Dict[str, Any]]] = None,
         kind: str = "text",
     ) -> Dict[str, Any]:
-        """Notify emergency channel or mentioned members."""
+        """Push a channel message to the other active members of the tour.
+
+        Everyone hears about a message in a group channel. The emergency
+        channel is high priority.
+        """
         try:
             members = self.get_active_tour_members(tour_id, except_email=sender_email)
-            mentions_set = {str(m).strip().lower() for m in (mentions or [])}
-
-            if channel_id == EVERYONE_CHANNEL_ID:
-                recipients = members
-            else:
-                recipients = [m for m in members if m in mentions_set or "everyone" in mentions_set]
+            recipients = members
 
             if not recipients:
                 return {"status": "no_recipients"}
@@ -678,13 +737,19 @@ class NotificationEngine:
 class FirestoreNotificationWatcher:
     """Real-time listener daemon running on the VPS to capture events as they happen."""
 
-    def __init__(self, engine: NotificationEngine) -> None:
+    def __init__(
+        self,
+        engine: NotificationEngine,
+        claim_event: Optional[Callable[[Any], bool]] = None,
+    ) -> None:
         self.engine = engine
         self.started_at = datetime.now(timezone.utc)
         self.active_listeners: List[Any] = []
         self._processed_ids: Set[str] = set()
         self._lock = threading.Lock()
         self._is_running = False
+        # Marks a journey event as pushed, once. Tests pass a stand-in.
+        self._claim_event = claim_event or self._claim_in_transaction
 
     def is_seen(self, doc_id: str) -> bool:
         with self._lock:
@@ -775,6 +840,96 @@ class FirestoreNotificationWatcher:
                     if callee_id:
                         self.engine.send_call_ended_push(call_id, callee_id)
 
+    def on_journey_snapshot(self, col_snapshot, changes, read_time):
+        """Called when a member's arrival or departure is written (roadmap LJ-4.3).
+
+        Each event is pushed once, to the other members of its tour. An event is only
+        ever created, never changed, so an added document is the one to act on.
+        """
+        for change in changes:
+            if change.type.name != "ADDED":
+                continue
+            doc = change.document
+            if self.is_seen(doc.reference.path):
+                continue
+            data = doc.to_dict() or {}
+            created_at = data.get("createdAt")
+            if isinstance(created_at, datetime):
+                if created_at.tzinfo is None:
+                    created_at = created_at.replace(tzinfo=timezone.utc)
+                if created_at < self.started_at:
+                    continue
+            kind = data.get("type")
+            if kind not in ("arrive", "depart"):
+                continue
+            tour_ref = doc.reference.parent.parent
+            tour_id = tour_ref.id if tour_ref else ""
+            sender_email = str(data.get("email", "")).strip().lower()
+            stop_id = str(data.get("stopId", "")).strip()
+            if not tour_id or not sender_email or not stop_id:
+                continue
+            try:
+                claimed = self._claim_event(doc.reference)
+            except Exception as error:
+                logger.warning("Journey event %s not claimed: %s", doc.reference.path, error)
+                continue
+            if not claimed:
+                # Pushed before: by an earlier run, or by this one before a restart.
+                continue
+            self.engine.send_journey_event(
+                tour_id=tour_id,
+                event_id=doc.id,
+                sender_email=sender_email,
+                sender_name=self._member_name(tour_id, sender_email),
+                stop_name=self._stop_name(tour_id, stop_id),
+                kind=kind,
+            )
+
+    def _claim_in_transaction(self, ref: Any) -> bool:
+        """Records that a journey event was pushed, in a transaction. Returns False when
+        it was already recorded, so a restart does not push it again."""
+        from google.cloud import firestore
+
+        db = self.engine._get_db()
+
+        def claim(transaction: Any, ref_: Any) -> bool:
+            snapshot = ref_.get(transaction=transaction)
+            if not snapshot.exists or (snapshot.to_dict() or {}).get("pushedAt") is not None:
+                return False
+            transaction.update(ref_, {"pushedAt": firestore.SERVER_TIMESTAMP})
+            return True
+
+        return firestore.transactional(claim)(db.transaction(), ref)
+
+    def _stop_name(self, tour_id: str, stop_id: str) -> str:
+        """The stop's name from the tour's itinerary, or its id when it is not there."""
+        try:
+            tour = self.engine._get_db().collection("tours").document(tour_id).get()
+            for stop in (tour.to_dict() or {}).get("stops") or []:
+                if isinstance(stop, dict) and stop.get("id") == stop_id:
+                    name = str(stop.get("name", "")).strip()
+                    if name:
+                        return name
+        except Exception as error:
+            logger.debug("Stop name not read for %s/%s: %s", tour_id, stop_id, error)
+        return stop_id
+
+    def _member_name(self, tour_id: str, email: str) -> str:
+        """The member's display name in the tour, or a generic name."""
+        try:
+            member = (
+                self.engine._get_db()
+                .collection("memberships")
+                .document(f"{tour_id}__{email}")
+                .get()
+            )
+            name = str((member.to_dict() or {}).get("displayName", "")).strip()
+            if name:
+                return name
+        except Exception as error:
+            logger.debug("Member name not read for %s: %s", email, error)
+        return "A member"
+
     def start(self) -> None:
         """Start real-time Firestore listeners."""
         if self._is_running:
@@ -794,6 +949,13 @@ class FirestoreNotificationWatcher:
                 .on_snapshot(self.on_call_snapshot)
             )
             self.active_listeners.append(calls_watch)
+            journey_since = self.started_at - timedelta(seconds=JOURNEY_PUSH_WINDOW_SECONDS)
+            journey_watch = (
+                db.collection_group("journey_events")
+                .where("createdAt", ">=", journey_since)
+                .on_snapshot(self.on_journey_snapshot)
+            )
+            self.active_listeners.append(journey_watch)
         except Exception as e:
             logger.warning("Could not attach real-time Firestore listener: %s", e)
 

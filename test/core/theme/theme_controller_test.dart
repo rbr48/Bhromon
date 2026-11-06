@@ -22,7 +22,7 @@ void main() {
     expect(ThemeController.modeFor(''), isNull);
   });
 
-  test('before anything is loaded the app stays dark', () {
-    expect(ThemeController.instance.mode, ThemeMode.dark);
+  test('before anything is loaded the app defaults to light', () {
+    expect(ThemeController.instance.mode, ThemeMode.light);
   });
 }

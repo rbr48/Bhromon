@@ -53,6 +53,9 @@ jobs:
         run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
 
       - name: Build debug APK
+        env:
+          GRADLE_OPTS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
+          _JAVA_OPTIONS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
         run: flutter build apk --debug
 
   # ─────────────────────────────────────────────────────────────────────────────

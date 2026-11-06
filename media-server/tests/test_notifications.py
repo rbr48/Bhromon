@@ -157,7 +157,7 @@ def test_send_channel_message_notification():
     mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.get.return_value.exists = False
     engine._get_db = MagicMock(return_value=mock_db)
 
-    # Mentions alice only
+    # Alice is mentioned; bob, who is not, hears about the message too.
     res = engine.send_channel_message_notification(
         tour_id="t1",
         channel_id="general",
@@ -169,7 +169,38 @@ def test_send_channel_message_notification():
     )
 
     assert res["status"] == "success"
-    assert res["recipients"] == 1
+    assert res["recipients"] == 2
+    engine.get_uids_for_emails.assert_called_with(["alice@x.com", "bob@x.com"])
+
+
+def test_channel_message_without_mentions_reaches_every_other_member():
+    engine = NotificationEngine()
+    engine.get_active_tour_members = MagicMock(return_value=["alice@x.com", "bob@x.com"])
+    engine.get_uids_for_emails = MagicMock(return_value=["uid_alice", "uid_bob"])
+    engine.get_push_targets_for_uids = MagicMock(
+        return_value=[("tok_alice", MagicMock(), "en"), ("tok_bob", MagicMock(), "en")]
+    )
+    engine.send_localized = MagicMock(return_value=2)
+
+    mock_db = MagicMock()
+    mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.get.return_value.exists = False
+    engine._get_db = MagicMock(return_value=mock_db)
+
+    res = engine.send_channel_message_notification(
+        tour_id="t1",
+        channel_id="food",
+        message_id="m2",
+        sender_email="me@x.com",
+        sender_name="Leader",
+        text="Lunch is at one",
+        mentions=[],
+    )
+
+    assert res["status"] == "success"
+    assert res["recipients"] == 2
+    engine.get_uids_for_emails.assert_called_with(["alice@x.com", "bob@x.com"])
+    # Ordinary messages are not high priority; the emergency channel is.
+    assert engine.send_localized.call_args.kwargs["high_priority"] is False
 
 
 def test_send_call_push():

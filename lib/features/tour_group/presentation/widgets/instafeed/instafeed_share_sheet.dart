@@ -11,6 +11,7 @@ import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/utils/logger.dart';
 
 /// The standard channels a post can be shared into. A channel an admin has hidden is not
 /// offered, and a channel an admin has titled shows that title.
@@ -171,11 +172,19 @@ class InstafeedShareSheet extends StatelessWidget {
   /// media server (legacy storage) cannot be copied, so it is used as it is.
   Future<String> _ownCopy(String url) async {
     if (!url.startsWith(TourMediaRef.publicBaseUrl)) return url;
-    return TourMediaUploader.copyMedia(
-      tourId: tourId,
-      sourceUrl: url,
-      folder: 'stories',
-    );
+    try {
+      return await TourMediaUploader.copyMedia(
+        tourId: tourId,
+        sourceUrl: url,
+        folder: 'stories',
+      );
+    } catch (e, st) {
+      logWarning(
+          '[ShareSheet] copyMedia failed, falling back to original URL: $e',
+          e,
+          st);
+      return url;
+    }
   }
 
   Future<void> _shareToStory(BuildContext context) async {
@@ -199,8 +208,11 @@ class InstafeedShareSheet extends StatelessWidget {
         args: {'name': post.authorName},
       );
       final mediaCopy = await _ownCopy(media);
-      final videoCopy =
-          post.videoUrl == null ? null : await _ownCopy(post.videoUrl!);
+      final videoCopy = post.videoUrl == null
+          ? null
+          : (post.coverUrl != null
+              ? await _ownCopy(post.videoUrl!)
+              : mediaCopy);
       await repository.addStory(
         tourId: tourId,
         mediaUrl: mediaCopy,
@@ -292,8 +304,8 @@ class InstafeedShareSheet extends StatelessWidget {
                     color: AppColors.darkGreen, size: 20),
               ),
               title: Text(context.l10n.translate('ig_add_to_story'),
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.text, fontWeight: FontWeight.bold)),
               subtitle: Text(context.l10n.translate('ig_story_lasts'),
                   style: TextStyle(color: context.forest.text54, fontSize: 12)),
               onTap: () => _shareToStory(context),

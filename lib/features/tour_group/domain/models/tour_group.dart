@@ -348,6 +348,9 @@ class TourGroup {
   /// residents raise service requests, as in a housing society.
   static const String committeePreset = 'committee';
 
+  /// The preset of a friends circle: hangouts, adda, dining splits, parties and games.
+  static const String friendsPreset = 'friends';
+
   /// The preset a stored value names, or null when it names none.
   static String? presetFrom(Object? value) {
     if (value == officePreset) return officePreset;
@@ -359,6 +362,7 @@ class TourGroup {
     if (value == sportsPreset) return sportsPreset;
     if (value == studyPreset) return studyPreset;
     if (value == committeePreset) return committeePreset;
+    if (value == friendsPreset) return friendsPreset;
     return null;
   }
 
@@ -393,6 +397,10 @@ class TourGroup {
   /// A neighbourhood committee: a family-style circle with notices and service requests,
   /// as in a housing society.
   bool get isCommittee => preset == committeePreset;
+
+  /// A friends circle: a casual family-style circle for friends with hangout plans,
+  /// dining splits, shared checklists, games and photos. Any friend can post.
+  bool get isFriends => preset == friendsPreset;
 
   /// An office or a campus: a workspace, where the household tiles and records do not
   /// apply and SOS is refused.

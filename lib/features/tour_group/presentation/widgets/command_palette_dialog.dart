@@ -46,7 +46,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
   List<CommandPaletteItem> _getItems(String tourId) {
     return [
       CommandPaletteItem(
-        title: 'ড্যাশবোর্ড (Dashboard)',
+        title: 'গ্রুপ হাব (Group hub)',
         subtitle: 'গ্রুপ হাব ও সারসংক্ষেপ',
         icon: Icons.dashboard_rounded,
         route: tourHubPath(tourId),

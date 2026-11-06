@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:bhromon/features/tour_group/presentation/live_journey_runtime.dart';
 import 'package:injectable/injectable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
@@ -87,6 +88,11 @@ class FcmService {
         await _localNotif.initialize(
           const InitializationSettings(android: androidInit, iOS: darwinInit),
           onDidReceiveNotificationResponse: (details) {
+            final journeyPayload = details.payload;
+            if (journeyPayload != null &&
+                handleJourneyNotificationPayload(journeyPayload)) {
+              return;
+            }
             final ctx = AppRouter.navigatorKey.currentContext;
             if (ctx == null) return;
             final payload = details.payload;
@@ -537,6 +543,9 @@ class FcmService {
         // Native CallNotificationService manages incoming call overlay/ringing
         break;
       case 'broadcast':
+        break;
+      case 'official':
+        GoRouter.of(context).go('/official-feed');
         break;
     }
   }

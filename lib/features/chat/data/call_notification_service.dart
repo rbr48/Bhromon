@@ -13,6 +13,7 @@ import '../../../core/localization/locale_controller.dart';
 import '../../../core/audio/call_audio_session.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../firebase_options.dart';
+import '../domain/call_ringback_audio.dart';
 import '../presentation/widgets/incoming_call_dialog.dart';
 import 'call_signaling_service.dart';
 import 'system_call_bridge.dart';
@@ -212,6 +213,11 @@ class CallNotificationService {
   void _startInAppRingtone() {
     try {
       _inAppRingtonePlayer ??= AudioPlayer();
+      if (!kIsWeb) {
+        unawaited(_inAppRingtonePlayer?.setAudioContext(
+          buildIncomingRingtoneAudioContext(),
+        ));
+      }
       _inAppRingtonePlayer?.setReleaseMode(ReleaseMode.loop);
       _inAppRingtonePlayer?.play(AssetSource('audio/ringtone_default.mp3'));
     } catch (e, st) {
@@ -298,9 +304,27 @@ class CallNotificationService {
 
   // ── Native call screen ─────────────────────────────────────────────────────
 
+  /// Ends the ringing native call for [callId] on this phone. The server sends this
+  /// push when the call stops ringing, and it also reaches the phone that answered the
+  /// call. Only a call this phone still holds as ringing is ended: ending a call the phone
+  /// has answered makes it report the call ended, and the app then hangs up the call on
+  /// screen.
   static Future<void> endNativeIncomingCall(String callId) async {
     if (kIsWeb || callId.isEmpty) return;
-    await FlutterCallkitIncoming.endCall(callId);
+    final List<CallKitParams> calls;
+    try {
+      calls = await FlutterCallkitIncoming.activeCalls();
+    } catch (e) {
+      // Without the list, the call is left alone rather than cut.
+      logInfo('[CallNotificationService] end push skipped: $e');
+      return;
+    }
+    for (final call in calls) {
+      final id = call.extra?['callId']?.toString() ?? call.id;
+      if (id != callId || call.isAccepted) continue;
+      await FlutterCallkitIncoming.endCall(call.id);
+      return;
+    }
   }
 
   /// Shows the native incoming-call screen for a call. Also runs in the

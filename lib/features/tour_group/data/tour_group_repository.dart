@@ -1557,6 +1557,7 @@ class TourGroupRepository {
     int? originalMinor,
     double? fxRate,
     String? receiptUrl,
+    MfsPaymentInfo? mfsInfo,
   }) async {
     final email = _requireEmail();
     final expense = ExpenseItem(
@@ -1578,8 +1579,27 @@ class TourGroupRepository {
       originalMinor: originalMinor,
       fxRate: fxRate,
       receiptUrl: receiptUrl,
+      mfsInfo: mfsInfo,
     );
-    await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
+    final batch = _firestore.batch();
+    batch.set(_sub(tourId, 'expenses').doc(expense.id), expense.toMap());
+
+    final trxId = mfsInfo?.trxId?.trim().toUpperCase();
+    if (trxId != null &&
+        trxId.isNotEmpty &&
+        mfsInfo?.provider.requiresTrxId == true) {
+      final regDoc = _sub(tourId, 'mfs_trx_registry').doc(trxId);
+      batch.set(regDoc, {
+        'trxId': trxId,
+        'provider': mfsInfo!.provider.name,
+        'recordType': 'expense',
+        'recordId': expense.id,
+        'amountPaisa': expense.amountPaisa,
+        'addedByEmail': email,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
     return expense.id;
   }
 
@@ -1680,6 +1700,82 @@ class TourGroupRepository {
   Future<void> deleteTransfer(String tourId, String transferId) async {
     _requireEmail();
     await _sub(tourId, 'transfers').doc(transferId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Structured MFS Settlements & TrxID Registry
+  // ---------------------------------------------------------------------------
+
+  /// Structured MFS settlements (bKash/Nagad/Rocket/Upay) and peer settlements, newest first.
+  Stream<List<SettlementRecord>> watchSettlements(String tourId) {
+    return _sub(tourId, 'settlements').snapshots().map((snapshot) {
+      final items =
+          snapshot.docs.map((d) => SettlementRecord.fromMap(d.data())).toList();
+      items.sort((a, b) => b.date.compareTo(a.date));
+      return items;
+    });
+  }
+
+  /// Records a structured MFS settlement. If the provider uses a TrxID,
+  /// atomically reserves it in the tour's `mfs_trx_registry` to prevent duplicate reuse.
+  Future<void> addSettlement(String tourId, SettlementRecord record) async {
+    final email = _requireEmail();
+    final batch = _firestore.batch();
+    final settlementDoc = _sub(tourId, 'settlements').doc(record.id);
+    batch.set(settlementDoc, record.toMap());
+
+    final trxId = record.mfsInfo.trxId?.trim().toUpperCase();
+    if (trxId != null &&
+        trxId.isNotEmpty &&
+        record.mfsInfo.provider.requiresTrxId) {
+      final regDoc = _sub(tourId, 'mfs_trx_registry').doc(trxId);
+      batch.set(regDoc, {
+        'trxId': trxId,
+        'provider': record.mfsInfo.provider.name,
+        'recordType': 'settlement',
+        'recordId': record.id,
+        'amountPaisa': record.amountPaisa,
+        'addedByEmail': email,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  /// Updates an MFS settlement's verification status (e.g., verified or disputed by admin).
+  Future<void> updateSettlementStatus(
+    String tourId,
+    String settlementId,
+    MfsVerificationStatus status, {
+    String? disputeReason,
+  }) async {
+    final email = _requireEmail();
+    final docRef = _sub(tourId, 'settlements').doc(settlementId);
+    final updates = <String, dynamic>{
+      'mfsInfo.status': status.name,
+      if (status == MfsVerificationStatus.verified) ...{
+        'mfsInfo.verifiedByUserId': email,
+        'mfsInfo.verifiedByName': currentDisplayName,
+        'mfsInfo.verifiedAt': DateTime.now().toIso8601String(),
+      },
+      if (status == MfsVerificationStatus.disputed && disputeReason != null)
+        'mfsInfo.disputeReason': disputeReason,
+    };
+    await docRef.update(updates);
+  }
+
+  /// Deletes a settlement record and frees its registered TrxID in `mfs_trx_registry` if present.
+  Future<void> deleteSettlement(String tourId, SettlementRecord record) async {
+    _requireEmail();
+    final batch = _firestore.batch();
+    batch.delete(_sub(tourId, 'settlements').doc(record.id));
+    final trxId = record.mfsInfo.trxId?.trim().toUpperCase();
+    if (trxId != null &&
+        trxId.isNotEmpty &&
+        record.mfsInfo.provider.requiresTrxId) {
+      batch.delete(_sub(tourId, 'mfs_trx_registry').doc(trxId));
+    }
+    await batch.commit();
   }
 
   /// Admins set the budget and the per-person collection target.
@@ -1923,6 +2019,7 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
+    String? photoUrl,
   }) async {
     final email = _requireEmail();
     await _sub(tourId, 'service_requests').add({
@@ -1931,6 +2028,7 @@ class TourGroupRepository {
       'category': category.name,
       'status': ServiceRequestStatus.open.stored,
       'adminNote': '',
+      if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
       'createdByEmail': email,
       'createdByName': currentDisplayName,
       'createdAt': FieldValue.serverTimestamp(),
@@ -1947,12 +2045,14 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
+    String? photoUrl,
   }) async {
     final email = _requireEmail();
     await _sub(tourId, 'service_requests').doc(requestId).update({
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
+      if (photoUrl != null) 'photoUrl': photoUrl,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
     });
@@ -1966,12 +2066,19 @@ class TourGroupRepository {
     required String note,
   }) async {
     final email = _requireEmail();
-    await _sub(tourId, 'service_requests').doc(requestId).update({
+    final updates = <String, dynamic>{
       'status': status.stored,
       'adminNote': note.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
-    });
+    };
+    if (status == ServiceRequestStatus.inProgress) {
+      updates['inProgressAt'] = FieldValue.serverTimestamp();
+    } else if (status == ServiceRequestStatus.resolved) {
+      updates['resolvedAt'] = FieldValue.serverTimestamp();
+      updates['resolvedByName'] = currentDisplayName;
+    }
+    await _sub(tourId, 'service_requests').doc(requestId).update(updates);
   }
 
   /// Removes a request. Its author or an owner or admin does this.
@@ -3105,12 +3212,13 @@ class TourGroupRepository {
   /// Recent stories. The caller filters to those still within their 24 hours,
   /// which keeps the cutoff current instead of frozen at subscription time.
   Stream<List<TourStoryItem>> watchStories(String tourId) {
-    return _sub(tourId, 'stories')
-        .orderBy('createdAt', descending: true)
-        .limit(100)
-        .snapshots()
-        .map((s) =>
-            s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList());
+    return _sub(tourId, 'stories').snapshots().map((s) {
+      final items =
+          s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList();
+      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (items.length > 100) return items.sublist(0, 100);
+      return items;
+    });
   }
 
   Future<void> addStory({

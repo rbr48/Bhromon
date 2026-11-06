@@ -54,6 +54,63 @@ class CallAudioSession {
   static Future<void> setPipAllowed(bool allowed) =>
       _invoke('setPipAllowed', {'allowed': allowed});
 
+  /// Explicitly enters Picture-in-Picture mode on Android (API 26+).
+  /// Returns true if PiP mode was successfully triggered.
+  static Future<bool> enterPip() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      final res = await _channel.invokeMethod<bool>('enterPip');
+      return res ?? false;
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: enterPip not supported: $e');
+      return false;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: enterPip failed: ${e.message}');
+      return false;
+    }
+  }
+
+  /// Puts the call's audio on the loudspeaker, or back on the default route, through
+  /// the phone's own audio manager. The WebRTC plugin drops a speaker request without an
+  /// error when its device list has no loudspeaker yet, so the phone answers whether the
+  /// route took. False when it did not, and off Android.
+  static Future<bool> setSpeakerphone(bool enabled) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      final done = await _channel.invokeMethod<bool>(
+        'setSpeakerphone',
+        {'enabled': enabled},
+      );
+      return done ?? false;
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: no native handler: $e');
+      return false;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: setSpeakerphone failed: ${e.message}');
+      return false;
+    }
+  }
+
+  /// What the phone reports about the call's audio route: the mode, the device the
+  /// communication route is on, the device the WebRTC plugin selected, the in-call volume
+  /// and the output kinds. Device types only, never names. Null off Android, or when the
+  /// phone does not answer. Read after a call connects, to check the loudspeaker route.
+  static Future<Map<String, Object?>?> routeSnapshot() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      final raw =
+          await _channel.invokeMethod<Map<Object?, Object?>>('routeSnapshot');
+      if (raw == null) return null;
+      return {for (final entry in raw.entries) '${entry.key}': entry.value};
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: no native handler: $e');
+      return null;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: routeSnapshot failed: ${e.message}');
+      return null;
+    }
+  }
+
   static void Function()? _onHangUp;
   static void Function(bool inPip)? _onPipChanged;
   static bool _listening = false;

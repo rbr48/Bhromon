@@ -244,3 +244,23 @@ Apple VoIP push. The app registers its PushKit token with the platform
    today). Set `APNS_SANDBOX=1` for development builds.
 3. Rebuild the media image: Apple accepts HTTP/2 only, which `httpx[http2]`
    in `requirements.txt` provides.
+
+## Live journey relay and group events (roadmap phase 4)
+
+- **`/api/live/ws` (`live.py`)**: a WebSocket that carries the live positions of a
+  trip. It needs the same upgrade in the server's nginx site as `/api/chat/ws`
+  (`Upgrade $http_upgrade`, `Connection "upgrade"`, a long read timeout). The site
+  file is kept on the server and is not in this repository, so the change is made
+  there. The room state is in memory, so run **one** worker process for this app.
+- The relay keeps positions in memory only. It writes no file and sends nothing to
+  Firestore. A member silent for two minutes is disconnected. The app sends a
+  heartbeat every minute, so a stationary member stays connected.
+- **Journey events (`notifications.py`)**: the watcher listens to the
+  `journey_events` collection group. Each arrival or departure is pushed once to the
+  other members of its tour. The push text names the stop from the tour's itinerary.
+  A `pushedAt` field, set in a transaction, keeps a restart from pushing again.
+- **Retention (`journey_cleanup.py`)**: the daily 04:00 job deletes journey events
+  older than 30 days. Deleting an account removes that member's events
+  (`functions/src/lib/accountErasure.ts`).
+- Tests: `python -m pytest tests/test_live_relay.py tests/test_journey_events.py`.
+  The rules are tested on the Firestore emulator in `functions/tests/journey_events_rules.test.js`.

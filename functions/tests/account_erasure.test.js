@@ -55,6 +55,19 @@ describe('closing an account erases what the person owns', () => {
     expect((await db.doc('explorer_profiles/uid-a').get()).exists).toBe(false);
   });
 
+  test('a member\'s journey events go with the account, and other members\' stay', async () => {
+    const mine = 'tours/t1/journey_events/stop__a@x.com__arrive';
+    const theirs = 'tours/t1/journey_events/stop__b@x.com__arrive';
+    await db.doc(mine).set({ type: 'arrive', stopId: 'stop', email: 'a@x.com', uid: 'uid-a', createdAt: new Date() });
+    await db.doc(theirs).set({ type: 'arrive', stopId: 'stop', email: 'b@x.com', uid: 'uid-b', createdAt: new Date() });
+
+    const deleted = await eraseOwnedDocuments(db, 'uid-a');
+
+    expect(deleted).toBe(1);
+    expect((await db.doc(mine).get()).exists).toBe(false);
+    expect((await db.doc(theirs).get()).exists).toBe(true);
+  });
+
   test('a direct chat loses the messages the person sent and their place in it', async () => {
     await db.doc('chats/c1').set({
       participants: ['uid-a', 'uid-b'],

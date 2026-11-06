@@ -36,6 +36,7 @@ Future<TourNotice?> showNoticeComposer(
   return showModalBottomSheet<TourNotice>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: context.forest.surfaceFor(_sheet),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -390,7 +391,8 @@ class _ComposerState extends State<_Composer> {
               DropdownButtonFormField<String?>(
                 initialValue:
                     stops.any((s) => s.id == _stopId) ? _stopId : null,
-                dropdownColor: const Color(0xFF1B4332),
+                dropdownColor:
+                    context.forest.surfaceFor(const Color(0xFF1B4332)),
                 decoration:
                     InputDecoration(labelText: l10n.translate('notice_stop')),
                 items: [

@@ -20,6 +20,7 @@ Future<T?> _sheet<T>(BuildContext context, Widget child) {
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: context.forest.surfaceFor(_sheetColor),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -226,7 +227,7 @@ class _TransferFormState extends State<_TransferForm> {
           DropdownButtonFormField<String>(
             initialValue: _from,
             isExpanded: true,
-            dropdownColor: _menuColor,
+            dropdownColor: context.forest.surfaceFor(_menuColor),
             decoration: InputDecoration(labelText: l10n.translate('fund_from')),
             items: parties,
             onChanged: (v) => setState(() => _from = v ?? _from),
@@ -246,7 +247,7 @@ class _TransferFormState extends State<_TransferForm> {
           DropdownButtonFormField<String>(
             initialValue: _to,
             isExpanded: true,
-            dropdownColor: _menuColor,
+            dropdownColor: context.forest.surfaceFor(_menuColor),
             decoration: InputDecoration(labelText: l10n.translate('fund_to')),
             items: parties,
             onChanged: (v) => setState(() => _to = v ?? _to),
@@ -425,7 +426,7 @@ class _DepositFormState extends State<_DepositForm> {
             DropdownButtonFormField<String>(
               initialValue: _member,
               isExpanded: true,
-              dropdownColor: _menuColor,
+              dropdownColor: context.forest.surfaceFor(_menuColor),
               decoration: InputDecoration(
                   labelText: l10n.translate('fund_who_deposits')),
               items: [

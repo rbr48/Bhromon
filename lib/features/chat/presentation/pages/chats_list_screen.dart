@@ -22,7 +22,9 @@ import '../../data/chat_deletion_service.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
 import '../../domain/chat_deletion.dart';
+import '../../domain/chat_list_sort.dart';
 import '../widgets/chat_delete_dialogs.dart';
+import '../widgets/chat_list_sort_button.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
@@ -38,6 +40,8 @@ class ChatsListScreen extends StatefulWidget {
 class _ChatsListScreenState extends State<ChatsListScreen> {
   String _activeTab = 'All'; // 'All' | 'Unread'
   String _searchQuery = '';
+  // The order of the one-to-one list. It opens on the newest message first.
+  ChatListSort _sort = ChatListSort.recent;
   int _bottomNavIndex = 0; // 0 = Chats, 1 = Calls
   late final PageController _pageController;
   List<Map<String, dynamic>> _offlineConversations = [];
@@ -386,6 +390,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               _buildTabButton('Favourites'),
                               const SizedBox(width: 8),
                               _buildTabButton('Groups'),
+                              const SizedBox(width: 8),
+                              ChatListSortButton(
+                                value: _sort,
+                                onChanged: (value) =>
+                                    setState(() => _sort = value),
+                              ),
                             ],
                           ),
                         ),
@@ -450,7 +460,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       doc.id, {'id': doc.id, ...d});
                                 }
 
-                                final chatListItems = allDocs.where((doc) {
+                                final matchingDocs = allDocs.where((doc) {
                                   final data =
                                       doc.data() as Map<String, dynamic>;
                                   final participants = List<String>.from(
@@ -493,6 +503,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                                   return true;
                                 }).toList();
+                                final chatListItems = sortChatRows(
+                                    matchingDocs,
+                                    _sort,
+                                    (doc) => _firestoreRow(doc, currentUid));
 
                                 if (chatListItems.isEmpty) {
                                   return Center(
@@ -625,7 +639,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   Widget _buildOfflineConversationsList(
       Set<String> blockedUids, String currentUid) {
-    final filtered = _offlineConversations.where((data) {
+    final matching = _offlineConversations.where((data) {
       if (!isInMyTours(data, _myTourIds)) return false;
       final participants =
           List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
@@ -651,6 +665,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       }
       return true;
     }).toList();
+    final filtered =
+        sortChatRows(matching, _sort, (data) => _offlineRow(data, currentUid));
 
     return ListView.separated(
       separatorBuilder: (context, index) => Divider(
@@ -709,6 +725,39 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         );
       },
     );
+  }
+
+  /// The sort key for a chat from the server. It reads the same fields the row shows.
+  ChatListRow _firestoreRow(QueryDocumentSnapshot doc, String currentUid) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ChatListRow(
+      chatId: doc.id,
+      lastMessageAt: ChatDeletionService.timestampOf(data['lastMessageTime']),
+      otherName: _storedNameOf(data, currentUid),
+    );
+  }
+
+  /// The sort key for a chat from the offline cache.
+  ChatListRow _offlineRow(Map<String, dynamic> data, String currentUid) {
+    return ChatListRow(
+      chatId: (data['chatId'] ?? data['id'] ?? '') as String,
+      lastMessageAt: ChatDeletionService.timestampOf(
+          data['lastMessageTime'] ?? data['lastTime']),
+      otherName: _storedNameOf(data, currentUid),
+    );
+  }
+
+  /// The other person's name as this chat stores it, or null when it stores none.
+  /// A chat with no stored name sorts after the named ones by name.
+  static String? _storedNameOf(Map<String, dynamic> data, String currentUid) {
+    final participants =
+        List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
+    final otherUid =
+        participants.firstWhere((p) => p != currentUid, orElse: () => '');
+    final profiles = data['participantProfiles'];
+    final profile = profiles is Map ? profiles[otherUid] : null;
+    final name = profile is Map ? profile['displayName'] : null;
+    return name is String && name.trim().isNotEmpty ? name : null;
   }
 
   static DateTime? _parseCallDate(dynamic raw) {
@@ -1646,6 +1695,14 @@ class _LockedChatTile extends StatelessWidget {
   }
 }
 
+/// The photo for a chat row: the chat's own copy when it has one, else the person's
+/// live profile. Null when neither has a photo, so the row shows initials.
+String? chatAvatarUrl(String? fromChat, String? fromProfile) {
+  if (fromChat != null && fromChat.isNotEmpty) return fromChat;
+  if (fromProfile != null && fromProfile.isNotEmpty) return fromProfile;
+  return null;
+}
+
 class ChatTile extends StatelessWidget {
   final String chatId;
   final String otherUserUid;
@@ -1683,13 +1740,15 @@ class ChatTile extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (cachedOtherProfile != null) {
-      final name = (cachedOtherProfile!['displayName'] as String?) ??
-          context.l10n.translate('chats_member');
-      final avatar = cachedOtherProfile!['avatarUrl'] as String?;
-      final inits = _initialsOf(name);
+    // The chat keeps its own copy of the other person's name and photo. A copy made
+    // before they had a photo has none, so the photo then comes from their live profile.
+    final chatName = cachedOtherProfile?['displayName'] as String?;
+    final chatAvatar = cachedOtherProfile?['avatarUrl'] as String?;
+    if (chatName != null && chatAvatar != null && chatAvatar.isNotEmpty) {
       return _buildTile(context,
-          displayName: name, avatarUrl: avatar, initials: inits);
+          displayName: chatName,
+          avatarUrl: chatAvatar,
+          initials: _initialsOf(chatName));
     }
 
     // Cached one-time fetch using DocFutureCache (zero long-lived stream overhead)
@@ -1701,9 +1760,10 @@ class ChatTile extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
-        final name = (data?['displayName'] as String?) ??
+        final name = chatName ??
+            (data?['displayName'] as String?) ??
             context.l10n.translate('chats_member');
-        final avatar = data?['avatarUrl'] as String?;
+        final avatar = chatAvatarUrl(chatAvatar, data?['avatarUrl'] as String?);
         final inits = _initialsOf(name);
         return _buildTile(context,
             displayName: name, avatarUrl: avatar, initials: inits);

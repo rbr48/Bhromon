@@ -10,6 +10,7 @@ import '../../data/tour_group_repository.dart';
 import '../../domain/models/meal_log.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/meal_engine.dart';
+import '../widgets/mess/mess_balance_sheet.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -93,6 +94,17 @@ class _MealsScreenState extends State<MealsScreen> {
             iconTheme: IconThemeData(color: context.forest.text),
             title: Text(l10n.translate('meals_title'),
                 style: TextStyle(color: context.forest.text)),
+            actions: [
+              IconButton(
+                tooltip: 'মেস মিল ও বাজার হিসাব বিবরণী',
+                icon: const Icon(Icons.receipt_long_rounded),
+                onPressed: () => showMessBalanceSheet(
+                  context,
+                  tourId: widget.tourId,
+                  month: _month,
+                ),
+              ),
+            ],
           ),
           body: StreamBuilder<List<MealLog>>(
             stream: _logs,
@@ -133,6 +145,62 @@ class _MealsScreenState extends State<MealsScreen> {
         _monthBar(l10n),
         const SizedBox(height: 8),
         _dayStrip(),
+        const SizedBox(height: 12),
+        InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => showMessBalanceSheet(
+            context,
+            tourId: widget.tourId,
+            month: _month,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.mintGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AppColors.mintGreen.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.calculate_outlined,
+                  color: AppColors.mintGreen,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'মাসিক মিল রেট ও ব্যালেন্স বিবরণী',
+                        style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        'বাজার খরচ ও সদস্যভিত্তিক বকেয়া/ফেরত হিসাব দেখুন',
+                        style: TextStyle(
+                          color: context.forest.text54,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: context.forest.text54,
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         _section(
           l10n.translate('meals_month_totals'),

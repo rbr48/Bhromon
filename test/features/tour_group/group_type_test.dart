@@ -18,6 +18,7 @@ TourGroup _group({bool family = false, String? preset}) => TourGroup(
 /// Every preset is stored as a family-kind circle, which is why the type cannot be
 /// read from the kind alone.
 const _presets = [
+  TourGroup.friendsPreset,
   TourGroup.officePreset,
   TourGroup.campusPreset,
   TourGroup.messPreset,
@@ -31,6 +32,11 @@ const _presets = [
 
 void main() {
   group('groupTypeKey', () {
+    test('a friends group is named as friends, not as a family', () {
+      final friends = _group(family: true, preset: TourGroup.friendsPreset);
+      expect(groupTypeKey(friends), 'hub_friends_badge');
+    });
+
     test('a housing society is named as a society, not as a family', () {
       final society = _group(family: true, preset: TourGroup.societyPreset);
       expect(groupTypeKey(society), 'hub_society_badge');
@@ -59,6 +65,11 @@ void main() {
   });
 
   group('groupTypeIcon', () {
+    test('a friends group shows people_alt icon', () {
+      final friends = _group(family: true, preset: TourGroup.friendsPreset);
+      expect(groupTypeIcon(friends), Icons.people_alt_rounded);
+    });
+
     test('a housing society shows an apartment, not the family icon', () {
       final society = _group(family: true, preset: TourGroup.societyPreset);
       expect(groupTypeIcon(society), Icons.apartment_rounded);

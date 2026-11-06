@@ -19,6 +19,7 @@ Future<TourVehicle?> showVehicleEditor(BuildContext context,
   return showModalBottomSheet<TourVehicle>(
     context: context,
     isScrollControlled: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -260,7 +261,8 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
                           style: TextStyle(color: context.forest.text70))),
                   DropdownButton<String>(
                     value: _v.pattern,
-                    dropdownColor: const Color(0xFF1B4332),
+                    dropdownColor:
+                        context.forest.surfaceFor(const Color(0xFF1B4332)),
                     style: TextStyle(color: context.forest.text),
                     items: [
                       for (final p in kSeatPatterns)

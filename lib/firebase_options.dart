@@ -45,7 +45,7 @@ class DefaultFirebaseOptions {
     appId: '1:919602851188:web:2068356a638e28caf61021',
     messagingSenderId: '919602851188',
     projectId: 'bhromon-ff801',
-    authDomain: 'bhromon-ff801.firebaseapp.com',
+    authDomain: 'app.bhromon.fun',
     storageBucket: 'bhromon-ff801.firebasestorage.app',
     measurementId: 'G-H73CQ9JY0Q',
   );
@@ -81,7 +81,7 @@ class DefaultFirebaseOptions {
     appId: '1:919602851188:web:21211574c3af1c8af61021',
     messagingSenderId: '919602851188',
     projectId: 'bhromon-ff801',
-    authDomain: 'bhromon-ff801.firebaseapp.com',
+    authDomain: 'app.bhromon.fun',
     storageBucket: 'bhromon-ff801.firebasestorage.app',
     measurementId: 'G-SHG9G0NBTF',
   );

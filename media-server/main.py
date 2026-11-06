@@ -9,6 +9,7 @@ public tree.
 There is no shared upload key. An old app build that still sends one is refused.
 """
 
+import asyncio
 import hashlib
 import os
 import json
@@ -41,6 +42,8 @@ from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from call_cleanup import run_call_cleanup
+from journey_cleanup import run_journey_event_cleanup
+import live
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
 
@@ -118,7 +121,18 @@ def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
     except Exception as error:
         logger.error("Call cleanup failed: %s", error)
         calls = {"deleted": 0, "errors": 1}
-    return {**stories, "calls_deleted": calls["deleted"], "call_errors": calls["errors"]}
+    try:
+        journey = run_journey_event_cleanup(db, now)
+    except Exception as error:
+        logger.error("Journey event cleanup failed: %s", error)
+        journey = {"deleted": 0, "errors": 1}
+    return {
+        **stories,
+        "calls_deleted": calls["deleted"],
+        "call_errors": calls["errors"],
+        "journey_events_deleted": journey["deleted"],
+        "journey_event_errors": journey["errors"],
+    }
 
 
 story_cleanup_scheduler = StoryCleanupScheduler(run_daily_cleanup)
@@ -157,8 +171,11 @@ async def lifespan(app: FastAPI):
         family_date_scheduler.start()
         story_cleanup_scheduler.start()
         ack_reminder_scheduler.start()
+    # The live relay drops members who have been silent for two minutes.
+    live_sweep = asyncio.create_task(live.sweep_forever())
     yield
     # Stop them on shutdown
+    live_sweep.cancel()
     ack_reminder_scheduler.stop()
     story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
@@ -177,6 +194,7 @@ app.include_router(quiz_router, prefix="/api/quiz")
 app.include_router(quiz_router, prefix="/quiz")
 app.include_router(news_router, prefix="/api/news")
 app.include_router(news_router, prefix="/news")
+app.include_router(live.router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -327,6 +345,13 @@ backend = FirebaseBackend()
 # through `backend` at call time, so tests that swap the backend swap this too.
 chat.shares_group = lambda uid_a, uid_b: backend.shares_group(uid_a, uid_b)
 
+# The live journey relay (roadmap LJ-4.4) checks a member's ID token, and that the
+# member is an active member of the tour, before it lets them in.
+live.configure(
+    identify=lambda token: backend.identity_for_token(token),
+    is_member=lambda tour_id, email: backend.role_for(tour_id, email) is not None,
+)
+
 # Only a platform admin may start a news sync.
 news.sync_guard = lambda authorization: require_platform_admin(authenticate(authorization))
 
@@ -363,8 +388,17 @@ def require_platform_admin(caller: Caller) -> None:
         )
 
 
+# The official Bhromon feed: posts the team publishes for everyone signed in. Only the
+# publisher writes it (publish_official_post), and nothing records who reads it.
+OFFICIAL_SPACE = "official"
+OFFICIAL_TOPIC = "official_instafeed"
+OFFICIAL_PUBLISH_KEY = os.getenv("OFFICIAL_PUBLISH_KEY", "")
+OFFICIAL_IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp"})
+MAX_OFFICIAL_CAPTION = 300
+MAX_OFFICIAL_DURATION_SECONDS = 3600
+
 PUBLIC_OR_USER_SPACES = frozenset({
-    "profiles", "users", "general", "explorer", "trip_logs"
+    "profiles", "users", "general", "explorer", "trip_logs", OFFICIAL_SPACE,
 })
 
 # Private media. The secret derives each person's link key (media_access.py). With
@@ -682,6 +716,128 @@ async def upload_media(
         "bytes": total_bytes,
         "contentType": file.content_type,
     }
+
+
+def _require_official_publisher(provided_key: Optional[str], authorization: Optional[str]) -> None:
+    """Lets only the team publish to the official feed: with the publish key, or as a platform admin."""
+    if OFFICIAL_PUBLISH_KEY and provided_key and secrets.compare_digest(
+        provided_key.encode("utf-8"), OFFICIAL_PUBLISH_KEY.encode("utf-8")
+    ):
+        return
+    require_platform_admin(authenticate(authorization))
+
+
+async def store_official_file(upload: UploadFile, folder: str, filename: str, max_allowed: int) -> str:
+    """Stores one file of the official feed and returns its public address."""
+    target_dir = MEDIA_ROOT / OFFICIAL_SPACE / folder
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / filename
+    part = target_dir / f".{filename}.{uuid.uuid4().hex}.part"
+    try:
+        await store_stream(upload, part, max_allowed)
+        # A hard link never replaces an existing file.
+        os.link(part, target)
+    finally:
+        part.unlink(missing_ok=True)
+    return f"{BASE_URL.rstrip('/')}/{OFFICIAL_SPACE}/{folder}/{filename}"
+
+
+def create_official_post(
+    post_id: str,
+    caption: str,
+    video_url: Optional[str] = None,
+    cover_url: Optional[str] = None,
+    duration_seconds: Optional[int] = None,
+    image_url: Optional[str] = None,
+    kind: str = "reel",
+) -> None:
+    """Writes the feed entry the app reads. Only the server writes these."""
+    data = {
+        "caption": caption,
+        "kind": kind,
+        "publisher": "Bhromon",
+        "createdAt": datetime.now(timezone.utc),
+        "videoUrl": video_url,
+        "coverUrl": cover_url,
+    }
+    if image_url is not None:
+        data["imageUrl"] = image_url
+        if not data["coverUrl"]:
+            data["coverUrl"] = image_url
+    if duration_seconds is not None:
+        data["durationSeconds"] = duration_seconds
+
+    backend._client().collection("official_instafeed").document(post_id).set(data)
+
+
+@app.post("/official/posts")
+async def publish_official_post(
+    file: UploadFile = File(...),
+    caption: str = Form(""),
+    durationSeconds: Optional[int] = Form(None),
+    cover: Optional[UploadFile] = File(None),
+    x_official_key: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Publishes a video or image to the official feed, for everyone signed in to read."""
+    await run_in_threadpool(_require_official_publisher, x_official_key, authorization)
+    text = caption.strip()
+    if len(text) > MAX_OFFICIAL_CAPTION:
+        raise HTTPException(status_code=400, detail="The caption is too long.")
+    if durationSeconds is not None and not 0 < durationSeconds <= MAX_OFFICIAL_DURATION_SECONDS:
+        raise HTTPException(status_code=400, detail="The duration is out of range.")
+    ext = extension_of(file.filename)
+    is_video = ext in VIDEO_EXTENSIONS
+    is_image = ext in OFFICIAL_IMAGE_EXTENSIONS
+    if not is_video and not is_image:
+        raise HTTPException(status_code=400, detail="The post must be a video or an image.")
+    cover_ext = ""
+    if cover is not None and cover.filename:
+        cover_ext = extension_of(cover.filename)
+        if cover_ext not in OFFICIAL_IMAGE_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="The cover must be an image.")
+
+    post_id = uuid.uuid4().hex
+    if is_video:
+        video_url = await store_official_file(file, "reels", f"{post_id}{ext}", MAX_VIDEO_BYTES)
+        cover_url = None
+        if cover_ext:
+            cover_url = await store_official_file(cover, "covers", f"{post_id}{cover_ext}", MAX_IMAGE_BYTES)
+        await run_in_threadpool(
+            create_official_post,
+            post_id,
+            text,
+            video_url=video_url,
+            cover_url=cover_url,
+            duration_seconds=durationSeconds,
+            kind="reel",
+        )
+        await run_in_threadpool(
+            notification_engine.send_topic_push,
+            OFFICIAL_TOPIC,
+            "Bhromon",
+            text or "A new post in the official feed",
+            {"action": "official", "postId": post_id},
+        )
+        return {"status": "success", "id": post_id, "videoUrl": video_url, "coverUrl": cover_url, "kind": "reel"}
+    else:
+        image_url = await store_official_file(file, "images", f"{post_id}{ext}", MAX_IMAGE_BYTES)
+        await run_in_threadpool(
+            create_official_post,
+            post_id,
+            text,
+            image_url=image_url,
+            cover_url=image_url,
+            kind="image",
+        )
+        await run_in_threadpool(
+            notification_engine.send_topic_push,
+            OFFICIAL_TOPIC,
+            "Bhromon",
+            text or "A new post in the official feed",
+            {"action": "official", "postId": post_id},
+        )
+        return {"status": "success", "id": post_id, "imageUrl": image_url, "coverUrl": image_url, "kind": "image"}
 
 
 def read_cdn_config() -> Optional[Dict]:

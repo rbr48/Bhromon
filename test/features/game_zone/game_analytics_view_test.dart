@@ -61,6 +61,12 @@ void main() {
     // 2. Win rate & streaks are calculated and shown
     expect(find.textContaining('72%'), findsOneWidget); // 18 / 25
     expect(find.textContaining('Master'), findsWidgets);
+
+    // 3. Metric items have high contrast white text on dark overview card
+    final matchesLabel = tester.widget<Text>(find.text('Matches'));
+    expect(matchesLabel.style?.color, Colors.white70);
+    final matchesValue = tester.widget<Text>(find.text('25'));
+    expect(matchesValue.style?.color, Colors.white);
   });
 
   testWidgets(

@@ -303,7 +303,11 @@ class HiveEncryptionService {
     try {
       return box.toMap();
     } finally {
-      await box.close();
+      try {
+        await box.close();
+      } catch (e, st) {
+        logSkipped(e, st);
+      }
     }
   }
 
@@ -311,7 +315,10 @@ class HiveEncryptionService {
   /// checksum or format error from Hive, a bad padding block, or a short read. Any
   /// other error is a failure to read, not a verdict on the key.
   bool _isDecodeFailure(Object error) =>
-      error is HiveError || error is ArgumentError || error is FormatException;
+      error is HiveError ||
+      error is ArgumentError ||
+      error is FormatException ||
+      (error is FileSystemException && (error.path?.endsWith('.lock') == true));
 
   Future<void> _discardProbe(String copyName) async {
     try {
@@ -331,10 +338,10 @@ class HiveEncryptionService {
       try {
         await Hive.deleteBoxFromDisk(name);
         return;
-      } on PathNotFoundException {
+      } on FileSystemException {
         attempts++;
-        if (attempts >= 3) rethrow;
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (attempts >= 5) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 30));
       }
     }
   }

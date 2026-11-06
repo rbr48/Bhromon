@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 
 /// WhatsApp-style voice message playback bubble.
@@ -17,11 +18,16 @@ class VoiceMessageBubble extends StatefulWidget {
   final int? durationSeconds;
   final bool isMe;
 
+  /// Set while the message is still being sent (0 to 1). The bubble then shows
+  /// the progress, and cannot be played until the message is saved.
+  final double? uploadProgress;
+
   const VoiceMessageBubble({
     super.key,
     required this.audioUrl,
     this.durationSeconds,
     required this.isMe,
+    this.uploadProgress,
   });
 
   @override
@@ -73,7 +79,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   }
 
   Future<void> _togglePlayPause() async {
-    if (_isLoading) return;
+    if (_isLoading || widget.uploadProgress != null) return;
 
     if (_playerState == PlayerState.playing) {
       await _player.pause();
@@ -133,6 +139,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   @override
   Widget build(BuildContext context) {
     final isPlaying = _playerState == PlayerState.playing;
+    final sending = widget.uploadProgress != null;
+    final sendValue = (widget.uploadProgress ?? 0).clamp(0.0, 1.0).toDouble();
+    final sendPercent = ((widget.uploadProgress ?? 0) * 100).round();
     final total = _totalDuration > Duration.zero
         ? _totalDuration
         : const Duration(seconds: 1);
@@ -150,7 +159,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             children: [
               // ── Play / Pause Button ──────────────────────────────────────
               GestureDetector(
-                onTap: _togglePlayPause,
+                onTap: sending ? null : _togglePlayPause,
                 child: Container(
                   width: 42,
                   height: 42,
@@ -160,10 +169,11 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         : const Color(0xFF53BDEB),
                     shape: BoxShape.circle,
                   ),
-                  child: _isLoading
+                  child: sending || _isLoading
                       ? Padding(
                           padding: const EdgeInsets.all(10),
                           child: CircularProgressIndicator(
+                            value: sending ? sendValue : null,
                             color: context.chat.text,
                             strokeWidth: 2,
                           ),
@@ -201,12 +211,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                       ),
                       child: Slider(
                         value: progress,
-                        onChanged: (val) {
-                          final seekTo = Duration(
-                              milliseconds:
-                                  (val * total.inMilliseconds).toInt());
-                          _player.seek(seekTo);
-                        },
+                        onChanged: sending
+                            ? null
+                            : (val) {
+                                final seekTo = Duration(
+                                    milliseconds:
+                                        (val * total.inMilliseconds).toInt());
+                                _player.seek(seekTo);
+                              },
                       ),
                     ),
                     Padding(
@@ -215,7 +227,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _formatDuration(_position),
+                            sending
+                                ? '${context.l10n.number(sendPercent)}%'
+                                : _formatDuration(_position),
                             style: TextStyle(
                                 color: context.chat.text60, fontSize: 10),
                           ),
@@ -233,7 +247,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
               // ── Speed Selector (1x, 1.5x, 2x) ────────────────────────────
               GestureDetector(
-                onTap: _cyclePlaybackSpeed,
+                onTap: sending ? null : _cyclePlaybackSpeed,
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 3),

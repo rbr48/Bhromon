@@ -16,6 +16,8 @@ class FeatureFlags {
     'offline_vault_enabled': true,
     'trust_system_enabled': true,
     'analytics_enabled': true,
+    'journey_relay_enabled': true,
+    'journey_alarms_enabled': true,
   };
 
   Future<void> initialize() async {
@@ -45,4 +47,14 @@ class FeatureFlags {
       kIsWeb ? true : _config.getBool('trust_system_enabled');
   bool get analyticsEnabled =>
       kIsWeb ? false : _config.getBool('analytics_enabled');
+
+  /// Kill switch for the live journey relay (roadmap LJ-6.3). Off stops positions
+  /// being sent and received; the trip itself keeps running on the phone.
+  bool get journeyRelayEnabled =>
+      kIsWeb ? false : _config.getBool('journey_relay_enabled');
+
+  /// Kill switch for scheduling journey alarms (roadmap LJ-6.3). Off stops new
+  /// alarms being scheduled; one already scheduled still rings.
+  bool get journeyAlarmsEnabled =>
+      kIsWeb ? false : _config.getBool('journey_alarms_enabled');
 }

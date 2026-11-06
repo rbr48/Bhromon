@@ -41,6 +41,28 @@ class CallTelemetry {
     }
   }
 
+  /// How the loudspeaker route stood once a call connected: `ok` when it held,
+  /// `retry_ok` when it held after one more apply, `failed` when it did not, or
+  /// `unknown` when the phone could not say. `systemCall` tells whether the phone's own
+  /// call system holds the call. [detail] is the route as it was found, without names.
+  static Future<void> speakerRoute({
+    required String outcome,
+    required bool systemCall,
+    String? detail,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      final crashlytics = FirebaseCrashlytics.instance;
+      await crashlytics.setCustomKey('call_speaker', outcome);
+      await crashlytics.setCustomKey('call_system', systemCall ? 'yes' : 'no');
+      if (detail != null) {
+        await crashlytics.setCustomKey('call_speaker_route', detail);
+      }
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
+  }
+
   /// wifi, cellular, ethernet, none or other. Null when the platform cannot say,
   /// or after a second, so a call never waits for it.
   static Future<String?> networkType() async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -234,18 +235,27 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       labelColor: AppColors.mintGreen,
                       unselectedLabelColor: context.forest.text60,
                       indicatorWeight: 3,
-                      tabs: const [
+                      tabs: [
                         Tab(
-                          icon: Icon(Icons.offline_bolt_rounded, size: 20),
-                          text: 'Offline Arcade',
+                          icon: const Icon(
+                            Icons.offline_bolt_rounded,
+                            size: 20,
+                          ),
+                          text: context.l10n.translate('gz_tab_offline'),
                         ),
                         Tab(
-                          icon: Icon(Icons.groups_rounded, size: 20),
-                          text: 'Tour Online Tables',
+                          icon: const Icon(
+                            Icons.groups_rounded,
+                            size: 20,
+                          ),
+                          text: context.l10n.translate('gz_tab_online'),
                         ),
                         Tab(
-                          icon: Icon(Icons.insights_rounded, size: 20),
-                          text: 'Stats & Trophies',
+                          icon: const Icon(
+                            Icons.insights_rounded,
+                            size: 20,
+                          ),
+                          text: context.l10n.translate('gz_tab_stats'),
                         ),
                       ],
                     ),
@@ -374,9 +384,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'Offline Arcade Hub',
-                      style: TextStyle(
+                    Text(
+                      context.l10n.translate('gz_offline_hub_title'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -963,9 +973,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       ),
                       icon: const Icon(Icons.add_circle_outline_rounded,
                           size: 18),
-                      label: const Text(
-                        'Create Table',
-                        style: TextStyle(
+                      label: Text(
+                        context.l10n.translate('gz_create_table'),
+                        style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
@@ -985,9 +995,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       ),
                       icon: const Icon(Icons.pin_rounded,
                           size: 18, color: AppColors.mintGreen),
-                      label: const Text(
-                        'Join with Code',
-                        style: TextStyle(
+                      label: Text(
+                        context.l10n.translate('gz_join_with_code'),
+                        style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
@@ -1041,7 +1051,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                         color: context.forest.text24, size: 48),
                     const SizedBox(height: 12),
                     Text(
-                      'No open game tables yet',
+                      context.l10n.translate('gz_no_open_tables'),
                       style: TextStyle(
                         color: context.forest.text,
                         fontSize: 15,
@@ -1255,7 +1265,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
             Icon(Icons.pin_rounded, color: context.forest.accentText),
             const SizedBox(width: 8),
             Text(
-              'Join with Code',
+              context.l10n.translate('gz_join_with_code'),
               style: TextStyle(color: context.forest.text, fontSize: 18),
             ),
           ],
