@@ -299,9 +299,8 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: context.forest.isDark
-                        ? Colors.white24
-                        : Colors.black26,
+                    color:
+                        context.forest.isDark ? Colors.white24 : Colors.black26,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
