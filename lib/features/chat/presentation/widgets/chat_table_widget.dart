@@ -130,7 +130,8 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
         content: Text(
           message,
           style: const TextStyle(
-            fontFamily: 'NotoSansBengali',
+            fontFamily: 'HindSiliguri',
+            fontFamilyFallback: ['NotoSansBengali', 'Roboto', 'sans-serif'],
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -462,13 +463,15 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
         : Colors.black.withValues(alpha: 0.03);
 
     final headerStyle = widget.baseStyle.copyWith(
-      fontFamily: 'NotoSansBengali',
+      fontFamily: 'HindSiliguri',
+      fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
       fontWeight: FontWeight.bold,
       fontSize: 14.0,
       height: 1.35,
     );
     final cellStyle = widget.baseStyle.copyWith(
-      fontFamily: 'NotoSansBengali',
+      fontFamily: 'HindSiliguri',
+      fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
       fontSize: 13.5,
       height: 1.35,
     );
@@ -662,7 +665,12 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                     child: Text(
                       '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
                       style: TextStyle(
-                        fontFamily: 'NotoSansBengali',
+                        fontFamily: 'HindSiliguri',
+                        fontFamilyFallback: const [
+                          'NotoSansBengali',
+                          'Roboto',
+                          'sans-serif'
+                        ],
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color:
@@ -692,7 +700,12 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                           Text(
                             'লেজারে যুক্ত',
                             style: TextStyle(
-                              fontFamily: 'NotoSansBengali',
+                              fontFamily: 'HindSiliguri',
+                              fontFamilyFallback: [
+                                'NotoSansBengali',
+                                'Roboto',
+                                'sans-serif'
+                              ],
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: AppColors.mintGreen,
@@ -724,7 +737,12 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                           Text(
                             'নোটিশে পিন',
                             style: TextStyle(
-                              fontFamily: 'NotoSansBengali',
+                              fontFamily: 'HindSiliguri',
+                              fontFamilyFallback: [
+                                'NotoSansBengali',
+                                'Roboto',
+                                'sans-serif'
+                              ],
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: AppColors.mintGreen,

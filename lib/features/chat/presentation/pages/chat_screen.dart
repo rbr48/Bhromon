@@ -924,9 +924,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     fontSize: 15.5,
                     height: 1.4,
                     letterSpacing: 0.05,
-                    fontFamily: 'NotoSansBengali',
+                    fontFamily: 'HindSiliguri',
                     fontFamilyFallback: const [
-                      'HindSiliguri',
+                      'NotoSansBengali',
                       'Roboto',
                       'sans-serif'
                     ],
@@ -3882,9 +3882,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                           fontSize: 15.5,
                                           height: 1.4,
                                           letterSpacing: 0.05,
-                                          fontFamily: 'NotoSansBengali',
+                                          fontFamily: 'HindSiliguri',
                                           fontFamilyFallback: const [
-                                            'HindSiliguri',
+                                            'NotoSansBengali',
                                             'Roboto',
                                             'sans-serif'
                                           ],
