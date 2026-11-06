@@ -173,11 +173,33 @@ class _ChannelComposerState extends State<ChannelComposer> {
                   ),
                   IconButton(
                     tooltip: l10n.translate('format_toolbar_toggle'),
-                    icon: Icon(
-                      Icons.text_format,
-                      color: _showFormatting
-                          ? AppColors.mintGreen
-                          : context.forest.text70,
+                    padding: EdgeInsets.zero,
+                    icon: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _showFormatting
+                              ? AppColors.mintGreen
+                              : context.forest.text70,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                        color: _showFormatting
+                            ? AppColors.mintGreen.withValues(alpha: 0.15)
+                            : Colors.transparent,
+                      ),
+                      child: Text(
+                        'Aa',
+                        style: TextStyle(
+                          color: _showFormatting
+                              ? AppColors.mintGreen
+                              : context.forest.text70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
                     ),
                     onPressed: widget.sending
                         ? null

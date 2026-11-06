@@ -168,7 +168,19 @@ final RegExp _orderedPattern = RegExp(r'^(\d+)\.\s+(.*)$');
 /// Parses [text] into block-level elements (tables, code blocks, lists, headings, dividers, paragraphs).
 List<ChatBlock> parseChatBlocks(String text) {
   final counter = _Counter();
-  final rawLines = text.split('\n');
+
+  // Normalize line endings and collapsed single-line tables
+  var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'\|\s{1,}\|'),
+    (_) => '|\n|',
+  );
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(\|[^\n]+?)\s{2,}(\|?[^\n]+?\|)'),
+    (m) => '${m.group(1)}\n${m.group(2)}',
+  );
+
+  final rawLines = normalized.split('\n');
   final blocks = <ChatBlock>[];
   var i = 0;
 
@@ -188,7 +200,7 @@ List<ChatBlock> parseChatBlocks(String text) {
     if (!trimmed.contains('-')) return false;
     final cells = splitTableRow(trimmed);
     if (cells.isEmpty) return false;
-    final delimPattern = RegExp(r'^:?-+:?$');
+    final delimPattern = RegExp(r'^:?\s*-[\s-]*:?$');
     for (final cell in cells) {
       if (!delimPattern.hasMatch(cell)) return false;
     }

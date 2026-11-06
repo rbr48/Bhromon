@@ -129,6 +129,27 @@ void main() {
       expect(find.text('3200'), findsOneWidget);
       expect(find.text('Due'), findsOneWidget);
     });
+
+    testWidgets('renders markdown tables even if newlines were collapsed',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const ChatRichText(
+            text:
+                '| Col 1 | Col 2 | Col 3           - | - | - | | Val 1 | Val 2 | Val 3 |',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChatTableWidget), findsOneWidget);
+      expect(find.text('Col 1'), findsOneWidget);
+      expect(find.text('Col 2'), findsOneWidget);
+      expect(find.text('Col 3'), findsOneWidget);
+      expect(find.text('Val 1'), findsOneWidget);
+      expect(find.text('Val 2'), findsOneWidget);
+      expect(find.text('Val 3'), findsOneWidget);
+    });
   });
 
   group('ChatFormattingToolbar Widget', () {
