@@ -674,6 +674,7 @@ class TourGroupRepository {
 
   /// Live view of one tour. Null when the tour no longer exists.
   Stream<TourGroup?> watchGroup(String tourId) {
+    if (tourId.trim().isEmpty) return Stream.value(null);
     return _tour(tourId).snapshots().map((doc) {
       final data = doc.data();
       if (!doc.exists || data == null) return null;
