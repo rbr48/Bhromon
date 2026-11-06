@@ -195,7 +195,19 @@ class ChatFormattingToolbar extends StatelessWidget {
                   // Highlight
                   _btn(
                     tooltip: l10n.translate('format_toolbar_highlight'),
-                    icon: Icons.border_color,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 3, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF08A),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: const Text('==',
+                          style: TextStyle(
+                              color: Color(0xFF713F12),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11)),
+                    ),
                     onTap: () => _wrapSelection('=='),
                     color: AppColors.gold,
                   ),
@@ -211,7 +223,11 @@ class ChatFormattingToolbar extends StatelessWidget {
                   // Inline Code
                   _btn(
                     tooltip: l10n.translate('format_toolbar_code'),
-                    icon: Icons.code,
+                    child: const Text('</>',
+                        style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
                     onTap: () => _wrapSelection('`'),
                     color: itemColor,
                   ),
@@ -227,61 +243,147 @@ class ChatFormattingToolbar extends StatelessWidget {
                   // Blockquote
                   _btn(
                     tooltip: l10n.translate('format_toolbar_quote'),
-                    icon: Icons.format_quote,
+                    child: const Text('”',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                            height: 0.9)),
                     onTap: () => _prefixLine('> '),
                     color: itemColor,
                   ),
                   // Bullet List
                   _btn(
                     tooltip: l10n.translate('format_toolbar_list'),
-                    icon: Icons.format_list_bulleted,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: itemColor, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 3),
+                        Container(
+                          width: 10,
+                          height: 2,
+                          decoration: BoxDecoration(
+                              color: itemColor,
+                              borderRadius: BorderRadius.circular(1)),
+                        ),
+                      ],
+                    ),
                     onTap: () => _prefixLine('- '),
                     color: itemColor,
                   ),
                   // Numbered List
                   _btn(
                     tooltip: l10n.translate('format_toolbar_num_list'),
-                    icon: Icons.format_list_numbered,
+                    child: const Text('1.',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
                     onTap: () => _prefixLine('1. '),
                     color: itemColor,
                   ),
                   // Checklist
                   _btn(
                     tooltip: l10n.translate('format_toolbar_task'),
-                    icon: Icons.check_box,
+                    child: Container(
+                      width: 15,
+                      height: 15,
+                      decoration: BoxDecoration(
+                        border:
+                            Border.all(color: AppColors.mintGreen, width: 1.5),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: const Center(
+                        child: Text('✓',
+                            style: TextStyle(
+                                color: AppColors.mintGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                height: 1)),
+                      ),
+                    ),
                     onTap: () => _prefixLine('- [ ] '),
                     color: AppColors.mintGreen,
                   ),
                   // Divider
                   _btn(
                     tooltip: l10n.translate('format_toolbar_divider'),
-                    icon: Icons.horizontal_rule,
+                    child: Container(
+                      width: 14,
+                      height: 2,
+                      decoration: BoxDecoration(
+                        color: itemColor,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
                     onTap: () => _insertBlock('---'),
                     color: itemColor,
                   ),
                   // Table Builder Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.darkGreen,
-                        foregroundColor: Colors.white,
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        elevation: 0,
+                  _btn(
+                    tooltip: l10n.translate('format_toolbar_table'),
+                    child: Container(
+                      width: 16,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: itemColor, width: 1.5),
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      icon: const Icon(Icons.table_chart, size: 14),
-                      label: Text(
-                        l10n.translate('format_toolbar_table'),
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.bold),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        right: BorderSide(
+                                            color: itemColor, width: 1),
+                                        bottom: BorderSide(
+                                            color: itemColor, width: 1),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                            color: itemColor, width: 1),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        right: BorderSide(
+                                            color: itemColor, width: 1),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const Expanded(child: SizedBox.expand()),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      onPressed: () => _openTableBuilder(context),
                     ),
+                    onTap: () => _openTableBuilder(context),
+                    color: itemColor,
                   ),
                 ],
               ),
@@ -298,7 +400,8 @@ class ChatFormattingToolbar extends StatelessWidget {
               iconSize: 18,
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              icon: const Icon(Icons.close),
+              icon: const Text('✕',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               color: context.forest.text54,
               onPressed: onClose,
             ),
@@ -310,8 +413,7 @@ class ChatFormattingToolbar extends StatelessWidget {
 
   Widget _btn({
     required String tooltip,
-    IconData? icon,
-    Widget? child,
+    required Widget child,
     required VoidCallback onTap,
     required Color color,
   }) {
@@ -325,14 +427,10 @@ class ChatFormattingToolbar extends StatelessWidget {
           height: 32,
           alignment: Alignment.center,
           margin: const EdgeInsets.symmetric(horizontal: 1),
-          child: icon != null
-              ? Icon(icon, size: 18, color: color)
-              : (child != null
-                  ? DefaultTextStyle(
-                      style: TextStyle(color: color),
-                      child: child,
-                    )
-                  : const SizedBox.shrink()),
+          child: DefaultTextStyle(
+            style: TextStyle(color: color),
+            child: child,
+          ),
         ),
       ),
     );
