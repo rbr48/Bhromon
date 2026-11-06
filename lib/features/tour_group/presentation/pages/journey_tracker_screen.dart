@@ -33,6 +33,8 @@ import '../widgets/journey/journey_alarm_settings_sheet.dart';
 import '../widgets/journey/journey_live_card.dart';
 import '../widgets/journey/journey_stop_sheet.dart';
 import '../widgets/map/offline_map_pack_sheet.dart';
+import '../../domain/services/offline_map_regions.dart';
+import 'offline_map_viewer_screen.dart';
 import '../../../../core/localization/localized_date.dart';
 
 String transportModeKey(TransportMode m) => 'route_mode_${m.name}';
@@ -623,6 +625,33 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               icon: const Icon(Icons.ios_share_rounded),
               label: Text(l10n.translate('route_share')),
             ),
+            Builder(builder: (context) {
+              final matchingRegion = regionForDestination(g.destination);
+              if (matchingRegion == null) return const SizedBox.shrink();
+              return FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen.withValues(alpha: 0.16),
+                  foregroundColor: AppColors.mintGreen,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => OfflineMapViewerScreen(
+                        region: matchingRegion,
+                        initialPosition: pos,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.offline_pin_rounded, size: 18),
+                label: Text(
+                  l10n.locale.languageCode == 'bn'
+                      ? '${matchingRegion.nameBn} অফলাইন ম্যাপ'
+                      : '${matchingRegion.nameEn} Offline Map',
+                ),
+              );
+            }),
           ],
         ),
         const SizedBox(height: 14),

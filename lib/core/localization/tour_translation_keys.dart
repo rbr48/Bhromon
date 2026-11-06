@@ -2538,6 +2538,17 @@ class TourTranslationKeys {
       'journey_stop_alarm': 'Set alarm for this stop',
       'journey_stop_alarm_hint':
           'Notices and wake-ups for this stop ring on this phone only.',
+
+      // ── Offline vector maps ────────────────────────────────────────────────
+      'offline_map_title': 'Offline Map & Travel Guide',
+      'offline_map_open': 'Open Offline Map',
+      'offline_map_open_interactive': 'Open Interactive Offline Map',
+      'offline_map_cached_badge': 'Offline Saved',
+      'offline_map_recenter': 'Fit Region',
+      'offline_map_my_location': 'My Location',
+      'offline_map_emergency_helpline': 'Emergency Helplines',
+      'offline_map_radar_mode': 'Radar View',
+      'offline_map_tour_banner': 'Offline map pack available for {destination}',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -5062,6 +5073,18 @@ class TourTranslationKeys {
       'journey_stop_alarm': 'এই স্টপের জন্য অ্যালার্ম দিন',
       'journey_stop_alarm_hint':
           'এই স্টপের সতর্কবার্তা ও জাগানো শুধু এই ফোনে বাজে।',
+
+      // ── Offline vector maps ────────────────────────────────────────────────
+      'offline_map_title': 'অফলাইন ম্যাপ ও ট্রাভেল গাইড',
+      'offline_map_open': 'অফলাইন ম্যাপ খুলুন',
+      'offline_map_open_interactive': 'ইন্টারেক্টিভ অফলাইন ম্যাপ খুলুন',
+      'offline_map_cached_badge': 'অফলাইন সংরক্ষিত',
+      'offline_map_recenter': 'সম্পূর্ণ অঞ্চল',
+      'offline_map_my_location': 'আমার অবস্থান',
+      'offline_map_emergency_helpline': 'জরুরি হেল্পলাইন',
+      'offline_map_radar_mode': 'রাডার ভিউ',
+      'offline_map_tour_banner':
+          '{destination}-এর জন্য অফলাইন ম্যাপ প্যাক উপলব্ধ',
     },
   };
 }

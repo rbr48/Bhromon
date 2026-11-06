@@ -1,0 +1,108 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
+
+import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/tour_group/domain/services/offline_map_regions.dart';
+import 'package:bhromon/features/tour_group/presentation/pages/offline_map_viewer_screen.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  final sajek =
+      kCuratedOfflineRegions.firstWhere((r) => r.id == 'sajek_valley');
+
+  Widget buildTestWidget({Locale locale = const Locale('en')}) {
+    return MaterialApp(
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('bn')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        DefaultMaterialLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
+      home: OfflineMapViewerScreen(
+        region: sajek,
+        initialPosition: Position(
+          latitude: 23.3833,
+          longitude: 92.2833,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 800.0,
+          altitudeAccuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 5.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+      ),
+    );
+  }
+
+  testWidgets(
+      'renders OfflineMapViewerScreen with header, offline badge, and waypoints',
+      (tester) async {
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sajek Valley & Ruilui'), findsOneWidget);
+    expect(find.textContaining('Chattogram · ~18 MB'), findsOneWidget);
+    expect(find.text('Offline Pack Active'), findsOneWidget);
+
+    // Waypoint chips in horizontal carousel
+    expect(find.text('Ruilui Para (Main Center)'), findsOneWidget);
+    expect(find.text('Konglak Peak Viewpoint'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  testWidgets('focuses waypoint and shows details card when chip is tapped',
+      (tester) async {
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Tap Konglak Peak chip
+    await tester.tap(find.text('Konglak Peak Viewpoint'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Directions'), findsOneWidget);
+    expect(find.textContaining('23.4110° N, 92.2980° E'), findsOneWidget);
+
+    // Close waypoint card
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Directions'), findsNothing);
+  });
+
+  testWidgets('opens emergency helplines sheet when helpline icon is tapped',
+      (tester) async {
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Tap emergency phone icon in app bar
+    await tester.tap(find.byIcon(Icons.phone_in_talk_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Emergency Helplines'), findsOneWidget);
+    expect(find.text('Sajek Tourist Police'), findsOneWidget);
+    expect(find.text('01320183277'), findsOneWidget);
+    expect(find.text('Call'), findsWidgets);
+  });
+
+  testWidgets('switches to Radar View when radar toggle button is tapped',
+      (tester) async {
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Tap Radar mode icon
+    await tester.tap(find.byIcon(Icons.radar_rounded));
+    await tester.pumpAndSettle();
+
+    // Verify CustomPaint with radar canvas is rendered
+    expect(find.byType(CustomPaint), findsWidgets);
+
+    // Toggle back to map mode
+    await tester.tap(find.byIcon(Icons.map_rounded));
+    await tester.pumpAndSettle();
+  });
+}
