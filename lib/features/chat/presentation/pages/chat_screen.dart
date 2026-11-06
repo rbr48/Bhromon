@@ -4022,6 +4022,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                                           _messageController,
                                                       focusNode:
                                                           _messageFocusNode,
+                                                      minLines: 1,
+                                                      maxLines: 5,
+                                                      keyboardType:
+                                                          TextInputType
+                                                              .multiline,
                                                       onTap: () {
                                                         if (_showEmojiPicker) {
                                                           setState(() =>
@@ -4063,13 +4068,57 @@ class _ChatScreenState extends State<ChatScreen> {
                                                       width: 44,
                                                       height: 48,
                                                       child: IconButton(
-                                                        icon: Icon(
-                                                          Icons.text_format,
-                                                          color: _showFormatting
-                                                              ? AppColors
-                                                                  .mintGreen
-                                                              : context
-                                                                  .chat.grey,
+                                                        tooltip: context.l10n
+                                                            .translate(
+                                                                'format_toolbar_toggle'),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        icon: Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 5,
+                                                                  vertical:
+                                                                      2.5),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            border: Border.all(
+                                                              color: _showFormatting
+                                                                  ? AppColors
+                                                                      .mintGreen
+                                                                  : context.chat
+                                                                      .grey,
+                                                              width: 1.5,
+                                                            ),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        4),
+                                                            color: _showFormatting
+                                                                ? AppColors
+                                                                    .mintGreen
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.15)
+                                                                : Colors
+                                                                    .transparent,
+                                                          ),
+                                                          child: Text(
+                                                            'Aa',
+                                                            style: TextStyle(
+                                                              color: _showFormatting
+                                                                  ? AppColors
+                                                                      .mintGreen
+                                                                  : context.chat
+                                                                      .grey,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              fontSize: 12.5,
+                                                              letterSpacing:
+                                                                  -0.5,
+                                                            ),
+                                                          ),
                                                         ),
                                                         onPressed: () => setState(
                                                             () => _showFormatting =
