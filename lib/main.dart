@@ -18,6 +18,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'core/utils/app_logger.dart';
 import 'core/config/feature_flags.dart';
+import 'features/share_intake/presentation/share_intake_host.dart';
 import 'features/tour_group/presentation/live_journey_runtime.dart';
 import 'firebase_options.dart';
 import 'app/di/injection.dart';
@@ -453,7 +454,9 @@ class MyApp extends StatelessWidget {
                   left: false,
                   right: false,
                   bottom: true,
-                  child: OtaListenerWrapper(child: child ?? const SizedBox()),
+                  child: ShareIntakeHost(
+                    child: OtaListenerWrapper(child: child ?? const SizedBox()),
+                  ),
                 ),
               ),
             );

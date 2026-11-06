@@ -57,6 +57,7 @@ import '../features/newspaper/presentation/pages/newspaper_hub_screen.dart';
 import '../features/newspaper/presentation/pages/adfree_article_reader_screen.dart';
 import '../features/newspaper/presentation/pages/adblock_browser_screen.dart';
 import '../features/newspaper/domain/models/newspaper_models.dart';
+import '../features/share_intake/domain/shared_file.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -150,6 +151,7 @@ class AppRouter {
               otherUid: otherUid,
               sharedTourId: extra?['sharedTourId'] as String?,
               otherEmail: extra?['otherEmail'] as String?,
+              sharedFiles: (extra?['sharedFiles'] as List?)?.cast<SharedFile>(),
             ),
           );
         },
