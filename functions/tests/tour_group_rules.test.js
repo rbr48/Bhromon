@@ -1149,8 +1149,8 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(setDoc(doc(anon(), ...msgPath('a3')), message(people.member.email)));
     });
 
-    test('a post has at most 1000 characters and four photos, and a known kind', async () => {
-      await assertFails(setDoc(doc(db('member'), ...msgPath('b1')), message(people.member.email, { text: 'x'.repeat(1001) })));
+    test('a post has unbounded text, at most four photos, and a known kind', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), ...msgPath('b1')), message(people.member.email, { text: 'x'.repeat(2500) })));
       const photos = Array.from({ length: 5 }, (_, i) => ({ url: `https://m.x/${i}.jpg`, kind: 'image' }));
       await assertFails(setDoc(doc(db('member'), ...msgPath('b2')), message(people.member.email, { attachments: photos })));
       await assertSucceeds(setDoc(doc(db('member'), ...msgPath('b3')), message(people.member.email, { attachments: photos.slice(0, 4) })));

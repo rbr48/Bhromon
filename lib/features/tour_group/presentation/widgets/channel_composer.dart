@@ -160,7 +160,6 @@ class ChannelComposer extends StatelessWidget {
                     child: TextField(
                       controller: controller,
                       focusNode: focusNode,
-                      maxLength: kChannelMessageMaxLength,
                       minLines: 1,
                       maxLines: 4,
                       textInputAction: TextInputAction.send,

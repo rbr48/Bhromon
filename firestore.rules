@@ -335,12 +335,12 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         // Validate outgoing messages: sender must be the authenticated user,
-        // type must be a known value, and text must not exceed 4 096 chars.
+        // type must be a known value, and message text has no maximum length limit.
         function validMessage() {
           let d = request.resource.data;
           return (d.senderId == request.auth.uid || d.senderId == tourUserEmail())
               && d.type in ['text', 'image', 'video', 'audio', 'document', 'location', 'contact', 'deleted', 'call', 'expense']
-              && (!('text' in d) || d.text == null || (d.text is string && d.text.size() <= 4096))
+              && (!('text' in d) || d.text == null || d.text is string)
               && ('timestamp' in d && d.timestamp == request.time);
         }
 
@@ -1283,13 +1283,12 @@ service cloud.firestore {
         match /messages/{messageId} {
           allow read: if isActiveMember(tourId);
 
-          // Post as yourself, within the text and photo limits. In an admin-only
-          // channel, only admins post.
+          // Post as yourself, with no message text length limit and within photo
+          // limits. In an admin-only channel, only admins post.
           allow create: if isActiveMember(tourId) &&
                            request.resource.data.senderEmail == tourUserEmail() &&
                            request.resource.data.kind in ['text', 'poll', 'expense'] &&
                            request.resource.data.text is string &&
-                           request.resource.data.text.size() <= 1000 &&
                            request.resource.data.get('attachments', []).size() <= 4 &&
                            (isTourAdmin(tourId) ||
                             !(exists(/databases/$(database)/documents/tours/$(tourId)/channels/$(channelId)) &&
@@ -1300,7 +1299,7 @@ service cloud.firestore {
                            resource.data.get('senderEmail', '') == tourUserEmail() &&
                            request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['text', 'mentions', 'editedAt']) &&
-                           request.resource.data.text.size() <= 1000;
+                           request.resource.data.text is string;
 
           // Admins pin and unpin, and change nothing else.
           allow update: if isTourAdmin(tourId) &&
