@@ -145,7 +145,8 @@ class _ChannelComposerState extends State<ChannelComposer> {
               ),
             ),
           if (widget.mentionChoices.isNotEmpty)
-            _MentionList(choices: widget.mentionChoices, onPick: widget.onPickMention),
+            _MentionList(
+                choices: widget.mentionChoices, onPick: widget.onPickMention),
           if (_showFormatting)
             ChatFormattingToolbar(
               controller: widget.controller,

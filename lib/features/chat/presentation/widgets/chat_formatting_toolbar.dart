@@ -38,7 +38,8 @@ class ChatFormattingToolbar extends StatelessWidget {
       );
     } else {
       final selected = text.substring(sel.start, sel.end);
-      final newText = text.replaceRange(sel.start, sel.end, '$prefix$selected$s');
+      final newText =
+          text.replaceRange(sel.start, sel.end, '$prefix$selected$s');
       controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection(
@@ -61,7 +62,8 @@ class ChatFormattingToolbar extends StatelessWidget {
     final insertPos = lineStart == -1 ? 0 : lineStart + 1;
 
     final newText = text.replaceRange(insertPos, insertPos, prefix);
-    final newOffset = (sel.isValid ? sel.extentOffset : text.length) + prefix.length;
+    final newOffset =
+        (sel.isValid ? sel.extentOffset : text.length) + prefix.length;
 
     controller.value = TextEditingValue(
       text: newText,
@@ -76,8 +78,12 @@ class ChatFormattingToolbar extends StatelessWidget {
     final sel = controller.selection;
     final pos = sel.isValid ? sel.start : text.length;
 
-    final prefixNewline = (pos > 0 && !text.substring(0, pos).endsWith('\n')) ? '\n' : '';
-    final suffixNewline = (pos < text.length && !text.substring(pos).startsWith('\n')) ? '\n' : '';
+    final prefixNewline =
+        (pos > 0 && !text.substring(0, pos).endsWith('\n')) ? '\n' : '';
+    final suffixNewline =
+        (pos < text.length && !text.substring(pos).startsWith('\n'))
+            ? '\n'
+            : '';
 
     final toInsert = '$prefixNewline$block$suffixNewline';
     final newText = text.replaceRange(pos, pos, toInsert);
@@ -130,7 +136,8 @@ class ChatFormattingToolbar extends StatelessWidget {
                   _btn(
                     tooltip: l10n.translate('format_toolbar_bold'),
                     child: const Text('B',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
                     onTap: () => _wrapSelection('**'),
                     color: itemColor,
                   ),
@@ -138,7 +145,8 @@ class ChatFormattingToolbar extends StatelessWidget {
                   _btn(
                     tooltip: l10n.translate('format_toolbar_italic'),
                     child: const Text('I',
-                        style: TextStyle(fontStyle: FontStyle.italic, fontSize: 15)),
+                        style: TextStyle(
+                            fontStyle: FontStyle.italic, fontSize: 15)),
                     onTap: () => _wrapSelection('*'),
                     color: itemColor,
                   ),
@@ -147,7 +155,8 @@ class ChatFormattingToolbar extends StatelessWidget {
                     tooltip: l10n.translate('format_toolbar_underline'),
                     child: const Text('U',
                         style: TextStyle(
-                            decoration: TextDecoration.underline, fontSize: 14)),
+                            decoration: TextDecoration.underline,
+                            fontSize: 14)),
                     onTap: () => _wrapSelection('__'),
                     color: itemColor,
                   ),
@@ -156,7 +165,8 @@ class ChatFormattingToolbar extends StatelessWidget {
                     tooltip: l10n.translate('format_toolbar_strike'),
                     child: const Text('S',
                         style: TextStyle(
-                            decoration: TextDecoration.lineThrough, fontSize: 14)),
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 14)),
                     onTap: () => _wrapSelection('~~'),
                     color: itemColor,
                   ),
@@ -245,7 +255,8 @@ class ChatFormattingToolbar extends StatelessWidget {
                       icon: const Icon(Icons.table_chart_rounded, size: 14),
                       label: Text(
                         l10n.translate('format_toolbar_table'),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       onPressed: () => _openTableBuilder(context),
                     ),

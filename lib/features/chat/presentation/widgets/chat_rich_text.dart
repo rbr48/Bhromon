@@ -47,7 +47,8 @@ class _ChatRichTextState extends State<ChatRichText> {
   @override
   void initState() {
     super.initState();
-    _internalRevealed = widget.revealed != null ? Set.from(widget.revealed!) : {};
+    _internalRevealed =
+        widget.revealed != null ? Set.from(widget.revealed!) : {};
   }
 
   @override
@@ -108,7 +109,8 @@ class _ChatRichTextState extends State<ChatRichText> {
     );
 
     final spoilerId = span.spoilerId;
-    final isHidden = spoilerId != null && !_internalRevealed.contains(spoilerId);
+    final isHidden =
+        spoilerId != null && !_internalRevealed.contains(spoilerId);
     if (isHidden) {
       style = style.copyWith(
         color: Colors.transparent,

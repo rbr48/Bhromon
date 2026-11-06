@@ -272,18 +272,21 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                                     fontSize: 13,
                                   ),
                                   decoration: InputDecoration(
-                                    labelText: '${l10n.translate('table_builder_header')} ${c + 1}',
+                                    labelText:
+                                        '${l10n.translate('table_builder_header')} ${c + 1}',
                                     labelStyle: TextStyle(
                                       color: context.forest.text54,
                                       fontSize: 11,
                                     ),
                                     isDense: true,
                                     filled: true,
-                                    fillColor: AppColors.midGreen.withValues(alpha: 0.15),
+                                    fillColor: AppColors.midGreen
+                                        .withValues(alpha: 0.15),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide(
-                                        color: AppColors.mintGreen.withValues(alpha: 0.3),
+                                        color: AppColors.mintGreen
+                                            .withValues(alpha: 0.3),
                                       ),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
@@ -297,9 +300,12 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    _alignButton(c, ChatTableAlign.left, Icons.format_align_left_rounded),
-                                    _alignButton(c, ChatTableAlign.center, Icons.format_align_center_rounded),
-                                    _alignButton(c, ChatTableAlign.right, Icons.format_align_right_rounded),
+                                    _alignButton(c, ChatTableAlign.left,
+                                        Icons.format_align_left_rounded),
+                                    _alignButton(c, ChatTableAlign.center,
+                                        Icons.format_align_center_rounded),
+                                    _alignButton(c, ChatTableAlign.right,
+                                        Icons.format_align_right_rounded),
                                   ],
                                 ),
                               ],
@@ -322,7 +328,8 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                                   controller: _cellControllers[r][c],
                                   style: textStyle.copyWith(fontSize: 13),
                                   decoration: InputDecoration(
-                                    hintText: '${l10n.translate('table_builder_cell')} ${r + 1},${c + 1}',
+                                    hintText:
+                                        '${l10n.translate('table_builder_cell')} ${r + 1},${c + 1}',
                                     hintStyle: TextStyle(
                                       color: context.forest.text38,
                                       fontSize: 11,
@@ -393,7 +400,9 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: selected ? AppColors.mintGreen.withValues(alpha: 0.25) : Colors.transparent,
+          color: selected
+              ? AppColors.mintGreen.withValues(alpha: 0.25)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Icon(
@@ -437,7 +446,9 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 icon: const Icon(Icons.remove_circle_outline_rounded),
-                color: value > min ? context.forest.accentText : context.forest.text38,
+                color: value > min
+                    ? context.forest.accentText
+                    : context.forest.text38,
                 onPressed: value > min ? () => onChanged(value - 1) : null,
               ),
               Padding(
@@ -457,7 +468,9 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 icon: const Icon(Icons.add_circle_outline_rounded),
-                color: value < max ? context.forest.accentText : context.forest.text38,
+                color: value < max
+                    ? context.forest.accentText
+                    : context.forest.text38,
                 onPressed: value < max ? () => onChanged(value + 1) : null,
               ),
             ],

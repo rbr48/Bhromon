@@ -858,7 +858,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ChatRichText(
                   text: pending.text,
-                  baseStyle: TextStyle(color: context.chat.text, fontSize: 13.5),
+                  baseStyle:
+                      TextStyle(color: context.chat.text, fontSize: 13.5),
                   isMine: true,
                 ),
                 const SizedBox(height: 2),
@@ -3962,8 +3963,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ChatFormattingToolbar(
                                         controller: _messageController,
                                         focusNode: _messageFocusNode,
-                                        onClose: () =>
-                                            setState(() => _showFormatting = false),
+                                        onClose: () => setState(
+                                            () => _showFormatting = false),
                                       ),
                                     Container(
                                       padding: EdgeInsets.fromLTRB(
@@ -4063,10 +4064,13 @@ class _ChatScreenState extends State<ChatScreen> {
                                                       height: 48,
                                                       child: IconButton(
                                                         icon: Icon(
-                                                          Icons.text_format_rounded,
+                                                          Icons
+                                                              .text_format_rounded,
                                                           color: _showFormatting
-                                                              ? AppColors.mintGreen
-                                                              : context.chat.grey,
+                                                              ? AppColors
+                                                                  .mintGreen
+                                                              : context
+                                                                  .chat.grey,
                                                         ),
                                                         onPressed: () => setState(
                                                             () => _showFormatting =

@@ -85,14 +85,16 @@ class _ChatCodeBlockWidgetState extends State<ChatCodeBlockWidget> {
                           Icon(
                             _copied ? Icons.check_rounded : Icons.copy_rounded,
                             size: 13,
-                            color: _copied ? AppColors.mintGreen : Colors.white70,
+                            color:
+                                _copied ? AppColors.mintGreen : Colors.white70,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _copied ? 'Copied' : 'Copy',
                             style: TextStyle(
-                              color:
-                                  _copied ? AppColors.mintGreen : Colors.white70,
+                              color: _copied
+                                  ? AppColors.mintGreen
+                                  : Colors.white70,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),

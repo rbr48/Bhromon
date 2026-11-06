@@ -226,7 +226,9 @@ List<ChatBlock> parseChatBlocks(String text) {
 
     // 2. Markdown Table Detection
     // Must have a header row and a delimiter row immediately following.
-    if (trimmed.contains('|') && i + 1 < rawLines.length && isTableDelimiter(rawLines[i + 1])) {
+    if (trimmed.contains('|') &&
+        i + 1 < rawLines.length &&
+        isTableDelimiter(rawLines[i + 1])) {
       final headerRawCells = splitTableRow(rawLines[i]);
       final delimCells = splitTableRow(rawLines[i + 1]);
       final colCount = headerRawCells.length;
@@ -312,7 +314,8 @@ List<ChatBlock> parseChatBlocks(String text) {
 
     // 6. Lists and Checklists
     final taskMatch = _taskPattern.firstMatch(trimmed);
-    final unorderedMatch = taskMatch == null ? _unorderedPattern.firstMatch(trimmed) : null;
+    final unorderedMatch =
+        taskMatch == null ? _unorderedPattern.firstMatch(trimmed) : null;
     final orderedMatch = (taskMatch == null && unorderedMatch == null)
         ? _orderedPattern.firstMatch(trimmed)
         : null;

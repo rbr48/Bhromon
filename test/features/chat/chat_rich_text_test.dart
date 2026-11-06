@@ -28,7 +28,8 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const ChatRichText(
-            text: 'Hello **bold** and *italic* and __underline__ and ==highlight==',
+            text:
+                'Hello **bold** and *italic* and __underline__ and ==highlight==',
           ),
         ),
       );
@@ -72,7 +73,8 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const ChatRichText(
-            text: '- Item A\n- Item B\n1. First\n2. Second\n- [ ] Task todo\n- [x] Task done',
+            text:
+                '- Item A\n- Item B\n1. First\n2. Second\n- [ ] Task todo\n- [x] Task done',
           ),
         ),
       );
@@ -84,7 +86,8 @@ void main() {
       expect(find.text('Second'), findsOneWidget);
       expect(find.text('Task todo'), findsOneWidget);
       expect(find.text('Task done'), findsOneWidget);
-      expect(find.byIcon(Icons.check_box_outline_blank_rounded), findsOneWidget);
+      expect(
+          find.byIcon(Icons.check_box_outline_blank_rounded), findsOneWidget);
       expect(find.byIcon(Icons.check_box_rounded), findsOneWidget);
     });
 
@@ -108,7 +111,8 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const ChatRichText(
-            text: '| Item | Cost | Status |\n|:---|:---:|---:|\n| Hotel | 5000 | Paid |\n| Transport | 3200 | Due |',
+            text:
+                '| Item | Cost | Status |\n|:---|:---:|---:|\n| Hotel | 5000 | Paid |\n| Transport | 3200 | Due |',
           ),
         ),
       );
@@ -152,9 +156,11 @@ void main() {
       expect(find.byIcon(Icons.table_chart_rounded), findsOneWidget);
     });
 
-    testWidgets('wraps text with bold tags when bold icon tapped', (tester) async {
+    testWidgets('wraps text with bold tags when bold icon tapped',
+        (tester) async {
       final controller = TextEditingController(text: 'hello');
-      controller.selection = const TextSelection(baseOffset: 0, extentOffset: 5);
+      controller.selection =
+          const TextSelection(baseOffset: 0, extentOffset: 5);
       final focusNode = FocusNode();
 
       await tester.pumpWidget(
@@ -176,7 +182,8 @@ void main() {
   });
 
   group('TableBuilderSheet Widget', () {
-    testWidgets('renders table builder and generates table markdown', (tester) async {
+    testWidgets('renders table builder and generates table markdown',
+        (tester) async {
       String? generated;
 
       await tester.pumpWidget(
