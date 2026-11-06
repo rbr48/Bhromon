@@ -153,6 +153,7 @@ void main() {
       expect(find.text('U'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
       expect(find.text('H'), findsOneWidget);
+      expect(find.text('||'), findsOneWidget);
       expect(find.byIcon(Icons.table_chart), findsOneWidget);
     });
 
@@ -178,6 +179,54 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.text, equals('**hello**'));
+    });
+
+    testWidgets('wraps text with spoiler tags when spoiler icon tapped',
+        (tester) async {
+      final controller = TextEditingController(text: 'secret');
+      controller.selection =
+          const TextSelection(baseOffset: 0, extentOffset: 6);
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        _wrap(
+          ChatFormattingToolbar(
+            controller: controller,
+            focusNode: focusNode,
+            onClose: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('||'));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, equals('||secret||'));
+    });
+
+    testWidgets(
+        'handles empty selection and heading prefix safely without crash',
+        (tester) async {
+      final controller = TextEditingController(text: 'hello');
+      controller.selection = const TextSelection.collapsed(offset: 0);
+      final focusNode = FocusNode();
+
+      await tester.pumpWidget(
+        _wrap(
+          ChatFormattingToolbar(
+            controller: controller,
+            focusNode: focusNode,
+            onClose: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('H'));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, equals('# hello'));
     });
   });
 
