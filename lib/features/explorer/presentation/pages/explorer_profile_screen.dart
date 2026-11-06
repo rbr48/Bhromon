@@ -494,12 +494,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   }
                 },
               ),
-              IconButton(
-                icon:
-                    const Icon(Icons.logout, color: Colors.redAccent, size: 20),
-                tooltip: _isBn ? 'লগআউট' : 'Log out',
-                onPressed: () => _confirmLogout(context),
-              ),
             ],
           ],
         ),
@@ -855,14 +849,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (isOwnProfile &&
-                        (_statusNote == null || _statusNote!.isEmpty))
+                        (_statusNote == null || _statusNote!.isEmpty)) ...[
                       Icon(Icons.add,
                           size: 12, color: context.forest.accentText),
+                      const SizedBox(width: 4),
+                    ],
                     Text(
                       (_statusNote != null && _statusNote!.isNotEmpty)
                           ? _statusNote!
                           : (isOwnProfile
-                              ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
+                              ? (_isBn ? 'নোট যুক্ত করুন' : 'Add Note')
                               : (_isBn ? 'সদস্য নোট' : 'Member note')),
                       style: TextStyle(
                         color: context.forest.accentText,
@@ -933,8 +929,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   child: _buildDetailChip(
                     icon: Icons.bloodtype_rounded,
                     text: _bloodGroup != null && _bloodGroup!.isNotEmpty
-                        ? '🩸 $_bloodGroup'
-                        : (_isBn ? '🩸 + রক্তের গ্রুপ' : '🩸 + Blood Group'),
+                        ? _bloodGroup!
+                        : (_isBn ? 'রক্তের গ্রুপ যোগ করুন' : 'Add Blood Group'),
                     color: Colors.redAccent,
                   ),
                 ),
@@ -990,6 +986,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       final days = g.endDate.difference(g.startDate).inDays + 1;
       return acc + (days > 0 ? days : 1);
     });
+    final activeLedgers = groups.length;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1003,7 +1000,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildMetricItem(
-            '${groups.length}',
+            _isBn ? context.l10n.number(groups.length) : '${groups.length}',
             _isBn ? 'গ্রুপ' : 'Groups',
             Icons.groups_rounded,
           ),
@@ -1013,7 +1010,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
-            '$ownedCount',
+            _isBn ? context.l10n.number(ownedCount) : '$ownedCount',
             _isBn ? 'পরিচালিত' : 'Organized',
             Icons.stars_rounded,
           ),
@@ -1023,7 +1020,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
-            '$totalDays',
+            _isBn ? context.l10n.number(totalDays) : '$totalDays',
             _isBn ? 'ভ্রমণ দিন' : 'Tour Days',
             Icons.calendar_month_rounded,
           ),
@@ -1033,7 +1030,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
-            _isBn ? 'সক্রিয়' : 'Active',
+            _isBn ? context.l10n.number(activeLedgers) : '$activeLedgers',
             _isBn ? 'লেজার' : 'Ledger',
             Icons.account_balance_wallet_rounded,
           ),
@@ -1064,7 +1061,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 3),
         Text(
           label,
-          style: TextStyle(color: context.forest.text54, fontSize: 10),
+          style: TextStyle(
+            color: context.forest.text70,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -2088,7 +2089,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     Expanded(
                       child: _buildChoiceChip(
                         selected: _isBn,
-                        label: 'বাংলা (Bengali)',
+                        label: 'বাংলা',
                         onTap: () {
                           LocaleController.instance.setLanguage('bn');
                           setState(() {});
@@ -2224,7 +2225,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _buildAccountRow(_isBn ? 'নাম' : 'Name', profile.displayName),
               _buildAccountRow(
                   _isBn ? 'ইমেইল' : 'Email', _tourRepo.currentEmail),
-              _buildAccountRow(_isBn ? 'বিভাগ' : 'Division', profile.division),
+              _buildAccountRow(
+                _isBn ? 'বিভাগ' : 'Division',
+                _isBn
+                    ? (() {
+                        final val = context.l10n
+                            .translate('div_${profile.division.toLowerCase()}');
+                        return val.startsWith('div_') ? profile.division : val;
+                      })()
+                    : profile.division,
+              ),
               _buildAccountRow(
                 _isBn ? 'যোগদান' : 'Joined',
                 localizedDateFormat('d MMMM yyyy').format(profile.createdAt),

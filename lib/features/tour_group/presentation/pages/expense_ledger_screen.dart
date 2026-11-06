@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,6 +25,7 @@ import '../../domain/services/trip_ledger_engine.dart';
 import '../../data/monthly_ledger_pdf.dart';
 import '../../domain/services/bangla_qr_engine.dart';
 import '../monthly_ledger_pdf_export.dart';
+import '../tour_routes.dart';
 import '../widgets/bangla_qr_view.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
@@ -111,7 +113,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   // Helpers
   // ---------------------------------------------------------------------------
 
-  String _money(int paisa) => TripLedgerEngine.formatTaka(paisa);
+  String _money(int paisa) =>
+      context.l10n.number(TripLedgerEngine.formatTaka(paisa));
 
   List<LedgerMemberInput> get _inputs => [
         for (final m in _members)
@@ -198,6 +201,16 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     return Scaffold(
       backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
+        leading: BackButton(
+          color: context.forest.text,
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(tourHubPath(widget.tourId));
+            }
+          },
+        ),
         elevation: 0,
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
@@ -530,12 +543,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             leading:
                 Icon(Icons.savings_outlined, color: context.forest.accentText),
             title: Text(
-                l10n.translate(group.isFamily
+                l10n.translate(group.isHousehold
                     ? 'fund_budget_cta_family'
                     : 'fund_budget_cta'),
                 style: TextStyle(color: context.forest.text)),
             subtitle: Text(
-                l10n.translate(group.isFamily
+                l10n.translate(group.isHousehold
                     ? 'fund_budget_cta_help_family'
                     : 'fund_budget_cta_help'),
                 style: TextStyle(color: context.forest.text54, fontSize: 12)),
@@ -2804,21 +2817,27 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.qr_code_2_rounded, size: 18),
-                  label: const Text('Generate Bangla QR',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                      l10n.locale.languageCode == 'bn'
+                          ? 'বাংলা কিউআর তৈরি করুন'
+                          : 'Generate Bangla QR',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   onPressed: () {
                     Navigator.of(ctx).pop();
                     final parsedTaka =
                         int.tryParse(amountTaka.replaceAll(',', ''));
+                    final rawAccount =
+                        (s.toId != null && s.toId!.isNotEmpty) ? s.toId! : '';
                     showBanglaQrSheet(
                       context,
                       payload: BanglaQrPayload(
-                        accountNumber: (s.toId != null && s.toId!.isNotEmpty)
-                            ? s.toId!
-                            : recipientName,
+                        accountNumber:
+                            rawAccount.contains('@') ? '' : rawAccount,
                         payeeName: recipientName,
                         amountTaka: parsedTaka,
-                        reference: 'Settlement',
+                        reference: l10n.locale.languageCode == 'bn'
+                            ? 'হিসাব মেলানো'
+                            : 'Settlement',
                       ),
                     );
                   },

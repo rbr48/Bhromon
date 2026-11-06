@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
@@ -10,6 +11,7 @@ import '../../domain/models/tour_activity_models.dart';
 export '../../domain/models/tour_activity_models.dart'
     show checklistDefaultItems;
 import '../../domain/models/tour_group.dart';
+import '../tour_routes.dart';
 
 class TourChecklistScreen extends StatefulWidget {
   final String tourId;
@@ -110,6 +112,16 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     return Scaffold(
       backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
+        leading: BackButton(
+          color: context.forest.text,
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(tourHubPath(widget.tourId));
+            }
+          },
+        ),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(
@@ -176,7 +188,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                                 color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13)),
-                        Text('$packedCount / $totalCount',
+                        Text(
+                            '${l10n.number(packedCount)} / ${l10n.number(totalCount)}',
                             style: TextStyle(
                                 color: context.forest.accentText,
                                 fontWeight: FontWeight.bold)),

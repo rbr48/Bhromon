@@ -169,12 +169,16 @@ class MembersStrip extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  RoleCountChip(
-                      label: l10n.translate('group_role_owner'), count: owners),
-                  RoleCountChip(
-                      label: l10n.translate('hub_role_admin'), count: admins),
-                  RoleCountChip(
-                      label: l10n.translate('hub_role_member'), count: plain),
+                  if (owners > 0)
+                    RoleCountChip(
+                        label: l10n.translate('group_role_owner'),
+                        count: owners),
+                  if (admins > 0)
+                    RoleCountChip(
+                        label: l10n.translate('hub_role_admin'), count: admins),
+                  if (plain > 0 || (owners == 0 && admins == 0))
+                    RoleCountChip(
+                        label: l10n.translate('hub_role_member'), count: plain),
                 ],
               ),
             ],

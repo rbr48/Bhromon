@@ -91,6 +91,7 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isBn = Localizations.maybeLocaleOf(context)?.languageCode == 'bn';
     return Container(
       padding: EdgeInsets.only(
         top: 20,
@@ -117,25 +118,27 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Create Online Game Table',
-            style: TextStyle(
+          Text(
+            isBn ? 'অনলাইন গেম টেবিল তৈরি করুন' : 'Create Online Game Table',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Host a match for group members with live voice lounge.',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+          Text(
+            isBn
+                ? 'গ্রুপ সদস্যদের সাথে লাইভ ভয়েস লাউঞ্জসহ খেলুন।'
+                : 'Host a match for group members with live voice lounge.',
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 16),
 
           // Game selection chips
-          const Text(
-            'SELECT GAME',
-            style: TextStyle(
+          Text(
+            isBn ? 'গেম নির্বাচন করুন' : 'SELECT GAME',
+            style: const TextStyle(
               color: Colors.white54,
               fontSize: 11,
               fontWeight: FontWeight.bold,
@@ -151,7 +154,7 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: Text(type.label),
+                    label: Text(type.localizedLabel(isBn)),
                     selected: isSelected,
                     selectedColor: AppColors.mintGreen,
                     backgroundColor: const Color(0xFF1E3526),
@@ -168,7 +171,8 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
                       if (val) {
                         setState(() {
                           _selectedGame = type;
-                          _nameController.text = '${type.label} Match';
+                          _nameController.text =
+                              '${type.localizedLabel(isBn)} ${isBn ? "ম্যাচ" : "Match"}';
                         });
                       }
                     },
@@ -185,7 +189,7 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
             controller: _nameController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              labelText: 'Table Name',
+              labelText: isBn ? 'টেবিলের নাম' : 'Table Name',
               labelStyle: const TextStyle(color: Colors.white70),
               filled: true,
               fillColor: const Color(0xFF1A2F22),
@@ -208,13 +212,15 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
 
           // Auto-fill bots toggle
           SwitchListTile(
-            title: const Text(
-              'Auto-fill with AI Bots',
-              style: TextStyle(color: Colors.white, fontSize: 14),
+            title: Text(
+              isBn ? 'এআই বট দিয়ে আসন পূর্ণ করুন' : 'Auto-fill with AI Bots',
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
-            subtitle: const Text(
-              'Fill any empty seats with bots automatically on launch',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+            subtitle: Text(
+              isBn
+                  ? 'খেলা শুরুর সময় খালি থাকা আসনগুলোতে স্বয়ংক্রিয়ভাবে বট যুক্ত হবে'
+                  : 'Fill any empty seats with bots automatically on launch',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
             value: _autoFillBots,
             activeThumbColor: AppColors.mintGreen,
@@ -224,23 +230,25 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
 
           // Tour Tournament Match toggle
           SwitchListTile(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.emoji_events_rounded,
+                const Icon(Icons.emoji_events_rounded,
                     color: AppColors.gold, size: 18),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
-                  'Tour Tournament Match',
-                  style: TextStyle(
+                  isBn ? 'ট্যুর টুর্নামেন্ট ম্যাচ' : 'Tour Tournament Match',
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w600),
                 ),
               ],
             ),
-            subtitle: const Text(
-              'Feature on Tour Leaderboard & award tournament trophies',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+            subtitle: Text(
+              isBn
+                  ? 'গ্রুপ লিডারবোর্ডে পয়েন্ট যোগ হবে এবং টুর্নামেন্ট ট্রফি প্রদান করা হবে'
+                  : 'Feature on Tour Leaderboard & award tournament trophies',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
             value: _isTournament,
             activeThumbColor: AppColors.gold,
@@ -271,9 +279,12 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
                       color: Color(0xFF0F1E14),
                     ),
                   )
-                : const Text(
-                    'Create Table & Enter Lobby',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                : Text(
+                    isBn
+                        ? 'টেবিল তৈরি ও লবিতে প্রবেশ'
+                        : 'Create Table & Enter Lobby',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
           ),
         ],

@@ -1197,170 +1197,181 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   /// The hub's app bar: the logo and title, and the menu to add or join a group.
   PreferredSizeWidget _hubAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: context.forest.background,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF1B4332),
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 930),
+          child: AppBar(
+            backgroundColor: context.forest.background,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF1B4332),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/logo.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.explore,
+                        color: context.forest.accentText,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Bhromon',
+                      style: TextStyle(
+                        color: context.forest.text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      context.l10n.translate('hub_title'),
+                      style: TextStyle(
+                        color: context.forest.accentText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.explore,
-                  color: context.forest.accentText,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Bhromon',
-                style: TextStyle(
-                  color: context.forest.text,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                context.l10n.translate('hub_title'),
-                style: TextStyle(
-                  color: context.forest.accentText,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+            actions: [
+              PopupMenuButton<String>(
+                tooltip: context.l10n.translate('hub_add_menu'),
+                icon: const Icon(Icons.add_circle_outline,
+                    color: AppColors.midGreen),
+                color: context.forest.dialog,
+                onSelected: (choice) {
+                  switch (choice) {
+                    case 'family':
+                      _showCreateFamilyDialog(context);
+                    case 'friends':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.friendsPreset);
+                    case 'office':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.officePreset);
+                    case 'campus':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.campusPreset);
+                    case 'mess':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.messPreset);
+                    case 'society':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.societyPreset);
+                    case 'samity':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.samityPreset);
+                    case 'school':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.schoolPreset);
+                    case 'sports':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.sportsPreset);
+                    case 'study':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.studyPreset);
+                    case 'committee':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.committeePreset);
+                    case 'trip':
+                      _showCreateGroupDialog(context);
+                    case 'join':
+                      _showJoinGroupDialog(context);
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'family',
+                    child: _menuRow(context, Icons.family_restroom_rounded,
+                        context.l10n.translate('hub_create_family')),
+                  ),
+                  PopupMenuItem(
+                    value: 'friends',
+                    child: _menuRow(context, Icons.people_alt_rounded,
+                        context.l10n.translate('hub_create_friends')),
+                  ),
+                  PopupMenuItem(
+                    value: 'office',
+                    child: _menuRow(context, Icons.work_rounded,
+                        context.l10n.translate('hub_create_office')),
+                  ),
+                  PopupMenuItem(
+                    value: 'campus',
+                    child: _menuRow(context, Icons.school_rounded,
+                        context.l10n.translate('hub_create_campus')),
+                  ),
+                  PopupMenuItem(
+                    value: 'mess',
+                    child: _menuRow(context, Icons.kitchen_rounded,
+                        context.l10n.translate('hub_create_mess')),
+                  ),
+                  PopupMenuItem(
+                    value: 'society',
+                    child: _menuRow(context, Icons.apartment_rounded,
+                        context.l10n.translate('hub_create_society')),
+                  ),
+                  PopupMenuItem(
+                    value: 'samity',
+                    child: _menuRow(context, Icons.savings_rounded,
+                        context.l10n.translate('hub_create_samity')),
+                  ),
+                  PopupMenuItem(
+                    value: 'school',
+                    child: _menuRow(context, Icons.menu_book_rounded,
+                        context.l10n.translate('hub_create_school')),
+                  ),
+                  PopupMenuItem(
+                    value: 'sports',
+                    child: _menuRow(context, Icons.sports_soccer_rounded,
+                        context.l10n.translate('hub_create_sports')),
+                  ),
+                  PopupMenuItem(
+                    value: 'study',
+                    child: _menuRow(context, Icons.local_library_rounded,
+                        context.l10n.translate('hub_create_study')),
+                  ),
+                  PopupMenuItem(
+                    value: 'committee',
+                    child: _menuRow(context, Icons.how_to_vote_rounded,
+                        context.l10n.translate('hub_create_committee')),
+                  ),
+                  PopupMenuItem(
+                    value: 'trip',
+                    child: _menuRow(context, Icons.card_travel_rounded,
+                        context.l10n.translate('hub_create_new_tour')),
+                  ),
+                  PopupMenuItem(
+                    value: 'join',
+                    child: _menuRow(context, Icons.group_add_outlined,
+                        context.l10n.translate('hub_join_with_code')),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
-      actions: [
-        PopupMenuButton<String>(
-          tooltip: context.l10n.translate('hub_add_menu'),
-          icon: const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
-          color: context.forest.dialog,
-          onSelected: (choice) {
-            switch (choice) {
-              case 'family':
-                _showCreateFamilyDialog(context);
-              case 'friends':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.friendsPreset);
-              case 'office':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.officePreset);
-              case 'campus':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.campusPreset);
-              case 'mess':
-                _showCreateFamilyDialog(context, preset: TourGroup.messPreset);
-              case 'society':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.societyPreset);
-              case 'samity':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.samityPreset);
-              case 'school':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.schoolPreset);
-              case 'sports':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.sportsPreset);
-              case 'study':
-                _showCreateFamilyDialog(context, preset: TourGroup.studyPreset);
-              case 'committee':
-                _showCreateFamilyDialog(context,
-                    preset: TourGroup.committeePreset);
-              case 'trip':
-                _showCreateGroupDialog(context);
-              case 'join':
-                _showJoinGroupDialog(context);
-            }
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              value: 'family',
-              child: _menuRow(context, Icons.family_restroom_rounded,
-                  context.l10n.translate('hub_create_family')),
-            ),
-            PopupMenuItem(
-              value: 'friends',
-              child: _menuRow(context, Icons.people_alt_rounded,
-                  context.l10n.translate('hub_create_friends')),
-            ),
-            PopupMenuItem(
-              value: 'office',
-              child: _menuRow(context, Icons.work_rounded,
-                  context.l10n.translate('hub_create_office')),
-            ),
-            PopupMenuItem(
-              value: 'campus',
-              child: _menuRow(context, Icons.school_rounded,
-                  context.l10n.translate('hub_create_campus')),
-            ),
-            PopupMenuItem(
-              value: 'mess',
-              child: _menuRow(context, Icons.kitchen_rounded,
-                  context.l10n.translate('hub_create_mess')),
-            ),
-            PopupMenuItem(
-              value: 'society',
-              child: _menuRow(context, Icons.apartment_rounded,
-                  context.l10n.translate('hub_create_society')),
-            ),
-            PopupMenuItem(
-              value: 'samity',
-              child: _menuRow(context, Icons.savings_rounded,
-                  context.l10n.translate('hub_create_samity')),
-            ),
-            PopupMenuItem(
-              value: 'school',
-              child: _menuRow(context, Icons.menu_book_rounded,
-                  context.l10n.translate('hub_create_school')),
-            ),
-            PopupMenuItem(
-              value: 'sports',
-              child: _menuRow(context, Icons.sports_soccer_rounded,
-                  context.l10n.translate('hub_create_sports')),
-            ),
-            PopupMenuItem(
-              value: 'study',
-              child: _menuRow(context, Icons.local_library_rounded,
-                  context.l10n.translate('hub_create_study')),
-            ),
-            PopupMenuItem(
-              value: 'committee',
-              child: _menuRow(context, Icons.how_to_vote_rounded,
-                  context.l10n.translate('hub_create_committee')),
-            ),
-            PopupMenuItem(
-              value: 'trip',
-              child: _menuRow(context, Icons.card_travel_rounded,
-                  context.l10n.translate('hub_create_new_tour')),
-            ),
-            PopupMenuItem(
-              value: 'join',
-              child: _menuRow(context, Icons.group_add_outlined,
-                  context.l10n.translate('hub_join_with_code')),
-            ),
-          ],
         ),
-      ],
+      ),
     );
   }
 

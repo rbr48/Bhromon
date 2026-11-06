@@ -374,9 +374,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         ),
                       ),
 
-                      // WhatsApp tabs (All, Unread, Favourites, Groups)
+                      // Filter tabs (All, Unread, Favourites, Groups)
                       Container(
-                        color: context.chat.wallpaper,
+                        decoration: BoxDecoration(
+                          color: context.chat.wallpaper,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: context.chat.divider12,
+                              width: 1,
+                            ),
+                          ),
+                        ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         child: SingleChildScrollView(
@@ -855,16 +863,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }
     if (!_toursLoaded) {
       // Calls are filtered by tour, so wait for the tours before showing any.
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF00A884)),
+      return Center(
+        child: CircularProgressIndicator(color: context.chat.accent),
       );
     }
     return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
       stream: _callsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF00A884)),
+          return Center(
+            child: CircularProgressIndicator(color: context.chat.accent),
           );
         }
         if (snapshot.hasError) {
@@ -1027,7 +1035,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   Widget _buildSectionTab(String label, int index) {
     final selected = _bottomNavIndex == index;
-    final color = selected ? const Color(0xFF00A884) : context.chat.text60;
+    final color = selected ? context.chat.accent : context.chat.text60;
     return InkWell(
       onTap: () {
         if (_bottomNavIndex != index) {
@@ -1046,7 +1054,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: selected ? const Color(0xFF00A884) : Colors.transparent,
+              color: selected ? context.chat.accent : Colors.transparent,
               width: 3,
             ),
           ),
@@ -1102,7 +1110,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF00A884).withValues(alpha: 0.3)
+                ? context.chat.accent.withValues(alpha: 0.3)
                 : Colors.transparent,
             width: 1,
           ),
@@ -1771,6 +1779,18 @@ class ChatTile extends StatelessWidget {
     );
   }
 
+  static Color _avatarColor(String name) {
+    const colors = [
+      Color(0xFF2D6A4F),
+      Color(0xFF1B4332),
+      Color(0xFF20503B),
+      Color(0xFF386641),
+      Color(0xFF285A48),
+      Color(0xFF1E4D3B),
+    ];
+    return colors[name.hashCode.abs() % colors.length];
+  }
+
   Widget _buildTile(
     BuildContext context, {
     required String displayName,
@@ -1778,6 +1798,10 @@ class ChatTile extends StatelessWidget {
     required String initials,
   }) {
     final bool isMe = lastMessageSenderId == currentUid;
+    final isCallMsg = lastMessage.startsWith('📞') ||
+        lastMessage.startsWith('📹') ||
+        lastMessage.toLowerCase().contains('call') ||
+        lastMessage.contains('কল');
     String timeStr = '';
     if (lastTime != null) {
       timeStr = _chatTimeLabel(lastTime!.toDate());
@@ -1787,7 +1811,9 @@ class ChatTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: context.chat.outgoing,
+        backgroundColor: (avatarUrl == null || avatarUrl.isEmpty)
+            ? _avatarColor(displayName)
+            : context.chat.outgoing,
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
             ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
                 context.decodeWidth(48))
@@ -1809,7 +1835,7 @@ class ChatTile extends StatelessWidget {
       ),
       subtitle: Row(
         children: [
-          if (isMe && lastMessage.isNotEmpty) ...[
+          if (isMe && lastMessage.isNotEmpty && !isCallMsg) ...[
             Icon(
               Icons.done_all,
               size: 16,
@@ -1845,8 +1871,8 @@ class ChatTile extends StatelessWidget {
             style: TextStyle(
               color: unreadCount > 0
                   ? context.chat.accentText
-                  : context.chat.text30,
-              fontSize: 10,
+                  : context.chat.text54,
+              fontSize: 11,
               fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),
           ),

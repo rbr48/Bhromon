@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'hotel_room_map_screen.dart';
 import 'transport_screen.dart';
@@ -6,6 +7,7 @@ import 'luggage_tracker_screen.dart';
 import 'holiday_calendar_screen.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../tour_routes.dart';
 
 class TourLogisticsHubScreen extends StatefulWidget {
   final String tourId;
@@ -37,6 +39,16 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
     return Scaffold(
       backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
+        leading: BackButton(
+          color: context.forest.text,
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(tourHubPath(widget.tourId));
+            }
+          },
+        ),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(

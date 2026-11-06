@@ -112,7 +112,7 @@ class VehicleSeatMap extends StatelessWidget {
               for (final b in r.blocks) {
                 w += (b.cells.length - 1).clamp(0, 99) * _gap;
                 for (final c in b.cells) {
-                  w += c.kind == SeatCellKind.berth ? 64 : 56;
+                  w += c.kind == SeatCellKind.berth ? 72 : 62;
                 }
                 if (b.title != null) w += 14; // the cabin box's padding
               }
@@ -233,8 +233,8 @@ class VehicleSeatMap extends StatelessWidget {
       return Tooltip(
         message: l10n.translate(driver ? 'tour_driver' : 'tour_door'),
         child: Container(
-          width: 56,
-          height: 44,
+          width: 62,
+          height: 50,
           decoration: BoxDecoration(
             color: Colors.black26,
             borderRadius: BorderRadius.circular(10),
@@ -242,7 +242,7 @@ class VehicleSeatMap extends StatelessWidget {
           child: Icon(
               driver ? Icons.sports_motorsports_rounded : Icons.sensor_door,
               color: Colors.white38,
-              size: 18),
+              size: 20),
         ),
       );
     }
@@ -270,17 +270,15 @@ class VehicleSeatMap extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: () => onSeatTap(id),
         child: Container(
-          width: berth ? 64 : 56,
-          height: berth ? 52 : 44,
+          width: berth ? 72 : 62,
+          height: berth ? 58 : 50,
           padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           decoration: BoxDecoration(
             color: color.withValues(alpha: occupied ? 0.9 : 1),
             borderRadius: BorderRadius.circular(berth ? 8 : 10),
             border: Border.all(
-              color: cell.isWindow
-                  ? SeatColors.window.withValues(alpha: 0.7)
-                  : Colors.white10,
-              width: cell.isWindow ? 1.4 : 1,
+              color: cell.isWindow ? SeatColors.window : Colors.white10,
+              width: cell.isWindow ? 1.8 : 1,
             ),
           ),
           child: Column(
@@ -293,7 +291,7 @@ class VehicleSeatMap extends StatelessWidget {
                       berth
                           ? Icons.bed_rounded
                           : Icons.airline_seat_recline_normal_rounded,
-                      size: 11,
+                      size: 13,
                       color: mine ? AppColors.darkGreen : Colors.white54),
                   const SizedBox(width: 2),
                   Flexible(
@@ -302,8 +300,13 @@ class VehicleSeatMap extends StatelessWidget {
                         style: TextStyle(
                             color: mine ? AppColors.darkGreen : Colors.white,
                             fontWeight: FontWeight.w800,
-                            fontSize: 10)),
+                            fontSize: 11)),
                   ),
+                  if (cell.isWindow) ...[
+                    const SizedBox(width: 2),
+                    const Icon(Icons.crop_square_rounded,
+                        size: 9, color: SeatColors.window),
+                  ],
                 ],
               ),
               const SizedBox(height: 2),
@@ -317,7 +320,7 @@ class VehicleSeatMap extends StatelessWidget {
                       : occupied
                           ? Colors.white
                           : Colors.white38,
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: occupied ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),

@@ -426,7 +426,7 @@ class TranslationKeys {
     },
     'bn': {
       // ── Chat list ──────────────────────────────────────────────────────────
-      'chats_title': 'Bhromon চ্যাট',
+      'chats_title': 'ভ্রমণ চ্যাট',
       'chat_search_chats_hint': 'চ্যাট খুঁজুন...',
       'chat_open_file_failed': 'ফাইলটি খোলা যায়নি: {error}',
       'chat_you': 'আপনি',

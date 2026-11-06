@@ -382,7 +382,9 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Bangla QR & MFS Payment',
+              Localizations.maybeLocaleOf(context)?.languageCode == 'bn'
+                  ? 'বাংলা কিউআর ও এমএফএস পেমেন্ট'
+                  : 'Bangla QR & MFS Payment',
               style: TextStyle(
                 color: f.text,
                 fontSize: 17,
@@ -391,7 +393,9 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Scan with bKash, Nagad, Rocket, or any Bangladeshi bank app',
+              Localizations.maybeLocaleOf(context)?.languageCode == 'bn'
+                  ? 'বিকাশ, নগদ, রকেট বা যেকোনো বাংলাদেশি ব্যাংক অ্যাপ দিয়ে স্ক্যান করুন'
+                  : 'Scan with bKash, Nagad, Rocket, or any Bangladeshi bank app',
               style: TextStyle(color: f.text60, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -704,8 +708,13 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Payee',
-                          style: TextStyle(color: f.text70, fontSize: 13)),
+                      Text(
+                        Localizations.maybeLocaleOf(context)?.languageCode ==
+                                'bn'
+                            ? 'প্রাপক'
+                            : 'Payee',
+                        style: TextStyle(color: f.text70, fontSize: 13),
+                      ),
                       Text(
                         _payload.payeeName,
                         style: TextStyle(
@@ -719,8 +728,13 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Account (${_payload.provider.displayName})',
-                          style: TextStyle(color: f.text70, fontSize: 13)),
+                      Text(
+                        Localizations.maybeLocaleOf(context)?.languageCode ==
+                                'bn'
+                            ? 'অ্যাকাউন্ট (${_payload.provider.displayName})'
+                            : 'Account (${_payload.provider.displayName})',
+                        style: TextStyle(color: f.text70, fontSize: 13),
+                      ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -736,10 +750,15 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             onTap: () {
                               Clipboard.setData(
                                   ClipboardData(text: _payload.accountNumber));
+                              final isBn = Localizations.maybeLocaleOf(context)
+                                      ?.languageCode ==
+                                  'bn';
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Account number copied'),
-                                  duration: Duration(seconds: 1),
+                                SnackBar(
+                                  content: Text(isBn
+                                      ? 'অ্যাকাউন্ট নম্বর কপি করা হয়েছে'
+                                      : 'Account number copied'),
+                                  duration: const Duration(seconds: 1),
                                 ),
                               );
                             },
@@ -756,10 +775,19 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Reference',
-                            style: TextStyle(color: f.text70, fontSize: 13)),
                         Text(
-                          _payload.reference!,
+                          Localizations.maybeLocaleOf(context)?.languageCode ==
+                                  'bn'
+                              ? 'রেফারেন্স'
+                              : 'Reference',
+                          style: TextStyle(color: f.text70, fontSize: 13),
+                        ),
+                        Text(
+                          (Localizations.maybeLocaleOf(context)?.languageCode ==
+                                      'bn' &&
+                                  _payload.reference == 'Settlement')
+                              ? 'হিসাব মেলানো'
+                              : _payload.reference!,
                           style: TextStyle(color: f.text60, fontSize: 12),
                         ),
                       ],
