@@ -212,8 +212,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           await (widget.readProfileData ?? _readProfileData)(profile.uid);
 
       final isOwn = currentUid.isNotEmpty && profile.uid == currentUid;
-      final fallbackAvatar =
-          isOwn ? FirebaseAuth.instance.currentUser?.photoURL : null;
+      String? fallbackAvatar;
+      if (isOwn) {
+        try {
+          fallbackAvatar = FirebaseAuth.instance.currentUser?.photoURL;
+        } catch (_) {}
+      }
       final effectiveAvatar = profile.avatarUrl?.isNotEmpty == true
           ? profile.avatarUrl
           : ((data?['avatarUrl'] as String?)?.isNotEmpty == true
