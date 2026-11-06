@@ -111,7 +111,11 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: Center(
-              child: BanglaQrView(payload: payload, size: 150),
+              child: BanglaQrView(
+                payload: payload,
+                size: 150,
+                isPersonal: false,
+              ),
             ),
           ),
         ),
