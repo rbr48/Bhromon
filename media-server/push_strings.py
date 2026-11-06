@@ -109,9 +109,17 @@ def localized_number(language: Optional[str], number: int) -> str:
     return text
 
 
+# A chat push carries at most this many characters of the message, as channel pushes
+# do. FCM rejects a message over 4 KB, and the body is copied into three notification
+# blocks, so a long message would never reach a phone whose app is closed.
+CHAT_PUSH_TEXT_LIMIT = 120
+
+
 def chat_preview(language: Optional[str], text: Optional[str], message_type: Optional[str]) -> str:
-    """The body of a chat push: the message text, or what was sent."""
+    """The body of a chat push: the message text, cut short, or what was sent."""
     if text:
+        if len(text) > CHAT_PUSH_TEXT_LIMIT:
+            return text[: CHAT_PUSH_TEXT_LIMIT - 1] + "…"
         return text
     if message_type and message_type != "text":
         return push_text(language, "vps.sent", type=message_type)

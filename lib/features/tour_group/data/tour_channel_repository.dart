@@ -620,9 +620,6 @@ class TourChannelRepository {
     if (trimmed.isEmpty && !hasAttachments) {
       throw const TourAccessException('বার্তা খালি রাখা যাবে না।');
     }
-    if (trimmed.length > kChannelMessageMaxLength) {
-      throw const TourAccessException('বার্তা ১০০০ অক্ষরের বেশি হতে পারবে না।');
-    }
     return trimmed;
   }
 

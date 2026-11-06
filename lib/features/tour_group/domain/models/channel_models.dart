@@ -216,7 +216,8 @@ List<String> builtInChannelIdsFor({
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }
 
-/// Longest text a message may carry.
+/// Longest text a message may carry (deprecated: channel message text is unbounded).
+@Deprecated('Channel messages no longer have a maximum character limit')
 const int kChannelMessageMaxLength = 1000;
 
 /// Most photos one message can carry. A video is sent on its own.
