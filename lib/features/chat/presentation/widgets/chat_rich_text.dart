@@ -271,8 +271,8 @@ class _ChatRichTextState extends State<ChatRichText> {
       fontSize: 15.5,
       height: 1.4,
       letterSpacing: 0.05,
-      fontFamily: 'NotoSansBengali',
-      fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
+      fontFamily: 'HindSiliguri',
+      fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
     );
     final base = widget.baseStyle != null
         ? defaultStyle.merge(widget.baseStyle)
