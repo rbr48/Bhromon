@@ -216,7 +216,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       if (isOwn) {
         try {
           fallbackAvatar = FirebaseAuth.instance.currentUser?.photoURL;
-        } catch (_) {}
+        } catch (e, st) {
+          // Firebase is not initialized in widget test environment.
+          logSkipped(e, st);
+        }
       }
       final effectiveAvatar = profile.avatarUrl?.isNotEmpty == true
           ? profile.avatarUrl
