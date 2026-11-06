@@ -47,21 +47,17 @@ class _MessHomeCardState extends State<MessHomeCard> {
     super.initState();
     final id = widget.group.id;
     final now = DateTime.now();
-    try {
-      _subs.add(_repository
+    _subs.addAll([
+      _repository
           .watchMealsForMonth(id, now)
-          .listen((v) => _update(() => _meals = v), onError: (Object _) {}));
-    } catch (_) {}
-    try {
-      _subs.add(_repository
+          .listen((v) => _update(() => _meals = v), onError: (Object _) {}),
+      _repository
           .watchFamilyTasks(id)
-          .listen((v) => _update(() => _tasks = v), onError: (Object _) {}));
-    } catch (_) {}
-    try {
-      _subs.add(_repository
+          .listen((v) => _update(() => _tasks = v), onError: (Object _) {}),
+      _repository
           .watchNotices(id)
-          .listen((v) => _update(() => _notices = v), onError: (Object _) {}));
-    } catch (_) {}
+          .listen((v) => _update(() => _notices = v), onError: (Object _) {}),
+    ]);
     _dayTick = Timer.periodic(const Duration(minutes: 10), (_) {
       if (mounted) setState(() {});
     });

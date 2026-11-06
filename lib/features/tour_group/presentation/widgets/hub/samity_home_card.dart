@@ -46,26 +46,20 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
   void initState() {
     super.initState();
     final id = widget.group.id;
-    try {
-      _subs.add(_repository
+    _subs.addAll([
+      _repository
           .watchSamityPayments(id)
-          .listen((v) => _update(() => _payments = v), onError: (Object _) {}));
-    } catch (_) {}
-    try {
-      _subs.add(_repository
+          .listen((v) => _update(() => _payments = v), onError: (Object _) {}),
+      _repository
           .watchSamityPayouts(id)
-          .listen((v) => _update(() => _payouts = v), onError: (Object _) {}));
-    } catch (_) {}
-    try {
-      _subs.add(_repository
+          .listen((v) => _update(() => _payouts = v), onError: (Object _) {}),
+      _repository
           .watchMembers(id)
-          .listen((v) => _update(() => _members = v), onError: (Object _) {}));
-    } catch (_) {}
-    try {
-      _subs.add(_repository
+          .listen((v) => _update(() => _members = v), onError: (Object _) {}),
+      _repository
           .watchNotices(id)
-          .listen((v) => _update(() => _notices = v), onError: (Object _) {}));
-    } catch (_) {}
+          .listen((v) => _update(() => _notices = v), onError: (Object _) {}),
+    ]);
     _dayTick = Timer.periodic(const Duration(minutes: 10), (_) {
       if (mounted) setState(() {});
     });

@@ -1729,18 +1729,28 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 Icons.receipt_long_rounded,
                 AppColors.mintGreen,
                 l10n.translate('fund_add_expense'),
-                l10n.translate(group?.isOffice == true
-                    ? 'office_add_expense_sub'
-                    : group?.isCampus == true
-                        ? 'campus_add_expense_sub'
-                        : group?.isMess == true
-                            ? 'mess_add_expense_sub'
-                            : group?.isSociety == true
-                                ? 'society_add_expense_sub'
-                                : group?.isSamity == true
-                                    ? 'samity_add_expense_sub'
-                                    : 'fund_add_expense_sub'),
+                l10n.translate(group?.isFriends == true
+                    ? 'friends_add_expense_sub'
+                    : group?.isOffice == true
+                        ? 'office_add_expense_sub'
+                        : group?.isCampus == true
+                            ? 'campus_add_expense_sub'
+                            : group?.isMess == true
+                                ? 'mess_add_expense_sub'
+                                : group?.isSociety == true
+                                    ? 'society_add_expense_sub'
+                                    : group?.isSamity == true
+                                        ? 'samity_add_expense_sub'
+                                        : 'fund_add_expense_sub'),
                 _editExpense),
+            if (group?.isFriends == true)
+              item(
+                  Icons.restaurant_rounded,
+                  AppColors.gold,
+                  l10n.translate('friends_quick_dining'),
+                  l10n.translate('friends_quick_dining_sub'),
+                  () => _editExpense(null, false,
+                      l10n.translate('friends_quick_dining'), 'Dining')),
             if (group?.isOffice == true)
               item(
                   Icons.restaurant_rounded,

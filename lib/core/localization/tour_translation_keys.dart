@@ -2072,6 +2072,10 @@ class TourTranslationKeys {
       'friends_home_title': 'Friends & Hangouts',
       'friends_home_hangout_btn': 'Split Adda / Dining',
       'friends_home_plans_btn': 'Hangout Plans',
+      'friends_add_expense_sub':
+          'Hangouts, dining, coffee, snacks and shared bills',
+      'friends_quick_dining': 'Dining & Hangout split',
+      'friends_quick_dining_sub': 'Fast split for dinner, coffee, or hangout',
       'hub_edit_circle_title': 'Edit circle details',
       'hub_edit_group_name': 'Edit group name',
       'hub_group_name_updated': 'Group details updated.',
@@ -4585,6 +4589,10 @@ class TourTranslationKeys {
       'friends_home_title': 'আড্ডা ও ফ্রেন্ডস কর্নার',
       'friends_home_hangout_btn': 'আড্ডা / ডাইনিং স্প্লিট',
       'friends_home_plans_btn': 'আড্ডার প্ল্যান',
+      'friends_add_expense_sub':
+          'আড্ডা, খাওয়া-দাওয়া, কফি, স্ন্যাক্স ও বিলের হিসাব',
+      'friends_quick_dining': 'খাওয়া-দাওয়া ও আড্ডার হিসাব',
+      'friends_quick_dining_sub': 'ডিনার, কফি বা আড্ডার দ্রুত সমান ভাগ',
       'hub_edit_circle_title': 'সার্কেল তথ্য পরিবর্তন',
       'hub_edit_group_name': 'গ্রুপের নাম পরিবর্তন',
       'hub_group_name_updated': 'গ্রুপের তথ্য আপডেট হয়েছে।',
