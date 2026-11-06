@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -210,9 +211,42 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       final data =
           await (widget.readProfileData ?? _readProfileData)(profile.uid);
 
+      final isOwn = currentUid.isNotEmpty && profile.uid == currentUid;
+      String? fallbackAvatar;
+      if (isOwn) {
+        try {
+          fallbackAvatar = FirebaseAuth.instance.currentUser?.photoURL;
+        } catch (e, st) {
+          // Firebase is not initialized in widget test environment.
+          logSkipped(e, st);
+        }
+      }
+      final effectiveAvatar = profile.avatarUrl?.isNotEmpty == true
+          ? profile.avatarUrl
+          : ((data?['avatarUrl'] as String?)?.isNotEmpty == true
+              ? (data?['avatarUrl'] as String)
+              : ((data?['photoUrl'] as String?)?.isNotEmpty == true
+                  ? (data?['photoUrl'] as String)
+                  : ((data?['photoURL'] as String?)?.isNotEmpty == true
+                      ? (data?['photoURL'] as String)
+                      : fallbackAvatar)));
+
+      final effectiveCover = profile.coverUrl?.isNotEmpty == true
+          ? profile.coverUrl
+          : ((data?['coverUrl'] as String?)?.isNotEmpty == true
+              ? (data?['coverUrl'] as String)
+              : ((data?['coverPhotoUrl'] as String?)?.isNotEmpty == true
+                  ? (data?['coverPhotoUrl'] as String)
+                  : (data?['cover_url'] as String?)));
+
+      final mergedProfile = profile.copyWith(
+        avatarUrl: effectiveAvatar,
+        coverUrl: effectiveCover,
+      );
+
       if (mounted) {
         setState(() {
-          _profile = profile;
+          _profile = mergedProfile;
           _rawProfileData = data;
           _bloodGroup = data?['bloodGroup'] as String?;
           _statusNote =
@@ -677,7 +711,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: 190,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          errorBuilder: (_, __, ___) => Image.network(
+                            profile.coverUrl!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 190,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          ),
                         )
                       : CachedNetworkImage(
                           imageUrl: signedMediaUrl(profile.coverUrl!),
@@ -786,8 +827,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                     width: 92,
                                     height: 92,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        _buildAvatarFallback(profile),
+                                    errorBuilder: (_, __, ___) => Image.network(
+                                      profile.avatarUrl!,
+                                      width: 92,
+                                      height: 92,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          _buildAvatarFallback(profile),
+                                    ),
                                   )
                                 : CachedNetworkImage(
                                     imageUrl:
@@ -3386,6 +3433,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                 .collection('explorer_profiles')
                                                 .doc(profile.uid)
                                                 .set({
+                                              'avatarUrl': finalAvatarUrl,
+                                              'photoUrl': finalAvatarUrl,
+                                              'coverUrl': finalCoverUrl,
+                                              'coverPhotoUrl': finalCoverUrl,
                                               'bioBangla': bioBanglaController
                                                   .text
                                                   .trim(),

@@ -26,6 +26,9 @@ class ChatRichText extends StatefulWidget {
   final Set<int>? revealed;
   final ValueChanged<int>? onSpoiler;
   final bool isMine;
+  final String? tableTitle;
+  final VoidCallback? onPinNotice;
+  final VoidCallback? onImportLedger;
 
   const ChatRichText({
     super.key,
@@ -34,6 +37,9 @@ class ChatRichText extends StatefulWidget {
     this.revealed,
     this.onSpoiler,
     this.isMine = false,
+    this.tableTitle,
+    this.onPinNotice,
+    this.onImportLedger,
   });
 
   @override
@@ -294,6 +300,9 @@ class _ChatRichTextState extends State<ChatRichText> {
               revealed: _internalRevealed,
               onSpoiler: _handleSpoiler,
               isMine: widget.isMine,
+              title: widget.tableTitle,
+              onPinNotice: widget.onPinNotice,
+              onImportLedger: widget.onImportLedger,
             )
           else if (block is ChatCodeBlock)
             ChatCodeBlockWidget(
