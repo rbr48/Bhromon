@@ -2867,8 +2867,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 if (lastSeen == null &&
                                     _allMessages.isNotEmpty) {
                                   for (final doc in _allMessages) {
-                                    final mData = doc.data()
-                                        as Map<String, dynamic>?;
+                                    final mData =
+                                        doc.data() as Map<String, dynamic>?;
                                     if (mData?['senderId'] ==
                                         resolvedOtherUid) {
                                       final t = mData?['timestamp'];
