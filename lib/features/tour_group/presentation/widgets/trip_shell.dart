@@ -160,7 +160,7 @@ class TripShell extends StatelessWidget {
 int tripTabFor(String location) {
   if (location.contains('/channels')) return 1;
   if (location.contains('/feed')) return 2;
-  if (location.contains('/chats')) return 3;
+  if (location.contains('/chats') || location.startsWith('/chat/')) return 3;
   if (location.contains('/profile')) return 4;
   return 0;
 }

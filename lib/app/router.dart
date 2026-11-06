@@ -128,7 +128,7 @@ class AppRouter {
       GoRoute(
         path: '/settings',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const NotificationSettingsScreen()),
+            _desktopShellPage(state, const NotificationSettingsScreen()),
       ),
       GoRoute(
         path: '/delete-account',
@@ -145,15 +145,17 @@ class AppRouter {
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final otherUid = extra?['otherUid'] as String?;
-          return _customPageTransition(
+          final sharedTourId = extra?['sharedTourId'] as String?;
+          return _desktopShellPage(
             state,
             ChatScreen(
               chatId: state.pathParameters['chatId']!,
               otherUid: otherUid,
-              sharedTourId: extra?['sharedTourId'] as String?,
+              sharedTourId: sharedTourId,
               otherEmail: extra?['otherEmail'] as String?,
               sharedFiles: (extra?['sharedFiles'] as List?)?.cast<SharedFile>(),
             ),
+            tourId: sharedTourId,
           );
         },
       ),
@@ -182,7 +184,7 @@ class AppRouter {
       GoRoute(
         path: '/starred-messages',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const StarredMessagesScreen()),
+            _desktopShellPage(state, const StarredMessagesScreen()),
       ),
       GoRoute(
         path: '/group-hub',
@@ -354,39 +356,40 @@ class AppRouter {
       GoRoute(
         path: '/game-zone/card29',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const Card29Screen()),
+            _desktopShellPage(state, const Card29Screen()),
       ),
       GoRoute(
         path: '/game-zone/chess',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const ChessScreen()),
+            _desktopShellPage(state, const ChessScreen()),
       ),
       GoRoute(
         path: '/game-zone/ludo',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const LudoScreen()),
+            _desktopShellPage(state, const LudoScreen()),
       ),
       GoRoute(
         path: '/game-zone/teen-patti',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const TeenPattiScreen()),
+            _desktopShellPage(state, const TeenPattiScreen()),
       ),
       GoRoute(
         path: '/game-zone/carrom',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const CarromScreen()),
+            _desktopShellPage(state, const CarromScreen()),
       ),
       GoRoute(
         path: '/game-zone/table/:tourId/:gameId',
         pageBuilder: (context, state) {
           final tourId = state.pathParameters['tourId']!;
           final gameId = state.pathParameters['gameId']!;
-          return _customPageTransition(
+          return _desktopShellPage(
             state,
             TourMembershipGuard(
               tourId: tourId,
               child: OnlineGameTableScreen(tourId: tourId, gameId: gameId),
             ),
+            tourId: tourId,
           );
         },
       ),
@@ -397,8 +400,10 @@ class AppRouter {
       ),
       GoRoute(
         path: '/holiday-calendar',
-        pageBuilder: (context, state) => _customPageTransition(
-            state, const HolidayCalendarScreen(tourId: '')),
+        pageBuilder: (context, state) => _desktopShellPage(
+          state,
+          const HolidayCalendarScreen(tourId: ''),
+        ),
       ),
       GoRoute(
         path: '/newspaper-reader',
@@ -406,7 +411,7 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           final url =
               state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
-          return _customPageTransition(
+          return _desktopShellPage(
             state,
             AdFreeArticleReaderScreen(
               articleUrl: url,
@@ -426,7 +431,7 @@ class AppRouter {
           final title = state.uri.queryParameters['title'] ??
               extra['title'] as String? ??
               'Web Browser';
-          return _customPageTransition(
+          return _desktopShellPage(
             state,
             AdBlockBrowserScreen(
               initialUrl: url,
