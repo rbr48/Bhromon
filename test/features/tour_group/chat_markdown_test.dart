@@ -77,5 +77,101 @@ void main() {
       const text = 'mix **a** _b_ ~~c~~ `d` ||e|| https://f.g ok';
       expect(_visible(text), 'mix a b c d e https://f.g ok');
     });
+
+    test('underline with double underscore', () {
+      final spans = _spans('this is __underlined__ text');
+      final underlined = spans.firstWhere((s) => s.text == 'underlined');
+      expect(underlined.underline, isTrue);
+      expect(underlined.italic, isFalse);
+    });
+
+    test('highlight with double equals', () {
+      final spans = _spans('important ==urgent notice== here');
+      final highlighted = spans.firstWhere((s) => s.text == 'urgent notice');
+      expect(highlighted.highlight, isTrue);
+    });
+
+    test('named markdown link [label](url)', () {
+      final spans = _spans('Check out [Bhromon App](https://bhromon.fun) now');
+      final linkSpan = spans.firstWhere((s) => s.link != null);
+      expect(linkSpan.text, 'Bhromon App');
+      expect(linkSpan.link, 'https://bhromon.fun');
+      expect(linkSpan.underline, isTrue);
+    });
+
+    test('parseChatBlocks parses headings', () {
+      final blocks = parseChatBlocks('# Main Title\n## Subtitle\n### Section');
+      expect(blocks, hasLength(3));
+      expect(blocks[0], isA<ChatHeadingBlock>());
+      expect((blocks[0] as ChatHeadingBlock).level, 1);
+      expect((blocks[0] as ChatHeadingBlock).spans.single.text, 'Main Title');
+      expect((blocks[1] as ChatHeadingBlock).level, 2);
+      expect((blocks[2] as ChatHeadingBlock).level, 3);
+    });
+
+    test('parseChatBlocks parses fenced code block with language', () {
+      const input = '```dart\nvoid main() {\n  print("hello");\n}\n```';
+      final blocks = parseChatBlocks(input);
+      expect(blocks, hasLength(1));
+      expect(blocks.single, isA<ChatCodeBlock>());
+      final codeBlock = blocks.single as ChatCodeBlock;
+      expect(codeBlock.language, 'dart');
+      expect(codeBlock.code, 'void main() {\n  print("hello");\n}');
+    });
+
+    test('parseChatBlocks parses markdown table with alignments', () {
+      const input = '''
+| Destination | Budget | Status |
+| :--- | :---: | ---: |
+| Cox's Bazar | ৳ 5,500 | Confirmed |
+| Sajek Valley | ৳ 7,200 | Planning |
+''';
+      final blocks = parseChatBlocks(input.trim());
+      expect(blocks, hasLength(1));
+      expect(blocks.single, isA<ChatTableBlock>());
+      final table = blocks.single as ChatTableBlock;
+      expect(table.headers, hasLength(3));
+      expect(table.headers[0].plainText, 'Destination');
+      expect(table.headers[1].plainText, 'Budget');
+      expect(table.headers[2].plainText, 'Status');
+
+      expect(table.alignments[0], ChatTableAlign.left);
+      expect(table.alignments[1], ChatTableAlign.center);
+      expect(table.alignments[2], ChatTableAlign.right);
+
+      expect(table.rows, hasLength(2));
+      expect(table.rows[0].cells[0].plainText, "Cox's Bazar");
+      expect(table.rows[0].cells[1].plainText, "৳ 5,500");
+      expect(table.rows[0].cells[2].plainText, "Confirmed");
+      expect(table.rows[1].cells[0].plainText, "Sajek Valley");
+    });
+
+    test('parseChatBlocks parses task checklists and lists', () {
+      const input = '''
+- [ ] Buy tickets
+- [x] Book hotel
+- Regular item
+''';
+      final blocks = parseChatBlocks(input.trim());
+      expect(blocks, hasLength(1));
+      expect(blocks.single, isA<ChatListBlock>());
+      final list = blocks.single as ChatListBlock;
+      expect(list.ordered, isFalse);
+      expect(list.items, hasLength(3));
+      expect(list.items[0].isChecked, isFalse);
+      expect(list.items[0].spans.single.text, 'Buy tickets');
+      expect(list.items[1].isChecked, isTrue);
+      expect(list.items[1].spans.single.text, 'Book hotel');
+      expect(list.items[2].isChecked, isNull);
+      expect(list.items[2].spans.single.text, 'Regular item');
+    });
+
+    test('parseChatBlocks parses horizontal divider', () {
+      final blocks = parseChatBlocks('first line\n---\nsecond line');
+      expect(blocks, hasLength(3));
+      expect(blocks[0], isA<ChatParagraphBlock>());
+      expect(blocks[1], isA<ChatDividerBlock>());
+      expect(blocks[2], isA<ChatParagraphBlock>());
+    });
   });
 }

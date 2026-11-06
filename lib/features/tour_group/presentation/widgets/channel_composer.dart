@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
+import '../../../chat/presentation/widgets/chat_formatting_toolbar.dart';
 import '../../../chat/presentation/widgets/voice_message_recorder.dart';
 
 /// A photo, video, or file picked for the next message, not yet uploaded.
@@ -32,7 +33,7 @@ class MentionChoice {
 
 /// The message box at the foot of a channel: reply or edit banner, pending
 /// attachments with upload progress, the mention list, and the input row.
-class ChannelComposer extends StatelessWidget {
+class ChannelComposer extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final String hint;
@@ -85,6 +86,13 @@ class ChannelComposer extends StatelessWidget {
   });
 
   @override
+  State<ChannelComposer> createState() => _ChannelComposerState();
+}
+
+class _ChannelComposerState extends State<ChannelComposer> {
+  bool _showFormatting = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return SafeArea(
@@ -93,20 +101,20 @@ class ChannelComposer extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (replyTo != null || editing)
+          if (widget.replyTo != null || widget.editing)
             _ContextBanner(
-              text: editing
+              text: widget.editing
                   ? l10n.translate('chan_editing')
                   : l10n.translate('chan_reply_to',
-                      args: {'name': replyTo!.senderName}),
-              onCancel: onCancelContext,
+                      args: {'name': widget.replyTo!.senderName}),
+              onCancel: widget.onCancelContext,
             ),
-          if (pending.isNotEmpty)
+          if (widget.pending.isNotEmpty)
             _PendingRow(
-              pending: pending,
-              onRemove: sending ? null : onRemovePending,
+              pending: widget.pending,
+              onRemove: widget.sending ? null : widget.onRemovePending,
             ),
-          if (sending && uploadLabel != null)
+          if (widget.sending && widget.uploadLabel != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
               child: Row(
@@ -115,12 +123,12 @@ class ChannelComposer extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(uploadLabel!,
+                        Text(widget.uploadLabel!,
                             style: TextStyle(
                                 color: context.forest.text54, fontSize: 11)),
                         const SizedBox(height: 3),
                         LinearProgressIndicator(
-                          value: uploadProgress,
+                          value: widget.uploadProgress,
                           color: AppColors.mintGreen,
                           backgroundColor: context.forest.divider10,
                           minHeight: 3,
@@ -131,19 +139,25 @@ class ChannelComposer extends StatelessWidget {
                   IconButton(
                     tooltip: l10n.translate('tour_cancel'),
                     icon: Icon(Icons.close, color: context.forest.text54),
-                    onPressed: onCancelUpload,
+                    onPressed: widget.onCancelUpload,
                   ),
                 ],
               ),
             ),
-          if (mentionChoices.isNotEmpty)
-            _MentionList(choices: mentionChoices, onPick: onPickMention),
-          if (recordingVoice)
+          if (widget.mentionChoices.isNotEmpty)
+            _MentionList(choices: widget.mentionChoices, onPick: widget.onPickMention),
+          if (_showFormatting)
+            ChatFormattingToolbar(
+              controller: widget.controller,
+              focusNode: widget.focusNode,
+              onClose: () => setState(() => _showFormatting = false),
+            ),
+          if (widget.recordingVoice)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: VoiceMessageRecorder(
-                onVoiceSent: onVoiceSent,
-                onCancel: onVoiceCancel,
+                onVoiceSent: widget.onVoiceSent,
+                onCancel: widget.onVoiceCancel,
               ),
             )
           else
@@ -154,21 +168,34 @@ class ChannelComposer extends StatelessWidget {
                   IconButton(
                     tooltip: l10n.translate('chan_attach_tooltip'),
                     icon: Icon(Icons.attach_file, color: context.forest.text70),
-                    onPressed: sending ? null : onAttach,
+                    onPressed: widget.sending ? null : widget.onAttach,
+                  ),
+                  IconButton(
+                    tooltip: l10n.translate('format_toolbar_toggle'),
+                    icon: Icon(
+                      Icons.text_format_rounded,
+                      color: _showFormatting
+                          ? AppColors.mintGreen
+                          : context.forest.text70,
+                    ),
+                    onPressed: widget.sending
+                        ? null
+                        : () =>
+                            setState(() => _showFormatting = !_showFormatting),
                   ),
                   Expanded(
                     child: TextField(
-                      controller: controller,
-                      focusNode: focusNode,
+                      controller: widget.controller,
+                      focusNode: widget.focusNode,
                       minLines: 1,
                       maxLines: 4,
                       textInputAction: TextInputAction.send,
-                      onChanged: onChanged,
-                      onSubmitted: (_) => onSend(),
+                      onChanged: widget.onChanged,
+                      onSubmitted: (_) => widget.onSend(),
                       style: TextStyle(color: context.forest.text),
                       decoration: InputDecoration(
                         counterText: '',
-                        hintText: hint,
+                        hintText: widget.hint,
                         hintStyle: TextStyle(
                             color: context.forest.text54, fontSize: 13),
                         filled: true,
@@ -184,23 +211,23 @@ class ChannelComposer extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: controller,
+                    valueListenable: widget.controller,
                     builder: (context, value, _) {
-                      final canRecord = !sending &&
-                          !editing &&
-                          pending.isEmpty &&
+                      final canRecord = !widget.sending &&
+                          !widget.editing &&
+                          widget.pending.isEmpty &&
                           value.text.trim().isEmpty;
                       if (canRecord) {
                         return IconButton(
                           tooltip: l10n.translate('chan_voice_tooltip'),
                           icon: Icon(Icons.mic_rounded,
                               color: context.forest.accentText),
-                          onPressed: onStartVoice,
+                          onPressed: widget.onStartVoice,
                         );
                       }
                       return IconButton(
                         tooltip: l10n.translate('tour_send'),
-                        icon: sending
+                        icon: widget.sending
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
@@ -209,7 +236,7 @@ class ChannelComposer extends StatelessWidget {
                               )
                             : Icon(Icons.send_rounded,
                                 color: context.forest.accentText),
-                        onPressed: sending ? null : onSend,
+                        onPressed: widget.sending ? null : widget.onSend,
                       );
                     },
                   ),

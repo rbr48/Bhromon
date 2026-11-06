@@ -2,17 +2,16 @@ import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
-import '../../domain/services/chat_markdown.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import 'groups/member_avatar.dart';
 import '../../../chat/presentation/widgets/chat_document_bubble.dart';
+import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
 
@@ -142,6 +141,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                   text: m.text,
                   revealed: _revealed,
                   onSpoiler: _toggleSpoiler,
+                  isMine: own,
                 ),
               if (loc != null) ...[
                 const SizedBox(height: 6),
@@ -542,112 +542,35 @@ class _ReactionRow extends StatelessWidget {
   }
 }
 
-/// Text with the chat formatting applied: bold, italic, strike-through, code,
-/// quotes, links and spoilers.
-class ChannelRichText extends StatefulWidget {
+/// Text with rich chat formatting applied: tables, code blocks, lists,
+/// quotes, headings, dividers, bold, italic, underline, strike, highlight, links and spoilers.
+class ChannelRichText extends StatelessWidget {
   final String text;
 
   /// Spoiler ids the reader has opened.
   final Set<int> revealed;
   final ValueChanged<int> onSpoiler;
+  final TextStyle? baseStyle;
+  final bool isMine;
 
   const ChannelRichText({
     super.key,
     required this.text,
     required this.revealed,
     required this.onSpoiler,
+    this.baseStyle,
+    this.isMine = false,
   });
 
   @override
-  State<ChannelRichText> createState() => _ChannelRichTextState();
-}
-
-class _ChannelRichTextState extends State<ChannelRichText> {
-  final List<TapGestureRecognizer> _recognizers = [];
-
-  @override
-  void dispose() {
-    _disposeRecognizers();
-    super.dispose();
-  }
-
-  void _disposeRecognizers() {
-    for (final r in _recognizers) {
-      r.dispose();
-    }
-    _recognizers.clear();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // The recognizers belong to the spans built below, so the previous set is
-    // released first.
-    _disposeRecognizers();
-    final base =
-        TextStyle(color: context.forest.text, fontSize: 14, height: 1.35);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final line in parseChatMarkdown(widget.text)) _line(line, base),
-      ],
+    return ChatRichText(
+      text: text,
+      baseStyle: baseStyle,
+      revealed: revealed,
+      onSpoiler: onSpoiler,
+      isMine: isMine,
     );
-  }
-
-  Widget _line(ChatLine line, TextStyle base) {
-    final text = Text.rich(
-      TextSpan(children: [for (final span in line.spans) _span(span, base)]),
-    );
-    if (!line.quote) return text;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 2),
-      padding: const EdgeInsets.only(left: 8),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: AppColors.gold, width: 3)),
-      ),
-      child: text,
-    );
-  }
-
-  InlineSpan _span(ChatSpan span, TextStyle base) {
-    var style = base.copyWith(
-      fontWeight: span.bold ? FontWeight.bold : null,
-      fontStyle: span.italic ? FontStyle.italic : null,
-      decoration: span.strike
-          ? TextDecoration.lineThrough
-          : span.link != null
-              ? TextDecoration.underline
-              : null,
-      fontFamily: span.code ? 'monospace' : null,
-      backgroundColor: span.code ? Colors.black38 : null,
-      color: span.link != null ? context.forest.accentText : null,
-    );
-
-    final spoilerId = span.spoilerId;
-    if (spoilerId != null && !widget.revealed.contains(spoilerId)) {
-      style = style.copyWith(
-        color: Colors.transparent,
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0B1410)),
-      );
-    }
-
-    TapGestureRecognizer? recognizer;
-    final link = span.link;
-    if (link != null) {
-      recognizer = TapGestureRecognizer()..onTap = () => _openLink(link);
-    } else if (spoilerId != null) {
-      recognizer = TapGestureRecognizer()
-        ..onTap = () => widget.onSpoiler(spoilerId);
-    }
-    if (recognizer != null) _recognizers.add(recognizer);
-
-    return TextSpan(text: span.text, style: style, recognizer: recognizer);
-  }
-
-  void _openLink(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
   }
 }
 
