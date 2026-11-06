@@ -169,6 +169,8 @@ class TourTranslationKeys {
       'hub_name_hint': 'Enter the group name',
       'hub_edit_settings_title': 'Edit group settings and dates',
       'hub_name_label': 'Group name',
+      'hub_desc_label': 'Description (optional)',
+      'hub_members_count': '{count} members',
       'hub_destination_label': 'Destination',
       'hub_destination_example': 'e.g. Sajek, Sylhet, Darjeeling, etc.',
       'hub_origin_label': 'Starting point',
@@ -2238,6 +2240,7 @@ class TourTranslationKeys {
       'moments_admins_only': 'Only the owner or an admin can change Moments.',
       'pdf_export_admin_only':
           'Only the owner or an admin can export the whole group.',
+      'members_admin_only': 'Only the owner or an admin can make this change.',
       'notice_post_failed':
           'Could not post the notice. Check your connection and try again.',
       'fund_cat_groceries': 'Groceries',
@@ -2695,6 +2698,8 @@ class TourTranslationKeys {
       'hub_name_hint': 'গ্রুপের নাম লিখুন',
       'hub_edit_settings_title': 'গ্রুপ সেটিংস ও দিন সম্পাদনা',
       'hub_name_label': 'গ্রুপের নাম',
+      'hub_desc_label': 'বিবরণ (ঐচ্ছিক)',
+      'hub_members_count': '{count} জন সদস্য',
       'hub_destination_label': 'গন্তব্য বা স্থান',
       'hub_destination_example': 'যেমন: সাজেক, সিলেট, দার্জিলিং ইত্যাদি',
       'hub_origin_label': 'যাত্রা শুরু',
@@ -4752,6 +4757,7 @@ class TourTranslationKeys {
       'moments_admins_only': 'শুধু মালিক বা অ্যাডমিন মোমেন্টস বদলাতে পারেন।',
       'pdf_export_admin_only':
           'শুধু মালিক বা অ্যাডমিন পুরো গ্রুপের PDF নিতে পারেন।',
+      'members_admin_only': 'শুধু মালিক বা অ্যাডমিন এই পরিবর্তন করতে পারবেন।',
       'notice_post_failed':
           'নোটিশ পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
       'fund_cat_groceries': 'বাজার',
