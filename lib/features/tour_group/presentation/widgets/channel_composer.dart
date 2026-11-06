@@ -211,21 +211,34 @@ class _ChannelComposerState extends State<ChannelComposer> {
                       controller: widget.controller,
                       focusNode: widget.focusNode,
                       minLines: 1,
-                      maxLines: 4,
+                      maxLines: 6,
                       textInputAction: TextInputAction.send,
                       onChanged: widget.onChanged,
                       onSubmitted: (_) => widget.onSend(),
                       style: TextStyle(
                         color: context.forest.text,
-                        fontSize: 15.0,
-                        height: 1.35,
+                        fontSize: 15.5,
+                        height: 1.38,
+                        letterSpacing: 0.05,
+                        fontFamily: 'NotoSansBengali',
+                        fontFamilyFallback: const [
+                          'HindSiliguri',
+                          'Roboto',
+                          'sans-serif'
+                        ],
                       ),
                       decoration: InputDecoration(
                         counterText: '',
                         hintText: widget.hint,
                         hintStyle: TextStyle(
                           color: context.forest.text54,
-                          fontSize: 14.5,
+                          fontSize: 15.0,
+                          fontFamily: 'NotoSansBengali',
+                          fontFamilyFallback: const [
+                            'HindSiliguri',
+                            'Roboto',
+                            'sans-serif'
+                          ],
                         ),
                         filled: true,
                         fillColor: context.forest.inset26,

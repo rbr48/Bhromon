@@ -152,7 +152,13 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                             : context.forest.text),
                     fontSize: 15.5,
                     height: 1.4,
-                    letterSpacing: 0.15,
+                    letterSpacing: 0.05,
+                    fontFamily: 'NotoSansBengali',
+                    fontFamilyFallback: const [
+                      'HindSiliguri',
+                      'Roboto',
+                      'sans-serif'
+                    ],
                   ),
                 ),
               if (loc != null) ...[
