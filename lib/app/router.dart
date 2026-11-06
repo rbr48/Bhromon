@@ -35,6 +35,8 @@ import '../features/tour_group/presentation/pages/tour_checklist_screen.dart';
 import '../features/tour_group/presentation/pages/tour_instafeed_screen.dart';
 import '../features/tour_group/presentation/pages/family_safety_hub_screen.dart';
 import '../features/tour_group/presentation/pages/journey_tracker_screen.dart';
+import '../features/tour_group/presentation/pages/offline_map_viewer_screen.dart';
+import '../features/tour_group/domain/services/offline_map_regions.dart';
 import '../features/tour_group/presentation/pages/notice_board_screen.dart';
 import '../features/tour_group/presentation/pages/tour_quiz_screen.dart';
 import '../features/tour_group/presentation/widgets/tour_membership_guard.dart';
@@ -321,6 +323,22 @@ class AppRouter {
           state,
           TourScrapbookScreen(tourId: state.pathParameters['tourId']!),
         ),
+      ),
+      GoRoute(
+        path: '/offline-map/:regionId',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['regionId'] ?? 'sajek_valley';
+          final region = regionById(id) ??
+              kCuratedOfflineRegions.firstWhere(
+                (r) => r.id == id,
+                orElse: () => kCuratedOfflineRegions.first,
+              );
+          return _customPageTransition(
+            state,
+            OfflineMapViewerScreen(region: region),
+            key: pageKeyFor(state),
+          );
+        },
       ),
       GoRoute(
         path: '/game-zone',

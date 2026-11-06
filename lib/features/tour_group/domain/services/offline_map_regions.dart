@@ -18,6 +18,25 @@ class OfflineWaypoint {
 
   /// 'viewpoint', 'camp', 'medical', 'water', 'shelter'
   final String category;
+
+  /// Emojis for quick vector pin rendering
+  String get categoryEmoji => switch (category) {
+        'viewpoint' => '🌄',
+        'camp' => '⛺',
+        'shelter' => '🏠',
+        'medical' => '🏥',
+        'water' => '💧',
+        _ => '📍',
+      };
+
+  String categoryName(bool isBn) => switch (category) {
+        'viewpoint' => isBn ? 'ভিউ পয়েন্ট' : 'Viewpoint',
+        'camp' => isBn ? 'ক্যাম্প / চেকপোস্ট' : 'Camp / Checkpost',
+        'shelter' => isBn ? 'শেল্টার / কটেজ' : 'Shelter / Cottage',
+        'medical' => isBn ? 'চিকিৎসা সেবা' : 'Medical Care',
+        'water' => isBn ? 'পানির উৎস' : 'Water Source',
+        _ => isBn ? 'ওয়েপয়েন্ট' : 'Waypoint',
+      };
 }
 
 class OfflineEmergencyContact {
@@ -360,3 +379,76 @@ const List<OfflineMapRegion> kCuratedOfflineRegions = [
     ],
   ),
 ];
+
+/// Finds a curated offline map region matching [destination] name or id, or null if none.
+OfflineMapRegion? regionForDestination(String? destination) {
+  if (destination == null || destination.trim().isEmpty) return null;
+  final clean = destination.toLowerCase().trim();
+  for (final region in kCuratedOfflineRegions) {
+    if (clean == region.id.toLowerCase() ||
+        clean.contains(region.id.replaceAll('_', ' ')) ||
+        clean.contains(region.nameEn.toLowerCase()) ||
+        clean.contains(region.nameBn)) {
+      return region;
+    }
+  }
+  // Keyword aliases
+  if (clean.contains('sajek') ||
+      clean.contains('সাজেক') ||
+      clean.contains('ruilui') ||
+      clean.contains('রুইলুই')) {
+    return kCuratedOfflineRegions.firstWhere((r) => r.id == 'sajek_valley');
+  }
+  if (clean.contains('tanguar') ||
+      clean.contains('টাঙ্গুয়ার') ||
+      clean.contains('টাঙ্গুয়ার') ||
+      clean.contains('টাঙ্গু') ||
+      clean.contains('haor') ||
+      clean.contains('হাওর') ||
+      clean.contains('tekerghat') ||
+      clean.contains('টেকেরঘাট')) {
+    return kCuratedOfflineRegions.firstWhere((r) => r.id == 'tanguar_haor');
+  }
+  if (clean.contains('bandarban') ||
+      clean.contains('বান্দরবান') ||
+      clean.contains('keokradong') ||
+      clean.contains('কেওক্রাডং') ||
+      clean.contains('boga') ||
+      clean.contains('বগা')) {
+    return kCuratedOfflineRegions
+        .firstWhere((r) => r.id == 'bandarban_highlands');
+  }
+  if (clean.contains('sundarban') ||
+      clean.contains('সুন্দরবন') ||
+      clean.contains('kotka') ||
+      clean.contains('কটকা') ||
+      clean.contains('mongla')) {
+    return kCuratedOfflineRegions
+        .firstWhere((r) => r.id == 'sundarbans_riverways');
+  }
+  if (clean.contains('saint martin') ||
+      clean.contains('সেন্টমার্টিন') ||
+      clean.contains('st. martin') ||
+      clean.contains('chera dwip') ||
+      clean.contains('ছেঁড়া')) {
+    return kCuratedOfflineRegions.firstWhere((r) => r.id == 'saint_martins');
+  }
+  if (clean.contains('sreemangal') ||
+      clean.contains('শ্রীমঙ্গল') ||
+      clean.contains('lawachara') ||
+      clean.contains('লাউয়াছড়া') ||
+      clean.contains('baikka') ||
+      clean.contains('বাইক্কা')) {
+    return kCuratedOfflineRegions
+        .firstWhere((r) => r.id == 'sreemangal_lawachara');
+  }
+  return null;
+}
+
+/// Finds a region by its unique [id].
+OfflineMapRegion? regionById(String id) {
+  for (final r in kCuratedOfflineRegions) {
+    if (r.id == id) return r;
+  }
+  return null;
+}
