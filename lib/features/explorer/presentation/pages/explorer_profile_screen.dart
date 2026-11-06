@@ -1221,23 +1221,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   color: context.forest.text70, size: 20),
             ),
           ),
-          const SizedBox(width: 8),
-
-          // Settings Button
-          Container(
-            decoration: BoxDecoration(
-              color: context.forest.text.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: context.forest.text.withValues(alpha: 0.08)),
-            ),
-            child: IconButton(
-              onPressed: () => context.push('/settings'),
-              tooltip: _isBn ? 'সেটিংস' : 'Settings',
-              icon:
-                  Icon(Icons.settings, color: context.forest.text70, size: 20),
-            ),
-          ),
         ],
       ),
     );
@@ -2430,7 +2413,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       ? 'বাংলা কিউআর ও পেমেন্ট প্রোফাইল'
                       : 'Bangla QR & Payment Profile',
                   style: TextStyle(
-                    fontFamily: 'HindSiliguri',
+                    fontFamily: 'NotoSansBengali',
                     color: context.forest.text,
                     fontSize: 14.5,
                     fontWeight: FontWeight.bold,
@@ -2451,7 +2434,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 ? 'আপনার বিকাশ, নগদ বা ব্যাংক কিউআর একবার সেভ করে রাখুন। গ্রুপের খরচের হিসাব মেলানোর সময় মেম্বাররা সরাসরি আপনার কিউআর দেখে টাকা পরিশোধ করতে পারবেন।'
                 : 'Save your bKash, Nagad, or Bank QR code once. Group members can scan your QR directly to settle up expenses without repeatedly asking.',
             style: TextStyle(
-              fontFamily: 'HindSiliguri',
+              fontFamily: 'NotoSansBengali',
               color: context.forest.text70,
               fontSize: 12,
               height: 1.35,
@@ -2519,7 +2502,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                       ? 'মার্চেন্ট (Bangla QR)'
                                       : 'Merchant'),
                               style: TextStyle(
-                                fontFamily: 'HindSiliguri',
+                                fontFamily: 'NotoSansBengali',
                                 color: context.forest.text60,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -2533,7 +2516,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(
                             accountNumber,
                             style: TextStyle(
-                              fontFamily: 'HindSiliguri',
+                              fontFamily: 'NotoSansBengali',
                               color: context.forest.text,
                               fontSize: 13.5,
                               fontWeight: FontWeight.bold,
@@ -2561,7 +2544,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               label: Text(
                 _isBn ? 'বাংলা কিউআর যোগ করুন' : 'Add Bangla QR',
                 style: const TextStyle(
-                  fontFamily: 'HindSiliguri',
+                  fontFamily: 'NotoSansBengali',
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),

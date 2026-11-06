@@ -154,9 +154,9 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                     fontSize: 15.5,
                     height: 1.4,
                     letterSpacing: 0.05,
-                    fontFamily: 'HindSiliguri',
+                    fontFamily: 'NotoSansBengali',
                     fontFamilyFallback: const [
-                      'NotoSansBengali',
+                      'HindSiliguri',
                       'Roboto',
                       'sans-serif'
                     ],

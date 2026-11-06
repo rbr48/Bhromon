@@ -195,9 +195,9 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                   fontSize: 15.5,
                                   height: 1.38,
                                   letterSpacing: 0.05,
-                                  fontFamily: 'HindSiliguri',
+                                  fontFamily: 'NotoSansBengali',
                                   fontFamilyFallback: const [
-                                    'NotoSansBengali',
+                                    'HindSiliguri',
                                     'Roboto',
                                     'sans-serif'
                                   ],
@@ -208,9 +208,9 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                   hintStyle: TextStyle(
                                     color: context.forest.text54,
                                     fontSize: 15.0,
-                                    fontFamily: 'HindSiliguri',
+                                    fontFamily: 'NotoSansBengali',
                                     fontFamilyFallback: const [
-                                      'NotoSansBengali',
+                                      'HindSiliguri',
                                       'Roboto',
                                       'sans-serif'
                                     ],

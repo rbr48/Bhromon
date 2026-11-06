@@ -130,8 +130,8 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
         content: Text(
           message,
           style: const TextStyle(
-            fontFamily: 'HindSiliguri',
-            fontFamilyFallback: ['NotoSansBengali', 'Roboto', 'sans-serif'],
+            fontFamily: 'NotoSansBengali',
+            fontFamilyFallback: ['HindSiliguri', 'Roboto', 'sans-serif'],
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -399,9 +399,9 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                   title: Text(
                     'মার্কডাউন ফরম্যাটে কপি করুন',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
-                        'NotoSansBengali',
+                        'HindSiliguri',
                         'Roboto',
                         'sans-serif'
                       ],
@@ -413,9 +413,9 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                   subtitle: Text(
                     'আসল পাইপলাইন (| Col 1 | Col 2 |) কোড কপি হবে',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
-                        'NotoSansBengali',
+                        'HindSiliguri',
                         'Roboto',
                         'sans-serif'
                       ],
@@ -463,15 +463,15 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
         : Colors.black.withValues(alpha: 0.03);
 
     final headerStyle = widget.baseStyle.copyWith(
-      fontFamily: 'HindSiliguri',
-      fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
+      fontFamily: 'NotoSansBengali',
+      fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
       fontWeight: FontWeight.bold,
       fontSize: 14.0,
       height: 1.35,
     );
     final cellStyle = widget.baseStyle.copyWith(
-      fontFamily: 'HindSiliguri',
-      fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
+      fontFamily: 'NotoSansBengali',
+      fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
       fontSize: 13.5,
       height: 1.35,
     );
@@ -665,9 +665,9 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                     child: Text(
                       '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
                       style: TextStyle(
-                        fontFamily: 'HindSiliguri',
+                        fontFamily: 'NotoSansBengali',
                         fontFamilyFallback: const [
-                          'NotoSansBengali',
+                          'HindSiliguri',
                           'Roboto',
                           'sans-serif'
                         ],
@@ -700,9 +700,9 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                           Text(
                             'লেজারে যুক্ত',
                             style: TextStyle(
-                              fontFamily: 'HindSiliguri',
+                              fontFamily: 'NotoSansBengali',
                               fontFamilyFallback: [
-                                'NotoSansBengali',
+                                'HindSiliguri',
                                 'Roboto',
                                 'sans-serif'
                               ],
@@ -737,9 +737,9 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                           Text(
                             'নোটিশে পিন',
                             style: TextStyle(
-                              fontFamily: 'HindSiliguri',
+                              fontFamily: 'NotoSansBengali',
                               fontFamilyFallback: [
-                                'NotoSansBengali',
+                                'HindSiliguri',
                                 'Roboto',
                                 'sans-serif'
                               ],

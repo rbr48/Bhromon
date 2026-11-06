@@ -10,11 +10,12 @@ import 'colors.dart';
 /// Bengali-first typography scale, and a complete set of component themes so
 /// buttons, inputs, dialogs, sheets and chips look consistent everywhere.
 class AppTheme {
-  // Bengali-first font stack: HindSiliguri provides WhatsApp-like, crisp Full HD
-  // rendering with dedicated Regular and Bold fonts. NotoSansBengali is the fallback.
-  static const _fontFamily = 'HindSiliguri';
+  // Bengali-first font stack: Standard Google NotoSansBengali provides crisp,
+  // high-definition typography with full Unicode coverage and modern glyph rendering.
+  // HindSiliguri and Roboto are the fallbacks.
+  static const _fontFamily = 'NotoSansBengali';
   static const _fontFamilyFallback = [
-    'NotoSansBengali',
+    'HindSiliguri',
     'Roboto',
     'sans-serif'
   ];
