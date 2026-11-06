@@ -148,14 +148,14 @@ class _ChatRichTextState extends State<ChatRichText> {
 
   Widget _buildHeading(ChatHeadingBlock block, TextStyle base) {
     final double fontSize = switch (block.level) {
-      1 => 17.0,
-      2 => 15.5,
-      _ => 14.5,
+      1 => 18.5,
+      2 => 17.0,
+      _ => 15.5,
     };
     final headingStyle = base.copyWith(
       fontSize: fontSize,
       fontWeight: FontWeight.bold,
-      height: 1.3,
+      height: 1.35,
     );
 
     return Padding(
@@ -260,8 +260,17 @@ class _ChatRichTextState extends State<ChatRichText> {
   @override
   Widget build(BuildContext context) {
     _disposeRecognizers();
-    final base = widget.baseStyle ??
-        TextStyle(color: context.forest.text, fontSize: 13.5, height: 1.35);
+    final defaultStyle = TextStyle(
+      color: context.forest.text,
+      fontSize: 15.5,
+      height: 1.4,
+      letterSpacing: 0.15,
+      fontFamily: 'HindSiliguri',
+      fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
+    );
+    final base = widget.baseStyle != null
+        ? defaultStyle.merge(widget.baseStyle)
+        : defaultStyle;
 
     final blocks = parseChatBlocks(widget.text);
 

@@ -153,10 +153,12 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
 
     final headerStyle = widget.baseStyle.copyWith(
       fontWeight: FontWeight.bold,
-      fontSize: 12.5,
+      fontSize: 14.0,
+      height: 1.35,
     );
     final cellStyle = widget.baseStyle.copyWith(
-      fontSize: 12,
+      fontSize: 13.5,
+      height: 1.35,
     );
 
     final colCount = widget.table.headers.length;

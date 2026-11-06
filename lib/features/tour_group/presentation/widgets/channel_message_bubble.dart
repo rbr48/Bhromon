@@ -142,6 +142,18 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                   revealed: _revealed,
                   onSpoiler: _toggleSpoiler,
                   isMine: own,
+                  baseStyle: TextStyle(
+                    color: own
+                        ? (context.forest.isDark
+                            ? Colors.white
+                            : AppColors.darkText)
+                        : (context.forest.isDark
+                            ? Colors.white
+                            : context.forest.text),
+                    fontSize: 15.5,
+                    height: 1.4,
+                    letterSpacing: 0.15,
+                  ),
                 ),
               if (loc != null) ...[
                 const SizedBox(height: 6),
@@ -232,13 +244,17 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
         if (m.editedAt != null) ...[
           Text(
             l10n.translate('chan_edited'),
-            style: TextStyle(color: meta, fontSize: 10),
+            style: TextStyle(color: meta, fontSize: 10.5),
           ),
           const SizedBox(width: 4),
         ],
         Text(
           localizedDateFormat('hh:mm a').format(m.timestamp),
-          style: TextStyle(color: meta, fontSize: 10),
+          style: TextStyle(
+            color: meta,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
