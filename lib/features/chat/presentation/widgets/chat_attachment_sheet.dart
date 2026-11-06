@@ -24,6 +24,7 @@ class ChatAttachmentSheet extends StatelessWidget {
   final void Function(PlatformFile audioFile) onAudioPicked;
   final void Function(Position position, String title) onLocationPicked;
   final VoidCallback onExpenseSplit;
+  final VoidCallback? onEmojiPicked;
 
   const ChatAttachmentSheet({
     super.key,
@@ -32,6 +33,7 @@ class ChatAttachmentSheet extends StatelessWidget {
     required this.onAudioPicked,
     required this.onLocationPicked,
     required this.onExpenseSplit,
+    this.onEmojiPicked,
   });
 
   Future<void> _pickDocument(BuildContext context) async {
@@ -194,6 +196,17 @@ class ChatAttachmentSheet extends StatelessWidget {
               onExpenseSplit();
             },
           ),
+          if (onEmojiPicked != null)
+            _buildItem(
+              context,
+              icon: Icons.sentiment_satisfied_alt_outlined,
+              color: const Color(0xFFF59E0B),
+              label: context.l10n.translate('chat_open_emoji'),
+              onTap: () {
+                Navigator.pop(context);
+                onEmojiPicked!();
+              },
+            ),
         ],
       ),
     );

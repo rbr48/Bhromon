@@ -26,7 +26,6 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../widgets/chat_media_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1831,6 +1830,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onLocationPicked: (pos, title) =>
             _sendLocationMessage(pos, title, currentUid, currentName),
         onExpenseSplit: () => _showSplitBillDialog(currentUid, currentName),
+        onEmojiPicked: _toggleEmojiPicker,
       ),
     );
   }
@@ -1862,19 +1862,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         caption: result.caption,
         isViewOnce: result.isViewOnce,
       );
-    }
-  }
-
-  Future<void> _openCameraDirect(String currentUid, String currentName) async {
-    try {
-      final picker = ImagePicker();
-      final photo =
-          await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-      if (photo != null) {
-        _openMediaCaptionFlow(photo, false, currentUid, currentName);
-      }
-    } catch (e) {
-      logError('Error opening camera: $e');
     }
   }
 
@@ -2837,7 +2824,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       color: context.chat.accentText,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      fontFamily: 'NotoSansBengali',
+                                      fontFamily: 'HindSiliguri',
+                                      fontFamilyFallback: const [
+                                        'NotoSansBengali',
+                                        'Roboto',
+                                        'sans-serif'
+                                      ],
                                     ),
                                   );
                                 }
@@ -2849,7 +2841,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                     style: TextStyle(
                                       color: context.chat.text54,
                                       fontSize: 11,
-                                      fontFamily: 'NotoSansBengali',
+                                      fontFamily: 'HindSiliguri',
+                                      fontFamilyFallback: const [
+                                        'NotoSansBengali',
+                                        'Roboto',
+                                        'sans-serif'
+                                      ],
                                     ),
                                   );
                                 }
@@ -2862,6 +2859,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   lastSeen = rawLastSeen.toDate();
                                 } else if (rawLastSeen is DateTime) {
                                   lastSeen = rawLastSeen;
+                                }
+
+                                if (lastSeen == null &&
+                                    data?['lastMessageSenderId'] ==
+                                        resolvedOtherUid) {
+                                  final t = data?['lastMessageTime'];
+                                  if (t is Timestamp) {
+                                    lastSeen = t.toDate();
+                                  } else if (t is DateTime) {
+                                    lastSeen = t;
+                                  }
                                 }
 
                                 if (lastSeen == null &&
@@ -2893,7 +2901,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   style: TextStyle(
                                     color: context.chat.text54,
                                     fontSize: 11,
-                                    fontFamily: 'NotoSansBengali',
+                                    fontFamily: 'HindSiliguri',
+                                    fontFamilyFallback: const [
+                                      'NotoSansBengali',
+                                      'Roboto',
+                                      'sans-serif'
+                                    ],
                                   ),
                                 );
                               },
@@ -4131,37 +4144,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               ),
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                      horizontal: 4),
+                                                      horizontal: 10,
+                                                      vertical: 2),
                                               child: Row(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.end,
                                                 children: [
-                                                  Semantics(
-                                                    label: _showEmojiPicker
-                                                        ? context.l10n.translate(
-                                                            'chat_open_keyboard')
-                                                        : context.l10n.translate(
-                                                            'chat_open_emoji'),
-                                                    button: true,
-                                                    child: SizedBox(
-                                                      width: 40,
-                                                      height: 48,
-                                                      child: IconButton(
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                        icon: Icon(
-                                                            _showEmojiPicker
-                                                                ? Icons
-                                                                    .keyboard_outlined
-                                                                : Icons
-                                                                    .sentiment_satisfied_alt_outlined,
-                                                            color: context
-                                                                .chat.grey),
-                                                        onPressed:
-                                                            _toggleEmojiPicker,
-                                                      ),
-                                                    ),
-                                                  ),
                                                   Expanded(
                                                     child: Padding(
                                                       padding: const EdgeInsets
@@ -4191,9 +4179,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                           height: 1.38,
                                                           letterSpacing: 0.05,
                                                           fontFamily:
-                                                              'NotoSansBengali',
+                                                              'HindSiliguri',
                                                           fontFamilyFallback: const [
-                                                            'HindSiliguri',
+                                                            'NotoSansBengali',
                                                             'Roboto',
                                                             'sans-serif'
                                                           ],
@@ -4208,9 +4196,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                                 .chat.grey,
                                                             fontSize: 15.5,
                                                             fontFamily:
-                                                                'NotoSansBengali',
+                                                                'HindSiliguri',
                                                             fontFamilyFallback: const [
-                                                              'HindSiliguri',
+                                                              'NotoSansBengali',
                                                               'Roboto',
                                                               'sans-serif'
                                                             ],
@@ -4229,154 +4217,92 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                       ),
                                                     ),
                                                   ),
-                                                  ValueListenableBuilder<
-                                                      TextEditingValue>(
-                                                    valueListenable:
-                                                        _messageController,
-                                                    builder:
-                                                        (context, textVal, _) {
-                                                      final hasText = textVal
-                                                          .text
-                                                          .trim()
-                                                          .isNotEmpty;
-                                                      return Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .end,
-                                                        children: [
-                                                          if (!hasText ||
-                                                              _showFormatting)
-                                                            Semantics(
-                                                              label: context
-                                                                  .l10n
-                                                                  .translate(
-                                                                      'format_toolbar_toggle'),
-                                                              button: true,
-                                                              child: SizedBox(
-                                                                width: 36,
-                                                                height: 48,
-                                                                child:
-                                                                    IconButton(
-                                                                  tooltip: context
-                                                                      .l10n
-                                                                      .translate(
-                                                                          'format_toolbar_toggle'),
-                                                                  padding:
-                                                                      EdgeInsets
-                                                                          .zero,
-                                                                  icon:
-                                                                      Container(
-                                                                    padding: const EdgeInsets
-                                                                        .symmetric(
-                                                                        horizontal:
-                                                                            4,
-                                                                        vertical:
-                                                                            2),
-                                                                    decoration:
-                                                                        BoxDecoration(
-                                                                      border:
-                                                                          Border
-                                                                              .all(
-                                                                        color: _showFormatting
-                                                                            ? AppColors.mintGreen
-                                                                            : context.chat.grey,
-                                                                        width:
-                                                                            1.5,
-                                                                      ),
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                              4),
-                                                                      color: _showFormatting
-                                                                          ? AppColors
-                                                                              .mintGreen
-                                                                              .withValues(alpha: 0.15)
-                                                                          : Colors.transparent,
-                                                                    ),
-                                                                    child: Text(
-                                                                      'Aa',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: _showFormatting
-                                                                            ? AppColors.mintGreen
-                                                                            : context.chat.grey,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                        fontSize:
-                                                                            12.0,
-                                                                        letterSpacing:
-                                                                            -0.5,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  onPressed: () =>
-                                                                      setState(() =>
-                                                                          _showFormatting =
-                                                                              !_showFormatting),
-                                                                ),
-                                                              ),
+                                                  Semantics(
+                                                    label: context.l10n.translate(
+                                                        'format_toolbar_toggle'),
+                                                    button: true,
+                                                    child: SizedBox(
+                                                      width: 32,
+                                                      height: 48,
+                                                      child: IconButton(
+                                                        tooltip: context.l10n
+                                                            .translate(
+                                                                'format_toolbar_toggle'),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        icon: Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 4,
+                                                                  vertical: 2),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            border: Border.all(
+                                                              color: _showFormatting
+                                                                  ? AppColors
+                                                                      .mintGreen
+                                                                  : context.chat
+                                                                      .grey,
+                                                              width: 1.5,
                                                             ),
-                                                          Semantics(
-                                                            label: context.l10n
-                                                                .translate(
-                                                                    'chat_attach_tooltip'),
-                                                            button: true,
-                                                            child: SizedBox(
-                                                              width: 36,
-                                                              height: 48,
-                                                              child: IconButton(
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                icon: Icon(
-                                                                    Icons
-                                                                        .attach_file,
-                                                                    color: context
-                                                                        .chat
-                                                                        .grey,
-                                                                    size: 22),
-                                                                onPressed: () =>
-                                                                    _openAttachmentSheet(
-                                                                        currentUid,
-                                                                        currentName),
-                                                              ),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        4),
+                                                            color: _showFormatting
+                                                                ? AppColors
+                                                                    .mintGreen
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.15)
+                                                                : Colors
+                                                                    .transparent,
+                                                          ),
+                                                          child: Text(
+                                                            'Aa',
+                                                            style: TextStyle(
+                                                              color: _showFormatting
+                                                                  ? AppColors
+                                                                      .mintGreen
+                                                                  : context.chat
+                                                                      .grey,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              fontSize: 12.0,
+                                                              letterSpacing:
+                                                                  -0.5,
                                                             ),
                                                           ),
-                                                          if (!hasText)
-                                                            Semantics(
-                                                              label: context
-                                                                  .l10n
-                                                                  .translate(
-                                                                      'chat_open_camera_action'),
-                                                              button: true,
-                                                              child: SizedBox(
-                                                                width: 36,
-                                                                height: 48,
-                                                                child:
-                                                                    IconButton(
-                                                                  padding:
-                                                                      EdgeInsets
-                                                                          .zero,
-                                                                  icon: Icon(
-                                                                      Icons
-                                                                          .camera_alt_outlined,
-                                                                      color: context
-                                                                          .chat
-                                                                          .grey,
-                                                                      size: 22),
-                                                                  onPressed: () =>
-                                                                      _openCameraDirect(
-                                                                          currentUid,
-                                                                          currentName),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          const SizedBox(
-                                                              width: 4),
-                                                        ],
-                                                      );
-                                                    },
+                                                        ),
+                                                        onPressed: () => setState(
+                                                            () => _showFormatting =
+                                                                !_showFormatting),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Semantics(
+                                                    label: context.l10n.translate(
+                                                        'chat_attach_tooltip'),
+                                                    button: true,
+                                                    child: SizedBox(
+                                                      width: 34,
+                                                      height: 48,
+                                                      child: IconButton(
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        icon: Icon(
+                                                            Icons.attach_file,
+                                                            color: context
+                                                                .chat.grey,
+                                                            size: 22),
+                                                        onPressed: () =>
+                                                            _openAttachmentSheet(
+                                                                currentUid,
+                                                                currentName),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
