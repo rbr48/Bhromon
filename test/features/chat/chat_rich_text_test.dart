@@ -282,4 +282,69 @@ void main() {
       expect(generated!.contains(':---'), isTrue);
     });
   });
+
+  group('Interactive ChatTableWidget & Micro-Toolbar', () {
+    testWidgets('renders micro-action toolbar and detects numeric auto-sum',
+        (tester) async {
+      const tableMarkdown = '''
+| আইটেম | খরচ |
+| :--- | :--- |
+| ডাল ও চাল | ৫০০ |
+| ডিম ও সবজি | ৬৫০ |
+''';
+
+      bool importedToLedger = false;
+      bool pinnedToNotice = false;
+
+      await tester.pumpWidget(
+        _wrap(
+          ChatRichText(
+            text: tableMarkdown,
+            tableTitle: 'বাজারের খরচ',
+            onImportLedger: () => importedToLedger = true,
+            onPinNotice: () => pinnedToNotice = true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify table headers and cells
+      expect(find.text('আইটেম'), findsOneWidget);
+      expect(find.text('খরচ'), findsOneWidget);
+      expect(find.text('ডাল ও চাল'), findsOneWidget);
+
+      // Verify micro-action toolbar icons
+      expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.fullscreen_rounded), findsOneWidget);
+
+      // Verify Auto-Sum calculation (500 + 650 = 1150)
+      expect(find.textContaining('মোট (খরচ): ৳1,150'), findsOneWidget);
+
+      // Verify Contextual Ecosystem Chips
+      expect(find.text('লেজারে যুক্ত'), findsOneWidget);
+      expect(find.text('নোটিশে পিন'), findsOneWidget);
+
+      // Tap Ledger chip
+      await tester.tap(find.text('লেজারে যুক্ত'));
+      await tester.pumpAndSettle();
+      expect(importedToLedger, isTrue);
+
+      // Tap Notice chip
+      await tester.tap(find.text('নোটিশে পিন'));
+      await tester.pumpAndSettle();
+      expect(pinnedToNotice, isTrue);
+
+      // Tap fullscreen modal button
+      await tester.tap(find.byIcon(Icons.fullscreen_rounded));
+      await tester.pumpAndSettle();
+
+      // Fullscreen modal should now be open
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(find.byIcon(Icons.screen_lock_landscape_rounded), findsOneWidget);
+
+      // Close modal
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+    });
+  });
 }

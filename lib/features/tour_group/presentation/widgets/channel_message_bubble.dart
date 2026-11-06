@@ -142,6 +142,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                   revealed: _revealed,
                   onSpoiler: _toggleSpoiler,
                   isMine: own,
+                  onImportLedger: widget.onOpenLedger,
                   baseStyle: TextStyle(
                     color: own
                         ? (context.forest.isDark
@@ -574,6 +575,7 @@ class ChannelRichText extends StatelessWidget {
   final ValueChanged<int> onSpoiler;
   final TextStyle? baseStyle;
   final bool isMine;
+  final VoidCallback? onImportLedger;
 
   const ChannelRichText({
     super.key,
@@ -582,6 +584,7 @@ class ChannelRichText extends StatelessWidget {
     required this.onSpoiler,
     this.baseStyle,
     this.isMine = false,
+    this.onImportLedger,
   });
 
   @override
@@ -592,6 +595,7 @@ class ChannelRichText extends StatelessWidget {
       revealed: revealed,
       onSpoiler: onSpoiler,
       isMine: isMine,
+      onImportLedger: onImportLedger,
     );
   }
 }

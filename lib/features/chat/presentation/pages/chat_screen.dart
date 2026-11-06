@@ -4246,80 +4246,77 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                             CrossAxisAlignment
                                                                 .end,
                                                         children: [
-                                                          Semantics(
-                                                            label: context.l10n
-                                                                .translate(
-                                                                    'format_toolbar_toggle'),
-                                                            button: true,
-                                                            child: SizedBox(
-                                                              width: 36,
-                                                              height: 48,
-                                                              child: IconButton(
-                                                                tooltip: context
-                                                                    .l10n
-                                                                    .translate(
-                                                                        'format_toolbar_toggle'),
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                icon: Container(
-                                                                  padding: const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          4,
-                                                                      vertical:
-                                                                          2),
-                                                                  decoration:
-                                                                      BoxDecoration(
-                                                                    border:
-                                                                        Border
-                                                                            .all(
+                                                          if (!hasText ||
+                                                              _showFormatting)
+                                                            Semantics(
+                                                              label: context
+                                                                  .l10n
+                                                                  .translate(
+                                                                      'format_toolbar_toggle'),
+                                                              button: true,
+                                                              child: SizedBox(
+                                                                width: 36,
+                                                                height: 48,
+                                                                child:
+                                                                    IconButton(
+                                                                  tooltip: context
+                                                                      .l10n
+                                                                      .translate(
+                                                                          'format_toolbar_toggle'),
+                                                                  padding:
+                                                                      EdgeInsets
+                                                                          .zero,
+                                                                  icon:
+                                                                      Container(
+                                                                    padding: const EdgeInsets
+                                                                        .symmetric(
+                                                                        horizontal:
+                                                                            4,
+                                                                        vertical:
+                                                                            2),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      border:
+                                                                          Border
+                                                                              .all(
+                                                                        color: _showFormatting
+                                                                            ? AppColors.mintGreen
+                                                                            : context.chat.grey,
+                                                                        width:
+                                                                            1.5,
+                                                                      ),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                              4),
                                                                       color: _showFormatting
                                                                           ? AppColors
                                                                               .mintGreen
-                                                                          : context
-                                                                              .chat
-                                                                              .grey,
-                                                                      width:
-                                                                          1.5,
+                                                                              .withValues(alpha: 0.15)
+                                                                          : Colors.transparent,
                                                                     ),
-                                                                    borderRadius:
-                                                                        BorderRadius
-                                                                            .circular(4),
-                                                                    color: _showFormatting
-                                                                        ? AppColors.mintGreen.withValues(
-                                                                            alpha:
-                                                                                0.15)
-                                                                        : Colors
-                                                                            .transparent,
-                                                                  ),
-                                                                  child: Text(
-                                                                    'Aa',
-                                                                    style:
-                                                                        TextStyle(
-                                                                      color: _showFormatting
-                                                                          ? AppColors
-                                                                              .mintGreen
-                                                                          : context
-                                                                              .chat
-                                                                              .grey,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                      fontSize:
-                                                                          12.0,
-                                                                      letterSpacing:
-                                                                          -0.5,
+                                                                    child: Text(
+                                                                      'Aa',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color: _showFormatting
+                                                                            ? AppColors.mintGreen
+                                                                            : context.chat.grey,
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
+                                                                        fontSize:
+                                                                            12.0,
+                                                                        letterSpacing:
+                                                                            -0.5,
+                                                                      ),
                                                                     ),
                                                                   ),
+                                                                  onPressed: () =>
+                                                                      setState(() =>
+                                                                          _showFormatting =
+                                                                              !_showFormatting),
                                                                 ),
-                                                                onPressed: () =>
-                                                                    setState(() =>
-                                                                        _showFormatting =
-                                                                            !_showFormatting),
                                                               ),
                                                             ),
-                                                          ),
                                                           Semantics(
                                                             label: context.l10n
                                                                 .translate(
