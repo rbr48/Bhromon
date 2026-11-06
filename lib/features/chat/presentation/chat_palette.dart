@@ -15,12 +15,13 @@ class ChatPalette {
   final bool isDark;
 
   /// The brand accent: buttons, ticks, links, unread badges.
-  Color get accent => const Color(0xFF00A884);
+  Color get accent =>
+      isDark ? const Color(0xFF52B788) : const Color(0xFF2D6A4F);
 
   /// The accent as a text or icon colour. In light mode it is darker, so it
   /// stays readable on light surfaces; buttons keep [accent].
   Color get accentText =>
-      isDark ? const Color(0xFF00A884) : const Color(0xFF008069);
+      isDark ? const Color(0xFF52B788) : const Color(0xFF2D6A4F);
 
   /// Money owed to you.
   Color get owedToYou =>
@@ -35,7 +36,7 @@ class ChatPalette {
 
   /// The conversation background behind the bubbles.
   Color get wallpaper =>
-      isDark ? const Color(0xFF0B141A) : const Color(0xFFEFEAE2);
+      isDark ? const Color(0xFF0D1A12) : const Color(0xFFEFEAE2);
 
   /// The faint doodles drawn on the wallpaper.
   Color get wallpaperDoodle => isDark
@@ -43,29 +44,29 @@ class ChatPalette {
       : Colors.black.withValues(alpha: 0.035);
 
   /// App bars, sheets, dialogs and menus.
-  Color get bar => isDark ? const Color(0xFF1F2C34) : Colors.white;
+  Color get bar => isDark ? const Color(0xFF14241B) : Colors.white;
 
   /// Incoming bubbles and the message input.
-  Color get panel => isDark ? const Color(0xFF202C33) : Colors.white;
+  Color get panel => isDark ? const Color(0xFF1B2E23) : Colors.white;
 
   /// Text fields and chips on a bar or panel.
-  Color get field => isDark ? const Color(0xFF2A3942) : const Color(0xFFF0F2F5);
+  Color get field => isDark ? const Color(0xFF233D2F) : const Color(0xFFF0F2F5);
 
   /// Recessed areas, such as a quoted message inside a bubble.
   Color get recessed =>
-      isDark ? const Color(0xFF1A2730) : const Color(0xFFF0F2F5);
+      isDark ? const Color(0xFF16241C) : const Color(0xFFF0F2F5);
 
   /// The deepest recessed areas.
   Color get recessedDeep =>
-      isDark ? const Color(0xFF182229) : const Color(0xFFE9EDEF);
+      isDark ? const Color(0xFF121E17) : const Color(0xFFE9EDEF);
 
   /// Outgoing bubbles.
   Color get outgoing =>
-      isDark ? const Color(0xFF005C4B) : const Color(0xFFD9FDD3);
+      isDark ? const Color(0xFF1B4332) : const Color(0xFFD9FDD3);
 
   /// Cards and quotes inside an outgoing bubble.
   Color get outgoingRecessed =>
-      isDark ? const Color(0xFF024638) : const Color(0xFFC5EBBE);
+      isDark ? const Color(0xFF143325) : const Color(0xFFC5EBBE);
 
   /// Grey used for timestamps and secondary icons.
   Color get grey => isDark ? const Color(0xFF8696A0) : const Color(0xFF667781);

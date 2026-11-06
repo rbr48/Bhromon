@@ -2,6 +2,7 @@ import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
@@ -153,12 +154,14 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.terminal_rounded,
-                            size: 15, color: context.forest.accentText),
+                        Icon(Icons.search_rounded,
+                            size: 16, color: context.forest.accentText),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '>_ কমান্ড প্যালেট',
+                            context.l10n.locale.languageCode == 'bn'
+                                ? 'অনুসন্ধান ও নেভিগেশন'
+                                : 'Search & Navigate',
                             style: TextStyle(
                                 color: context.forest.text70,
                                 fontSize: 11.5,
@@ -351,12 +354,16 @@ class DesktopTourSidebar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7.5),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.mintGreen.withValues(alpha: 0.15)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.18)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: isActive
               ? Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.4), width: 0.8)
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.4),
+                  width: 0.8)
               : null,
         ),
         child: Row(
@@ -405,12 +412,16 @@ class DesktopTourSidebar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.mintGreen.withValues(alpha: 0.15)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.18)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: isActive
               ? Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.4), width: 0.8)
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.4),
+                  width: 0.8)
               : null,
         ),
         child: Row(
@@ -552,7 +563,9 @@ class DesktopTourSidebar extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'ফায়ারবেস লাইভ সিঙ্ক সক্রিয়',
+                  context.l10n.locale.languageCode == 'bn'
+                      ? 'সার্ভার সংযোগ সক্রিয়'
+                      : 'Live sync active',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: context.forest.text54, fontSize: 9.5),
                 ),

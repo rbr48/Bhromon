@@ -10,15 +10,22 @@ class SosRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.hasActiveAlert = false,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool hasActiveAlert;
 
   @override
   Widget build(BuildContext context) {
     const red = Color(0xFFEF4444);
+    final borderColor = hasActiveAlert
+        ? red.withValues(alpha: 0.5)
+        : context.forest.text.withValues(alpha: 0.12);
+    final iconColor = hasActiveAlert ? red : context.forest.accentText;
+
     return Semantics(
       button: true,
       label: title,
@@ -33,11 +40,11 @@ class SosRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.forest.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: red.withValues(alpha: 0.4)),
+              border: Border.all(color: borderColor),
             ),
             child: Row(
               children: [
-                const Icon(Icons.shield_rounded, color: red),
+                Icon(Icons.shield_rounded, color: iconColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

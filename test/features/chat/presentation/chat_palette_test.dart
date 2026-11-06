@@ -19,14 +19,14 @@ void main() {
   group('dark palette keeps the original chat colours', () {
     const d = ChatPalette.dark;
     test('surfaces', () {
-      expect(d.wallpaper, const Color(0xFF0B141A));
-      expect(d.bar, const Color(0xFF1F2C34));
-      expect(d.panel, const Color(0xFF202C33));
-      expect(d.field, const Color(0xFF2A3942));
-      expect(d.recessed, const Color(0xFF1A2730));
-      expect(d.recessedDeep, const Color(0xFF182229));
-      expect(d.outgoing, const Color(0xFF005C4B));
-      expect(d.outgoingRecessed, const Color(0xFF024638));
+      expect(d.wallpaper, const Color(0xFF0D1A12));
+      expect(d.bar, const Color(0xFF14241B));
+      expect(d.panel, const Color(0xFF1B2E23));
+      expect(d.field, const Color(0xFF233D2F));
+      expect(d.recessed, const Color(0xFF16241C));
+      expect(d.recessedDeep, const Color(0xFF121E17));
+      expect(d.outgoing, const Color(0xFF1B4332));
+      expect(d.outgoingRecessed, const Color(0xFF143325));
       expect(d.grey, const Color(0xFF8696A0));
       expect(d.wallpaperDoodle, Colors.white.withValues(alpha: 0.015));
     });

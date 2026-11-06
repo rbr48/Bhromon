@@ -4,6 +4,7 @@ import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -26,6 +27,7 @@ import '../../domain/services/prayer_calculator.dart';
 import '../../domain/services/journey_audio_guide_service.dart';
 import '../journey_access_flow.dart';
 import '../live_journey_runtime.dart';
+import '../tour_routes.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
 import '../widgets/journey/journey_alarm_settings_sheet.dart';
 import '../widgets/journey/journey_live_card.dart';
@@ -530,6 +532,16 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     return Scaffold(
       backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
       appBar: AppBar(
+        leading: BackButton(
+          color: context.forest.text,
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(tourHubPath(widget.tourId));
+            }
+          },
+        ),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         foregroundColor: context.forest.text,
         elevation: 0,
@@ -705,9 +717,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final remainingMins = next.remaining.inMinutes;
     final hours = remainingMins ~/ 60;
     final mins = remainingMins % 60;
+    final isBn = l10n.locale.languageCode == 'bn';
     final timeStr = hours > 0
-        ? '${l10n.number(hours)}h ${l10n.number(mins)}m'
-        : '${l10n.number(mins)}m';
+        ? (isBn
+            ? '${l10n.number(hours)} ঘণ্টা ${l10n.number(mins)} মিনিট'
+            : '${hours}h ${mins}m')
+        : (isBn ? '${l10n.number(mins)} মিনিট' : '${mins}m');
 
     final prayerItems = [
       (key: 'prayer_fajr', time: schedule.fajr),

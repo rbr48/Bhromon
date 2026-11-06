@@ -330,7 +330,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 ),
                 child: Text(
                   isBn
-                      ? '${analytics.overallWinRate.toStringAsFixed(0)}% জয়'
+                      ? '${context.l10n.number(analytics.overallWinRate.toStringAsFixed(0))}% জয়'
                       : '${analytics.overallWinRate.toStringAsFixed(0)}% Win',
                   style: const TextStyle(
                     color: AppColors.mintGreen,
@@ -464,7 +464,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   ),
                   Text(
                     isBn
-                        ? '${stat.winRate.toStringAsFixed(0)}% জয়ের হার'
+                        ? '${context.l10n.number(stat.winRate.toStringAsFixed(0))}% জয়ের হার'
                         : '${stat.winRate.toStringAsFixed(0)}% Win Rate',
                     style: TextStyle(
                       color: context.forest.accentText,
@@ -657,7 +657,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                 children: [
                   if (record.score > 0)
                     Text(
-                      '${record.score} pts',
+                      '${context.l10n.number(record.score)} ${isBn ? 'পয়েন্ট' : 'pts'}',
                       style: TextStyle(
                         color: context.forest.text,
                         fontSize: 13,
@@ -665,7 +665,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       ),
                     ),
                   Text(
-                    _formatTimeAgo(record.timestamp),
+                    _formatTimeAgo(record.timestamp, context.l10n),
                     style: TextStyle(
                       color: context.forest.text.withValues(alpha: 0.4),
                       fontSize: 10,
@@ -729,6 +729,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
     }
 
     final entries = _leaderboardEntries ?? [];
+    final isBn = Localizations.localeOf(context).languageCode == 'bn';
     if (entries.isEmpty) {
       return Center(
         key: const ValueKey(2),
@@ -828,7 +829,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                         ),
                       ),
                       Text(
-                        '${entries.first.totalWins} জয় • ${entries.first.winRate.toStringAsFixed(0)}% উইন রেট',
+                        isBn
+                            ? '${context.l10n.number(entries.first.totalWins)} জয় • ${context.l10n.number(entries.first.winRate.toStringAsFixed(0))}% উইন রেট'
+                            : '${entries.first.totalWins} Wins • ${entries.first.winRate.toStringAsFixed(0)}% Win Rate',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -926,7 +929,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${entry.totalWins} জয়',
+                      isBn
+                          ? '${context.l10n.number(entry.totalWins)} জয়'
+                          : '${entry.totalWins} Wins',
                       style: TextStyle(
                         color: context.forest.text,
                         fontSize: 13,
@@ -934,7 +939,9 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       ),
                     ),
                     Text(
-                      '${entry.totalMatches} ম্যাচ (${entry.winRate.toStringAsFixed(0)}%)',
+                      isBn
+                          ? '${context.l10n.number(entry.totalMatches)} ম্যাচ (${context.l10n.number(entry.winRate.toStringAsFixed(0))}%)'
+                          : '${entry.totalMatches} matches (${entry.winRate.toStringAsFixed(0)}%)',
                       style: TextStyle(
                         color: context.forest.accentText,
                         fontSize: 11,
@@ -950,11 +957,19 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
     );
   }
 
-  static String _formatTimeAgo(DateTime dt) {
+  static String _formatTimeAgo(DateTime dt, [AppLocalizations? l10n]) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    final isBn = l10n?.locale.languageCode == 'bn';
+    if (diff.inMinutes < 1) return isBn ? 'এইমাত্র' : 'Just now';
+    if (diff.inHours < 1) {
+      final m = l10n != null ? l10n.number(diff.inMinutes) : diff.inMinutes;
+      return isBn ? '$m মিনিট আগে' : '${diff.inMinutes}m ago';
+    }
+    if (diff.inDays < 1) {
+      final h = l10n != null ? l10n.number(diff.inHours) : diff.inHours;
+      return isBn ? '$h ঘণ্টা আগে' : '${diff.inHours}h ago';
+    }
+    final d = l10n != null ? l10n.number(diff.inDays) : diff.inDays;
+    return isBn ? '$d দিন আগে' : '${diff.inDays}d ago';
   }
 }

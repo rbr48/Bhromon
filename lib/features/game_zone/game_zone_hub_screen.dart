@@ -22,11 +22,15 @@ class ArcadeGameItem {
   final String title;
   final String titleBn;
   final String description;
+  final String? descriptionBn;
   final IconData icon;
   final String tag;
+  final String? tagBn;
   final Color tagColor;
   final String players;
+  final String? playersBn;
   final String highlight;
+  final String? highlightBn;
   final List<Color> gradient;
   final Color glowColor;
   final String route;
@@ -37,16 +41,28 @@ class ArcadeGameItem {
     required this.title,
     required this.titleBn,
     required this.description,
+    this.descriptionBn,
     required this.icon,
     required this.tag,
+    this.tagBn,
     required this.tagColor,
     required this.players,
+    this.playersBn,
     required this.highlight,
+    this.highlightBn,
     required this.gradient,
     required this.glowColor,
     required this.route,
     required this.category,
   });
+
+  String displayTitle(bool isBn) => isBn ? titleBn : title;
+  String displayDescription(bool isBn) =>
+      (isBn ? descriptionBn : null) ?? description;
+  String displayTag(bool isBn) => (isBn ? tagBn : null) ?? tag;
+  String displayPlayers(bool isBn) => (isBn ? playersBn : null) ?? players;
+  String displayHighlight(bool isBn) =>
+      (isBn ? highlightBn : null) ?? highlight;
 }
 
 class GameZoneHubScreen extends StatefulWidget {
@@ -90,11 +106,16 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       titleBn: 'টোয়েন্টি নাইন',
       description:
           'South Asian 32-card trick-taking game. Bid 16–28, reveal trump, and team up with smart AI partner.',
+      descriptionBn:
+          'জনপ্রিয় ৩২ কার্ডের ট্রিক-টেকিং খেলা। ১৬–২৮ ডাকুন, ট্রাম্প রিভিল করুন এবং স্মার্ট এআই পার্টনারের সাথে খেলুন।',
       icon: Icons.style_rounded,
       tag: 'CROWD FAVORITE',
+      tagBn: 'সবার প্রিয়',
       tagColor: Color(0xFFFF5252),
       players: '👥 4 Players • 2 Teams',
+      playersBn: '👥 ৪ জন খেলোয়াড় • ২ দল',
       highlight: '32 Cards • Bid 16-28',
+      highlightBn: '৩২ কার্ড • ১৬-২৮ ডাক',
       gradient: [Color(0xFF14301C), Color(0xFF09160D)],
       glowColor: Color(0xFF2E7D32),
       route: '/game-zone/card29',
@@ -106,11 +127,16 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       titleBn: 'দাবা',
       description:
           'Sharpen your mind with tactical road battles against our Minimax engine with takeback, move history & clocks.',
+      descriptionBn:
+          'স্মার্ট মিনিম্যাক্স এআইয়ের বিরুদ্ধে বুদ্ধির লড়াই। চাল ফিরিয়ে নেওয়ার সুযোগ, ইতিহাস ও ঘড়ি সহ যেকোনো সময় খেলুন।',
       icon: Icons.psychology_rounded,
       tag: 'TACTICAL STRATEGY',
+      tagBn: 'কৌশলগত খেলা',
       tagColor: Color(0xFF448AFF),
       players: '🧠 1 vs 1 • Minimax AI',
+      playersBn: '🧠 ১ বনাম ১ • মিনিম্যাক্স এআই',
       highlight: '3 Difficulty Levels',
+      highlightBn: '৩টি ভিন্ন লেভেল',
       gradient: [Color(0xFF132435), Color(0xFF0A131C)],
       glowColor: Color(0xFF1976D2),
       route: '/game-zone/chess',
@@ -119,14 +145,19 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
     ArcadeGameItem(
       id: 'ludo',
       title: 'Ludo Express',
-      titleBn: 'লুডো',
+      titleBn: 'লুডো এক্সপ্রেস',
       description:
           'Roll the dice, race 4 tokens to home base, and knock out companions. 3-sixes rule, safe squares & pass-and-play.',
+      descriptionBn:
+          'ছক্কা ফেলে ৪টি ঘুঁটি ঘরে নিন এবং সঙ্গীদের নকআউট করুন। ৩ ছক্কার নিয়ম, সেফ স্কয়ার ও পাস-অ্যান্ড-প্লে।',
       icon: Icons.casino_rounded,
       tag: 'FAMILY CLASSIC',
+      tagBn: 'পারিবারিক ক্লাসিক',
       tagColor: Color(0xFFFFB300),
       players: '🎲 2-4 Players • Pass & Play',
+      playersBn: '🎲 ২-৪ জন • পাস ও প্লে',
       highlight: '3 Sixes & Auto Knockout',
+      highlightBn: '৩ ছক্কা ও নকআউট',
       gradient: [Color(0xFF2F1F17), Color(0xFF150D0A)],
       glowColor: Color(0xFFD84315),
       route: '/game-zone/ludo',
@@ -138,11 +169,16 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       titleBn: 'তিন পাত্তি',
       description:
           'Authentic South Asian 3-card poker. Play blind or seen, manage chips, request sideshows & win with Trail & Sequence.',
+      descriptionBn:
+          'জনপ্রিয় ৩ কার্ডের দেশি পোকার। ব্লাইন্ড বা দেখে খেলুন, চিপস পরিচালনা করুন এবং ট্রেইল ও সিকোয়েন্সে জয়ী হোন।',
       icon: Icons.filter_3_rounded,
       tag: 'DESI POKER',
+      tagBn: 'দেশি পোকার',
       tagColor: Color(0xFF00E676),
       players: '🃏 3-6 Players • AI Bots',
+      playersBn: '🃏 ৩-৬ জন • এআই বট',
       highlight: 'Sideshow • Blind & Chaal',
+      highlightBn: 'সাইডশো • ব্লাইন্ড ও চাল',
       gradient: [Color(0xFF112E24), Color(0xFF081611)],
       glowColor: Color(0xFF00BFA5),
       route: '/game-zone/teen-patti',
@@ -154,11 +190,16 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       titleBn: 'ক্যারম',
       description:
           'Flick the striker on a realistic physics board. Sink coins, cover the Queen, and challenge the bot or pass the phone.',
+      descriptionBn:
+          'বাস্তবধর্মী ফিজিক্স বোর্ডে স্ট্রাইকার ছুড়ুন। ঘুঁটি ফেলুন, কুইন কাভার করুন এবং বট বা বন্ধুদের সাথে খেলুন।',
       icon: Icons.adjust_rounded,
       tag: 'PHYSICS ARCADE',
+      tagBn: 'বোর্ড আর্কেড',
       tagColor: Color(0xFFFF9100),
       players: '🎯 2-4 Players • Pass / Bot',
+      playersBn: '🎯 ২-৪ জন • পাস / বট',
       highlight: 'Queen Cover • Real Physics',
+      highlightBn: 'কুইন কাভার • রিয়েল ফিজিক্স',
       gradient: [Color(0xFF332015), Color(0xFF170D08)],
       glowColor: Color(0xFFE65100),
       route: '/game-zone/carrom',
@@ -400,14 +441,16 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                         color: AppColors.mintGreen.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.bolt_rounded,
+                          const Icon(Icons.bolt_rounded,
                               size: 11, color: AppColors.mintGreen),
                           Text(
-                            '100% OFFLINE',
-                            style: TextStyle(
+                            context.l10n.locale.languageCode == 'bn'
+                                ? '১০০% অফলাইন'
+                                : '100% OFFLINE',
+                            style: const TextStyle(
                               color: AppColors.mintGreen,
                               fontSize: 9.5,
                               fontWeight: FontWeight.bold,
@@ -419,9 +462,11 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   ],
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  'Zero internet required. Built for scenic bus rides, camping nights & flights.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11.5),
+                Text(
+                  context.l10n.locale.languageCode == 'bn'
+                      ? 'কোনো ইন্টারনেটের প্রয়োজন নেই। বাস ভ্রমণ, ক্যাম্পিং ও ফ্লাইটের জন্য উপযুক্ত।'
+                      : 'Zero internet required. Built for scenic bus rides, camping nights & flights.',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11.5),
                 ),
               ],
             ),
@@ -433,11 +478,15 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
 
   // --- FILTER & TOOLBAR ---
   Widget _buildFilterAndToolbar(BuildContext context, bool isWide) {
+    final isBn = context.l10n.locale.languageCode == 'bn';
     final categories = [
-      {'cat': GameCategory.all, 'label': 'All (5)'},
-      {'cat': GameCategory.cards, 'label': 'Cards (2)'},
-      {'cat': GameCategory.board, 'label': 'Board & AI (2)'},
-      {'cat': GameCategory.arcade, 'label': 'Arcade (1)'},
+      {'cat': GameCategory.all, 'label': isBn ? 'সব (৫)' : 'All (5)'},
+      {'cat': GameCategory.cards, 'label': isBn ? 'কার্ড (২)' : 'Cards (2)'},
+      {
+        'cat': GameCategory.board,
+        'label': isBn ? 'বোর্ড ও এআই (২)' : 'Board & AI (2)'
+      },
+      {'cat': GameCategory.arcade, 'label': isBn ? 'আর্কেড (১)' : 'Arcade (1)'},
     ];
 
     return Row(
@@ -492,7 +541,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
             color: context.forest.text60,
             size: 20,
           ),
-          tooltip: _isCompactView ? 'Grid View' : 'Compact List',
+          tooltip: _isCompactView
+              ? (isBn ? 'গ্রিড ভিউ' : 'Grid View')
+              : (isBn ? 'কম্প্যাক্ট তালিকা' : 'Compact List'),
           onPressed: () => setState(() => _isCompactView = !_isCompactView),
         ),
       ],
@@ -578,7 +629,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            g.title,
+                            g.displayTitle(
+                                context.l10n.locale.languageCode == 'bn'),
                             style: TextStyle(
                               color: context.forest.text,
                               fontWeight: FontWeight.bold,
@@ -587,7 +639,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            '${g.players} • ${g.highlight}',
+                            '${g.displayPlayers(context.l10n.locale.languageCode == 'bn')} • ${g.displayHighlight(context.l10n.locale.languageCode == 'bn')}',
                             style: TextStyle(
                                 color: context.forest.text60, fontSize: 11),
                             maxLines: 1,
@@ -614,7 +666,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                               size: 14, color: g.tagColor),
                           const SizedBox(width: 2),
                           Text(
-                            'PLAY',
+                            context.l10n.locale.languageCode == 'bn'
+                                ? 'খেলুন'
+                                : 'PLAY',
                             style: TextStyle(
                               color: g.tagColor,
                               fontSize: 10.5,
@@ -715,7 +769,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                                   ),
                                 ),
                                 child: Text(
-                                  item.tag,
+                                  item.displayTag(
+                                      context.l10n.locale.languageCode == 'bn'),
                                   style: TextStyle(
                                     color: item.tagColor,
                                     fontSize: 9.5,
@@ -728,7 +783,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            item.players,
+                            item.displayPlayers(
+                                context.l10n.locale.languageCode == 'bn'),
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
@@ -756,7 +812,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                               size: 14, color: item.tagColor),
                           const SizedBox(width: 2),
                           Text(
-                            'PLAY',
+                            context.l10n.locale.languageCode == 'bn'
+                                ? 'খেলুন'
+                                : 'PLAY',
                             style: TextStyle(
                               color: item.tagColor,
                               fontSize: 10,
@@ -774,7 +832,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      item.displayTitle(
+                          context.l10n.locale.languageCode == 'bn'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -783,7 +842,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      item.description,
+                      item.displayDescription(
+                          context.l10n.locale.languageCode == 'bn'),
                       style: const TextStyle(
                         color: Colors.white60,
                         fontSize: 11.5,
@@ -810,7 +870,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       Icon(Icons.stars_rounded, size: 11, color: item.tagColor),
                       const SizedBox(width: 4),
                       Text(
-                        item.highlight,
+                        item.displayHighlight(
+                            context.l10n.locale.languageCode == 'bn'),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 10.5,
@@ -854,7 +915,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   color: context.forest.text38, size: 64),
               const SizedBox(height: 16),
               Text(
-                'No Active Group',
+                context.l10n.locale.languageCode == 'bn'
+                    ? 'কোনো সক্রিয় গ্রুপ নেই'
+                    : 'No Active Group',
                 style: TextStyle(
                   color: context.forest.text,
                   fontSize: 18,
@@ -863,7 +926,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Join or create a group to unlock online multiplayer with in-game voice chat.',
+                context.l10n.locale.languageCode == 'bn'
+                    ? 'গ্রুপ সদস্যদের সাথে অনলাইন মাল্টিপ্লেয়ার ও লাইভ ভয়েস চ্যাট খেলতে একটি গ্রুপে যোগ দিন বা তৈরি করুন।'
+                    : 'Join or create a group to unlock online multiplayer with in-game voice chat.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.forest.text70, fontSize: 13),
               ),
@@ -881,7 +946,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   ),
                 ),
                 icon: const Icon(Icons.hub_outlined),
-                label: const Text('Open Tours Hub'),
+                label: Text(context.l10n.locale.languageCode == 'bn'
+                    ? 'গ্রুপ হাব খুলুন'
+                    : 'Open Tours Hub'),
               ),
             ],
           ),
@@ -941,9 +1008,12 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const Text(
-                          'Live multiplayer tables with voice chat',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        Text(
+                          context.l10n.locale.languageCode == 'bn'
+                              ? 'ভয়েস চ্যাটসহ লাইভ মাল্টিপ্লেয়ার টেবিল'
+                              : 'Live multiplayer tables with voice chat',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
                         ),
                       ],
                     ),
@@ -1188,7 +1258,13 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isPlaying ? 'IN MATCH' : 'OPEN LOBBY',
+                              isPlaying
+                                  ? (context.l10n.locale.languageCode == 'bn'
+                                      ? 'খেলা চলছে'
+                                      : 'IN MATCH')
+                                  : (context.l10n.locale.languageCode == 'bn'
+                                      ? 'খোলা লবি'
+                                      : 'OPEN LOBBY'),
                               style: TextStyle(
                                 color: isPlaying
                                     ? context.forest.readable(Colors.redAccent)
@@ -1202,7 +1278,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${session.gameType.label} • ${session.players.length}/${session.maxPlayers} Seated',
+                        '${session.gameType.localizedLabel(context.l10n.locale.languageCode == 'bn')} • ${context.l10n.number(session.players.length)}/${context.l10n.number(session.maxPlayers)} ${context.l10n.locale.languageCode == 'bn' ? 'যুক্ত' : 'Seated'}',
                         style: TextStyle(
                             color: context.forest.text60, fontSize: 12),
                       ),
@@ -1237,7 +1313,17 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   ),
                   child: Text(
-                    isSeated ? 'Enter' : (isFull ? 'Watch' : 'Join'),
+                    isSeated
+                        ? (context.l10n.locale.languageCode == 'bn'
+                            ? 'প্রবেশ'
+                            : 'Enter')
+                        : (isFull
+                            ? (context.l10n.locale.languageCode == 'bn'
+                                ? 'দেখুন'
+                                : 'Watch')
+                            : (context.l10n.locale.languageCode == 'bn'
+                                ? 'যোগ দিন'
+                                : 'Join')),
                     style: const TextStyle(
                         fontSize: 12, fontWeight: FontWeight.bold),
                   ),
@@ -1275,7 +1361,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Enter the Table Code or paste the invite shared by your host:',
+              context.l10n.locale.languageCode == 'bn'
+                  ? 'হোস্টের শেয়ার করা টেবিল কোড বা ইনভাইট কোড দিন:'
+                  : 'Enter the Table Code or paste the invite shared by your host:',
               style: TextStyle(color: context.forest.text70, fontSize: 13),
             ),
             const SizedBox(height: 12),
@@ -1312,8 +1400,10 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
-            child:
-                Text('Cancel', style: TextStyle(color: context.forest.text54)),
+            child: Text(
+              context.l10n.locale.languageCode == 'bn' ? 'বাতিল' : 'Cancel',
+              style: TextStyle(color: context.forest.text54),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -1338,15 +1428,21 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Could not join table: $e'),
+                      content: Text(context.l10n.locale.languageCode == 'bn'
+                          ? 'টেবিলে যোগ দেওয়া যায়নি: $e'
+                          : 'Could not join table: $e'),
                       backgroundColor: Colors.redAccent,
                     ),
                   );
                 }
               }
             },
-            child: const Text('Join Table',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              context.l10n.locale.languageCode == 'bn'
+                  ? 'টেবিলে যোগ দিন'
+                  : 'Join Table',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

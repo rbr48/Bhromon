@@ -152,11 +152,17 @@ void main() {
 
     // Verify Tour Modules Grid
     expect(find.text('Group modules & operations'), findsOneWidget);
-    expect(find.text('Moments 📸'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(GridView),
+        matching: find.text('Moments'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Shared fund & ledger'), findsOneWidget);
-    expect(find.text('Highway roadmap 🛣️'), findsOneWidget);
-    expect(find.text('Safety hub & SOS 🚨'), findsOneWidget);
-    expect(find.text('Holiday calendar 📅'), findsOneWidget);
+    expect(find.text('Highway roadmap'), findsOneWidget);
+    expect(find.text('Safety hub & SOS'), findsOneWidget);
+    expect(find.text('Holiday calendar'), findsOneWidget);
 
     // Verify Navigation bar tabs
     expect(find.byType(NavigationBar), findsOneWidget);

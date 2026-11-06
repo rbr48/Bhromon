@@ -23,7 +23,7 @@ import 'package:hive/hive.dart';
 
 const _goldenPath = 'test/features/tour_group/goldens/hub_modules_golden.json';
 const _capture = bool.fromEnvironment('CAPTURE_HUB_MODULES');
-const _noticesTitle = 'Notice board 📌';
+const _noticesTitle = 'Notice board';
 
 class _Repo extends TourGroupRepository {
   _Repo(this.groups);

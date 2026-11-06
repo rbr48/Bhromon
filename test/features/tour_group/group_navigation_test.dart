@@ -130,7 +130,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Two taps on the same tile before the next frame: a double tap.
-    final spot = tester.getCenter(find.text('Moments 📸'));
+    final momentsTile = find.descendant(
+      of: find.byType(GridView),
+      matching: find.text('Moments'),
+    );
+    final spot = tester.getCenter(momentsTile);
     await tester.tapAt(spot);
     await tester.tapAt(spot);
     await tester.pumpAndSettle();
@@ -157,11 +161,15 @@ void main() {
     // Tapping a card expands it in place. Its Moments tile opens the feed route.
     await tester.tap(find.text('Sajek g4'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Moments 📸'));
+    final tileInCard = find.descendant(
+      of: find.byType(GridView),
+      matching: find.text('Moments'),
+    );
+    await tester.ensureVisible(tileInCard);
     await tester.pumpAndSettle();
     final beforeTool = _listOffset(tester);
 
-    await tester.tap(find.text('Moments 📸'));
+    await tester.tap(tileInCard);
     await tester.pumpAndSettle();
     expect(find.text('Feed page'), findsOneWidget);
 

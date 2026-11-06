@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -16,6 +17,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/models/vehicle_models.dart';
 import '../../domain/services/seat_layout_engine.dart';
 import '../../domain/services/seat_planner.dart';
+import '../tour_routes.dart';
 import '../widgets/transport/local_fare_guide_sheet.dart';
 import '../widgets/transport/vehicle_editor_sheet.dart';
 import '../widgets/transport/vehicle_seat_map.dart';
@@ -455,6 +457,16 @@ class _TransportScreenState extends State<TransportScreen> {
     return Scaffold(
       backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
+        leading: BackButton(
+          color: context.forest.text,
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(tourHubPath(widget.tourId));
+            }
+          },
+        ),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(l10n.translate('veh_title'),
@@ -588,33 +600,40 @@ class _TransportScreenState extends State<TransportScreen> {
         ];
         final needed = _members.fold<int>(0, (n, m) => n + m.familyCount);
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
-          children: [
-            _infoCard(l10n, v, booked, layout.seatCount, mine, needed),
-            const SizedBox(height: 10),
-            _actions(l10n, v, layout, seats),
-            const SizedBox(height: 10),
-            _legend(l10n),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.forest.surfaceFor(const Color(0xFF14241B)),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                    color: AppColors.mintGreen.withValues(alpha: 0.3),
-                    width: 1.5),
-              ),
-              child: VehicleSeatMap(
-                layout: layout,
-                seats: byId,
-                myEmail: me,
-                kind: v?.kind,
-                onSeatTap: (id) => _openSeat(id, layout, seats),
-              ),
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+              children: [
+                _infoCard(l10n, v, booked, layout.seatCount, mine, needed),
+                const SizedBox(height: 10),
+                _actions(l10n, v, layout, seats),
+                const SizedBox(height: 10),
+                _legend(l10n),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.forest.surfaceFor(const Color(0xFF14241B)),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: AppColors.mintGreen.withValues(alpha: 0.3),
+                        width: 1.5),
+                  ),
+                  child: Center(
+                    child: VehicleSeatMap(
+                      layout: layout,
+                      seats: byId,
+                      myEmail: me,
+                      kind: v?.kind,
+                      onSeatTap: (id) => _openSeat(id, layout, seats),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -790,17 +809,24 @@ class _TransportScreenState extends State<TransportScreen> {
   }
 
   Widget _legend(AppLocalizations l10n) {
-    Widget item(String label, Color color, {Color? border}) => Row(
+    Widget item(String label, Color color, {Color? border, IconData? icon}) =>
+        Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 14,
-              height: 14,
+              width: 15,
+              height: 15,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(4),
-                border: border == null ? null : Border.all(color: border),
+                border: border == null
+                    ? null
+                    : Border.all(color: border, width: 1.5),
               ),
+              child: icon != null
+                  ? Icon(icon,
+                      size: 9, color: border ?? context.forest.accentText)
+                  : null,
             ),
             const SizedBox(width: 6),
             Text(label,
@@ -815,7 +841,7 @@ class _TransportScreenState extends State<TransportScreen> {
         item(l10n.translate('tour_seat_booked'), SeatColors.taken),
         item(l10n.translate('veh_mine'), SeatColors.mine),
         item(l10n.translate('veh_window'), SeatColors.free,
-            border: SeatColors.window),
+            border: SeatColors.window, icon: Icons.crop_square_rounded),
       ],
     );
   }
