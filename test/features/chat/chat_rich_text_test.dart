@@ -153,8 +153,14 @@ void main() {
       expect(find.text('U'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
       expect(find.text('H'), findsOneWidget);
+      expect(find.text('=='), findsOneWidget);
       expect(find.text('||'), findsOneWidget);
-      expect(find.byIcon(Icons.table_chart), findsOneWidget);
+      expect(find.text('</>'), findsOneWidget);
+      expect(find.text('{ }'), findsOneWidget);
+      expect(find.text('”'), findsOneWidget);
+      expect(find.text('1.'), findsOneWidget);
+      expect(find.text('✓'), findsOneWidget);
+      expect(find.text('✕'), findsOneWidget);
     });
 
     testWidgets('wraps text with bold tags when bold icon tapped',
