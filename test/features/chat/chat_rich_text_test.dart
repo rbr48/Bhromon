@@ -153,7 +153,7 @@ void main() {
       expect(find.text('U'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
       expect(find.text('H'), findsOneWidget);
-      expect(find.byIcon(Icons.table_chart_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.table_chart), findsOneWidget);
     });
 
     testWidgets('wraps text with bold tags when bold icon tapped',

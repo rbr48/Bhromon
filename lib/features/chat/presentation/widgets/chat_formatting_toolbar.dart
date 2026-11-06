@@ -184,56 +184,58 @@ class ChatFormattingToolbar extends StatelessWidget {
                   // Highlight
                   _btn(
                     tooltip: l10n.translate('format_toolbar_highlight'),
-                    icon: Icons.border_color_rounded,
+                    icon: Icons.border_color,
                     onTap: () => _wrapSelection('=='),
                     color: AppColors.gold,
                   ),
                   // Inline Code
                   _btn(
                     tooltip: l10n.translate('format_toolbar_code'),
-                    icon: Icons.code_rounded,
+                    icon: Icons.code,
                     onTap: () => _wrapSelection('`'),
                     color: itemColor,
                   ),
                   // Code Block
                   _btn(
                     tooltip: 'Code Block',
-                    icon: Icons.data_object_rounded,
+                    child: const Text('{ }',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
                     onTap: () => _wrapSelection('```\n', '\n```'),
                     color: itemColor,
                   ),
                   // Blockquote
                   _btn(
                     tooltip: l10n.translate('format_toolbar_quote'),
-                    icon: Icons.format_quote_rounded,
+                    icon: Icons.format_quote,
                     onTap: () => _prefixLine('> '),
                     color: itemColor,
                   ),
                   // Bullet List
                   _btn(
                     tooltip: l10n.translate('format_toolbar_list'),
-                    icon: Icons.format_list_bulleted_rounded,
+                    icon: Icons.format_list_bulleted,
                     onTap: () => _prefixLine('- '),
                     color: itemColor,
                   ),
                   // Numbered List
                   _btn(
                     tooltip: l10n.translate('format_toolbar_num_list'),
-                    icon: Icons.format_list_numbered_rounded,
+                    icon: Icons.format_list_numbered,
                     onTap: () => _prefixLine('1. '),
                     color: itemColor,
                   ),
                   // Checklist
                   _btn(
                     tooltip: l10n.translate('format_toolbar_task'),
-                    icon: Icons.check_box_outlined,
+                    icon: Icons.check_box,
                     onTap: () => _prefixLine('- [ ] '),
                     color: AppColors.mintGreen,
                   ),
                   // Divider
                   _btn(
                     tooltip: 'Divider',
-                    icon: Icons.horizontal_rule_rounded,
+                    icon: Icons.horizontal_rule,
                     onTap: () => _insertBlock('---'),
                     color: itemColor,
                   ),
@@ -252,7 +254,7 @@ class ChatFormattingToolbar extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.table_chart_rounded, size: 14),
+                      icon: const Icon(Icons.table_chart, size: 14),
                       label: Text(
                         l10n.translate('format_toolbar_table'),
                         style: const TextStyle(
@@ -276,7 +278,7 @@ class ChatFormattingToolbar extends StatelessWidget {
               iconSize: 18,
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              icon: const Icon(Icons.close_rounded),
+              icon: const Icon(Icons.close),
               color: context.forest.text54,
               onPressed: onClose,
             ),
