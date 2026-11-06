@@ -75,8 +75,8 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
         content: Text(
           successMessage,
           style: const TextStyle(
-            fontFamily: 'HindSiliguri',
-            fontFamilyFallback: ['NotoSansBengali', 'Roboto', 'sans-serif'],
+            fontFamily: 'NotoSansBengali',
+            fontFamilyFallback: ['HindSiliguri', 'Roboto', 'sans-serif'],
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -208,7 +208,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                 Text(
                   header,
                   style: TextStyle(
-                    fontFamily: 'HindSiliguri',
+                    fontFamily: 'NotoSansBengali',
                     fontFamilyFallback: const [
                       'NotoSansBengali',
                       'Roboto',
@@ -223,7 +223,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                 SelectableText(
                   content,
                   style: TextStyle(
-                    fontFamily: 'HindSiliguri',
+                    fontFamily: 'NotoSansBengali',
                     fontFamilyFallback: const [
                       'NotoSansBengali',
                       'Roboto',
@@ -246,7 +246,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                       label: const Text(
                         'সেল কপি করুন',
                         style: TextStyle(
-                          fontFamily: 'HindSiliguri',
+                          fontFamily: 'NotoSansBengali',
                           fontFamilyFallback: [
                             'NotoSansBengali',
                             'Roboto',
@@ -297,7 +297,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                 Text(
                   'টেবিল এক্সপোর্ট ও শেয়ার',
                   style: TextStyle(
-                    fontFamily: 'HindSiliguri',
+                    fontFamily: 'NotoSansBengali',
                     fontFamilyFallback: const [
                       'NotoSansBengali',
                       'Roboto',
@@ -315,7 +315,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   title: Text(
                     'এক্সেল / গুগল শিটসের জন্য কপি (TSV)',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
                         'NotoSansBengali',
                         'Roboto',
@@ -329,7 +329,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   subtitle: Text(
                     'পেস্ট করলে স্বয়ংক্রিয়ভাবে আলাদা কলাম ও সারিতে বসে যাবে',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
                         'NotoSansBengali',
                         'Roboto',
@@ -351,7 +351,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   title: Text(
                     'লিস্ট আকারে কপি করুন (Clean List)',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
                         'NotoSansBengali',
                         'Roboto',
@@ -365,7 +365,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   subtitle: Text(
                     'হোয়াটসঅ্যাপ বা মেসেঞ্জারে স্পষ্ট বুলেট পয়েন্টে শেয়ারের জন্য',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
                         'NotoSansBengali',
                         'Roboto',
@@ -387,7 +387,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   title: Text(
                     'মার্কডাউন ফরম্যাটে কপি করুন',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
                         'NotoSansBengali',
                         'Roboto',
@@ -401,7 +401,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   subtitle: Text(
                     'আসল পাইপলাইন (| Col 1 | Col 2 |) কোড কপি হবে',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       fontFamilyFallback: const [
                         'NotoSansBengali',
                         'Roboto',
@@ -439,8 +439,8 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
         title: Text(
           widget.title ?? 'টেবিল ভিউ ($rowCount সারি, $colCount কলাম)',
           style: const TextStyle(
-            fontFamily: 'HindSiliguri',
-            fontFamilyFallback: ['NotoSansBengali', 'Roboto', 'sans-serif'],
+            fontFamily: 'NotoSansBengali',
+            fontFamilyFallback: ['HindSiliguri', 'Roboto', 'sans-serif'],
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -496,7 +496,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                     child: Text(
                       'দুই আঙুলে জুম করুন, টেনে স্ক্রল করুন অথবা সেলে ট্যাপ করে কপি করুন',
                       style: TextStyle(
-                        fontFamily: 'HindSiliguri',
+                        fontFamily: 'NotoSansBengali',
                         fontFamilyFallback: [
                           'NotoSansBengali',
                           'Roboto',
@@ -565,7 +565,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         child: Text(
                           '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
                           style: const TextStyle(
-                            fontFamily: 'HindSiliguri',
+                            fontFamily: 'NotoSansBengali',
                             fontFamilyFallback: [
                               'NotoSansBengali',
                               'Roboto',
@@ -584,7 +584,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         label: const Text(
                           'লেজারে যুক্ত করুন',
                           style: TextStyle(
-                            fontFamily: 'HindSiliguri',
+                            fontFamily: 'NotoSansBengali',
                             fontFamilyFallback: [
                               'NotoSansBengali',
                               'Roboto',
@@ -608,7 +608,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         label: const Text(
                           'নোটিশে পিন করুন',
                           style: TextStyle(
-                            fontFamily: 'HindSiliguri',
+                            fontFamily: 'NotoSansBengali',
                             fontFamilyFallback: [
                               'NotoSansBengali',
                               'Roboto',
@@ -685,7 +685,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                       child: Text(
                         widget.table.headers[c].plainText,
                         style: const TextStyle(
-                          fontFamily: 'HindSiliguri',
+                          fontFamily: 'NotoSansBengali',
                           fontFamilyFallback: [
                             'NotoSansBengali',
                             'Roboto',
@@ -729,7 +729,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                               ? widget.table.rows[r].cells[c].plainText
                               : '',
                           style: const TextStyle(
-                            fontFamily: 'HindSiliguri',
+                            fontFamily: 'NotoSansBengali',
                             fontFamilyFallback: [
                               'NotoSansBengali',
                               'Roboto',

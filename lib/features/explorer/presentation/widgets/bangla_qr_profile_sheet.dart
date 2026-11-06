@@ -51,6 +51,8 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
   late String _selectedAccountType;
 
   Uint8List? _enhancedBytes;
+  Uint8List? _rawPickedBytes;
+  bool _showOriginal = false;
   bool _wasAutoCropped = false;
   bool _isProcessingImage = false;
   bool _isSaving = false;
@@ -86,6 +88,9 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
       if (picked != null) {
         final rawBytes = await picked.readAsBytes();
 
+        _rawPickedBytes = rawBytes;
+        _showOriginal = false;
+
         // Run smart on-device auto-enhancement
         final enhanced = SmartQrEnhancer.process(rawBytes);
         if (enhanced != null && mounted) {
@@ -94,6 +99,9 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
             _wasAutoCropped = enhanced.isAutoCropped;
             if (enhanced.detectedProvider != null) {
               _selectedProvider = enhanced.detectedProvider!;
+              if (enhanced.detectedProvider!.toLowerCase() == 'bangla_qr') {
+                _selectedAccountType = 'merchant';
+              }
             }
           });
         } else if (mounted) {
@@ -117,7 +125,9 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
   }
 
   Future<void> _saveProfileQr() async {
-    final bytesToSave = _enhancedBytes;
+    final bytesToSave = (_showOriginal && _rawPickedBytes != null)
+        ? _rawPickedBytes
+        : _enhancedBytes;
     if (bytesToSave == null && (_savedQrUrl == null || _savedQrUrl!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('অনুগ্রহ করে কিউআরের ছবি নির্বাচন করুন।')),
@@ -159,7 +169,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
             content: Text(
               '✅ বাংলা কিউআর সফলভাবে প্রোফাইলে সংরক্ষিত হয়েছে!',
               style: TextStyle(
-                fontFamily: 'HindSiliguri',
+                fontFamily: 'NotoSansBengali',
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -267,7 +277,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                   child: Text(
                     'বাংলা কিউআর ও পেমেন্ট প্রোফাইল',
                     style: TextStyle(
-                      fontFamily: 'HindSiliguri',
+                      fontFamily: 'NotoSansBengali',
                       color: f.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -287,7 +297,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
             Text(
               'এখানে একবার আপনার বিকাশ, নগদ বা ব্যাংক কিউআর সেভ করে রাখলে লেজারে খরচের হিসাব মেলানোর সময় মেম্বাররা সরাসরি এটি দেখতে পাবেন।',
               style: TextStyle(
-                fontFamily: 'HindSiliguri',
+                fontFamily: 'NotoSansBengali',
                 color: f.text70,
                 fontSize: 12.5,
                 height: 1.35,
@@ -322,9 +332,11 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                   borderRadius: BorderRadius.circular(14),
                   child: _isProcessingImage
                       ? const Center(child: CircularProgressIndicator())
-                      : _enhancedBytes != null
+                      : (_enhancedBytes != null || _rawPickedBytes != null)
                           ? Image.memory(
-                              _enhancedBytes!,
+                              (_showOriginal && _rawPickedBytes != null)
+                                  ? _rawPickedBytes!
+                                  : _enhancedBytes!,
                               fit: BoxFit.contain,
                             )
                           : (_savedQrUrl != null && _savedQrUrl!.isNotEmpty)
@@ -345,7 +357,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                                     Text(
                                       'কোনো কিউআর যোগ করা নেই',
                                       style: TextStyle(
-                                        fontFamily: 'HindSiliguri',
+                                        fontFamily: 'NotoSansBengali',
                                         color: f.text60,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -369,17 +381,19 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                     color: AppColors.mintGreen.withValues(alpha: 0.4),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.auto_fix_high_rounded,
+                    const Icon(Icons.auto_fix_high_rounded,
                         size: 15, color: AppColors.mintGreen),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Text(
-                      'স্মার্ট এডিটিং: কিউআর স্বয়ংক্রিয়ভাবে ক্রপ ও নিখুঁত করা হয়েছে!',
-                      style: TextStyle(
-                        fontFamily: 'HindSiliguri',
+                      _showOriginal
+                          ? 'আসল ছবি প্রদর্শিত হচ্ছে'
+                          : 'স্মার্ট এডিটিং: কিউআর স্বয়ংক্রিয়ভাবে ক্রপ ও নিখুঁত করা হয়েছে!',
+                      style: const TextStyle(
+                        fontFamily: 'NotoSansBengali',
                         color: AppColors.mintGreen,
                         fontSize: 11.5,
                         fontWeight: FontWeight.bold,
@@ -388,6 +402,38 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                   ],
                 ),
               ),
+              if (_rawPickedBytes != null) ...[
+                const SizedBox(height: 4),
+                Center(
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                    ),
+                    icon: Icon(
+                      _showOriginal
+                          ? Icons.auto_fix_high_rounded
+                          : Icons.image_outlined,
+                      size: 14,
+                      color: f.accentText,
+                    ),
+                    label: Text(
+                      _showOriginal
+                          ? 'স্মার্ট ক্রপ করা ছবি ব্যবহার করুন'
+                          : 'আসল ছবি ব্যবহার করুন',
+                      style: TextStyle(
+                        fontFamily: 'NotoSansBengali',
+                        color: f.accentText,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onPressed: () =>
+                        setState(() => _showOriginal = !_showOriginal),
+                  ),
+                ),
+              ],
             ],
 
             const SizedBox(height: 12),
@@ -409,7 +455,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                     ? 'গ্যালারি থেকে ছবি পরিবর্তন করুন'
                     : 'গ্যালারি থেকে কিউআর ছবি বাছাই করুন',
                 style: const TextStyle(
-                  fontFamily: 'HindSiliguri',
+                  fontFamily: 'NotoSansBengali',
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -423,53 +469,73 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
             Text(
               'পেমেন্ট প্রোভাইডার',
               style: TextStyle(
-                fontFamily: 'HindSiliguri',
+                fontFamily: 'NotoSansBengali',
                 color: f.text,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final provider in BanglaQrProvider.values)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text(provider.displayName),
-                        selected: _selectedProvider.toLowerCase() ==
-                            provider.name.toLowerCase(),
-                        selectedColor: _getProviderColor(provider.name)
-                            .withValues(alpha: 0.22),
-                        labelStyle: TextStyle(
-                          fontFamily: 'HindSiliguri',
-                          fontSize: 12,
-                          fontWeight: _selectedProvider.toLowerCase() ==
-                                  provider.name.toLowerCase()
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: _selectedProvider.toLowerCase() ==
-                                  provider.name.toLowerCase()
-                              ? _getProviderColor(provider.name)
-                              : f.text70,
-                        ),
-                        side: BorderSide(
-                          color: _selectedProvider.toLowerCase() ==
-                                  provider.name.toLowerCase()
-                              ? _getProviderColor(provider.name)
-                              : f.divider12,
-                        ),
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => _selectedProvider = provider.name);
-                          }
-                        },
-                      ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final provider in BanglaQrProvider.values)
+                  ChoiceChip(
+                    label: Text(provider.displayName),
+                    selected: _selectedProvider.toLowerCase() ==
+                            provider.name.toLowerCase() ||
+                        ((_selectedProvider.toLowerCase() == 'bangla_qr' ||
+                                _selectedProvider.toLowerCase() ==
+                                    'banglaqr') &&
+                            provider == BanglaQrProvider.bank),
+                    selectedColor: _getProviderColor(provider.name)
+                        .withValues(alpha: 0.22),
+                    labelStyle: TextStyle(
+                      fontFamily: 'NotoSansBengali',
+                      fontSize: 12,
+                      fontWeight: (_selectedProvider.toLowerCase() ==
+                                  provider.name.toLowerCase() ||
+                              ((_selectedProvider.toLowerCase() ==
+                                          'bangla_qr' ||
+                                      _selectedProvider.toLowerCase() ==
+                                          'banglaqr') &&
+                                  provider == BanglaQrProvider.bank))
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: (_selectedProvider.toLowerCase() ==
+                                  provider.name.toLowerCase() ||
+                              ((_selectedProvider.toLowerCase() ==
+                                          'bangla_qr' ||
+                                      _selectedProvider.toLowerCase() ==
+                                          'banglaqr') &&
+                                  provider == BanglaQrProvider.bank))
+                          ? _getProviderColor(provider.name)
+                          : f.text70,
                     ),
-                ],
-              ),
+                    side: BorderSide(
+                      color: (_selectedProvider.toLowerCase() ==
+                                  provider.name.toLowerCase() ||
+                              ((_selectedProvider.toLowerCase() ==
+                                          'bangla_qr' ||
+                                      _selectedProvider.toLowerCase() ==
+                                          'banglaqr') &&
+                                  provider == BanglaQrProvider.bank))
+                          ? _getProviderColor(provider.name)
+                          : f.divider12,
+                    ),
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _selectedProvider = provider.name;
+                          if (provider == BanglaQrProvider.bank) {
+                            _selectedAccountType = 'merchant';
+                          }
+                        });
+                      }
+                    },
+                  ),
+              ],
             ),
 
             const SizedBox(height: 14),
@@ -508,7 +574,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                             child: Text(
                               'ব্যক্তিগত (Send Money)',
                               style: TextStyle(
-                                fontFamily: 'HindSiliguri',
+                                fontFamily: 'NotoSansBengali',
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.bold,
                                 color: _selectedAccountType == 'personal'
@@ -554,7 +620,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                             child: Text(
                               'মার্চেন্ট (Bangla QR)',
                               style: TextStyle(
-                                fontFamily: 'HindSiliguri',
+                                fontFamily: 'NotoSansBengali',
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.bold,
                                 color: _selectedAccountType == 'merchant'
@@ -574,46 +640,71 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
             const SizedBox(height: 14),
 
             // Account / Phone Number Input
-            TextField(
-              controller: _accountController,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(11),
-              ],
-              style: TextStyle(
-                fontFamily: 'HindSiliguri',
-                color: f.text,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-              decoration: InputDecoration(
-                labelText: 'অ্যাকাউন্ট বা মোবাইল নম্বর (১১ ডিজিট)',
-                labelStyle: TextStyle(
-                  fontFamily: 'HindSiliguri',
-                  color: f.text70,
-                  fontSize: 12.5,
-                ),
-                hintText: '01XXXXXXXXX',
-                hintStyle: TextStyle(
-                  fontFamily: 'HindSiliguri',
-                  color: f.text24,
-                  fontSize: 13,
-                ),
-                prefixIcon: Icon(Icons.phone_android_rounded,
-                    size: 18, color: f.accentText),
-                filled: true,
-                fillColor: f.card,
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: f.divider12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: f.accentText, width: 1.5),
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final isBankOrMerchant = _selectedAccountType == 'merchant' ||
+                    _selectedProvider.toLowerCase() == 'bank' ||
+                    _selectedProvider.toLowerCase() == 'bangla_qr' ||
+                    _selectedProvider.toLowerCase() == 'banglaqr';
+                return TextField(
+                  controller: _accountController,
+                  keyboardType: isBankOrMerchant
+                      ? TextInputType.text
+                      : TextInputType.phone,
+                  inputFormatters: isBankOrMerchant
+                      ? [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'[a-zA-Z0-9\-\s]')),
+                          LengthLimitingTextInputFormatter(24),
+                        ]
+                      : [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(11),
+                        ],
+                  style: TextStyle(
+                    fontFamily: 'NotoSansBengali',
+                    color: f.text,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: isBankOrMerchant
+                        ? 'ব্যাংক অ্যাকাউন্ট বা মার্চেন্ট আইডি'
+                        : 'অ্যাকাউন্ট বা মোবাইল নম্বর (১১ ডিজিট)',
+                    labelStyle: TextStyle(
+                      fontFamily: 'NotoSansBengali',
+                      color: f.text70,
+                      fontSize: 12.5,
+                    ),
+                    hintText: isBankOrMerchant
+                        ? '১৩-১৭ ডিজিটের অ্যাকাউন্ট নম্বর বা আইডি'
+                        : '01XXXXXXXXX',
+                    hintStyle: TextStyle(
+                      fontFamily: 'NotoSansBengali',
+                      color: f.text24,
+                      fontSize: 13,
+                    ),
+                    prefixIcon: Icon(
+                      isBankOrMerchant
+                          ? Icons.account_balance_rounded
+                          : Icons.phone_android_rounded,
+                      size: 18,
+                      color: f.accentText,
+                    ),
+                    filled: true,
+                    fillColor: f.card,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: f.divider12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: f.accentText, width: 1.5),
+                    ),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 18),
@@ -643,7 +734,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                     ? 'সংরক্ষণ হচ্ছে...'
                     : 'প্রোফাইলে স্থায়ীভাবে সংরক্ষণ করুন',
                 style: const TextStyle(
-                  fontFamily: 'HindSiliguri',
+                  fontFamily: 'NotoSansBengali',
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),

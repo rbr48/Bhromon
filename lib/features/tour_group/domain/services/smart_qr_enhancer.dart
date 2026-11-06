@@ -204,9 +204,9 @@ class SmartQrEnhancer {
       rowTransitions[y] = transitions;
     }
 
-    // Filter rows with significant high frequency pattern (QR modules usually have > 14 transitions)
+    // Filter rows with significant high frequency pattern (QR modules have high transition density)
     final denseRows = rowTransitions.entries
-        .where((e) => e.value >= 14)
+        .where((e) => e.value >= 16)
         .map((e) => e.key)
         .toList();
 
@@ -238,7 +238,7 @@ class SmartQrEnhancer {
     }
 
     final denseCols = colTransitions.entries
-        .where((e) => e.value >= 14)
+        .where((e) => e.value >= 16)
         .map((e) => e.key)
         .toList();
 
@@ -292,22 +292,47 @@ class SmartQrEnhancer {
     return canvas;
   }
 
-  /// Enhances contrast: turns near-white pixels pure white and dark pixels deep black.
+  /// Enhances contrast with adaptive dynamic range normalization.
+  /// Converts off-white paper backgrounds to crisp pure white and QR modules to deep black,
+  /// while suppressing uneven indoor desk/table shadows.
   static img.Image _enhanceContrast(img.Image src) {
     final result = img.Image.from(src);
 
+    // Sample luminances to compute min and max percentiles
+    final step = math.max(1, (src.width * src.height) ~/ 2000);
+    final samples = <double>[];
+    for (int i = 0; i < src.width * src.height; i += step) {
+      final p = src.getPixel(i % src.width, i ~/ src.width);
+      samples.add(0.299 * p.r + 0.587 * p.g + 0.114 * p.b);
+    }
+    samples.sort();
+
+    final p10 =
+        samples.isNotEmpty ? samples[(samples.length * 0.10).toInt()] : 30.0;
+    final p90 =
+        samples.isNotEmpty ? samples[(samples.length * 0.90).toInt()] : 220.0;
+    final range = math.max(20.0, p90 - p10);
+
     for (final pixel in result) {
       final lum = 0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b;
-      if (lum > 175) {
+      final normalized = ((lum - p10) / range).clamp(0.0, 1.0);
+
+      if (normalized > 0.65) {
         // Pure crisp white background
         pixel.r = 255;
         pixel.g = 255;
         pixel.b = 255;
-      } else if (lum < 110) {
-        // Deep crisp black module
+      } else if (normalized < 0.35) {
+        // Deep crisp dark module
         pixel.r = 15;
         pixel.g = 23;
         pixel.b = 42;
+      } else {
+        // Smooth transition
+        final factor = (normalized - 0.35) / 0.30;
+        pixel.r = (15 + factor * (255 - 15)).round();
+        pixel.g = (23 + factor * (255 - 23)).round();
+        pixel.b = (42 + factor * (255 - 42)).round();
       }
     }
 
