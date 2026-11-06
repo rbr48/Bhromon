@@ -141,14 +141,14 @@ const List<String> kCommitteeExpenseCategories = [
   'Others',
 ];
 
-/// The categories a friends circle's ledger offers: hangouts, dining, movies,
-/// games, snacks, transport and shared gifts.
+/// The categories a friends circle's ledger offers: dining out, food and snacks,
+/// movie and event tickets, activities, transport, shopping and gifts.
 const List<String> kFriendsExpenseCategories = [
   'Dining',
-  'Hangouts',
-  'Movie & tickets',
-  'Snacks & tea',
-  'Gaming',
+  'Food',
+  'Tickets',
+  'Activities',
+  'Events',
   'Transport',
   'Shopping',
   'Gifts',

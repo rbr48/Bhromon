@@ -16,8 +16,9 @@ void main() {
   final en = TourTranslationKeys.localizedValues['en']!;
   final bn = TourTranslationKeys.localizedValues['bn']!;
 
-  group('school, sports, study and committee groups', () {
+  group('friends, school, sports, study and committee groups', () {
     test('each type is recognised by its own preset', () {
+      expect(_circle('friends').isFriends, isTrue);
       expect(_circle('school').isSchool, isTrue);
       expect(_circle('sports').isSports, isTrue);
       expect(_circle('study').isStudy, isTrue);
@@ -28,6 +29,7 @@ void main() {
         () {
       final familyChannels = builtInChannelIdsFor(family: true);
       final perType = {
+        'friends': builtInChannelIdsFor(family: true, friends: true),
         'school': builtInChannelIdsFor(family: true, school: true),
         'sports': builtInChannelIdsFor(family: true, sports: true),
         'study': builtInChannelIdsFor(family: true, study: true),
@@ -44,6 +46,8 @@ void main() {
 
     test('each type offers its own ledger categories, and not the family list',
         () {
+      expect(expenseCategoriesForGroup(_circle('friends')),
+          kFriendsExpenseCategories);
       expect(expenseCategoriesForGroup(_circle('school')),
           kSchoolExpenseCategories);
       expect(expenseCategoriesForGroup(_circle('sports')),
@@ -58,6 +62,7 @@ void main() {
 
     test('every category offered has a label in both languages', () {
       final lists = [
+        kFriendsExpenseCategories,
         kSchoolExpenseCategories,
         kSportsExpenseCategories,
         kStudyExpenseCategories,
@@ -77,6 +82,10 @@ void main() {
     test(
         'a chat split in the food channel books under a category the type offers',
         () {
+      expect(
+          kFriendsExpenseCategories,
+          contains(splitCategoryFor(
+              family: true, channelId: 'food', friends: true)));
       expect(
           kSchoolExpenseCategories,
           contains(

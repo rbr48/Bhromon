@@ -168,9 +168,10 @@ void main() {
     });
 
     testWidgets(
-        'renders CommunityHomeCard for school, sports, study, committee',
+        'renders CommunityHomeCard for friends, school, sports, study, committee',
         (tester) async {
       for (final preset in [
+        TourGroup.friendsPreset,
         TourGroup.schoolPreset,
         TourGroup.sportsPreset,
         TourGroup.studyPreset,
@@ -227,6 +228,9 @@ void main() {
       'campus_home_snacks_btn',
       'campus_home_notices_btn',
       'school_home_title',
+      'friends_home_title',
+      'friends_home_hangout_btn',
+      'friends_home_plans_btn',
       'sports_home_title',
       'study_home_title',
       'committee_home_title',
