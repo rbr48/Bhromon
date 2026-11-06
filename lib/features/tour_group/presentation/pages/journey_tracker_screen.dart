@@ -915,7 +915,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 g.originCity,
                 ...g.effectiveStops.map((s) => s.name),
                 if (g.returnHome) g.originCity,
-              ].join(' → '),
+              ].where((name) => name.trim().isNotEmpty).join(' → '),
               style: TextStyle(
                   color: context.forest.text,
                   fontWeight: FontWeight.bold,
@@ -994,7 +994,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(p.name,
+                      child: Text(
+                          p.name.trim().isEmpty
+                              ? l10n.translate('route_unnamed_stop')
+                              : p.name,
                           style: TextStyle(
                               color: context.forest.text,
                               fontWeight: FontWeight.bold,

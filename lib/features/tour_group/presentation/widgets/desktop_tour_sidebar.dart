@@ -196,7 +196,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     _buildSectionHeader(context, 'প্রধান মডিউলসমূহ'),
                     _buildNavItem(
                       context,
-                      title: 'ড্যাশবোর্ড',
+                      title: 'গ্রুপ হাব',
                       icon: Icons.dashboard_outlined,
                       activeIcon: Icons.dashboard_rounded,
                       route: tourHubPath(tourId),
