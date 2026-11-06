@@ -1333,7 +1333,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                   PopupMenuItem(
                     value: 'samity',
-                    child: _menuRow(context, Icons.savings_rounded,
+                    child: _menuRow(
+                        context,
+                        Icons.account_balance_wallet_rounded,
                         context.l10n.translate('hub_create_samity')),
                   ),
                   PopupMenuItem(
@@ -1611,8 +1613,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             TextButton.icon(
               onPressed: () => _showCreateFamilyDialog(context,
                   preset: TourGroup.samityPreset),
-              icon:
-                  Icon(Icons.savings_rounded, color: context.forest.accentText),
+              icon: Icon(Icons.account_balance_wallet_rounded,
+                  color: context.forest.accentText),
               label: Text(context.l10n.translate('hub_create_samity'),
                   style: TextStyle(color: context.forest.accentText)),
             ),
@@ -2274,7 +2276,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       'samity': () => _ModuleItem(
             title: l10n.translate('samity_module_samity'),
             subtitle: l10n.translate('samity_module_samity_sub'),
-            icon: Icons.savings_rounded,
+            icon: Icons.account_balance_wallet_rounded,
             color: const Color(0xFF65A30D),
             onTap: () => context.push('/group/${group.id}/samity'),
           ),

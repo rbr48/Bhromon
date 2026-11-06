@@ -97,7 +97,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
         children: [
           Row(
             children: [
-              Icon(Icons.savings_outlined,
+              Icon(Icons.account_balance_wallet_outlined,
                   color: context.forest.accentText, size: 18),
               const SizedBox(width: 8),
               Expanded(
