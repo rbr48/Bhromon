@@ -518,8 +518,9 @@ describe('Tour Group Firestore rules', () => {
 
     test('a member deletes their own meals; an owner or admin deletes any', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), 'tours', MESS, 'meals', mealId(people.member.email)), meal(people.member.email));
-        await setDoc(doc(ctx.firestore(), 'tours', MESS, 'meals', mealId(people.owner.email)), meal(people.owner.email));
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', MESS, 'meals', mealId(people.member.email)), meal(people.member.email));
+        await setDoc(doc(f, 'tours', MESS, 'meals', mealId(people.owner.email)), meal(people.owner.email));
       });
       await assertFails(deleteDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.owner.email))));
       await assertSucceeds(deleteDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.member.email))));
@@ -704,8 +705,9 @@ describe('Tour Group Firestore rules', () => {
 
     test('a request is removed by its author or an admin, not by another resident', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r4'), serviceRequest(people.member.email));
-        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r5'), serviceRequest(people.member.email));
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', SOC, 'service_requests', 'r4'), serviceRequest(people.member.email));
+        await setDoc(doc(f, 'tours', SOC, 'service_requests', 'r5'), serviceRequest(people.member.email));
       });
 
       await assertFails(deleteDoc(doc(db('other'), 'tours', SOC, 'service_requests', 'r4')));
@@ -792,8 +794,9 @@ describe('Tour Group Firestore rules', () => {
 
     test('a member removes their own payment; an admin removes any', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), 'tours', SAM, 'samity_payments', `000__${people.member.email}`), payment(people.member.email, 500));
-        await setDoc(doc(ctx.firestore(), 'tours', SAM, 'samity_payments', `000__${people.other.email}`), payment(people.other.email, 500));
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', SAM, 'samity_payments', `000__${people.member.email}`), payment(people.member.email, 500));
+        await setDoc(doc(f, 'tours', SAM, 'samity_payments', `000__${people.other.email}`), payment(people.other.email, 500));
       });
 
       await assertFails(deleteDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `000__${people.other.email}`)));
