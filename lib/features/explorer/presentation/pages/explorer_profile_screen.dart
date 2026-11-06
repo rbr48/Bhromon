@@ -35,6 +35,8 @@ import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 import '../widgets/server_patron_card.dart';
+import '../widgets/bangla_qr_profile_sheet.dart';
+import '../../../tour_group/domain/services/payment_profile_service.dart';
 import 'package:bhromon/core/config/feature_flags.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/explorer/presentation/widgets/games_link_card.dart';
@@ -2263,6 +2265,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         const SizedBox(height: 12),
 
+        // Bangla QR & Payment Profile
+        _buildPaymentQrCard(profile),
+        const SizedBox(height: 12),
+
         // Community Support / Keep Bhromon Alive Card
         const ServerPatronCard(),
         const SizedBox(height: 12),
@@ -2388,6 +2394,214 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildPaymentQrCard(ExplorerProfile profile) {
+    final raw = _rawProfileData;
+    final qrUrl =
+        raw?['banglaQrUrl'] as String? ?? raw?['paymentQrUrl'] as String?;
+    final accountNumber = raw?['paymentAccountNumber'] as String? ??
+        raw?['mfsNumber'] as String? ??
+        raw?['phone'] as String?;
+    final provider = raw?['paymentProvider'] as String? ??
+        raw?['mfsProvider'] as String? ??
+        'bKash';
+    final accountType = raw?['paymentAccountType'] as String? ?? 'personal';
+    final hasQr = qrUrl != null && qrUrl.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.forest.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.forest.text.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.qr_code_2_rounded,
+                  color: context.forest.accentText, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _isBn
+                      ? 'বাংলা কিউআর ও পেমেন্ট প্রোফাইল'
+                      : 'Bangla QR & Payment Profile',
+                  style: TextStyle(
+                    fontFamily: 'HindSiliguri',
+                    color: context.forest.text,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (hasQr)
+                TextButton.icon(
+                  icon: const Icon(Icons.edit, size: 14),
+                  label: Text(_isBn ? 'পরিবর্তন' : 'Edit'),
+                  onPressed: () => _openPaymentQrSheet(profile),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _isBn
+                ? 'আপনার বিকাশ, নগদ বা ব্যাংক কিউআর একবার সেভ করে রাখুন। গ্রুপের খরচের হিসাব মেলানোর সময় মেম্বাররা সরাসরি আপনার কিউআর দেখে টাকা পরিশোধ করতে পারবেন।'
+                : 'Save your bKash, Nagad, or Bank QR code once. Group members can scan your QR directly to settle up expenses without repeatedly asking.',
+            style: TextStyle(
+              fontFamily: 'HindSiliguri',
+              color: context.forest.text70,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (hasQr) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.forest.surfaceFor(const Color(0xFF142428)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.forest.divider12),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      color: Colors.white,
+                      child: Image.network(
+                        qrUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.qr_code,
+                          size: 32,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                provider.toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.mintGreen,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              accountType == 'personal'
+                                  ? (_isBn
+                                      ? 'ব্যক্তিগত (Send Money)'
+                                      : 'Personal')
+                                  : (_isBn
+                                      ? 'মার্চেন্ট (Bangla QR)'
+                                      : 'Merchant'),
+                              style: TextStyle(
+                                fontFamily: 'HindSiliguri',
+                                color: context.forest.text60,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (accountNumber != null &&
+                            accountNumber.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            accountNumber,
+                            style: TextStyle(
+                              fontFamily: 'HindSiliguri',
+                              color: context.forest.text,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.mintGreen,
+                foregroundColor: AppColors.darkGreen,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              ),
+              icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+              label: Text(
+                _isBn ? 'বাংলা কিউআর যোগ করুন' : 'Add Bangla QR',
+                style: const TextStyle(
+                  fontFamily: 'HindSiliguri',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              onPressed: () => _openPaymentQrSheet(profile),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPaymentQrSheet(ExplorerProfile profile) async {
+    final raw = _rawProfileData;
+    final initial = PaymentProfileInfo.fromMap(raw);
+    final updated = await showBanglaQrProfileSheet(
+      context,
+      uid: profile.uid,
+      initialProfile: initial,
+    );
+    if (updated != null && mounted) {
+      setState(() {
+        final current = Map<String, dynamic>.from(_rawProfileData ?? {});
+        if (updated.banglaQrUrl != null) {
+          current['banglaQrUrl'] = updated.banglaQrUrl;
+        } else {
+          current.remove('banglaQrUrl');
+        }
+        if (updated.accountNumber != null) {
+          current['paymentAccountNumber'] = updated.accountNumber;
+        }
+        if (updated.provider != null) {
+          current['paymentProvider'] = updated.provider;
+        }
+        if (updated.accountType != null) {
+          current['paymentAccountType'] = updated.accountType;
+        }
+        _rawProfileData = current;
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
