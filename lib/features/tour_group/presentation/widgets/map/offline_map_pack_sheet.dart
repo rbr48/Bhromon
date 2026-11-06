@@ -4,7 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
+import '../../../domain/services/map_cache_manager.dart';
 import '../../../domain/services/offline_map_regions.dart';
+import '../../pages/offline_map_viewer_screen.dart';
 
 const double _kMaxModalWidth = 560.0;
 
@@ -28,9 +30,14 @@ class OfflineMapPackSheet extends StatefulWidget {
 
 class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
   String? _selectedDivision;
-  final Set<String> _downloadedPacks = {'sajek_valley'};
   String? _downloadingId;
   OfflineMapRegion? _viewingRegion;
+
+  @override
+  void initState() {
+    super.initState();
+    MapCacheManager.instance.init();
+  }
 
   List<OfflineMapRegion> get _filteredRegions {
     if (_selectedDivision == null) return kCuratedOfflineRegions;
@@ -47,18 +54,17 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
   }
 
   Future<void> _toggleDownload(OfflineMapRegion region) async {
-    if (_downloadedPacks.contains(region.id)) {
-      setState(() {
-        _downloadedPacks.remove(region.id);
-      });
+    final cache = MapCacheManager.instance;
+    if (cache.isDownloaded(region.id)) {
+      await cache.removeRegion(region.id);
+      if (mounted) setState(() {});
       return;
     }
     setState(() => _downloadingId = region.id);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    await cache.downloadRegion(region);
     if (!mounted) return;
     setState(() {
       _downloadingId = null;
-      _downloadedPacks.add(region.id);
     });
   }
 
@@ -162,7 +168,8 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
                     final region = _filteredRegions[i];
-                    final isCached = _downloadedPacks.contains(region.id);
+                    final isCached =
+                        MapCacheManager.instance.isDownloaded(region.id);
                     final isDownloading = _downloadingId == region.id;
                     final isExpanded = _viewingRegion?.id == region.id;
 
@@ -202,10 +209,30 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            subtitle: Text(
-                              '${region.division} · ~${region.estimatedMb} MB · ${region.waypoints.length} ওয়েপয়েন্ট',
-                              style: TextStyle(
-                                  color: context.forest.text54, fontSize: 12),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${region.division} · ~${region.estimatedMb} MB · ${region.waypoints.length} ${isBn ? "ওয়েপয়েন্ট" : "waypoints"}',
+                                  style: TextStyle(
+                                      color: context.forest.text54,
+                                      fontSize: 12),
+                                ),
+                                if (isCached)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      isBn
+                                          ? '✓ সেভ করা আছে (ম্যাপ দেখতে ট্যাপ করুন)'
+                                          : '✓ Saved (tap to open interactive map)',
+                                      style: const TextStyle(
+                                        color: AppColors.mintGreen,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                             trailing: isDownloading
                                 ? const SizedBox(
@@ -303,6 +330,39 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                                         fontSize: 11,
                                       ),
                                     ),
+                                  const SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.mintGreen,
+                                      foregroundColor: AppColors.darkGreen,
+                                      minimumSize: const Size.fromHeight(40),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.explore_rounded,
+                                        size: 18),
+                                    label: Text(
+                                      isBn
+                                          ? 'ইন্টারেক্টিভ অফলাইন ম্যাপ খুলুন'
+                                          : 'Open Interactive Offline Map',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute<void>(
+                                          builder: (_) =>
+                                              OfflineMapViewerScreen(
+                                                  region: region),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ],
                               ),
                             ),
