@@ -146,10 +146,10 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                     color: own
                         ? (context.forest.isDark
                             ? Colors.white
-                            : const Color(0xFF111B21))
+                            : AppColors.darkText)
                         : (context.forest.isDark
                             ? Colors.white
-                            : const Color(0xFF111B21)),
+                            : context.forest.text),
                     fontSize: 15.5,
                     height: 1.4,
                     letterSpacing: 0.15,
