@@ -19,6 +19,7 @@ import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
+import '../widgets/trip_shell.dart';
 import '../widgets/groups/group_card.dart';
 import '../widgets/groups/members_sheet.dart';
 import '../widgets/groups/members_strip.dart';
@@ -977,7 +978,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
+      bottomNavigationBar:
+          MediaQuery.sizeOf(context).width < TripShell.railBreakpoint
+              ? const BhromonBottomNav(selectedIndex: 0)
+              : null,
     );
   }
 
@@ -1159,7 +1163,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
+      bottomNavigationBar:
+          MediaQuery.sizeOf(context).width < TripShell.railBreakpoint
+              ? const BhromonBottomNav(selectedIndex: 0)
+              : null,
     );
   }
 
@@ -1485,10 +1492,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ),
             ),
           ),
-          bottomNavigationBar: BhromonBottomNav(
-            selectedIndex: 0,
-            tourId: current?.id,
-          ),
+          bottomNavigationBar:
+              MediaQuery.sizeOf(context).width < TripShell.railBreakpoint
+                  ? BhromonBottomNav(
+                      selectedIndex: 0,
+                      tourId: current?.id,
+                    )
+                  : null,
         );
       },
     );

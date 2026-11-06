@@ -321,7 +321,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                                         : (isBn
                                             ? 'পারিবারিক সার্কেল'
                                             : 'Family Circle'))))
-                            : '${g.originCity.isNotEmpty ? g.originCity : 'ঢাকা'} ➔ ${g.destination.isNotEmpty ? g.destination : 'কক্সবাজার'}';
+                            : '${g.originCity.isNotEmpty ? g.originCity : (isBn ? 'ঢাকা' : 'Dhaka')} ➔ ${g.destination.isNotEmpty ? g.destination : (isBn ? 'কক্সবাজার' : "Cox's Bazar")}';
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 6),
