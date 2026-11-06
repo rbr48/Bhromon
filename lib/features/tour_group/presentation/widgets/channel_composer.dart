@@ -174,7 +174,7 @@ class _ChannelComposerState extends State<ChannelComposer> {
                   IconButton(
                     tooltip: l10n.translate('format_toolbar_toggle'),
                     icon: Icon(
-                      Icons.text_format_rounded,
+                      Icons.text_format,
                       color: _showFormatting
                           ? AppColors.mintGreen
                           : context.forest.text70,

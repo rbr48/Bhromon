@@ -8,7 +8,7 @@ import 'table_builder_sheet.dart';
 /// A rich text formatting toolbar for chat message composers.
 ///
 /// Provides one-tap actions for:
-/// - Inline styling: Bold (**), Italic (*), Underline (__), Strikethrough (~~), Highlight (==), Code (`)
+/// - Inline styling: Bold (**), Italic (*), Underline (__), Strikethrough (~~), Highlight (==), Spoiler (||), Code (`)
 /// - Block elements: Heading (#), Blockquote (>), Bullet list (-), Numbered list (1.), Checklist (- [ ])
 /// - Structural: Divider (---), Interactive Table Builder (opens [TableBuilderSheet])
 class ChatFormattingToolbar extends StatelessWidget {
@@ -30,21 +30,29 @@ class ChatFormattingToolbar extends StatelessWidget {
     final sel = controller.selection;
 
     if (!sel.isValid || sel.isCollapsed) {
-      final insertPos = sel.isValid ? sel.start : text.length;
+      final insertPos =
+          (sel.isValid ? sel.start : text.length).clamp(0, text.length);
       final newText = text.replaceRange(insertPos, insertPos, '$prefix$s');
+      final newOffset = (insertPos + prefix.length).clamp(0, newText.length);
       controller.value = TextEditingValue(
         text: newText,
-        selection: TextSelection.collapsed(offset: insertPos + prefix.length),
+        selection: TextSelection.collapsed(offset: newOffset),
       );
     } else {
-      final selected = text.substring(sel.start, sel.end);
+      final start = sel.start.clamp(0, text.length);
+      final end = sel.end.clamp(0, text.length);
+      final safeStart = start <= end ? start : end;
+      final safeEnd = start <= end ? end : start;
+      final selected = text.substring(safeStart, safeEnd);
       final newText =
-          text.replaceRange(sel.start, sel.end, '$prefix$selected$s');
+          text.replaceRange(safeStart, safeEnd, '$prefix$selected$s');
+      final newStart = (safeStart + prefix.length).clamp(0, newText.length);
+      final newEnd = (newStart + selected.length).clamp(0, newText.length);
       controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection(
-          baseOffset: sel.start + prefix.length,
-          extentOffset: sel.start + prefix.length + selected.length,
+          baseOffset: newStart,
+          extentOffset: newEnd,
         ),
       );
     }
@@ -55,15 +63,17 @@ class ChatFormattingToolbar extends StatelessWidget {
   void _prefixLine(String prefix) {
     final text = controller.text;
     final sel = controller.selection;
-    final pos = sel.isValid ? sel.start : text.length;
+    final pos = (sel.isValid ? sel.start : text.length).clamp(0, text.length);
 
     // Find start of current line
-    final lineStart = text.lastIndexOf('\n', pos - 1);
-    final insertPos = lineStart == -1 ? 0 : lineStart + 1;
+    final lineStart = pos <= 0 ? -1 : text.lastIndexOf('\n', pos - 1);
+    final insertPos =
+        (lineStart == -1 ? 0 : lineStart + 1).clamp(0, text.length);
 
     final newText = text.replaceRange(insertPos, insertPos, prefix);
-    final newOffset =
-        (sel.isValid ? sel.extentOffset : text.length) + prefix.length;
+    final currentOffset =
+        (sel.isValid ? sel.extentOffset : text.length).clamp(0, text.length);
+    final newOffset = (currentOffset + prefix.length).clamp(0, newText.length);
 
     controller.value = TextEditingValue(
       text: newText,
@@ -76,7 +86,7 @@ class ChatFormattingToolbar extends StatelessWidget {
   void _insertBlock(String block) {
     final text = controller.text;
     final sel = controller.selection;
-    final pos = sel.isValid ? sel.start : text.length;
+    final pos = (sel.isValid ? sel.start : text.length).clamp(0, text.length);
 
     final prefixNewline =
         (pos > 0 && !text.substring(0, pos).endsWith('\n')) ? '\n' : '';
@@ -87,10 +97,11 @@ class ChatFormattingToolbar extends StatelessWidget {
 
     final toInsert = '$prefixNewline$block$suffixNewline';
     final newText = text.replaceRange(pos, pos, toInsert);
+    final newOffset = (pos + toInsert.length).clamp(0, newText.length);
 
     controller.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: pos + toInsert.length),
+      selection: TextSelection.collapsed(offset: newOffset),
     );
     focusNode?.requestFocus();
   }
@@ -188,6 +199,15 @@ class ChatFormattingToolbar extends StatelessWidget {
                     onTap: () => _wrapSelection('=='),
                     color: AppColors.gold,
                   ),
+                  // Spoiler
+                  _btn(
+                    tooltip: l10n.translate('format_toolbar_spoiler'),
+                    child: const Text('||',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                    onTap: () => _wrapSelection('||'),
+                    color: itemColor,
+                  ),
                   // Inline Code
                   _btn(
                     tooltip: l10n.translate('format_toolbar_code'),
@@ -197,7 +217,7 @@ class ChatFormattingToolbar extends StatelessWidget {
                   ),
                   // Code Block
                   _btn(
-                    tooltip: 'Code Block',
+                    tooltip: l10n.translate('format_toolbar_code_block'),
                     child: const Text('{ }',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 13)),
@@ -234,7 +254,7 @@ class ChatFormattingToolbar extends StatelessWidget {
                   ),
                   // Divider
                   _btn(
-                    tooltip: 'Divider',
+                    tooltip: l10n.translate('format_toolbar_divider'),
                     icon: Icons.horizontal_rule,
                     onTap: () => _insertBlock('---'),
                     color: itemColor,

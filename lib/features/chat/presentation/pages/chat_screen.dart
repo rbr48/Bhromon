@@ -4064,8 +4064,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                       height: 48,
                                                       child: IconButton(
                                                         icon: Icon(
-                                                          Icons
-                                                              .text_format_rounded,
+                                                          Icons.text_format,
                                                           color: _showFormatting
                                                               ? AppColors
                                                                   .mintGreen
