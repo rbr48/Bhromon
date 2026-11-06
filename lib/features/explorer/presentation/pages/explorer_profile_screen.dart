@@ -656,33 +656,37 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           child: Container(
             height: 190,
             width: double.infinity,
-            decoration: BoxDecoration(
-              image: profile.coverUrl != null
-                  ? DecorationImage(
-                      image: sizedImage(
-                        CachedNetworkImageProvider(
-                          signedMediaUrl(profile.coverUrl!),
-                          errorListener: (dynamic error) {},
-                        ),
-                        context.decodeWidth(),
-                      ),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-              gradient: profile.coverUrl == null
-                  ? const LinearGradient(
-                      colors: [
-                        Color(0xFF081C15),
-                        Color(0xFF1B4332),
-                        Color(0xFF2D6A4F),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF081C15),
+                  Color(0xFF1B4332),
+                  Color(0xFF2D6A4F),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
             child: Stack(
+              fit: StackFit.expand,
               children: [
+                if (profile.coverUrl != null && profile.coverUrl!.isNotEmpty)
+                  kIsWeb
+                      ? Image.network(
+                          signedMediaUrl(profile.coverUrl!),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: 190,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: signedMediaUrl(profile.coverUrl!),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: 190,
+                          memCacheWidth: context.decodeWidth(),
+                          errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                        ),
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -770,30 +774,35 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
-                      radius: 46,
-                      backgroundColor: const Color(0xFF1B4332),
-                      backgroundImage: profile.avatarUrl != null
-                          ? sizedImage(
-                              CachedNetworkImageProvider(
-                                signedMediaUrl(profile.avatarUrl!),
-                                errorListener: (dynamic error) {},
-                              ),
-                              context.decodeWidth(92),
-                            )
-                          : null,
-                      child: profile.avatarUrl == null
-                          ? Text(
-                              profile.displayName.isNotEmpty
-                                  ? profile.displayName[0].toUpperCase()
-                                  : 'T',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : null,
+                    child: ClipOval(
+                      child: SizedBox(
+                        width: 92,
+                        height: 92,
+                        child: profile.avatarUrl != null &&
+                                profile.avatarUrl!.isNotEmpty
+                            ? (kIsWeb
+                                ? Image.network(
+                                    signedMediaUrl(profile.avatarUrl!),
+                                    width: 92,
+                                    height: 92,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _buildAvatarFallback(profile),
+                                  )
+                                : CachedNetworkImage(
+                                    imageUrl:
+                                        signedMediaUrl(profile.avatarUrl!),
+                                    width: 92,
+                                    height: 92,
+                                    fit: BoxFit.cover,
+                                    memCacheWidth: context.decodeWidth(92),
+                                    placeholder: (_, __) =>
+                                        _buildAvatarFallback(profile),
+                                    errorWidget: (_, __, ___) =>
+                                        _buildAvatarFallback(profile),
+                                  ))
+                            : _buildAvatarFallback(profile),
+                      ),
                     ),
                   ),
                 ),
@@ -818,6 +827,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAvatarFallback(ExplorerProfile profile) {
+    return Container(
+      color: const Color(0xFF1B4332),
+      alignment: Alignment.center,
+      child: Text(
+        profile.displayName.isNotEmpty
+            ? profile.displayName[0].toUpperCase()
+            : 'T',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 36,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -2893,15 +2919,29 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                           color:
                                                               Colors.black26),
                                                 ))
-                                        else if (profile.coverUrl != null)
-                                          CachedNetworkImage(
-                                            imageUrl: signedMediaUrl(
-                                                profile.coverUrl!),
-                                            fit: BoxFit.cover,
-                                            errorWidget: (_, __, ___) =>
-                                                const ColoredBox(
-                                                    color: Colors.black26),
-                                          ),
+                                        else if (profile.coverUrl != null &&
+                                            profile.coverUrl!.isNotEmpty)
+                                          kIsWeb
+                                              ? Image.network(
+                                                  signedMediaUrl(
+                                                      profile.coverUrl!),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      const ColoredBox(
+                                                          color:
+                                                              Colors.black26),
+                                                )
+                                              : CachedNetworkImage(
+                                                  imageUrl: signedMediaUrl(
+                                                      profile.coverUrl!),
+                                                  fit: BoxFit.cover,
+                                                  errorWidget: (_, __, ___) =>
+                                                      const ColoredBox(
+                                                          color:
+                                                              Colors.black26),
+                                                )
+                                        else
+                                          const SizedBox.shrink(),
                                         Container(
                                           color: Colors.black
                                               .withValues(alpha: 0.35),
@@ -2972,16 +3012,31 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                             const Icon(
                                                                 Icons.person),
                                                       ))
-                                                : (profile.avatarUrl != null
-                                                    ? CachedNetworkImage(
-                                                        imageUrl: signedMediaUrl(
-                                                            profile.avatarUrl!),
-                                                        fit: BoxFit.cover,
-                                                        errorWidget: (_, __,
-                                                                ___) =>
-                                                            const Icon(
-                                                                Icons.person),
-                                                      )
+                                                : (profile.avatarUrl != null &&
+                                                        profile.avatarUrl!
+                                                            .isNotEmpty
+                                                    ? (kIsWeb
+                                                        ? Image.network(
+                                                            signedMediaUrl(
+                                                                profile
+                                                                    .avatarUrl!),
+                                                            fit: BoxFit.cover,
+                                                            errorBuilder: (_,
+                                                                    __, ___) =>
+                                                                const Icon(Icons
+                                                                    .person),
+                                                          )
+                                                        : CachedNetworkImage(
+                                                            imageUrl:
+                                                                signedMediaUrl(
+                                                                    profile
+                                                                        .avatarUrl!),
+                                                            fit: BoxFit.cover,
+                                                            errorWidget: (_, __,
+                                                                    ___) =>
+                                                                const Icon(Icons
+                                                                    .person),
+                                                          ))
                                                     : Container(
                                                         color: const Color(
                                                             0xFF1B4332),

@@ -219,7 +219,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         actions: [
           if (_isAdmin && group != null)
             IconButton(
-              icon: const Icon(Icons.savings_outlined),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
               tooltip: l10n.translate('fund_budget_title'),
               onPressed: () => _editBudget(group),
             ),
@@ -540,8 +540,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         _box(
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading:
-                Icon(Icons.savings_outlined, color: context.forest.accentText),
+            leading: Icon(Icons.account_balance_wallet_outlined,
+                color: context.forest.accentText),
             title: Text(
                 l10n.translate(group.isHousehold
                     ? 'fund_budget_cta_family'
@@ -1825,7 +1825,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   () => showMessBalanceSheet(context, tourId: widget.tourId)),
             ],
             item(
-                Icons.savings_rounded,
+                Icons.account_balance_wallet_rounded,
                 AppColors.gold,
                 l10n.translate('fund_add_deposit'),
                 l10n.translate('fund_add_deposit_sub'),

@@ -47,7 +47,7 @@ IconData groupTypeIcon(TourGroup group) {
     case TourGroup.societyPreset:
       return Icons.apartment_rounded;
     case TourGroup.samityPreset:
-      return Icons.savings_outlined;
+      return Icons.account_balance_wallet_outlined;
     case TourGroup.schoolPreset:
       return Icons.school_rounded;
     case TourGroup.sportsPreset:
