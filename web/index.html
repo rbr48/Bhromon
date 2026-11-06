@@ -37,6 +37,13 @@
   <link rel="manifest" href="manifest.json">
 
   <style>
+    /* Full HD crisp text rendering and subpixel anti-aliasing */
+    html, body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
     /* Prevent browser autofill from styling inputs with white backgrounds and white text */
     input:-webkit-autofill,
     input:-webkit-autofill:hover, 

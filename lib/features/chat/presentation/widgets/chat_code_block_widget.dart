@@ -114,7 +114,8 @@ class _ChatCodeBlockWidgetState extends State<ChatCodeBlockWidget> {
                 widget.code,
                 style: const TextStyle(
                   fontFamily: 'monospace',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
+                  letterSpacing: 0.2,
                   color: Color(0xFFE2E8F0),
                   height: 1.4,
                 ),

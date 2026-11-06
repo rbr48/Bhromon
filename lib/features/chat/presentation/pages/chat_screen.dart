@@ -858,8 +858,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ChatRichText(
                   text: pending.text,
-                  baseStyle:
-                      TextStyle(color: context.chat.text, fontSize: 13.5),
+                  baseStyle: TextStyle(
+                    color: context.chat.text,
+                    fontSize: 15.5,
+                    height: 1.4,
+                    letterSpacing: 0.15,
+                  ),
                   isMine: true,
                 ),
                 const SizedBox(height: 2),
@@ -868,8 +872,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: [
                     Text(
                       timeStr,
-                      style:
-                          TextStyle(color: context.chat.text54, fontSize: 9.5),
+                      style: TextStyle(
+                        color: context.chat.text54,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     if (pending.isFailed)
@@ -3222,14 +3229,16 @@ class _ChatScreenState extends State<ChatScreen> {
                                     Text(context.l10n.translate('chat_edited'),
                                         style: TextStyle(
                                             color: context.chat.text38,
-                                            fontSize: 9)),
+                                            fontSize: 10)),
                                     const SizedBox(width: 3),
                                   ],
                                   Text(
                                     timeStr,
                                     style: TextStyle(
-                                        color: context.chat.text54,
-                                        fontSize: 9.5),
+                                      color: context.chat.text54,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                   if (isStarred) ...[
                                     const SizedBox(width: 3),
@@ -3618,8 +3627,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                           child: Text(
                                             text,
                                             style: TextStyle(
-                                                color: context.chat.text,
-                                                fontSize: 13.5),
+                                              color: context.chat.text,
+                                              fontSize: 15.5,
+                                              height: 1.4,
+                                              letterSpacing: 0.15,
+                                            ),
                                           ),
                                         ),
                                       Padding(
@@ -3734,8 +3746,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ChatRichText(
                                         text: text,
                                         baseStyle: TextStyle(
-                                            color: context.chat.text,
-                                            fontSize: 13.5),
+                                          color: context.chat.text,
+                                          fontSize: 15.5,
+                                          height: 1.4,
+                                          letterSpacing: 0.15,
+                                        ),
                                         isMine: isMe,
                                       ),
                                       const SizedBox(height: 2),
@@ -4035,18 +4050,21 @@ class _ChatScreenState extends State<ChatScreen> {
                                                         }
                                                       },
                                                       style: TextStyle(
-                                                          color:
-                                                              context.chat.text,
-                                                          fontSize: 14),
+                                                        color:
+                                                            context.chat.text,
+                                                        fontSize: 15.0,
+                                                        height: 1.35,
+                                                      ),
                                                       decoration:
                                                           InputDecoration(
                                                         hintText: context.l10n
                                                             .translate(
                                                                 'chat_message_placeholder'),
                                                         hintStyle: TextStyle(
-                                                            color: context
-                                                                .chat.grey,
-                                                            fontSize: 14),
+                                                          color:
+                                                              context.chat.grey,
+                                                          fontSize: 15.0,
+                                                        ),
                                                         border:
                                                             InputBorder.none,
                                                         contentPadding:

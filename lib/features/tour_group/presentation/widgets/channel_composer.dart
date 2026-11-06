@@ -215,12 +215,18 @@ class _ChannelComposerState extends State<ChannelComposer> {
                       textInputAction: TextInputAction.send,
                       onChanged: widget.onChanged,
                       onSubmitted: (_) => widget.onSend(),
-                      style: TextStyle(color: context.forest.text),
+                      style: TextStyle(
+                        color: context.forest.text,
+                        fontSize: 15.0,
+                        height: 1.35,
+                      ),
                       decoration: InputDecoration(
                         counterText: '',
                         hintText: widget.hint,
                         hintStyle: TextStyle(
-                            color: context.forest.text54, fontSize: 13),
+                          color: context.forest.text54,
+                          fontSize: 14.5,
+                        ),
                         filled: true,
                         fillColor: context.forest.inset26,
                         border: OutlineInputBorder(
