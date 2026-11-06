@@ -48,6 +48,7 @@ import '../../domain/chat_deletion.dart';
 import '../widgets/chat_delete_dialogs.dart';
 import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
+import '../../../share_intake/domain/shared_file.dart';
 import '../../domain/call_log_entry.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
@@ -62,12 +63,16 @@ class ChatScreen extends StatefulWidget {
   final String? sharedTourId;
   final String? otherEmail;
 
+  /// Files another app shared into Bhromon, sent here once the chat opens.
+  final List<SharedFile>? sharedFiles;
+
   const ChatScreen({
     super.key,
     required this.chatId,
     this.otherUid,
     this.sharedTourId,
     this.otherEmail,
+    this.sharedFiles,
   });
 
   @override
@@ -195,6 +200,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // When this person deleted the chat. Messages sent up to then stay hidden.
   DateTime? _clearedAt;
   StreamSubscription<DocumentSnapshot>? _chatDocSub;
+  bool _sharedFilesSent = false;
 
   @override
   void initState() {
@@ -208,6 +214,10 @@ class _ChatScreenState extends State<ChatScreen> {
     _initVpsTypingListener();
     _messageController.addListener(_onTextChanged);
     unawaited(_restoreDraft());
+    if (widget.sharedFiles?.isNotEmpty ?? false) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => unawaited(_sendSharedFiles()));
+    }
     _messageFocusNode.addListener(() {
       if (_messageFocusNode.hasFocus && _showEmojiPicker) {
         setState(() => _showEmojiPicker = false);
@@ -1682,6 +1692,45 @@ class _ChatScreenState extends State<ChatScreen> {
                 .translate('chat_send_expense_failed', args: {'error': '$e'})),
             backgroundColor: Colors.redAccent,
           ),
+        );
+      }
+    }
+  }
+
+  /// Sends the files another app shared into this chat, in the order they came. Each
+  /// one goes through the same path as a file picked here, so the chat's upload rules
+  /// and failure handling apply. It runs once, after the first frame.
+  Future<void> _sendSharedFiles() async {
+    final files = widget.sharedFiles;
+    if (_sharedFilesSent || files == null || files.isEmpty) return;
+    _sharedFilesSent = true;
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! Authenticated) return;
+    final uid = authState.profile.uid;
+    final name = authState.profile.displayName;
+    for (final file in files) {
+      final path = file.path;
+      if (path == null || sharedFileIssue(file) != null) continue;
+      final kind = sharedFileKind(file.name);
+      if (kind == SharedFileKind.image || kind == SharedFileKind.video) {
+        await _sendMediaMessage(
+          MediaPickResult(
+            file: !kIsWeb ? File(path) : null,
+            xFile: XFile(path, name: file.name),
+            type: kind == SharedFileKind.video ? 'video' : 'image',
+          ),
+          uid,
+          name,
+        );
+      } else {
+        await _sendDocumentMessage(
+          PlatformFile(
+            name: file.name,
+            size: file.sizeBytes < 0 ? 0 : file.sizeBytes,
+            path: path,
+          ),
+          uid,
+          name,
         );
       }
     }

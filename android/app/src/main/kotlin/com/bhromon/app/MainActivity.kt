@@ -7,29 +7,47 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.provider.OpenableColumns
 import android.provider.Settings
+import android.util.Log
 import android.util.Rational
+import android.webkit.MimeTypeMap
 import android.view.WindowManager
 import com.cloudwebrtc.webrtc.audio.AudioSwitchManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.util.UUID
+import java.util.concurrent.Executors
 
 class MainActivity: FlutterFragmentActivity() {
     companion object {
         // The action flutter_callkit_incoming starts the app with on Accept.
         private const val ACTION_CALL_ACCEPT =
             "com.hiennv.flutter_callkit_incoming.ACTION_CALL_ACCEPT"
+
+        private const val SHARE_CHANNEL = "com.bhromon.app/share_intake"
+        // Shared files are copied here, and a copy that was never taken is removed a day on.
+        private const val SHARE_DIR = "shared_inbox"
+        private const val SHARE_TTL_MS = 24L * 60 * 60 * 1000
+        // The largest file any destination takes (kMaxVideoBytes in media_rules.dart).
+        private const val MAX_SHARE_COPY_BYTES = 100L * 1024 * 1024
+        private const val SHARE_LOG = "ShareIntake"
     }
 
     private val CHANNEL = "com.bhromon.app/integrity"
     private val CALL_AUDIO_CHANNEL = "com.bhromon.app/call_audio"
     private val BATTERY_CHANNEL = "com.bhromon.app/battery"
     private var callAudioChannel: MethodChannel? = null
+    private var shareChannel: MethodChannel? = null
+    // Read and written on the main thread only.
+    private val pendingShares = mutableListOf<Map<String, Any?>>()
+    private val shareExecutor = Executors.newSingleThreadExecutor()
     private var proximityLock: PowerManager.WakeLock? = null
     private var pipAllowed = false
     // The call screen asked to show over the lock screen.
@@ -43,11 +61,14 @@ class MainActivity: FlutterFragmentActivity() {
         // over the lock screen instead of asking to unlock first.
         noteAcceptLaunch(intent)
         super.onCreate(savedInstanceState)
+        // After a rebuild the same intent is still here, so a share is read only once.
+        if (savedInstanceState == null) handleShareIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         setIntent(intent)
         noteAcceptLaunch(intent)
+        handleShareIntent(intent)
         super.onNewIntent(intent)
     }
 
@@ -84,6 +105,18 @@ class MainActivity: FlutterFragmentActivity() {
                 "isIgnoringBatteryOptimizations" -> result.success(isIgnoringBatteryOptimizations())
                 "openBatterySettings" -> result.success(openBatterySettings())
                 "manufacturer" -> result.success(Build.MANUFACTURER)
+                else -> result.notImplemented()
+            }
+        }
+        val share = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL)
+        shareChannel = share
+        share.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "takePendingShares" -> {
+                    val items = pendingShares.toList()
+                    pendingShares.clear()
+                    result.success(items)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -338,7 +371,155 @@ class MainActivity: FlutterFragmentActivity() {
         setProximityScreenOff(false)
         CallOngoingService.onHangUp = null
         callAudioChannel = null
+        shareChannel = null
+        shareExecutor.shutdown()
         super.onDestroy()
+    }
+
+    /// Takes the files another app shared into Bhromon. Each one is copied into the app's
+    /// cache first, because the other app's read permission ends with this activity. The
+    /// copies run off the main thread, and Dart is told once they are ready.
+    private fun handleShareIntent(incoming: Intent?) {
+        if (incoming == null) return
+        val action = incoming.action
+        if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return
+        val uris = shareUris(incoming)
+        val text = incoming.getStringExtra(Intent.EXTRA_TEXT)
+        if (uris.isEmpty() && text == null) return
+        shareExecutor.execute {
+            cleanOldShares()
+            val copied = uris.map { copyShared(it) }
+            runOnUiThread {
+                pendingShares.addAll(copied)
+                if (text != null) pendingShares.add(mapOf("text" to text))
+                if (pendingShares.isNotEmpty()) {
+                    shareChannel?.invokeMethod("sharesReady", null)
+                }
+            }
+        }
+    }
+
+    /// The files of a share: the stream in EXTRA_STREAM, or the clip data when the sender
+    /// put the files there instead.
+    private fun shareUris(incoming: Intent): List<Uri> {
+        val uris = mutableListOf<Uri>()
+        if (incoming.action == Intent.ACTION_SEND) {
+            streamExtra(incoming)?.let { uris.add(it) }
+        } else {
+            uris.addAll(streamExtras(incoming))
+        }
+        if (uris.isEmpty()) {
+            val clip = incoming.clipData
+            if (clip != null) {
+                for (i in 0 until clip.itemCount) {
+                    clip.getItemAt(i).uri?.let { uris.add(it) }
+                }
+            }
+        }
+        return uris.distinct()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun streamExtra(incoming: Intent): Uri? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            incoming.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            incoming.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        }
+
+    @Suppress("DEPRECATION")
+    private fun streamExtras(incoming: Intent): List<Uri> {
+        val list: ArrayList<Uri>? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                incoming.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                incoming.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+            }
+        return list?.filterNotNull() ?: emptyList()
+    }
+
+    /// Copies one shared file into the cache. A file that cannot be read, or is larger than
+    /// the biggest size a destination takes, keeps no path, so Dart refuses it with the
+    /// reason. The name and size are sent either way.
+    private fun copyShared(uri: Uri): Map<String, Any?> {
+        var name = "file"
+        var size = -1L
+        try {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0 && !cursor.isNull(nameIndex)) {
+                        name = cursor.getString(nameIndex)
+                    }
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                        size = cursor.getLong(sizeIndex)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(SHARE_LOG, "could not read the name of a shared file", e)
+        }
+        val mime = contentResolver.getType(uri)
+        if (!name.contains('.')) {
+            val ext = mime?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
+            if (ext != null) name = "$name.$ext"
+        }
+        val refused: Map<String, Any?> =
+            mapOf("name" to name, "sizeBytes" to size, "path" to null, "mimeType" to mime)
+        if (size > MAX_SHARE_COPY_BYTES) return refused
+        val dir = File(cacheDir, SHARE_DIR)
+        if (!dir.exists() && !dir.mkdirs()) return refused
+        val safeName = name.replace(Regex("[^A-Za-z0-9._-]"), "_").takeLast(120)
+        val dest = File(dir, "${UUID.randomUUID()}_$safeName")
+        val copied = try {
+            copyStream(uri, dest)
+        } catch (e: Exception) {
+            Log.w(SHARE_LOG, "could not copy a shared file", e)
+            -1L
+        }
+        if (copied < 0) {
+            dest.delete()
+            return refused
+        }
+        if (copied > MAX_SHARE_COPY_BYTES) {
+            dest.delete()
+            return mapOf("name" to name, "sizeBytes" to copied, "path" to null, "mimeType" to mime)
+        }
+        return mapOf(
+            "name" to name,
+            "sizeBytes" to copied,
+            "path" to dest.absolutePath,
+            "mimeType" to mime,
+        )
+    }
+
+    /// Streams [uri] into [dest], and stops once the largest size has been passed, so a
+    /// huge file never fills the cache. Returns the bytes read, or -1 with no stream.
+    private fun copyStream(uri: Uri, dest: File): Long {
+        val source = contentResolver.openInputStream(uri) ?: return -1L
+        var total = 0L
+        source.use { input ->
+            dest.outputStream().use { output ->
+                val buffer = ByteArray(64 * 1024)
+                while (total <= MAX_SHARE_COPY_BYTES) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                    total += read
+                }
+            }
+        }
+        return total
+    }
+
+    /// Removes shared copies older than a day. A share is taken within moments, so this
+    /// clears only the files that were never taken, for example after the app was closed.
+    private fun cleanOldShares() {
+        val cutoff = System.currentTimeMillis() - SHARE_TTL_MS
+        File(cacheDir, SHARE_DIR).listFiles()?.forEach { file ->
+            if (file.lastModified() < cutoff) file.delete()
+        }
     }
 
     private fun checkRooted(): Boolean {
