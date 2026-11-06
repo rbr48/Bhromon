@@ -75,7 +75,8 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
         content: Text(
           successMessage,
           style: const TextStyle(
-            fontFamily: 'NotoSansBengali',
+            fontFamily: 'HindSiliguri',
+            fontFamilyFallback: ['NotoSansBengali', 'Roboto', 'sans-serif'],
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -438,7 +439,8 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
         title: Text(
           widget.title ?? 'টেবিল ভিউ ($rowCount সারি, $colCount কলাম)',
           style: const TextStyle(
-            fontFamily: 'NotoSansBengali',
+            fontFamily: 'HindSiliguri',
+            fontFamilyFallback: ['NotoSansBengali', 'Roboto', 'sans-serif'],
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -494,7 +496,12 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                     child: Text(
                       'দুই আঙুলে জুম করুন, টেনে স্ক্রল করুন অথবা সেলে ট্যাপ করে কপি করুন',
                       style: TextStyle(
-                        fontFamily: 'NotoSansBengali',
+                        fontFamily: 'HindSiliguri',
+                        fontFamilyFallback: [
+                          'NotoSansBengali',
+                          'Roboto',
+                          'sans-serif'
+                        ],
                         fontSize: 12,
                         color: Colors.white70,
                       ),
@@ -558,7 +565,12 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         child: Text(
                           '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
                           style: const TextStyle(
-                            fontFamily: 'NotoSansBengali',
+                            fontFamily: 'HindSiliguri',
+                            fontFamilyFallback: [
+                              'NotoSansBengali',
+                              'Roboto',
+                              'sans-serif'
+                            ],
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: AppColors.mintGreen,
@@ -572,7 +584,12 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         label: const Text(
                           'লেজারে যুক্ত করুন',
                           style: TextStyle(
-                            fontFamily: 'NotoSansBengali',
+                            fontFamily: 'HindSiliguri',
+                            fontFamilyFallback: [
+                              'NotoSansBengali',
+                              'Roboto',
+                              'sans-serif'
+                            ],
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                             fontSize: 12.5,
@@ -591,7 +608,12 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         label: const Text(
                           'নোটিশে পিন করুন',
                           style: TextStyle(
-                            fontFamily: 'NotoSansBengali',
+                            fontFamily: 'HindSiliguri',
+                            fontFamilyFallback: [
+                              'NotoSansBengali',
+                              'Roboto',
+                              'sans-serif'
+                            ],
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontSize: 12.5,
@@ -663,7 +685,12 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                       child: Text(
                         widget.table.headers[c].plainText,
                         style: const TextStyle(
-                          fontFamily: 'NotoSansBengali',
+                          fontFamily: 'HindSiliguri',
+                          fontFamilyFallback: [
+                            'NotoSansBengali',
+                            'Roboto',
+                            'sans-serif'
+                          ],
                           color: Colors.white,
                           fontSize: 14.5,
                           fontWeight: FontWeight.bold,
@@ -702,7 +729,12 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                               ? widget.table.rows[r].cells[c].plainText
                               : '',
                           style: const TextStyle(
-                            fontFamily: 'NotoSansBengali',
+                            fontFamily: 'HindSiliguri',
+                            fontFamilyFallback: [
+                              'NotoSansBengali',
+                              'Roboto',
+                              'sans-serif'
+                            ],
                             color: Colors.white,
                             fontSize: 14,
                             height: 1.4,
