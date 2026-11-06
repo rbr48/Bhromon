@@ -8,7 +8,6 @@ import '../../../../core/theme/colors.dart';
 import '../tour_routes.dart';
 import 'package:bhromon/core/config/feature_flags.dart';
 import '../../data/active_group.dart';
-import 'trip_shell.dart';
 
 /// The persistent 5 navigation destinations used across the entire application:
 /// 0: Tours (Hub)
@@ -156,9 +155,6 @@ class BhromonBottomNav extends StatelessWidget {
     );
 
     final width = MediaQuery.sizeOf(context).width;
-    if (width >= TripShell.railBreakpoint) {
-      return const SizedBox.shrink();
-    }
     if (width <= 800) {
       return navBar;
     }
