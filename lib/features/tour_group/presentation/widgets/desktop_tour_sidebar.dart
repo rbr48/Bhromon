@@ -41,10 +41,17 @@ class DesktopTourSidebar extends StatelessWidget {
         stream: repository.watchGroup(tourId),
         builder: (context, snapshot) {
           final group = snapshot.data;
-          final tourTitle = group?.name ?? 'গ্রুপ';
-          final origin = group?.originCity ?? 'ঢাকা';
-          final destination = group?.destination ?? 'কক্সবাজার';
-          final routeSubtitle = '$origin ➔ $destination';
+          final tourTitle = group?.name ??
+              (tourId.isEmpty ? 'সার্বজনীন গ্রুপ প্ল্যাটফর্ম' : 'গ্রুপ');
+          final origin = group?.originCity ?? '';
+          final destination = group?.destination ?? '';
+          final routeSubtitle = (origin.isNotEmpty && destination.isNotEmpty)
+              ? '$origin ➔ $destination'
+              : (group != null
+                  ? group.kind.name
+                  : (tourId.isEmpty
+                      ? 'ডান পাশ থেকে গ্রুপ বাছুন'
+                      : 'লোড হচ্ছে...'));
 
           return Column(
             children: [
@@ -346,6 +353,10 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
+        if (route.contains('/group//')) {
+          context.go('/group-hub');
+          return;
+        }
         context.go(route);
       },
       borderRadius: BorderRadius.circular(8),
@@ -404,6 +415,10 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
+        if (route.contains('/group//')) {
+          context.go('/group-hub');
+          return;
+        }
         context.go(route);
       },
       borderRadius: BorderRadius.circular(8),
