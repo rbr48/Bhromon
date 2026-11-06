@@ -9,7 +9,10 @@ import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/family_date_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/family_task_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/meal_log.dart';
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/samity_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/service_request_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_activity_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/tour_group_hub_screen.dart';
@@ -51,6 +54,22 @@ class _Repo extends TourGroupRepository {
 
   @override
   Stream<List<BatteryTelemetry>> watchBatteryTelemetry(String tourId) =>
+      Stream.value(const []);
+
+  @override
+  Stream<List<MealLog>> watchMealsForMonth(String tourId, DateTime month) =>
+      Stream.value(const []);
+
+  @override
+  Stream<List<ServiceRequest>> watchServiceRequests(String tourId) =>
+      Stream.value(const []);
+
+  @override
+  Stream<List<SamityPayment>> watchSamityPayments(String tourId) =>
+      Stream.value(const []);
+
+  @override
+  Stream<List<SamityPayout>> watchSamityPayouts(String tourId) =>
       Stream.value(const []);
 
   @override

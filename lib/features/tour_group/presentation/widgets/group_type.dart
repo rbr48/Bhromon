@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 /// for a plain family circle, or "Trips" for a trip.
 String groupTypeKey(TourGroup group) {
   switch (group.preset) {
+    case TourGroup.friendsPreset:
+      return 'hub_friends_badge';
     case TourGroup.officePreset:
       return 'hub_office_badge';
     case TourGroup.campusPreset:
@@ -34,6 +36,8 @@ String groupTypeKey(TourGroup group) {
 /// The icon of the type [group] shows when it has no photo.
 IconData groupTypeIcon(TourGroup group) {
   switch (group.preset) {
+    case TourGroup.friendsPreset:
+      return Icons.people_alt_rounded;
     case TourGroup.officePreset:
       return Icons.work_outline_rounded;
     case TourGroup.campusPreset:

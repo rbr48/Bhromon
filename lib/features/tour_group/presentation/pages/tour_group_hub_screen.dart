@@ -31,7 +31,7 @@ import '../widgets/tour_membership_guard.dart';
 import '../widgets/group_avatar.dart';
 import '../widgets/group_type.dart';
 import '../widgets/group_photo_sheet.dart';
-import '../widgets/family/family_home_card.dart';
+import '../widgets/hub/preset_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../tour_pdf_export.dart';
 import 'package:bhromon/features/official_feed/data/official_feed_repository.dart';
@@ -596,6 +596,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             group: group, repository: _repository);
       case 'add_member':
         _showAddMemberDialog(context, group.id);
+      case 'edit_name':
+        final role = await _repository.myRole(group.id);
+        if (role == null || !role.isAdminOrOwner) {
+          _snack(l10n.translate('members_admin_only'), error: true);
+          return;
+        }
+        if (!context.mounted) return;
+        if (group.isFamily) {
+          _showRenameGroupDialog(context, group);
+        } else {
+          _showEditGroupDialog(context, group);
+        }
       case 'moments':
         final role = await _repository.myRole(group.id);
         if (role == null || !role.isAdminOrOwner) {
@@ -629,27 +641,29 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'leave':
         final nav = Navigator.of(context);
         final ok = await _confirm(
-            l10n.translate(group.isOffice
-                ? 'hub_leave_office_title'
-                : group.isCampus
-                    ? 'hub_leave_campus_title'
-                    : group.isMess
-                        ? 'hub_leave_mess_title'
-                        : group.isSociety
-                            ? 'hub_leave_society_title'
-                            : group.isSamity
-                                ? 'hub_leave_samity_title'
-                                : group.isSchool
-                                    ? 'hub_leave_school_title'
-                                    : group.isSports
-                                        ? 'hub_leave_sports_title'
-                                        : group.isStudy
-                                            ? 'hub_leave_study_title'
-                                            : group.isCommittee
-                                                ? 'hub_leave_committee_title'
-                                                : group.isFamily
-                                                    ? 'hub_leave_family_title'
-                                                    : 'hub_leave_title'),
+            l10n.translate(group.isFriends
+                ? 'hub_leave_friends_title'
+                : group.isOffice
+                    ? 'hub_leave_office_title'
+                    : group.isCampus
+                        ? 'hub_leave_campus_title'
+                        : group.isMess
+                            ? 'hub_leave_mess_title'
+                            : group.isSociety
+                                ? 'hub_leave_society_title'
+                                : group.isSamity
+                                    ? 'hub_leave_samity_title'
+                                    : group.isSchool
+                                        ? 'hub_leave_school_title'
+                                        : group.isSports
+                                            ? 'hub_leave_sports_title'
+                                            : group.isStudy
+                                                ? 'hub_leave_study_title'
+                                                : group.isCommittee
+                                                    ? 'hub_leave_committee_title'
+                                                    : group.isFamily
+                                                        ? 'hub_leave_family_title'
+                                                        : 'hub_leave_title'),
             l10n.translate('hub_leave_body', args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -669,49 +683,53 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'delete':
         final nav = Navigator.of(context);
         final ok = await _confirm(
-            l10n.translate(group.isOffice
-                ? 'hub_delete_office_title'
-                : group.isCampus
-                    ? 'hub_delete_campus_title'
-                    : group.isMess
-                        ? 'hub_delete_mess_title'
-                        : group.isSociety
-                            ? 'hub_delete_society_title'
-                            : group.isSamity
-                                ? 'hub_delete_samity_title'
-                                : group.isSchool
-                                    ? 'hub_delete_school_title'
-                                    : group.isSports
-                                        ? 'hub_delete_sports_title'
-                                        : group.isStudy
-                                            ? 'hub_delete_study_title'
-                                            : group.isCommittee
-                                                ? 'hub_delete_committee_title'
-                                                : group.isFamily
-                                                    ? 'hub_delete_family_title'
-                                                    : 'hub_delete_title'),
-            l10n.translate(
-                group.isOffice
-                    ? 'hub_delete_office_body'
+            l10n.translate(group.isFriends
+                ? 'hub_delete_friends_title'
+                : group.isOffice
+                    ? 'hub_delete_office_title'
                     : group.isCampus
-                        ? 'hub_delete_campus_body'
+                        ? 'hub_delete_campus_title'
                         : group.isMess
-                            ? 'hub_delete_mess_body'
+                            ? 'hub_delete_mess_title'
                             : group.isSociety
-                                ? 'hub_delete_society_body'
+                                ? 'hub_delete_society_title'
                                 : group.isSamity
-                                    ? 'hub_delete_samity_body'
+                                    ? 'hub_delete_samity_title'
                                     : group.isSchool
-                                        ? 'hub_delete_school_body'
+                                        ? 'hub_delete_school_title'
                                         : group.isSports
-                                            ? 'hub_delete_sports_body'
+                                            ? 'hub_delete_sports_title'
                                             : group.isStudy
-                                                ? 'hub_delete_study_body'
+                                                ? 'hub_delete_study_title'
                                                 : group.isCommittee
-                                                    ? 'hub_delete_committee_body'
+                                                    ? 'hub_delete_committee_title'
                                                     : group.isFamily
-                                                        ? 'hub_delete_family_body'
-                                                        : 'hub_delete_body',
+                                                        ? 'hub_delete_family_title'
+                                                        : 'hub_delete_title'),
+            l10n.translate(
+                group.isFriends
+                    ? 'hub_delete_friends_body'
+                    : group.isOffice
+                        ? 'hub_delete_office_body'
+                        : group.isCampus
+                            ? 'hub_delete_campus_body'
+                            : group.isMess
+                                ? 'hub_delete_mess_body'
+                                : group.isSociety
+                                    ? 'hub_delete_society_body'
+                                    : group.isSamity
+                                        ? 'hub_delete_samity_body'
+                                        : group.isSchool
+                                            ? 'hub_delete_school_body'
+                                            : group.isSports
+                                                ? 'hub_delete_sports_body'
+                                                : group.isStudy
+                                                    ? 'hub_delete_study_body'
+                                                    : group.isCommittee
+                                                        ? 'hub_delete_committee_body'
+                                                        : group.isFamily
+                                                            ? 'hub_delete_family_body'
+                                                            : 'hub_delete_body',
                 args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -753,6 +771,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           value: 'photo',
           child: _menuRow(context, Icons.photo_camera_rounded,
               context.l10n.translate('group_photo_title')),
+        ),
+        PopupMenuItem(
+          value: 'edit_name',
+          child: _menuRow(context, Icons.edit_rounded,
+              context.l10n.translate('hub_edit_group_name')),
         ),
         if (group.isManaged)
           PopupMenuItem(
@@ -1235,6 +1258,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             switch (choice) {
               case 'family':
                 _showCreateFamilyDialog(context);
+              case 'friends':
+                _showCreateFamilyDialog(context,
+                    preset: TourGroup.friendsPreset);
               case 'office':
                 _showCreateFamilyDialog(context,
                     preset: TourGroup.officePreset);
@@ -1271,6 +1297,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               value: 'family',
               child: _menuRow(context, Icons.family_restroom_rounded,
                   context.l10n.translate('hub_create_family')),
+            ),
+            PopupMenuItem(
+              value: 'friends',
+              child: _menuRow(context, Icons.people_alt_rounded,
+                  context.l10n.translate('hub_create_friends')),
             ),
             PopupMenuItem(
               value: 'office',
@@ -1413,9 +1444,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       // 1. Active Tour Card
                       _buildActiveTourBanner(context, current, groups),
                       const SizedBox(height: 18),
-                      if (current.isHousehold) ...[
-                        FamilyHomeCard(
-                            tourId: current.id, repository: _repository),
+                      if (current.isFamily) ...[
+                        PresetHomeCard(group: current, repository: _repository),
                         const SizedBox(height: 18),
                       ],
 
@@ -1526,6 +1556,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               icon: Icon(Icons.family_restroom_rounded,
                   color: context.forest.accentText),
               label: Text(context.l10n.translate('hub_create_family'),
+                  style: TextStyle(color: context.forest.accentText)),
+            ),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context,
+                  preset: TourGroup.friendsPreset),
+              icon: Icon(Icons.people_alt_rounded,
+                  color: context.forest.accentText),
+              label: Text(context.l10n.translate('hub_create_friends'),
                   style: TextStyle(color: context.forest.accentText)),
             ),
             TextButton.icon(
@@ -1668,36 +1706,41 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        group.isOffice
-                            ? context.l10n.translate('hub_office_badge')
-                            : group.isCampus
-                                ? context.l10n.translate('hub_campus_badge')
-                                : group.isMess
-                                    ? context.l10n.translate('hub_mess_badge')
-                                    : group.isSociety
+                        group.isFriends
+                            ? context.l10n.translate('hub_friends_badge')
+                            : group.isOffice
+                                ? context.l10n.translate('hub_office_badge')
+                                : group.isCampus
+                                    ? context.l10n.translate('hub_campus_badge')
+                                    : group.isMess
                                         ? context.l10n
-                                            .translate('hub_society_badge')
-                                        : group.isSamity
+                                            .translate('hub_mess_badge')
+                                        : group.isSociety
                                             ? context.l10n
-                                                .translate('hub_samity_badge')
-                                            : group.isSchool
+                                                .translate('hub_society_badge')
+                                            : group.isSamity
                                                 ? context.l10n.translate(
-                                                    'hub_school_badge')
-                                                : group.isSports
+                                                    'hub_samity_badge')
+                                                : group.isSchool
                                                     ? context.l10n.translate(
-                                                        'hub_sports_badge')
-                                                    : group.isStudy
+                                                        'hub_school_badge')
+                                                    : group.isSports
                                                         ? context.l10n.translate(
-                                                            'hub_study_badge')
-                                                        : group.isCommittee
+                                                            'hub_sports_badge')
+                                                        : group.isStudy
                                                             ? context.l10n
                                                                 .translate(
-                                                                    'hub_committee_badge')
-                                                            : group.isFamily
+                                                                    'hub_study_badge')
+                                                            : group.isCommittee
                                                                 ? context.l10n
                                                                     .translate(
-                                                                        'hub_family_badge')
-                                                                : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                                                                        'hub_committee_badge')
+                                                                : group.isFamily
+                                                                    ? context
+                                                                        .l10n
+                                                                        .translate(
+                                                                            'hub_family_badge')
+                                                                    : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
                         style: TextStyle(
                           color: context.forest.accentText,
                           fontSize: 12,
@@ -1736,6 +1779,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       tooltip: context.l10n.translate('hub_settings_dates'),
                       padding: EdgeInsets.zero,
                       onPressed: () => _showEditGroupDialog(context, group),
+                    )
+                  else
+                    IconButton(
+                      icon: Icon(Icons.edit_rounded,
+                          size: 20, color: context.forest.accentText),
+                      tooltip: context.l10n.translate('hub_edit_group_name'),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _showRenameGroupDialog(context, group),
                     ),
                   if (allGroups.length > 1) ...[
                     const SizedBox(width: 8),
@@ -2554,26 +2605,30 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             String school,
             String sports,
             String study,
-            String committee) =>
-        preset == TourGroup.officePreset
-            ? office
-            : preset == TourGroup.campusPreset
-                ? campus
-                : preset == TourGroup.messPreset
-                    ? mess
-                    : preset == TourGroup.societyPreset
-                        ? society
-                        : preset == TourGroup.samityPreset
-                            ? samity
-                            : preset == TourGroup.schoolPreset
-                                ? school
-                                : preset == TourGroup.sportsPreset
-                                    ? sports
-                                    : preset == TourGroup.studyPreset
-                                        ? study
-                                        : preset == TourGroup.committeePreset
-                                            ? committee
-                                            : family;
+            String committee,
+            [String? friends]) =>
+        preset == TourGroup.friendsPreset
+            ? (friends ?? family)
+            : preset == TourGroup.officePreset
+                ? office
+                : preset == TourGroup.campusPreset
+                    ? campus
+                    : preset == TourGroup.messPreset
+                        ? mess
+                        : preset == TourGroup.societyPreset
+                            ? society
+                            : preset == TourGroup.samityPreset
+                                ? samity
+                                : preset == TourGroup.schoolPreset
+                                    ? school
+                                    : preset == TourGroup.sportsPreset
+                                        ? sports
+                                        : preset == TourGroup.studyPreset
+                                            ? study
+                                            : preset ==
+                                                    TourGroup.committeePreset
+                                                ? committee
+                                                : family;
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     bool isCreating = false;
@@ -2600,7 +2655,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       'hub_school_title',
                       'hub_sports_title',
                       'hub_study_title',
-                      'hub_committee_title')),
+                      'hub_committee_title',
+                      'hub_friends_title')),
                   style: TextStyle(
                       color: context.forest.text,
                       fontWeight: FontWeight.bold,
@@ -2623,7 +2679,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               'hub_school_intro',
                               'hub_sports_intro',
                               'hub_study_intro',
-                              'hub_committee_intro')),
+                              'hub_committee_intro',
+                              'hub_friends_intro')),
                           style: TextStyle(
                               color: context.forest.text70, fontSize: 12)),
                       const SizedBox(height: 14),
@@ -2642,7 +2699,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               'hub_school_name_hint',
                               'hub_sports_name_hint',
                               'hub_study_name_hint',
-                              'hub_committee_name_hint')),
+                              'hub_committee_name_hint',
+                              'hub_friends_name_hint')),
                           labelStyle: TextStyle(
                               color: context.forest.text70, fontSize: 13),
                           filled: true,
@@ -2759,7 +2817,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                           'hub_school_created',
                                           'hub_sports_created',
                                           'hub_study_created',
-                                          'hub_committee_created'),
+                                          'hub_committee_created',
+                                          'hub_friends_created'),
                                       args: {'name': newGroup.name})),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
@@ -3253,6 +3312,137 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       descCtrl.dispose();
       destCtrl.dispose();
       originCtrl.dispose();
+    });
+  }
+
+  void _showRenameGroupDialog(BuildContext context, TourGroup group) {
+    final l10n = context.l10n;
+    final nameCtrl = TextEditingController(text: group.name);
+    final descCtrl = TextEditingController(text: group.description);
+    bool isUpdating = false;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: context.forest.card,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: Text(l10n.translate('hub_edit_circle_title'),
+                  style: TextStyle(
+                      color: context.forest.text,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: nameCtrl,
+                        autofocus: true,
+                        style: TextStyle(color: context.forest.text),
+                        decoration: InputDecoration(
+                          labelText: l10n.translate('hub_name_label'),
+                          labelStyle: TextStyle(
+                              color: context.forest.text70, fontSize: 13),
+                          filled: true,
+                          fillColor: context.forest.inset26,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        maxLines: 2,
+                        style: TextStyle(color: context.forest.text),
+                        decoration: InputDecoration(
+                          labelText: l10n.translate('hub_desc_label'),
+                          labelStyle: TextStyle(
+                              color: context.forest.text70, fontSize: 13),
+                          filled: true,
+                          fillColor: context.forest.inset26,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isUpdating ? null : () => Navigator.pop(ctx),
+                  child: Text(l10n.translate('tour_cancel'),
+                      style: TextStyle(color: context.forest.text54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isUpdating
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          if (name.isEmpty) {
+                            _snack(l10n.translate('hub_name_hint'),
+                                error: true);
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isUpdating = true);
+                          try {
+                            await _repository.updateGroupSettings(
+                              tourId: group.id,
+                              name: name,
+                              description: descCtrl.text.trim(),
+                            );
+                            if (mounted) {
+                              setState(() {
+                                _selectedGroup = group.copyWith(
+                                  name: name,
+                                  description: descCtrl.text.trim(),
+                                );
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      l10n.translate('hub_group_name_updated')),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isUpdating = false);
+                            _reportFailure(e);
+                          }
+                        },
+                  child: isUpdating
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: context.forest.text, strokeWidth: 2),
+                        )
+                      : Text(l10n.translate('hub_save_changes'),
+                          style: TextStyle(color: context.forest.text)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      descCtrl.dispose();
     });
   }
 
