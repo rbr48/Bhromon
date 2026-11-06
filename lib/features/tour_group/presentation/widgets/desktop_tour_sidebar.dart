@@ -2,6 +2,7 @@ import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
@@ -71,22 +72,26 @@ class DesktopTourSidebar extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          width: 34,
-                          height: 34,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00BFA5), Color(0xFF1B4332)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: const Color(0xFF1B4332),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                                color:
-                                    AppColors.mintGreen.withValues(alpha: 0.5)),
+                              color: AppColors.mintGreen.withValues(alpha: 0.4),
+                              width: 1,
+                            ),
                           ),
-                          child: const Center(
-                            child: Icon(Icons.explore_rounded,
-                                color: Colors.white, size: 20),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(9),
+                            child: Image.asset(
+                              'assets/logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.explore_rounded,
+                                    color: Colors.white, size: 20),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -95,16 +100,18 @@ class DesktopTourSidebar extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Bhromon OS',
+                                'Bhromon',
                                 style: TextStyle(
                                   color: context.forest.accentText,
-                                  fontSize: 13.5,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
                                 ),
                               ),
                               Text(
-                                'Universal Group Engine',
+                                l10n.locale.languageCode == 'bn'
+                                    ? 'জীবনের সাথে ভ্রমণ'
+                                    : 'Travel with life',
                                 style: TextStyle(
                                     color: context.forest.text54, fontSize: 10),
                               ),
@@ -566,7 +573,71 @@ class DesktopTourSidebar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
+          // Google Play Download Link
+          InkWell(
+            onTap: () async {
+              final uri = Uri.parse(
+                  'https://play.google.com/store/apps/details?id=com.bhromon.app&pli=1');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.mintGreen.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppColors.mintGreen,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.locale.languageCode == 'bn'
+                              ? 'গেট ইট অন'
+                              : 'GET IT ON',
+                          style: TextStyle(
+                            color: context.forest.text38,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          'Google Play',
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.open_in_new_rounded,
+                    color: context.forest.text54,
+                    size: 14,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           // Connection status
           Row(
             children: [
