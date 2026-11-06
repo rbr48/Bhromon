@@ -1411,33 +1411,63 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             ],
           ),
         ),
-        _heading(
-          l10n.translate('fund_payments'),
-          trailing: Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              OutlinedButton.icon(
-                onPressed: () => _openMfsSettlementSheet(),
-                icon: const Icon(Icons.receipt_long_rounded,
-                    size: 14, color: Color(0xFFE2136E)),
-                label: Text(l10n.translate('fund_record_mfs'),
-                    style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFE2136E))),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFE2136E)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  visualDensity: VisualDensity.compact,
+              Text(
+                l10n.translate('fund_payments'),
+                style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => _transfer(),
-                icon: Icon(Icons.add_rounded, color: context.forest.accentText),
-                label: Text(l10n.translate('fund_record_payment'),
-                    style: TextStyle(color: context.forest.accentText)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _openMfsSettlementSheet(),
+                    icon: const Icon(Icons.receipt_long,
+                        size: 15, color: Color(0xFFE2136E)),
+                    label: Text(l10n.translate('fund_record_mfs'),
+                        style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE2136E))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFE2136E)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _transfer(),
+                    icon: Icon(Icons.add,
+                        size: 16, color: context.forest.accentText),
+                    label: Text(l10n.translate('fund_record_payment'),
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: context.forest.accentText)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor:
+                          context.forest.accentText.withValues(alpha: 0.12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

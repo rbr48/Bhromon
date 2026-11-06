@@ -8,16 +8,24 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../domain/services/bangla_qr_engine.dart';
 
+/// Supported account classification for MFS payments.
+enum MfsAccountType {
+  personal,
+  merchant,
+}
+
 /// Renders a native Bangla QR code with payment breakdown and copy/share utilities.
 class BanglaQrView extends StatelessWidget {
   const BanglaQrView({
     super.key,
     required this.payload,
     this.size = 200.0,
+    this.isPersonal = true,
   });
 
   final BanglaQrPayload payload;
   final double size;
+  final bool isPersonal;
 
   Color get _providerColor {
     switch (payload.provider) {
@@ -89,10 +97,12 @@ class BanglaQrView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
-                    'BANGLA QR',
+                  Text(
+                    isPersonal ? 'SEND MONEY' : 'BANGLA QR',
                     style: TextStyle(
-                      color: Color(0xFF1B4332),
+                      color: isPersonal
+                          ? const Color(0xFFB78103)
+                          : const Color(0xFF1B4332),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
@@ -100,6 +110,18 @@ class BanglaQrView extends StatelessWidget {
                   ),
                 ],
               ),
+              if (isPersonal) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  '* অ্যাপ স্ক্যানারে সমস্যা হলে নম্বর কপি করে সেন্ড মানি করুন',
+                  style: TextStyle(
+                    color: Color(0xFF856404),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),
@@ -177,6 +199,7 @@ class BanglaQrSheetModal extends StatefulWidget {
 
 class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
   int _activeTab = 0; // 0: Dynamic QR, 1: My QR Image
+  MfsAccountType _accountType = MfsAccountType.personal;
   late BanglaQrPayload _payload;
   late final TextEditingController _phoneController;
   late final TextEditingController _amountController;
@@ -299,6 +322,226 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
     );
   }
 
+  Widget _buildAccountTypeSelector(ForestPalette f) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: f.card,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: f.divider12),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () =>
+                  setState(() => _accountType = MfsAccountType.personal),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                decoration: BoxDecoration(
+                  color: _accountType == MfsAccountType.personal
+                      ? f.accentText.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.person,
+                      size: 15,
+                      color: _accountType == MfsAccountType.personal
+                          ? f.accentText
+                          : f.text60,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'ব্যক্তিগত (Send Money)',
+                      style: TextStyle(
+                        color: _accountType == MfsAccountType.personal
+                            ? f.accentText
+                            : f.text60,
+                        fontWeight: _accountType == MfsAccountType.personal
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () =>
+                  setState(() => _accountType = MfsAccountType.merchant),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                decoration: BoxDecoration(
+                  color: _accountType == MfsAccountType.merchant
+                      ? f.accentText.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.storefront,
+                      size: 15,
+                      color: _accountType == MfsAccountType.merchant
+                          ? f.accentText
+                          : f.text60,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'মার্চেন্ট (Bangla QR)',
+                      style: TextStyle(
+                        color: _accountType == MfsAccountType.merchant
+                            ? f.accentText
+                            : f.text60,
+                        fontWeight: _accountType == MfsAccountType.merchant
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalNoticeCard(ForestPalette f) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF9E6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFD54F)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline, color: Color(0xFFB78103), size: 18),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ব্যক্তিগত অ্যাকাউন্ট নির্দেশনা (Send Money)',
+                  style: TextStyle(
+                    color: Color(0xFF7F5400),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'বিকাশ ও নগদ অ্যাপের ইন-অ্যাপ কিউআর স্ক্যানার শুধুমাত্র রেজিস্টার্ড মার্চেন্টদের জন্য কাজ করে। ব্যক্তিগত অ্যাকাউন্টে টাকা পাঠাতে নম্বরটি কপি করে আপনার বিকাশ বা নগদ অ্যাপে "সেন্ড মানি" করুন।',
+            style: TextStyle(
+              color: Color(0xFF5D4037),
+              fontSize: 11.5,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B4332),
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.copy, size: 14),
+                  label: const Text(
+                    'নম্বর কপি করুন (সেন্ড মানি)',
+                    style:
+                        TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Clipboard.setData(
+                        ClipboardData(text: _payload.accountNumber));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'নম্বর কপি হয়েছে! বিকাশ/নগদে গিয়ে সেন্ড মানি করুন।'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1B4332),
+                  side: const BorderSide(color: Color(0xFF1B4332)),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.photo_library_outlined, size: 14),
+                label: const Text(
+                  'কিউআর ছবি',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => setState(() => _activeTab = 1),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMerchantNoticeCard(ForestPalette f) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFA5D6A7)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.verified, color: Color(0xFF2E7D32), size: 18),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'মার্চেন্ট বাংলা কিউআর: বিকাশ, নগদ বা যেকোনো ব্যাংক অ্যাপ (CellFin, CityTouch, EBL ইত্যাদি) দিয়ে সরাসরি স্ক্যান করে পেমেন্ট সম্পন্ন করুন।',
+              style: TextStyle(
+                color: Color(0xFF1B5E20),
+                fontSize: 11.5,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProviderSelector(ForestPalette f) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -403,9 +646,18 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
             _buildTabSwitcher(f),
             const SizedBox(height: 16),
             if (_activeTab == 0) ...[
+              _buildAccountTypeSelector(f),
               _buildProviderSelector(f),
-              const SizedBox(height: 14),
-              BanglaQrView(payload: _payload, size: 190),
+              const SizedBox(height: 12),
+              BanglaQrView(
+                payload: _payload,
+                size: 190,
+                isPersonal: _accountType == MfsAccountType.personal,
+              ),
+              if (_accountType == MfsAccountType.personal)
+                _buildPersonalNoticeCard(f)
+              else
+                _buildMerchantNoticeCard(f),
               if (!_payload.isPhoneAccount) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -456,10 +708,10 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                         labelStyle: TextStyle(color: f.text70, fontSize: 11.5),
                         hintText: '01XXXXXXXXX',
                         hintStyle: TextStyle(color: f.text24, fontSize: 12),
-                        prefixIcon: Icon(Icons.phone_android_rounded,
+                        prefixIcon: Icon(Icons.phone_android,
                             size: 18, color: f.accentText),
                         suffixIcon: _payload.isPhoneAccount
-                            ? const Icon(Icons.check_circle_rounded,
+                            ? const Icon(Icons.check_circle,
                                 color: Colors.green, size: 18)
                             : null,
                         filled: true,
@@ -557,7 +809,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.qr_code_scanner_rounded,
+                      Icon(Icons.qr_code_scanner,
                           size: 52, color: f.accentText),
                       const SizedBox(height: 12),
                       Text(
@@ -586,7 +838,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 12),
                         ),
-                        icon: const Icon(Icons.photo_library_rounded, size: 18),
+                        icon: const Icon(Icons.photo_library, size: 18),
                         label: const Text(
                           'গ্যালারি থেকে ছবি বাছাই করুন',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -660,7 +912,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('ছবি পরিবর্তন'),
                       onPressed: _pickQrImage,
                     ),
@@ -668,7 +920,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                     TextButton.icon(
                       style: TextButton.styleFrom(
                           foregroundColor: Colors.redAccent),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                      icon: const Icon(Icons.delete_outline, size: 16),
                       label: const Text('মুছে ফেলুন'),
                       onPressed: () => setState(() => _customQrBytes = null),
                     ),
@@ -762,8 +1014,8 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                                 ),
                               );
                             },
-                            child: Icon(Icons.copy_rounded,
-                                size: 15, color: f.accentText),
+                            child:
+                                Icon(Icons.copy, size: 15, color: f.accentText),
                           ),
                         ],
                       ),
@@ -800,20 +1052,26 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.share_rounded, size: 16),
+                icon: const Icon(Icons.share, size: 16),
                 label: const Text('Share Payment Details'),
                 onPressed: () {
                   final details = StringBuffer()
                     ..writeln('Bhromon Payment Details')
                     ..writeln('Payee: ${_payload.payeeName}')
                     ..writeln('Provider: ${_payload.provider.displayName}')
-                    ..writeln('Account: ${_payload.accountNumber}');
+                    ..writeln('Account: ${_payload.accountNumber}')
+                    ..writeln(
+                        'Type: ${_accountType == MfsAccountType.personal ? 'Send Money (ব্যক্তিগত)' : 'Merchant Payment (মার্চেন্ট)'}');
                   if (_payload.amountTaka != null && _payload.amountTaka! > 0) {
                     details.writeln('Amount: ৳ ${_payload.amountTaka}');
                   }
                   if (_payload.reference != null &&
                       _payload.reference!.isNotEmpty) {
                     details.writeln('Ref: ${_payload.reference}');
+                  }
+                  if (_accountType == MfsAccountType.personal) {
+                    details.writeln(
+                        'Note: বিকাশ/নগদ অ্যাপে "সেন্ড মানি" (Send Money) করুন।');
                   }
                   SharePlus.instance.share(
                     ShareParams(text: details.toString().trim()),
