@@ -167,9 +167,15 @@ void main() {
     expect(find.text('See all'), findsOneWidget);
     expect(find.text('The trip starts in 10 days.'), findsOneWidget);
     expect(find.byType(SosRow), findsOneWidget);
-    expect(find.text('Moments 📸'), findsOneWidget);
-    expect(find.text('Game zone 🎮'), findsNothing);
-    expect(find.text('Newspaper Hub 📰'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(GridView),
+        matching: find.text('Moments'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Game zone'), findsNothing);
+    expect(find.text('Newspaper Hub'), findsNothing);
   });
 
   testWidgets('a trip that has started shows no next step', (tester) async {
