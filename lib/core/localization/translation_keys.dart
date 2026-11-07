@@ -444,6 +444,13 @@ class TranslationKeys {
       'exploring_suffix': '',
       'back_from_prefix': 'Back from ',
       'back_from_suffix': ' (Ready for next excursion)',
+      'unsynced_warning_title': 'Unsynced Changes Pending',
+      'unsynced_warning_body':
+          'You have {count} unsynced offline change(s) stored on this device. Logging out now may permanently discard them.\n\nPlease connect to the internet to finish syncing before logging out.',
+      'unsynced_action_wait_sync': 'Cancel & Sync',
+      'unsynced_action_force_logout': 'Log Out Anyway',
+      'unsynced_safe_logout_body':
+          'Your offline data and tours are safely backed up to the cloud. You can sign back in anytime.',
     },
     'bn': {
       // ── Chat list ──────────────────────────────────────────────────────────
@@ -888,6 +895,13 @@ class TranslationKeys {
       'exploring_suffix': ' এ অভিযান চলছে',
       'back_from_prefix': '',
       'back_from_suffix': ' থেকে ফিরেছেন (পরবর্তী অভিযানের জন্য প্রস্তুত)',
+      'unsynced_warning_title': 'লগআউট করার আগে সিঙ্ক করুন',
+      'unsynced_warning_body':
+          'আপনার {count}টি অফলাইন পরিবর্তন এখনো সার্ভারে সিঙ্ক হয়নি। এখন লগআউট করলে এই পরিবর্তনগুলো হারিয়ে যেতে পারে।\n\nঅনুগ্রহ করে ইন্টারনেটে সংযুক্ত হয়ে সিঙ্ক সম্পন্ন করার পর লগআউট করুন।',
+      'unsynced_action_wait_sync': 'বাতিল ও সিঙ্ক করুন',
+      'unsynced_action_force_logout': 'তবুও লগআউট করুন',
+      'unsynced_safe_logout_body':
+          'আপনার সমস্ত ডেটা ক্লাউডে সুরক্ষিত রয়েছে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।',
     },
   };
 }

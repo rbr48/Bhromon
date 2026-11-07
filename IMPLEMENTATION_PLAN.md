@@ -82,3 +82,24 @@ Resolve all TypeScript compilation errors (`tsc exit code: 2`) across `functions
   - Run `npm run build` in `functions/`.
   - Test `docker compose build bhromon-games` on VPS.
   - Open GitHub PR and merge to `main`.
+
+---
+
+## Phase 7: Outbox Sync Guard & Unsent Changes Sign-Out Protection (Option A)
+
+### Objective
+Protect offline, device-only writes from accidental loss during sign-out or account switching. Implement queries in `AppDatabase` to detect pending outbox entries (`SyncOutboxTable`) and unpublished drafts (`TripLogsTable`), and add a safety confirmation guard before sign-out with clear localized warnings and options to wait for sync.
+
+### Tasks
+- [x] **Task 7.1: Add Pending Sync Count Queries in `AppDatabase`**
+  - Implement `getPendingOutboxCount()`, `getDraftTripLogsCount()`, and `getTotalUnsyncedChangesCount()` in `lib/core/database/app_database.dart`.
+- [x] **Task 7.2: Add Localization Strings for Unsynced Warnings**
+  - Add English and Bengali translations for unsynced changes warning title, description, and action buttons in `lib/core/localization/translation_keys.dart`.
+- [x] **Task 7.3: Implement Outbox Protection Guard in `_confirmLogout`**
+  - Update `lib/features/explorer/presentation/pages/explorer_profile_screen.dart` to inspect `getTotalUnsyncedChangesCount()` before showing the logout dialog.
+  - Present a high-contrast warning with unsynced count and cancel/sync button when un-synced data is pending.
+- [x] **Task 7.4: Automated Unit & Widget Verification**
+  - Write unit tests in `test/core/database/` or `test/features/` testing the outbox query and logout guard behavior.
+  - Run `flutter test` and `dart analyze`.
+- [ ] **Task 7.5: Commit, Pull Request & Merge**
+  - Commit changes, push branch, open PR, and merge to `main`.

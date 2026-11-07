@@ -39,6 +39,7 @@ import '../widgets/server_patron_card.dart';
 import '../widgets/bangla_qr_profile_sheet.dart';
 import '../../../tour_group/domain/services/payment_profile_service.dart';
 import 'package:bhromon/core/config/feature_flags.dart';
+import 'package:bhromon/core/database/app_database.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/explorer/presentation/widgets/games_link_card.dart';
 import 'package:bhromon/features/explorer/domain/profile_tabs.dart';
@@ -3795,32 +3796,85 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
+    int unsyncedCount = 0;
+    try {
+      if (getIt.isRegistered<AppDatabase>()) {
+        final db = getIt<AppDatabase>();
+        unsyncedCount = await db.getTotalUnsyncedChangesCount();
+      }
+    } catch (e) {
+      debugPrint('Failed to query unsynced changes count: $e');
+    }
+
+    if (!context.mounted) return;
+
+    final hasUnsynced = unsyncedCount > 0;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: dialogContext.surfacePanel,
-        title: Text(
-          _isBn ? 'লগআউট করতে চান?' : 'Log out?',
-          style: TextStyle(color: context.forest.text),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            if (hasUnsynced) ...[
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.amber, size: 24),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                hasUnsynced
+                    ? context.l10n.translate('unsynced_warning_title')
+                    : (_isBn ? 'লগআউট করতে চান?' : 'Log out?'),
+                style: TextStyle(
+                  color: hasUnsynced ? Colors.amber : context.forest.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
         ),
         content: Text(
-          _isBn
-              ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
-              : 'Your offline data stays safely on this device. You can sign back in anytime.',
-          style: TextStyle(color: context.forest.text70, fontSize: 13),
+          hasUnsynced
+              ? context.l10n.translate(
+                  'unsynced_warning_body',
+                  args: {'count': unsyncedCount.toString()},
+                )
+              : context.l10n.translate('unsynced_safe_logout_body'),
+          style: TextStyle(
+            color: context.forest.text70,
+            fontSize: 13,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
-              _isBn ? 'বাতিল' : 'Cancel',
-              style: TextStyle(color: context.forest.text54),
+              hasUnsynced
+                  ? context.l10n.translate('unsynced_action_wait_sync')
+                  : (_isBn ? 'বাতিল' : 'Cancel'),
+              style: TextStyle(
+                color:
+                    hasUnsynced ? AppColors.mintGreen : context.forest.text54,
+                fontWeight:
+                    hasUnsynced ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  hasUnsynced ? Colors.red.shade700 : Colors.redAccent,
+            ),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(_isBn ? 'লগআউট' : 'Log Out'),
+            child: Text(
+              hasUnsynced
+                  ? context.l10n.translate('unsynced_action_force_logout')
+                  : (_isBn ? 'লগআউট' : 'Log Out'),
+            ),
           ),
         ],
       ),
