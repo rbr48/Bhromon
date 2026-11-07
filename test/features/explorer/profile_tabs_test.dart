@@ -6,8 +6,7 @@ void main() {
     test(
         'without kGroupsV2 the groups tab is first and the profile opens on it',
         () {
-      expect(profileTabKeys(groupsV2: false),
-          ['tours', 'games', 'settings']);
+      expect(profileTabKeys(groupsV2: false), ['tours', 'games', 'settings']);
       expect(defaultProfileTab(groupsV2: false), 'tours');
     });
 

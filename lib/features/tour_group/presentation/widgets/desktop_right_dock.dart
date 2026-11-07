@@ -404,9 +404,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                                               child: Text(
                                                 g.name,
                                                 style: TextStyle(
-                                                  color: isActive
-                                                      ? Colors.white
-                                                      : context.forest.text,
+                                                  color: context.forest.text,
                                                   fontWeight: isActive
                                                       ? FontWeight.w800
                                                       : FontWeight.w600,
@@ -902,8 +900,8 @@ class _DesktopDirectChatItem extends StatelessWidget {
     return Center(
       child: Text(
         initial,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: context.forest.text,
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),

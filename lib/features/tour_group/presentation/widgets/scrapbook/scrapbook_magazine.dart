@@ -26,16 +26,11 @@ class _MagPalette {
   final bool isDark;
   const _MagPalette(this.isDark);
 
-  Color get paper =>
-      isDark ? const Color(0xFF15110D) : const Color(0xFFFBF8F2);
-  Color get ink =>
-      isDark ? const Color(0xFFF5EEDC) : const Color(0xFF1C1814);
-  Color get muted =>
-      isDark ? const Color(0xFFB9AE98) : const Color(0xFF5A5145);
-  Color get gold =>
-      isDark ? const Color(0xFFE8B04B) : const Color(0xFFA06200);
-  Color get goldForeground =>
-      isDark ? const Color(0xFF15110D) : Colors.white;
+  Color get paper => isDark ? const Color(0xFF15110D) : const Color(0xFFFBF8F2);
+  Color get ink => isDark ? const Color(0xFFF5EEDC) : const Color(0xFF1C1814);
+  Color get muted => isDark ? const Color(0xFFB9AE98) : const Color(0xFF5A5145);
+  Color get gold => isDark ? const Color(0xFFE8B04B) : const Color(0xFFA06200);
+  Color get goldForeground => isDark ? const Color(0xFF15110D) : Colors.white;
 }
 
 extension _MagContext on BuildContext {
@@ -201,8 +196,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
               index: i,
               child: RepaintBoundary(
                 key: _pageKeys[i],
-                child: ColoredBox(
-                    color: mag.paper, child: pages[i]),
+                child: ColoredBox(color: mag.paper, child: pages[i]),
               ),
             ),
           ),
@@ -404,7 +398,8 @@ class _PostPicture extends StatelessWidget {
             errorWidget: ColoredBox(
               color: context.forest.surfaceFor(const Color(0xFF2A231C)),
               child: Center(
-                  child: Icon(Icons.broken_image_outlined, color: context.mag.muted)),
+                  child: Icon(Icons.broken_image_outlined,
+                      color: context.mag.muted)),
             ),
           );
 
@@ -477,8 +472,7 @@ class _Avatar extends StatelessWidget {
           ? null
           : Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(),
               style: TextStyle(
-                  color: mag.goldForeground,
-                  fontWeight: FontWeight.w800)),
+                  color: mag.goldForeground, fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -883,8 +877,8 @@ class _ChapterPage extends StatelessWidget {
                 avatar: Icon(Icons.place_rounded, color: mag.gold, size: 16),
                 backgroundColor: context.forest.text.withValues(alpha: 0.05),
                 side: BorderSide(color: mag.gold.withValues(alpha: 0.3)),
-                label: Text(place,
-                    style: TextStyle(color: mag.ink, fontSize: 12)),
+                label:
+                    Text(place, style: TextStyle(color: mag.ink, fontSize: 12)),
               ),
           ],
         ),
@@ -918,8 +912,7 @@ class _PullQuote extends StatelessWidget {
                   fontWeight: FontWeight.w600)),
           if (author != null) ...[
             const SizedBox(height: 6),
-            Text('— $author',
-                style: TextStyle(color: mag.gold, fontSize: 12)),
+            Text('— $author', style: TextStyle(color: mag.gold, fontSize: 12)),
           ],
         ],
       ),

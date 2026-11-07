@@ -93,16 +93,19 @@ class VehicleSeatMap extends StatelessWidget {
           if (deck.titleKey != null)
             Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 6),
-              child: Text(
-                l10n.translate(deck.titleKey!, args: {
-                  for (final e in (deck.titleArgs ?? const {}).entries)
-                    e.key:
-                        e.value is int ? l10n.number(e.value as int) : e.value,
-                }),
-                style: TextStyle(
-                    color: context.forest.readable(AppColors.gold),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13),
+              child: Center(
+                child: Text(
+                  l10n.translate(deck.titleKey!, args: {
+                    for (final e in (deck.titleArgs ?? const {}).entries)
+                      e.key: e.value is int
+                          ? l10n.number(e.value as int)
+                          : e.value,
+                  }),
+                  style: TextStyle(
+                      color: context.forest.readable(AppColors.gold),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
+                ),
               ),
             ),
           LayoutBuilder(builder: (context, constraints) {
@@ -119,11 +122,18 @@ class VehicleSeatMap extends StatelessWidget {
               if (w > widest) widest = w;
             }
             final fits = widest <= constraints.maxWidth;
-            final content = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final row in deck.rows) _row(context, row, me),
-              ],
+            final content = Align(
+              alignment: Alignment.center,
+              child: SizedBox(
+                width: widest,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final row in deck.rows) _row(context, row, me),
+                  ],
+                ),
+              ),
             );
             return fits
                 ? content
