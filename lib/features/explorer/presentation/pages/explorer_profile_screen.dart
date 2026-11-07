@@ -3859,8 +3859,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               style: TextStyle(
                 color:
                     hasUnsynced ? AppColors.mintGreen : context.forest.text54,
-                fontWeight:
-                    hasUnsynced ? FontWeight.bold : FontWeight.normal,
+                fontWeight: hasUnsynced ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
