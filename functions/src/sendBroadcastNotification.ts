@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions/v1';
-import { FieldPath, getFirestore } from 'firebase-admin/firestore';
+import { FieldPath, QueryDocumentSnapshot, getFirestore } from 'firebase-admin/firestore';
 import { MulticastMessage, Notification, getMessaging } from 'firebase-admin/messaging';
 
 const db = getFirestore();
@@ -37,7 +37,7 @@ export const sendBroadcastNotification = functions
       if (!target || target === 'all') {
         // Fetch every document from the fcm_tokens collection
         const tokenSnap = await db.collection('fcm_tokens').get();
-        tokenSnap.forEach((doc) => {
+        tokenSnap.forEach((doc: QueryDocumentSnapshot) => {
           const t = doc.data()?.token as string | undefined;
           if (t) tokens.push(t);
         });
@@ -49,7 +49,7 @@ export const sendBroadcastNotification = functions
           .get();
 
         const uids: string[] = [];
-        profileSnap.forEach((doc) => uids.push(doc.id));
+        profileSnap.forEach((doc: QueryDocumentSnapshot) => uids.push(doc.id));
 
         // Batch-fetch their FCM tokens (Firestore allows up to 30 in 'in' query)
         for (let i = 0; i < uids.length; i += 30) {
@@ -58,7 +58,7 @@ export const sendBroadcastNotification = functions
             .collection('fcm_tokens')
             .where(FieldPath.documentId(), 'in', batch)
             .get();
-          tokenSnap.forEach((doc) => {
+          tokenSnap.forEach((doc: QueryDocumentSnapshot) => {
             const t = doc.data()?.token as string | undefined;
             if (t) tokens.push(t);
           });

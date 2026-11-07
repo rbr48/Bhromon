@@ -1,4 +1,10 @@
-import { FieldValue, QueryDocumentSnapshot, Timestamp, getFirestore } from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  QueryDocumentSnapshot,
+  Timestamp,
+  Transaction,
+  getFirestore,
+} from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import { minutesUntil, reminderText, reminderWindow } from './lib/noticeReminders';
 import {
@@ -40,7 +46,7 @@ async function sendReminder(doc: QueryDocumentSnapshot): Promise<void> {
   const tourId = doc.ref.parent.parent?.id;
   if (!tourId) return;
 
-  const notice = await getFirestore().runTransaction(async (tx) => {
+  const notice = await getFirestore().runTransaction(async (tx: Transaction) => {
     const fresh = await tx.get(doc.ref);
     if (!fresh.exists || fresh.get('reminderSentAt')) return null;
     tx.update(doc.ref, {
