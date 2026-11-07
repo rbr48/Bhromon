@@ -1395,7 +1395,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         final b = await xf.readAsBytes();
 
         multiBytes.add(b);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     final pending = _PendingUpload(
