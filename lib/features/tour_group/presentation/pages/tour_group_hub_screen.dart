@@ -351,6 +351,32 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
+  void _copyInviteLink(String code) {
+    final link = 'https://app.bhromon.fun/#/join/$code';
+    Clipboard.setData(ClipboardData(text: link));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.link_rounded,
+                color: context.forest.accentText, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                context.l10n.translate('hub_invite_link_copied'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: context.forest.card,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _showAddMemberDialog(BuildContext context, String tourId) async {
     final emailCtrl = TextEditingController();
     final nameCtrl = TextEditingController();
@@ -580,6 +606,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       BuildContext context, TourGroup group, String action) async {
     final l10n = context.l10n;
     switch (action) {
+      case 'copy_link':
+        _copyInviteLink(group.inviteCode);
       case 'copy_code':
         _copyInviteCode(group.inviteCode);
       case 'export_pdf':
@@ -757,6 +785,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       color: context.forest.dialog,
       onSelected: (v) => _onGroupMenu(context, group, v),
       itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'copy_link',
+          child: _menuRow(context, Icons.link_rounded,
+              context.l10n.translate('hub_copy_invite_link')),
+        ),
         PopupMenuItem(
           value: 'copy_code',
           child: _menuRow(context, Icons.copy_rounded,
