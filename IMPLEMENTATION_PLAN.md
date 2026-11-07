@@ -239,7 +239,7 @@ Provide instant, intuitive, and comprehensive search capabilities across groups 
 - [x] **Task 11.5: Automated Unit & Widget Tests**
   - Add tests in `test/features/tour_group/group_search_test.dart` verifying search filtering across names, types, destinations, and empty states.
   - Verify static analysis (`dart analyze lib/ test/`), formatting, and stream build guard.
-- [ ] **Task 11.6: PR, CI Green Check, Merge & Web Deployment**
+- [x] **Task 11.6: PR, CI Green Check, Merge & Web Deployment**
   - Increment version to `1.8.135+189` in `pubspec.yaml`.
   - Create GitHub PR via `gh pr create --base main`.
   - Monitor CI until 100% green, squash-merge to `main`, build web release, and deploy to Firebase Hosting (`app.bhromon.fun`).
