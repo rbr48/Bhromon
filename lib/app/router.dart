@@ -114,9 +114,14 @@ class AppRouter {
         pageBuilder: (context, state) {
           final code = state.pathParameters['code'] ?? '';
           final auto = state.uri.queryParameters['auto'] == 'true';
+          final name = state.uri.queryParameters['name'];
           return _customPageTransition(
             state,
-            JoinGroupScreen(inviteCode: code, autoJoin: auto),
+            JoinGroupScreen(
+              inviteCode: code,
+              autoJoin: auto,
+              initialGroupName: name,
+            ),
           );
         },
       ),

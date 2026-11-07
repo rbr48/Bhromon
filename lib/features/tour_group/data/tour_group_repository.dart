@@ -792,6 +792,12 @@ class TourGroupRepository {
       batch.set(_invites.doc(inviteCode), {
         'tourId': tourId,
         'code': inviteCode,
+        'tourName': group.name,
+        'groupName': group.name,
+        'photoUrl': group.photoUrl,
+        'preset': group.preset,
+        'tourType': group.tourType.name,
+        'destination': group.destination,
         'createdAt': writeDate(now),
       });
       return batch.commit();
@@ -912,6 +918,110 @@ class TourGroupRepository {
     ]).then<void>((_) {}).catchError((Object _) {}));
 
     return group;
+  }
+
+  /// Synchronizes group metadata (name, photo, preset) to the invite document
+  /// so that prospective members can preview the group before joining.
+  Future<void> syncInviteMetadata(TourGroup group) async {
+    final code = group.inviteCode.trim().toUpperCase();
+    if (code.isEmpty || !isValidInviteCode(code)) return;
+    try {
+      await _invites.doc(code).set({
+        'tourId': group.id,
+        'code': code,
+        'tourName': group.name,
+        'groupName': group.name,
+        'photoUrl': group.photoUrl,
+        'preset': group.preset,
+        'tourType': group.tourType.name,
+        'destination': group.destination,
+        'updatedAt': writeDate(DateTime.now()),
+      }, SetOptions(merge: true));
+    } catch (e, st) {
+      logSkipped(e, st);
+    }
+  }
+
+  /// Fetches preview metadata for a group by its invite code.
+  /// Works for prospective members and existing members.
+  Future<TourGroupPreview?> fetchInvitePreview(String inviteCode) async {
+    final code = inviteCode.trim().toUpperCase();
+    if (!isValidInviteCode(code)) return null;
+
+    String? tourId;
+    String? name;
+    String? photoUrl;
+    String? preset;
+    TourType? tourType;
+    String? destination;
+    bool isAlreadyMember = false;
+
+    try {
+      final invite = await _invites.doc(code).get();
+      if (invite.exists) {
+        final data = invite.data();
+        tourId = data?['tourId'] as String?;
+        name = (data?['tourName'] ?? data?['groupName'] ?? data?['name'])
+            as String?;
+        photoUrl = data?['photoUrl'] as String?;
+        preset = data?['preset'] as String?;
+        destination = data?['destination'] as String?;
+        final tTypeStr = data?['tourType'] as String?;
+        if (tTypeStr != null && tTypeStr.isNotEmpty) {
+          tourType = TourType.values.firstWhere(
+            (t) => t.name == tTypeStr,
+            orElse: () => TourType.nature,
+          );
+        }
+      }
+    } catch (e, st) {
+      logSkipped(e, st);
+    }
+
+    if (tourId == null || tourId.isEmpty) {
+      tourId = code;
+    }
+
+    // If caller is authenticated, try fetching the tour document directly
+    if (currentEmail.isNotEmpty) {
+      try {
+        final directGroup = await getGroup(tourId);
+        if (directGroup != null) {
+          name = directGroup.name;
+          photoUrl = directGroup.photoUrl;
+          preset = directGroup.preset;
+          tourType = directGroup.tourType;
+          destination = directGroup.destination;
+
+          final role = await myRole(tourId);
+          if (role != null) {
+            isAlreadyMember = true;
+          }
+
+          // If the caller is the owner and the invite was missing metadata, backfill it
+          if (directGroup.ownerEmail == currentEmail &&
+              directGroup.inviteCode.isNotEmpty) {
+            unawaited(syncInviteMetadata(directGroup));
+          }
+        }
+      } catch (e, st) {
+        logSkipped(e, st);
+      }
+    }
+
+    if (name != null && name.isNotEmpty) {
+      return TourGroupPreview(
+        tourId: tourId,
+        name: name,
+        photoUrl: photoUrl,
+        preset: preset,
+        tourType: tourType,
+        destination: destination,
+        isAlreadyMember: isAlreadyMember,
+      );
+    }
+
+    return null;
   }
 
   /// Directly adds a new member by email address (for owners and admins).
@@ -1154,11 +1264,20 @@ class TourGroupRepository {
   Future<String> rotateInviteCode(String tourId, String oldCode) async {
     _requireEmail();
     final newCode = generateInviteCode();
+    final group = await getGroup(tourId);
     final batch = _firestore.batch();
     batch.update(_tour(tourId), {'inviteCode': newCode});
     batch.set(_invites.doc(newCode), {
       'tourId': tourId,
       'code': newCode,
+      if (group != null) ...{
+        'tourName': group.name,
+        'groupName': group.name,
+        'photoUrl': group.photoUrl,
+        'preset': group.preset,
+        'tourType': group.tourType.name,
+        'destination': group.destination,
+      },
       'createdAt': writeDate(DateTime.now()),
     });
     if (oldCode.isNotEmpty) batch.delete(_invites.doc(oldCode));

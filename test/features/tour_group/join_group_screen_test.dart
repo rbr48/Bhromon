@@ -25,12 +25,18 @@ class _FakeAuthCubit extends Cubit<AuthState> implements AuthCubit {
 
 class _FakeTourGroupRepo extends TourGroupRepository {
   final Exception? errorToThrow;
+  final TourGroupPreview? previewToReturn;
   String? lastJoinedCode;
 
-  _FakeTourGroupRepo({this.errorToThrow});
+  _FakeTourGroupRepo({this.errorToThrow, this.previewToReturn});
 
   @override
   String get currentEmail => 'traveler@bhromon.fun';
+
+  @override
+  Future<TourGroupPreview?> fetchInvitePreview(String inviteCode) async {
+    return previewToReturn;
+  }
 
   @override
   Future<TourGroup> joinGroupWithCode(String code) async {
@@ -197,5 +203,69 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('The group is already full'), findsOneWidget);
+  });
+
+  testWidgets(
+      'JoinGroupScreen renders official logo asset and initial group name immediately',
+      (tester) async {
+    final fakeRepo = _FakeTourGroupRepo();
+    final authCubit = _FakeAuthCubit(Authenticated(testProfile));
+
+    await tester.pumpWidget(
+      _wrapScreen(
+        child: JoinGroupScreen(
+          inviteCode: '3K7MNP9X',
+          initialGroupName: 'ইজাহান পরিবার',
+          repository: fakeRepo,
+        ),
+        authCubit: authCubit,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify official logo
+    final logoFinder = find.byWidgetPredicate((w) =>
+        w is Image &&
+        w.image is AssetImage &&
+        (w.image as AssetImage).assetName == 'assets/logo.png');
+    expect(logoFinder, findsOneWidget);
+
+    // Verify initial group name rendered
+    expect(find.text('ইজাহান পরিবার'), findsOneWidget);
+    expect(find.text('"ইজাহান পরিবার" গ্রুপে আমন্ত্রণ'), findsOneWidget);
+  });
+
+  testWidgets(
+      'JoinGroupScreen renders preview metadata with preset badge and enter button when already member',
+      (tester) async {
+    final fakeRepo = _FakeTourGroupRepo(
+      previewToReturn: const TourGroupPreview(
+        tourId: 'office-tour-99',
+        name: 'DBM অফিস টিম',
+        preset: TourGroup.officePreset,
+        isAlreadyMember: true,
+      ),
+    );
+    final authCubit = _FakeAuthCubit(Authenticated(testProfile));
+
+    await tester.pumpWidget(
+      _wrapScreen(
+        child: JoinGroupScreen(
+          inviteCode: '3K7MNP9X',
+          repository: fakeRepo,
+        ),
+        authCubit: authCubit,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify preview group name
+    expect(find.text('DBM অফিস টিম'), findsOneWidget);
+    // Verify preset badge for office
+    expect(find.text('অফিস'), findsOneWidget);
+    // Verify already member subtitle
+    expect(find.text('আপনি ইতিমধ্যে এই গ্রুপের সদস্য'), findsOneWidget);
+    // Verify Enter Group button
+    expect(find.text('গ্রুপে প্রবেশ করুন'), findsOneWidget);
   });
 }
