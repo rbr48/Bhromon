@@ -19,12 +19,14 @@ import '../../domain/services/invite_code.dart';
 /// Supports deep-linking and browser navigation via `/join/:code`.
 class JoinGroupScreen extends StatefulWidget {
   final String inviteCode;
+  final String? initialGroupName;
   final bool autoJoin;
   final TourGroupRepository? repository;
 
   const JoinGroupScreen({
     super.key,
     required this.inviteCode,
+    this.initialGroupName,
     this.autoJoin = false,
     this.repository,
   });
@@ -38,15 +40,20 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   TourGroup? _joinedGroup;
+  TourGroupPreview? _preview;
+  String? _groupName;
+  bool _isAlreadyMember = false;
   bool _autoJoinTriggered = false;
 
   @override
   void initState() {
     super.initState();
     _repo = widget.repository ?? TourGroupRepository();
+    _groupName = widget.initialGroupName?.trim();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _loadGroupPreview();
       final authState = context.read<AuthCubit>().state;
       if (authState is Authenticated &&
           widget.autoJoin &&
@@ -62,12 +69,32 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
   bool get _isCodeFormatValid =>
       _normalizedCode.isNotEmpty && isValidInviteCode(_normalizedCode);
 
+  Future<void> _loadGroupPreview() async {
+    if (!_isCodeFormatValid) return;
+    try {
+      final preview = await _repo.fetchInvitePreview(_normalizedCode);
+      if (!mounted) return;
+      if (preview != null) {
+        setState(() {
+          _preview = preview;
+          _groupName = preview.name;
+          _isAlreadyMember = preview.isAlreadyMember;
+        });
+      }
+    } catch (_) {
+      // Safe fallback if preview fetch fails or offline.
+    }
+  }
+
   Future<void> _handleJoin() async {
     final l10n = context.l10n;
     final authState = context.read<AuthCubit>().state;
 
     if (authState is! Authenticated) {
-      final target = '/join/$_normalizedCode?auto=true';
+      final encodedName = _groupName != null && _groupName!.isNotEmpty
+          ? '&name=${Uri.encodeComponent(_groupName!)}'
+          : '';
+      final target = '/join/$_normalizedCode?auto=true$encodedName';
       try {
         context.go('/login?redirect=${Uri.encodeComponent(target)}');
       } catch (_) {
@@ -100,6 +127,8 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       setState(() {
         _isLoading = false;
         _joinedGroup = joined;
+        _groupName = joined.name;
+        _isAlreadyMember = true;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +183,10 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
   }
 
   void _copyInviteLink() {
-    final link = 'https://app.bhromon.fun/#/join/$_normalizedCode';
+    final encodedName = _groupName != null && _groupName!.isNotEmpty
+        ? '?name=${Uri.encodeComponent(_groupName!)}'
+        : '';
+    final link = 'https://app.bhromon.fun/#/join/$_normalizedCode$encodedName';
     Clipboard.setData(ClipboardData(text: link));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -178,12 +210,131 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
     );
   }
 
+  IconData _iconForPreset(String? preset) {
+    switch (preset) {
+      case TourGroup.friendsPreset:
+        return Icons.people_alt_rounded;
+      case TourGroup.officePreset:
+        return Icons.work_outline_rounded;
+      case TourGroup.campusPreset:
+        return Icons.account_balance_outlined;
+      case TourGroup.messPreset:
+        return Icons.restaurant_rounded;
+      case TourGroup.societyPreset:
+        return Icons.apartment_rounded;
+      case TourGroup.samityPreset:
+        return Icons.account_balance_wallet_outlined;
+      case TourGroup.schoolPreset:
+        return Icons.menu_book_rounded;
+      case TourGroup.sportsPreset:
+        return Icons.sports_soccer_rounded;
+      case TourGroup.studyPreset:
+        return Icons.import_contacts_rounded;
+      case TourGroup.committeePreset:
+        return Icons.groups_rounded;
+      default:
+        return Icons.family_restroom_rounded;
+    }
+  }
+
+  String _presetBadgeTitle(BuildContext context, String? preset) {
+    final l10n = context.l10n;
+    switch (preset) {
+      case TourGroup.friendsPreset:
+        return l10n.translate('hub_friends_badge');
+      case TourGroup.officePreset:
+        return l10n.translate('hub_office_badge');
+      case TourGroup.campusPreset:
+        return l10n.translate('hub_campus_badge');
+      case TourGroup.messPreset:
+        return l10n.translate('hub_mess_badge');
+      case TourGroup.societyPreset:
+        return l10n.translate('hub_society_badge');
+      case TourGroup.samityPreset:
+        return l10n.translate('hub_samity_badge');
+      case TourGroup.schoolPreset:
+        return l10n.translate('hub_school_badge');
+      case TourGroup.sportsPreset:
+        return l10n.translate('hub_sports_badge');
+      case TourGroup.studyPreset:
+        return l10n.translate('hub_study_badge');
+      case TourGroup.committeePreset:
+        return l10n.translate('hub_committee_badge');
+      default:
+        return l10n.translate('hub_section_family');
+    }
+  }
+
+  Widget _buildGroupAvatar() {
+    if (_joinedGroup != null) {
+      return Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.mintGreen.withValues(alpha: 0.2),
+          border: Border.all(color: AppColors.mintGreen, width: 2),
+        ),
+        child: const Center(
+          child: Icon(Icons.check_circle_rounded,
+              size: 40, color: AppColors.mintGreen),
+        ),
+      );
+    }
+
+    final photo = _preview?.photoUrl ?? _joinedGroup?.photoUrl;
+    final preset = _preview?.preset ?? _joinedGroup?.preset;
+    final iconData = _iconForPreset(preset);
+
+    if (photo != null && photo.isNotEmpty) {
+      return Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.mintGreen, width: 2),
+        ),
+        child: ClipOval(
+          child: Image.network(
+            photo,
+            width: 72,
+            height: 72,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackIcon(iconData),
+          ),
+        ),
+      );
+    }
+
+    return _buildFallbackIcon(iconData);
+  }
+
+  Widget _buildFallbackIcon(IconData iconData) {
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF1B4332),
+        border: Border.all(
+          color: AppColors.mintGreen.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+      ),
+      child: Center(
+        child: Icon(iconData, size: 34, color: AppColors.mintGreen),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isBn = l10n.locale.languageCode == 'bn';
     final authState = context.watch<AuthCubit>().state;
     final isAuthenticated = authState is Authenticated;
+    final hasGroupName = _groupName != null && _groupName!.trim().isNotEmpty;
+    final targetTourId = _joinedGroup?.id ?? _preview?.tourId;
 
     return Scaffold(
       backgroundColor: context.forest.background,
@@ -200,6 +351,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                 context.go('/group-hub');
               }
             } catch (_) {
+              // Safe fallback when GoRouter is not attached.
               Navigator.of(context).maybePop();
             }
           },
@@ -214,25 +366,31 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // App Brand Header
+                  // App Brand Header with accurate logo
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.mintGreen.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
+                          color: const Color(0xFF1B4332),
                           border: Border.all(
                             color: AppColors.mintGreen.withValues(alpha: 0.5),
                             width: 1.5,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.explore_rounded,
-                          color: AppColors.mintGreen,
-                          size: 24,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.explore,
+                              color: AppColors.mintGreen,
+                              size: 24,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -285,45 +443,52 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                     ),
                     child: Column(
                       children: [
-                        // Badge Icon
-                        Container(
-                          width: 68,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _joinedGroup != null
-                                ? AppColors.mintGreen.withValues(alpha: 0.2)
-                                : context.forest
-                                    .surfaceFor(const Color(0xFF1D3B2A)),
-                            border: Border.all(
-                              color: _joinedGroup != null
-                                  ? AppColors.mintGreen
-                                  : context.forest.divider12,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Center(
-                            child: _joinedGroup != null
-                                ? const Icon(Icons.check_circle_rounded,
-                                    size: 38, color: AppColors.mintGreen)
-                                : const Icon(Icons.group_add_rounded,
-                                    size: 34, color: AppColors.mintGreen),
-                          ),
-                        ),
+                        // Group Avatar / Icon
+                        _buildGroupAvatar(),
                         const SizedBox(height: 18),
 
-                        // Invitation Title
+                        // Group Title or Invitation Header
                         Text(
                           _joinedGroup != null
                               ? l10n.translate('hub_join_success_title')
-                              : l10n.translate('hub_join_invitation_title'),
+                              : (hasGroupName
+                                  ? _groupName!
+                                  : l10n
+                                      .translate('hub_join_invitation_title')),
                           style: TextStyle(
                             color: context.forest.text,
-                            fontSize: 19,
+                            fontSize: hasGroupName ? 21 : 19,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
                         ),
+
+                        // Preset Badge (if available)
+                        if (_preview?.preset != null &&
+                            _joinedGroup == null) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.mintGreen.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              _presetBadgeTitle(context, _preview!.preset),
+                              style: const TextStyle(
+                                color: AppColors.mintGreen,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 8),
 
                         // Subtitle
@@ -331,7 +496,13 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                           _joinedGroup != null
                               ? l10n.translate('hub_join_success_subtitle',
                                   args: {'name': _joinedGroup!.name})
-                              : l10n.translate('hub_join_invitation_subtitle'),
+                              : _isAlreadyMember
+                                  ? l10n.translate('hub_join_already_member')
+                                  : (hasGroupName
+                                      ? l10n.translate('hub_join_invite_to',
+                                          args: {'name': _groupName!})
+                                      : l10n.translate(
+                                          'hub_join_invitation_subtitle')),
                           style: TextStyle(
                             color: context.forest.text70,
                             fontSize: 13,
@@ -497,7 +668,8 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                         const SizedBox(height: 24),
 
                         // Action Buttons
-                        if (_joinedGroup != null) ...[
+                        if (_joinedGroup != null ||
+                            (_isAlreadyMember && targetTourId != null)) ...[
                           SizedBox(
                             width: double.infinity,
                             height: 46,
@@ -522,7 +694,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                               onPressed: () {
                                 try {
                                   context.go(
-                                      '/group/${_joinedGroup!.id}/channels');
+                                      '/group/${_joinedGroup?.id ?? targetTourId}/channels');
                                 } catch (_) {
                                   // Safe fallback if navigation route is detached.
                                 }
@@ -551,8 +723,12 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                 ),
                               ),
                               onPressed: () {
+                                final encodedName = _groupName != null &&
+                                        _groupName!.isNotEmpty
+                                    ? '&name=${Uri.encodeComponent(_groupName!)}'
+                                    : '';
                                 final target =
-                                    '/join/$_normalizedCode?auto=true';
+                                    '/join/$_normalizedCode?auto=true$encodedName';
                                 try {
                                   context.go(
                                       '/login?redirect=${Uri.encodeComponent(target)}');
@@ -608,6 +784,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                             try {
                               context.go('/group-hub');
                             } catch (_) {
+                              // Safe fallback when GoRouter is not attached.
                               Navigator.of(context).maybePop();
                             }
                           },

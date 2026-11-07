@@ -139,6 +139,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       'name': group.name,
       'code': group.inviteCode,
     });
+    if (group.ownerEmail == _repository.currentEmail &&
+        group.inviteCode.isNotEmpty) {
+      unawaited(_repository.syncInviteMetadata(group));
+    }
     await SharePlus.instance
         .share(ShareParams(text: text, subject: group.name));
   }
@@ -351,9 +355,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  void _copyInviteLink(String code) {
-    final link = 'https://app.bhromon.fun/#/join/$code';
+  void _copyInviteLink(TourGroup group) {
+    final encodedName = Uri.encodeComponent(group.name);
+    final link =
+        'https://app.bhromon.fun/#/join/${group.inviteCode}?name=$encodedName';
     Clipboard.setData(ClipboardData(text: link));
+    if (group.ownerEmail == _repository.currentEmail &&
+        group.inviteCode.isNotEmpty) {
+      unawaited(_repository.syncInviteMetadata(group));
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -607,7 +617,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final l10n = context.l10n;
     switch (action) {
       case 'copy_link':
-        _copyInviteLink(group.inviteCode);
+        _copyInviteLink(group);
       case 'copy_code':
         _copyInviteCode(group.inviteCode);
       case 'export_pdf':

@@ -231,8 +231,10 @@ class TourTranslationKeys {
           'Join "{name}" on Bhromon: https://app.bhromon.fun/#/join/{code}\n(Invite code: {code})',
       'hub_invite_link_copied': 'Invite link copied to clipboard!',
       'hub_join_invitation_title': 'Group Invitation',
+      'hub_join_invite_to': 'Invitation to join "{name}"',
       'hub_join_invitation_subtitle':
           'You have been invited to join a group on Bhromon.',
+      'hub_join_already_member': 'You are already a member of this group',
       'hub_join_code_label': 'Invite Code',
       'hub_join_sign_in_required': 'Please sign in to join this group.',
       'hub_join_sign_in_button': 'Sign In to Join Group',
@@ -2843,8 +2845,10 @@ class TourTranslationKeys {
           'Bhromon-এ "{name}" গ্রুপে যোগ দিন: https://app.bhromon.fun/#/join/{code}\n(আমন্ত্রণ কোড: {code})',
       'hub_invite_link_copied': 'আমন্ত্রণ লিংক কপি করা হয়েছে!',
       'hub_join_invitation_title': 'গ্রুপে আমন্ত্রণ',
+      'hub_join_invite_to': '"{name}" গ্রুপে আমন্ত্রণ',
       'hub_join_invitation_subtitle':
           'আপনাকে Bhromon গ্রুপে যোগ দেওয়ার আমন্ত্রণ জানানো হয়েছে।',
+      'hub_join_already_member': 'আপনি ইতিমধ্যে এই গ্রুপের সদস্য',
       'hub_join_code_label': 'আমন্ত্রণ কোড',
       'hub_join_sign_in_required': 'গ্রুপে যুক্ত হতে সাইন-ইন করতে হবে।',
       'hub_join_sign_in_button': 'সাইন-ইন করে যোগ দিন',

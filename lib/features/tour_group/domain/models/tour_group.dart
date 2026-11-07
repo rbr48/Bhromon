@@ -790,3 +790,24 @@ class TourGroup {
     );
   }
 }
+
+/// Lightweight preview of a group for direct invite landing screens.
+class TourGroupPreview {
+  final String tourId;
+  final String name;
+  final String? photoUrl;
+  final String? preset;
+  final TourType? tourType;
+  final String? destination;
+  final bool isAlreadyMember;
+
+  const TourGroupPreview({
+    required this.tourId,
+    required this.name,
+    this.photoUrl,
+    this.preset,
+    this.tourType,
+    this.destination,
+    this.isAlreadyMember = false,
+  });
+}
