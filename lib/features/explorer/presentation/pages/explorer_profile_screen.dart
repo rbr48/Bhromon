@@ -46,7 +46,7 @@ import 'package:bhromon/features/explorer/domain/profile_tabs.dart';
 
 /// The modern, Tour Group-Centric Profile Screen for Bhromon Travelers.
 /// Replaces the legacy public social/YouTube architecture with live
-/// tour groups, digital scrapbooks, offline vault, and personal settings.
+/// tour groups, gaming, and personal settings.
 class ExplorerProfileScreen extends StatefulWidget {
   final String uid;
 
@@ -99,7 +99,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   String? _statusNote;
   String _activeCategory = 'all';
 
-  // Active tab: 'tours' | 'vault' | 'settings' | 'games'. Set in initState, once the
+  // Active tab: 'tours' | 'settings' | 'games'. Set in initState, once the
   // layout is known.
   late String _activeTab;
 
@@ -653,7 +653,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _buildAchievementsShowcase(groups, isOwnProfile),
               const SizedBox(height: 20),
 
-              // 7. Segmented Navigation Tabs: games, vault and settings are
+              // 7. Segmented Navigation Tabs: games and settings are
               // your own, so someone else's profile shows only shared groups.
               if (isOwnProfile) ...[
                 _buildSegmentedTabs(),
@@ -1474,11 +1474,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             _isBn ? 'গেমিং' : 'Games',
           ),
           _buildTabItem(
-            'vault',
-            Icons.folder_shared_rounded,
-            _isBn ? 'স্মৃতি' : 'Vault',
-          ),
-          _buildTabItem(
             'settings',
             Icons.tune_rounded,
             _isBn ? 'সেটিংস' : 'Settings',
@@ -1539,8 +1534,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   ) {
     if (!isOwnProfile) return _buildMyToursTab(groups, false);
     switch (_activeTab) {
-      case 'vault':
-        return _buildKeepsakesTab(groups);
       case 'games':
         return _useGroupsV2 ? _buildGamesTabV2() : _gameAnalyticsSection();
       case 'settings':
@@ -1955,152 +1948,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 2: Keepsakes & Vault
-  // ---------------------------------------------------------------------------
-
-  Widget _buildKeepsakesTab(List<TourGroup> groups) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _isBn
-              ? 'ট্যুর স্মৃতি ও অফলাইন ভল্ট'
-              : 'Trip Keepsakes & Offline Vault',
-          style: TextStyle(
-            color: context.forest.text,
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // 1. Digital Scrapbooks Card
-        _buildKeepsakeCard(
-          title: _isBn
-              ? 'ট্যুর ম্যাগাজিন ও স্ক্র্যাপবুক'
-              : 'Trip Scrapbook Magazines',
-          subtitle: _isBn
-              ? 'আপনার প্রতিটি ট্যুরের স্বয়ংক্রিয় ফটো অ্যালবাম, খরচ পরিসংখ্যান ও মেমোরি বই।'
-              : 'Auto-curated photo stories, awards, and numbers from your travels.',
-          icon: Icons.auto_stories_rounded,
-          color: AppColors.mintGreen,
-          onTap: () {
-            final tour = pickTour(groups, [_tourId]);
-            if (tour != null) {
-              context.push('/group/${tour.id}/scrapbook');
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_isBn
-                      ? 'স্ক্র্যাপবুক দেখতে আগে একটি ট্যুরে যোগ দিন।'
-                      : 'Join a tour to view trip scrapbooks.'),
-                  backgroundColor: AppColors.midGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
-        ),
-        const SizedBox(height: 12),
-
-        // 3. Family Safety & Emergency Card
-        _buildKeepsakeCard(
-          title:
-              _isBn ? 'ফ্যামিলি সেফটি হাব ও এসওএস' : 'Family Safety Hub & SOS',
-          subtitle: _isBn
-              ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও গ্রুপ সদস্যদের লোকেশন নোটিশ।'
-              : 'Emergency siren alerts, coastal tide advisories, and member safety.',
-          icon: Icons.shield_rounded,
-          color: Colors.redAccent,
-          onTap: () {
-            final tour = pickTour(groups, [_tourId]);
-            if (tour != null) {
-              context.push('/group/${tour.id}/safety');
-            } else {
-              context.go('/group-hub');
-            }
-          },
-        ),
-        const SizedBox(height: 12),
-
-        // 4. Game Zone Card
-        _buildKeepsakeCard(
-          title: _isBn ? 'গেম জোন' : 'Game Zone',
-          subtitle: _isBn
-              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
-              : 'Play Card 29, Carrom, Chess AI, Ludo, and Teen Patti on the bus or train.',
-          icon: Icons.sports_esports_rounded,
-          color: Colors.lightBlueAccent,
-          onTap: () => context.push('/game-zone'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKeepsakeCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.forest.card,
-          borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: context.forest.text.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  Icon(icon, color: context.forest.readable(color), size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: context.forest.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: context.forest.text54,
-                      fontSize: 11,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded,
-                color: context.forest.text38, size: 22),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tab 3: Preferences & Settings
+  // Tab 2: Preferences & Settings
   // ---------------------------------------------------------------------------
 
   Widget _buildPreferencesTab(ExplorerProfile profile) {
