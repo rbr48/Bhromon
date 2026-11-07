@@ -544,38 +544,68 @@ class TourGroupDialogs {
     bool isSaving = false;
     final isBn = context.l10n.locale.languageCode == 'bn';
 
-    String defaultTitle = isBn ? 'পরিবারের গ্রুপ তৈরি করুন' : 'Create Family Circle';
+    String defaultTitle =
+        isBn ? 'পরিবারের গ্রুপ তৈরি করুন' : 'Create Family Circle';
     String hint = isBn ? 'যেমন: রানা ফ্যামিলি...' : 'e.g., Rana Family...';
     if (preset == TourGroup.friendsPreset) {
-      defaultTitle = isBn ? 'বন্ধু বা ফ্রেন্ডস সার্কেল তৈরি করুন' : 'Create Friends Circle';
-      hint = isBn ? 'যেমন: নটরডেম ব্যাচ ফ্রেন্ডস...' : 'e.g., College Friends...';
+      defaultTitle = isBn
+          ? 'বন্ধু বা ফ্রেন্ডস সার্কেল তৈরি করুন'
+          : 'Create Friends Circle';
+      hint =
+          isBn ? 'যেমন: নটরডেম ব্যাচ ফ্রেন্ডস...' : 'e.g., College Friends...';
     } else if (preset == TourGroup.officePreset) {
-      defaultTitle = isBn ? 'অফিস বা দলের গ্রুপ তৈরি করুন' : 'Create Office or Team';
-      hint = isBn ? 'যেমন: টেক টিম, মার্কেটিং ডিপার্টমেন্ট...' : 'e.g., Tech Team, Marketing...';
+      defaultTitle =
+          isBn ? 'অফিস বা দলের গ্রুপ তৈরি করুন' : 'Create Office or Team';
+      hint = isBn
+          ? 'যেমন: টেক টিম, মার্কেটিং ডিপার্টমেন্ট...'
+          : 'e.g., Tech Team, Marketing...';
     } else if (preset == TourGroup.campusPreset) {
-      defaultTitle = isBn ? 'ক্যাম্পাস বা ব্যাচের গ্রুপ তৈরি করুন' : 'Create Campus or Batch';
+      defaultTitle = isBn
+          ? 'ক্যাম্পাস বা ব্যাচের গ্রুপ তৈরি করুন'
+          : 'Create Campus or Batch';
       hint = isBn ? 'যেমন: বুয়েট সিএসই ২১ ব্যাচ...' : 'e.g., CSE Batch 21...';
     } else if (preset == TourGroup.messPreset) {
-      defaultTitle = isBn ? 'মেস বা শেয়ার্ড বাসার গ্রুপ তৈরি করুন' : 'Create Mess or Shared Flat';
+      defaultTitle = isBn
+          ? 'মেস বা শেয়ার্ড বাসার গ্রুপ তৈরি করুন'
+          : 'Create Mess or Shared Flat';
       hint = isBn ? 'যেমন: বনশ্রী মেস...' : 'e.g., Green Valley Mess...';
     } else if (preset == TourGroup.societyPreset) {
-      defaultTitle = isBn ? 'হাউজিং সোসাইটি বা ভবনের গ্রুপ তৈরি করুন' : 'Create Housing Society / Building';
-      hint = isBn ? 'যেমন: রূপালী টাওয়ার সমিতি...' : 'e.g., Sunrise Apartments...';
+      defaultTitle = isBn
+          ? 'হাউজিং সোসাইটি বা ভবনের গ্রুপ তৈরি করুন'
+          : 'Create Housing Society / Building';
+      hint =
+          isBn ? 'যেমন: রূপালী টাওয়ার সমিতি...' : 'e.g., Sunrise Apartments...';
     } else if (preset == TourGroup.samityPreset) {
-      defaultTitle = isBn ? 'ঘূর্ণায়মান সঞ্চয় গ্রুপ তৈরি করুন' : 'Create Rotating Savings Group';
-      hint = isBn ? 'যেমন: মাসিক সঞ্চয় সমিতি...' : 'e.g., Monthly Savings Circle...';
+      defaultTitle = isBn
+          ? 'ঘূর্ণায়মান সঞ্চয় গ্রুপ তৈরি করুন'
+          : 'Create Rotating Savings Group';
+      hint = isBn
+          ? 'যেমন: মাসিক সঞ্চয় সমিতি...'
+          : 'e.g., Monthly Savings Circle...';
     } else if (preset == TourGroup.schoolPreset) {
-      defaultTitle = isBn ? 'স্কুল বা কোচিং ক্লাসের গ্রুপ তৈরি করুন' : 'Create School or Coaching Class';
-      hint = isBn ? 'যেমন: ম্যাথ কোচিং ব্যাচ ২০২৬...' : 'e.g., Math Batch 2026...';
+      defaultTitle = isBn
+          ? 'স্কুল বা কোচিং ক্লাসের গ্রুপ তৈরি করুন'
+          : 'Create School or Coaching Class';
+      hint =
+          isBn ? 'যেমন: ম্যাথ কোচিং ব্যাচ ২০২৬...' : 'e.g., Math Batch 2026...';
     } else if (preset == TourGroup.sportsPreset) {
-      defaultTitle = isBn ? 'খেলার দল বা জিমের গ্রুপ তৈরি করুন' : 'Create Sports Team or Gym';
-      hint = isBn ? 'যেমন: সানরাইজ ফুটবল ক্লাব...' : 'e.g., Sunrise FC, Gym Squad...';
+      defaultTitle = isBn
+          ? 'খেলার দল বা জিমের গ্রুপ তৈরি করুন'
+          : 'Create Sports Team or Gym';
+      hint = isBn
+          ? 'যেমন: সানরাইজ ফুটবল ক্লাব...'
+          : 'e.g., Sunrise FC, Gym Squad...';
     } else if (preset == TourGroup.studyPreset) {
-      defaultTitle = isBn ? 'স্টাডি বা বুক ক্লাবের গ্রুপ তৈরি করুন' : 'Create Study or Book Club';
+      defaultTitle = isBn
+          ? 'স্টাডি বা বুক ক্লাবের গ্রুপ তৈরি করুন'
+          : 'Create Study or Book Club';
       hint = isBn ? 'যেমন: সাহিত্য পাঠচক্র...' : 'e.g., Book Readers Club...';
     } else if (preset == TourGroup.committeePreset) {
-      defaultTitle = isBn ? 'পাড়া-মহল্লা কমিটির গ্রুপ তৈরি করুন' : 'Create Neighborhood Committee';
-      hint = isBn ? 'যেমন: শান্তিবাগ কল্যাণ সমিতি...' : 'e.g., Community Board...';
+      defaultTitle = isBn
+          ? 'পাড়া-মহল্লা কমিটির গ্রুপ তৈরি করুন'
+          : 'Create Neighborhood Committee';
+      hint =
+          isBn ? 'যেমন: শান্তিবাগ কল্যাণ সমিতি...' : 'e.g., Community Board...';
     }
 
     await showDialog<void>(
