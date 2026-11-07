@@ -37,8 +37,14 @@ Future<Future<void> Function()> setUpTempHive() async {
   final dir = await Directory.systemTemp.createTemp('bhromon_hive_');
   Hive.init(dir.path);
   return () async {
-    await Hive.close();
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    try {
+      await Hive.close();
+    } catch (_) {}
+    if (dir.existsSync()) {
+      try {
+        dir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
   };
 }
 
