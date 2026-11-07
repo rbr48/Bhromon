@@ -113,15 +113,15 @@ class InstafeedExploreGrid extends StatelessWidget {
 
                 // Reel / Video Indicator
                 if (post.isReel)
-                  Positioned(
+                  const Positioned(
                     top: 6,
                     right: 6,
                     child: Icon(
                       Icons.play_arrow_rounded,
-                      color: context.forest.text,
+                      color: Colors.white,
                       size: 20,
-                      shadows: const [
-                        Shadow(color: Colors.black87, blurRadius: 4)
+                      shadows: [
+                        Shadow(color: Colors.black87, blurRadius: 4),
                       ],
                     ),
                   )
@@ -157,8 +157,8 @@ class InstafeedExploreGrid extends StatelessWidget {
                           const SizedBox(width: 2),
                           Text(
                             context.l10n.number(post.effectiveViewCount),
-                            style: TextStyle(
-                              color: context.forest.text,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -170,10 +170,10 @@ class InstafeedExploreGrid extends StatelessWidget {
 
                 // Pinned badge
                 if (post.isPinned)
-                  const Positioned(
-                    bottom: 6,
-                    left: 6,
-                    child: Icon(
+                  Positioned(
+                    top: 6,
+                    left: post.isArchived ? 26 : 6,
+                    child: const Icon(
                       Icons.push_pin,
                       color: Colors.amber,
                       size: 14,
@@ -193,8 +193,8 @@ class InstafeedExploreGrid extends StatelessWidget {
                         color: Colors.purple.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Icon(Icons.archive_outlined,
-                          color: context.forest.text, size: 12),
+                      child: const Icon(Icons.archive_outlined,
+                          color: Colors.white, size: 12),
                     ),
                   ),
 
