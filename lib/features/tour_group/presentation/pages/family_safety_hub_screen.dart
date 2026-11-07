@@ -62,6 +62,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   TourRole? _myRole;
   // The alert this device raised and has not resolved yet.
   String? _activeAlertId;
+  Future<bool>? _pendingRaiseFuture;
   late final Stream<List<SafetyAlert>> _alerts =
       _repository.watchSafetyAlerts(widget.tourId);
   late final Stream<List<BatteryTelemetry>> _telemetry =
@@ -301,6 +302,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     _telemetryTimer?.cancel();
     _alertTimer?.cancel();
     _sirenAnimController.dispose();
+    if (_isSirenActive && _activeAlertId != null) {
+      final alertId = _activeAlertId!;
+      unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId));
+    }
     // Stops sharing the place when the member leaves this screen.
     unawaited(_publisher.stop(DateTime.now()));
     super.dispose();
@@ -441,7 +446,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     } else {
       _sirenAnimController.stop();
       _sirenAnimController.value = 0;
-      _resolveAlert();
+      unawaited(_resolveAlert());
     }
   }
 
@@ -450,39 +455,60 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     final alertId = _repository.newSafetyAlertId();
     _activeAlertId = alertId;
     final pos = _currentPosition;
-    unawaited(_repository
-        .raiseSafetyAlert(
+    final future = _repository.raiseSafetyAlert(
       tourId: widget.tourId,
       alertId: alertId,
       latitude: pos?.latitude,
       longitude: pos?.longitude,
-    )
-        .then(
+    );
+    _pendingRaiseFuture = future;
+    future.then(
       (synced) {
-        if (!synced) {
+        if (!synced && mounted) {
           _showMessage(l10n.translate('fsh_alert_not_synced'));
         }
       },
-      onError: (Object e) => _showMessage(
-          l10n.translate('fsh_alert_send_failed', args: {'error': e})),
-    ));
+      onError: (Object e) {
+        if (_activeAlertId == alertId) {
+          _activeAlertId = null;
+        }
+        if (mounted) {
+          _showMessage(
+              l10n.translate('fsh_alert_send_failed', args: {'error': e}));
+        }
+      },
+    );
   }
 
   /// Resolves the alert this device raised, if any. Used when the siren stops.
-  void _resolveAlert() {
+  Future<void> _resolveAlert() async {
     final alertId = _activeAlertId;
+    final pending = _pendingRaiseFuture;
     _activeAlertId = null;
+    _pendingRaiseFuture = null;
     if (alertId == null) return;
+    if (pending != null) {
+      try {
+        final synced = await pending;
+        if (!synced) return;
+      } catch (_) {
+        return;
+      }
+    }
     _resolveById(alertId);
   }
 
   void _resolveById(String alertId) {
     final l10n = context.l10n;
     unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId).then(
-          (_) {},
-          onError: (Object e) => _showMessage(
-              l10n.translate('fsh_alert_close_failed', args: {'error': e})),
-        ));
+      (_) {},
+      onError: (Object e) {
+        if (mounted) {
+          _showMessage(
+              l10n.translate('fsh_alert_close_failed', args: {'error': e}));
+        }
+      },
+    ));
   }
 
   /// Closes an alert from its card. Closing this device's own live alert also
@@ -602,9 +628,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             color: alertColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: _isSirenActive
-                  ? Colors.redAccent
-                  : context.forest.divider12,
+              color:
+                  _isSirenActive ? Colors.redAccent : context.forest.divider12,
               width: _isSirenActive ? 2 : 1,
             ),
             boxShadow: _isSirenActive

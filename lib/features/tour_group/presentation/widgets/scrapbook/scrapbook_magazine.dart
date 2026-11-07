@@ -17,9 +17,6 @@ import '../instafeed/tour_safe_network_image.dart';
 import '../../../../../core/localization/localized_date.dart';
 
 const _paper = Color(0xFF15110D);
-const _ink = Color(0xFFF5EEDC);
-const _gold = Color(0xFFE8B04B);
-const _muted = Color(0xFFB9AE98);
 
 /// High-contrast theme palette for the scrapbook magazine:
 /// - Dark Mode: classic deep paper with warm cream ink and amber gold.

@@ -28,7 +28,6 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
-import '../../../tour_group/domain/services/tour_choice.dart';
 import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import '../../../tour_group/presentation/widgets/trip_shell.dart';
