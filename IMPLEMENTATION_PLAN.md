@@ -55,3 +55,30 @@ Completely consolidate push notification dispatching, token tracking, and schedu
   - Run `npm test` in `functions/`.
 - [ ] **Task 5.3: Production Deployment to Hostinger VPS**
   - Run `media-server/deploy.sh` on Hostinger VPS.
+
+---
+
+## Phase 6: Fix TypeScript Compilation Errors in Cloud Functions & bhromon-games Docker Build
+
+### Objective
+Resolve all TypeScript compilation errors (`tsc exit code: 2`) across `functions/src/` caused by Firebase Admin v14 type changes and strict TypeScript checks, and upgrade `functions/Dockerfile` to `node:22-alpine` so that `docker compose build bhromon-games` succeeds cleanly.
+
+### Tasks
+- [x] **Task 6.1: Fix Firestore Type Namespaces and Exports in `functions/src/gameTable/shared.ts`**
+  - Import and re-export `DocumentData`, `Transaction`, `DocumentReference`, `Firestore`, and `UpdateData` from `'firebase-admin/firestore'`.
+- [x] **Task 6.2: Add Explicit Transaction Types to Game Callables**
+  - Update `functions/src/card29/callables.ts`, `functions/src/teenPatti/callables.ts`, and `functions/src/carrom/callables.ts` to type `(tx: Transaction)`.
+- [x] **Task 6.3: Fix Type Annotations Across Cloud Functions Handlers**
+  - Fix `functions/src/computeExplorerScore.ts` (`snap.forEach((doc: QueryDocumentSnapshot) => ...)`).
+  - Fix `functions/src/lib/accountTours.ts` (query snapshots and safe `toMillis` conversion).
+  - Fix `functions/src/sendBroadcastNotification.ts` (`QueryDocumentSnapshot`).
+  - Fix `functions/src/sendOtpEmail.ts` and `functions/src/verifyOtp.ts` (`tx: Transaction`).
+  - Fix `functions/src/sendTourNoticeReminders.ts` (`tx: Transaction`).
+  - Fix `functions/src/sendTourReactionNotification.ts` (`email: string`).
+  - Fix `functions/src/tourContentPurge.ts` (`error`, `tx: Transaction`, query snapshots).
+- [x] **Task 6.4: Upgrade `functions/Dockerfile` to `node:22-alpine`**
+  - Match `"engines": { "node": ">=22" }` and AGENTS.md requirement.
+- [ ] **Task 6.5: Verify Compilation & Build Locally and on VPS**
+  - Run `npm run build` in `functions/`.
+  - Test `docker compose build bhromon-games` on VPS.
+  - Open GitHub PR and merge to `main`.
