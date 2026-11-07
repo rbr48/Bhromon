@@ -602,7 +602,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             color: alertColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: _isSirenActive ? Colors.redAccent : Colors.white12,
+              color: _isSirenActive
+                  ? Colors.redAccent
+                  : context.forest.divider12,
               width: _isSirenActive ? 2 : 1,
             ),
             boxShadow: _isSirenActive
@@ -643,8 +645,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           _isSirenActive
                               ? context.l10n.translate('fsh_alert_on')
                               : context.l10n.translate('fsh_family_sos'),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: _isSirenActive
+                                ? Colors.white
+                                : context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -654,8 +658,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           _isSirenActive
                               ? context.l10n.translate('fsh_alert_on_hint')
                               : context.l10n.translate('fsh_alert_off_hint'),
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
+                          style: TextStyle(
+                              color: _isSirenActive
+                                  ? Colors.white70
+                                  : context.forest.text70,
+                              fontSize: 12),
                         ),
                       ],
                     ),
