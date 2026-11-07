@@ -5,15 +5,17 @@
 ## 1. Firebase Suite
 - **Cloud Firestore**: Primary realtime database (`tours/{id}`, `memberships/{tourId}__{email}`, `invites/{code}`, `channels`, `direct_messages`, `sos`). Configured with offline cache enabled.
 - **Firebase Authentication**: Email/Password, Phone OTP, Google Sign-In with Android Credential Manager support (`serverClientId`).
-- **Cloud Functions (TypeScript)**: Automated triggers for feed posts, comments, ledger transactions, SOS siren push notifications, GDPR account erasure, and daily backups.
+- **Cloud Functions (TypeScript)**: Decommissioned notification triggers to run 100% on Firebase Spark plan without billing. Retains GDPR account erasure (`gdprDeleteUser`), OTP auth digests, and administrative scripts.
 - **Firebase Storage**: User avatars, post media, stories, and document attachments governed by `storage.rules`.
 - **Firebase Hosting**: High-speed CDN hosting for Flutter Web app at `https://app.bhromon.fun` and `https://bhromon-ff801.web.app`.
-- **Firebase Cloud Messaging (FCM)**: Push notification dispatch for SOS alerts, mentions, channel messages, and notice reminders.
+- **Firebase Cloud Messaging (FCM)**: Push notification dispatch for SOS alerts, mentions, channel messages, ledger updates, and notice reminders, dispatched directly from the Hostinger VPS notification daemon via Firebase Admin SDK.
 
-## 2. Hostinger VPS & Media Server
+## 2. Hostinger VPS & Microservices
 - **Endpoint**: `https://bhromon.fun` (IP: `148.135.137.245`, SSH port: `2222`).
-- **FastAPI Media Service**: Video transcoding, image compression, CDN proxy, and legacy SCP APK downloads.
-- **Nginx Reverse Proxy**: SSL termination, caching headers, and media serving from `/var/www/bhromon/downloads/`.
+- **FastAPI Media Service (`bhromon-media-app:8210`)**: Media uploads, video streaming with byte-range support, news proxy, and 1-on-1 WebSocket chat signaling.
+- **Notification Watcher Daemon (`notifications.py`)**: Realtime listener daemon on Firestore streams that dispatches FCM push notifications for SOS alerts, channels, posts, comments, notices, and ledger transactions.
+- **Node 22 Games Server (`bhromon-games-app:8220`)**: Multiplayer card and board game engine running Card 29, Teen Patti, and Carrom.
+- **Nginx Reverse Proxy**: SSL termination, caching headers, WebSocket upgrades, and media/APK serving from `/var/www/bhromon/downloads/`.
 
 ## 3. WebRTC Calling Infrastructure
 - **Signaling**: Firestore-based peer-to-peer signaling channels for 1-on-1 voice/video calls.
@@ -28,6 +30,6 @@
 - **Verification Engine**: Admin verification and dispute states recorded per settlement.
 
 ## 5. Offline Maps & Geolocation
-- **MapLibre GL**: Offline vector tile rendering using `.mbtiles` packages.
-- **Geolocator**: Realtime GPS position, speed, altitude, and bearing calculations.
-- **Highway & Spot Catalog (`destination_catalog.dart`)**: 40 curated Bangladesh destinations with GPS coordinates and waypoints.
+- **MapLibre GL & OpenFreeMap**: Offline vector tile rendering using OpenFreeMap Liberty style (`https://tiles.openfreemap.org/planet`) with locally bundled, coalesce-guarded style in `assets/map/liberty_style.json` and fallback sprites.
+- **Geolocator**: Realtime GPS position, speed, altitude, and bearing calculations with boundary containment checks.
+- **Curated Bangladesh Regions (`offline_map_regions.dart`)**: 8 curated offline regions (Sajek, Tanguar Haor, Bandarban, Sundarbans, Saint Martin's, Sylhet, etc.) with coordinates, waypoints, and emergency helplines.
