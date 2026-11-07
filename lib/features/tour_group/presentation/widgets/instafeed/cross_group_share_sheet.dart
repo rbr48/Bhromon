@@ -64,6 +64,14 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
     },
   ];
 
+  late final Stream<List<TourGroup>> _groupsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _groupsStream = widget.repository.watchMyGroups();
+  }
+
   @override
   void dispose() {
     _captionCtrl.dispose();
@@ -255,7 +263,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
   Widget _buildGroupPicker(BuildContext context) {
     final l10n = context.l10n;
     return StreamBuilder<List<TourGroup>>(
-      stream: widget.repository.watchMyGroups(),
+      stream: _groupsStream,
       builder: (context, snapshot) {
         final allGroups = snapshot.data ?? const <TourGroup>[];
         final otherGroups =
