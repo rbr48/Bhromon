@@ -77,6 +77,34 @@ void main() {
       expect(back.isLikedBy('babu@example.com'), isFalse);
     });
 
+    test('serializes and deserializes reshared cross-group metadata', () {
+      final post = TourPostItem(
+        id: 'p_reshared',
+        tourId: 'target_tour_123',
+        authorEmail: 'user@example.com',
+        authorName: 'Current User',
+        caption: 'Loving this moment from our family trip!',
+        images: const ['https://media.example.com/family_pic.jpg'],
+        createdAt: now,
+        resharedFromTourId: 'source_tour_456',
+        resharedFromTourName: 'Coxs Bazar Family',
+        resharedFromAuthorName: 'Auntie Rina',
+        resharedPostId: 'orig_post_789',
+      );
+
+      final map = post.toMap();
+      expect(map['resharedFromTourId'], 'source_tour_456');
+      expect(map['resharedFromTourName'], 'Coxs Bazar Family');
+      expect(map['resharedFromAuthorName'], 'Auntie Rina');
+      expect(map['resharedPostId'], 'orig_post_789');
+
+      final restored = TourPostItem.fromMap('p_reshared', map);
+      expect(restored.resharedFromTourId, 'source_tour_456');
+      expect(restored.resharedFromTourName, 'Coxs Bazar Family');
+      expect(restored.resharedFromAuthorName, 'Auntie Rina');
+      expect(restored.resharedPostId, 'orig_post_789');
+    });
+
     test('a photo post is remote only when every image is', () {
       TourPostItem withImages(List<String> images,
               {bool reel = false, String? video}) =>

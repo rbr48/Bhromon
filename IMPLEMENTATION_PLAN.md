@@ -187,3 +187,33 @@ Deliver complete, automated business workflows for daily group presets so that m
 - [ ] **Task 9.5: Automated Testing, PR & Verification**
   - Add unit tests for `meal_engine.dart` and `service_request_models.dart`.
   - Format with `dart format .` and verify with `flutter analyze`.
+
+
+---
+
+## Phase 10: Cross-Group Moments Sharing & Reposting
+
+### Objective
+Allow members to seamlessly share/repost Moments photos, videos, and reels from one group to any other group they belong to. Support both reposting to the destination group's Moments feed (with true media file isolation via `/api/media/copy` and source attribution) and sending post cards into target group chat channels.
+
+### Tasks
+- [x] **Task 10.1: Domain Models & Repost Metadata**
+  - Update `TourPostItem` with `resharedFromTourId`, `resharedFromTourName`, `resharedFromAuthorName`, `resharedPostId`.
+  - Update `toMap`, `fromMap`, `copyWith`, and constructor.
+  - Update `TourGroupRepository.addPost` to pass reshared metadata.
+- [x] **Task 10.2: Localization for Cross-Group Sharing**
+  - Add English and Bengali strings to `tour_translation_keys.dart` for all cross-group share actions, hints, headers, and toasts.
+- [x] **Task 10.3: Cross-Group Media Duplication & Isolation Logic**
+  - Safely duplicate remote media (`images`, `videoUrl`, `coverUrl`) using `TourMediaUploader.copyMedia(tourId: targetTourId, folder: 'posts')` so destination groups retain full access independently of the source group.
+- [x] **Task 10.4: Cross-Group Share UI Sheet (`cross_group_share_sheet.dart`)**
+  - Build `CrossGroupShareSheet` with group picker (excluding current group), Moments feed repost flow with optional caption, and target channel selection.
+- [x] **Task 10.5: Post Card Attribution Display (`InstafeedPostCard`)**
+  - Display reshared attribution header chip (`Icons.repeat_rounded` + source group and author name).
+- [x] **Task 10.6: Integration in `InstafeedShareSheet`**
+  - Add "Share to another group" action in `InstafeedShareSheet` and wire it up.
+- [x] **Task 10.7: Automated Unit & Widget Tests**
+  - Add tests for model serialization, cross-group UI components, and attribution rendering.
+  - Verify static analysis (`dart analyze`), formatting (`dart format`), and guard rules.
+- [ ] **Task 10.8: PR, CI Green Check, Merge & Web Deployment**
+  - Increment version to `1.8.134+188`.
+  - Create GitHub PR, monitor CI until 100% green, merge to `main`, and deploy to Firebase Hosting (`app.bhromon.fun`).

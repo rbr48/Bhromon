@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/destination_catalog.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/device_battery_reader.dart';
 import '../../domain/models/date_codec.dart';
@@ -50,6 +51,17 @@ class FamilySafetyHubScreen extends StatefulWidget {
 
 class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     with SingleTickerProviderStateMixin {
+  String _effectiveDestination(BuildContext context) {
+    final raw = _tourGroup?.currentDestination() ??
+        _tourGroup?.destination ??
+        context.l10n.translate('fsh_default_destination');
+    final preset = presetForName(raw);
+    if (preset != null) {
+      return preset.nameFor(context.l10n.locale.languageCode);
+    }
+    return raw;
+  }
+
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
   bool _isSirenActive = false;
@@ -203,10 +215,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       return [
         TourLandmark(
           id: 'hotel_sea_moon',
-          name: context.l10n.translate('fsh_cox_hotel_name', args: {
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
-          }),
+          name: context.l10n.translate('fsh_cox_hotel_name',
+              args: {'destination': _effectiveDestination(context)}),
           subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 21.4326,
           lng: 91.9774,
@@ -218,8 +228,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           name: context.l10n.translate('fsh_cox_bus_name', args: {
             'origin': _tourGroup?.originCity ??
                 context.l10n.translate('fsh_default_origin'),
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
+            'destination': _effectiveDestination(context)
           }),
           subtitle: context.l10n.translate('fsh_main_bus_sub'),
           lat: 21.4385,
@@ -229,10 +238,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'sugandha_beach',
-          name: context.l10n.translate('fsh_cox_meetup_name', args: {
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
-          }),
+          name: context.l10n.translate('fsh_cox_meetup_name',
+              args: {'destination': _effectiveDestination(context)}),
           subtitle: context.l10n.translate('fsh_family_meetup_sub'),
           lat: 21.4298,
           lng: 91.9752,
@@ -241,10 +248,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'laboni_beach',
-          name: context.l10n.translate('fsh_cox_spot_name', args: {
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
-          }),
+          name: context.l10n.translate('fsh_cox_spot_name',
+              args: {'destination': _effectiveDestination(context)}),
           subtitle: context.l10n.translate('fsh_sightseeing_sub'),
           lat: 21.4390,
           lng: 91.9712,

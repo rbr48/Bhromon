@@ -1105,6 +1105,34 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               ),
             ),
 
+          if (widget.post.resharedFromTourName != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              color: context.forest.accentText.withValues(alpha: 0.1),
+              child: Row(
+                children: [
+                  Icon(Icons.repeat_rounded,
+                      size: 14, color: context.forest.accentText),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      context.l10n.translate('ig_reshared_from_group', args: {
+                        'group': widget.post.resharedFromTourName!,
+                        'author': widget.post.resharedFromAuthorName ?? '',
+                      }),
+                      style: TextStyle(
+                        color: context.forest.accentText,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Header: Avatar, Name, Seat/Room Quick Chip, Location & Menu
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
