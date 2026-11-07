@@ -369,7 +369,10 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
           children: [
             Text(
               regionTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             Text(
               '${widget.region.division} · ~${widget.region.estimatedMb} MB · ${isBn ? "অফলাইন ম্যাপ" : "Offline Map"}',

@@ -207,7 +207,10 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
       appBar: AppBar(
         title: Text(
           context.l10n.translate('tq_title_master'),
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 16),
         ),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         foregroundColor: context.forest.text,

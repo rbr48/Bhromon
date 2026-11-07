@@ -14,6 +14,9 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
+  /// Whether the active locale is Bengali.
+  bool get isBn => locale.languageCode == 'bn';
+
   /// Looks up [key] in this language, then in English, then returns the key
   /// itself. Each `{name}` in the text is replaced with `args['name']`.
   ///

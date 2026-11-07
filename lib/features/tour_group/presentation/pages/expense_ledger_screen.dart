@@ -216,7 +216,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
         title: Text(l10n.translate('fund_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         actions: [
           if (_isAdmin && group != null)
             IconButton(
