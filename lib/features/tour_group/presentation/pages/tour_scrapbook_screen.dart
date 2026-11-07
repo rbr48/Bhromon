@@ -128,7 +128,10 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
       backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
       appBar: AppBar(
         title: Text(l10n.translate('scrap_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
         foregroundColor: context.forest.text,
         elevation: 0,
