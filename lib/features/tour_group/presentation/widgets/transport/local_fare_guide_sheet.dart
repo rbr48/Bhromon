@@ -19,7 +19,7 @@ Future<void> showLocalFareGuideSheet(
   );
 }
 
-/// Interactive sheet providing verified transit fare estimates and calculation.
+/// Interactive sheet showing transit fare estimates and a calculator.
 class LocalFareGuideSheet extends StatefulWidget {
   const LocalFareGuideSheet({
     super.key,

@@ -18,14 +18,14 @@ These items were described as missing or wrong in v2.0. The code on `main` shows
 
 | Item | v2.0 said | `main` shows | Change |
 |---|---|---|---|
-| P9.1 Live Journey flag | Enable `kLiveJourney` by default | Already `defaultValue: true` in `lib/core/config/feature_flags.dart`. The comment above it still says "off until acceptance tests" | Fix the comment. Remaining work is the device battery test |
+| P9.1 Live Journey flag | Enable `kLiveJourney` by default | Already `defaultValue: true` in `lib/core/config/feature_flags.dart`. The comment above it still says "off until acceptance tests" | Comment corrected in this PR. Remaining work is the device battery test |
 | Remote Config keys | Set `journey_relay_enabled` and `journey_alarms_enabled` to true | Both already default to `true` | Done |
 | P8.2 Picture-in-picture | Add `supportsPictureInPicture` and PiP | The manifest already has it, and `setPipAllowed` exists | Removed |
 | P8.2 Reconnect | New 10-second ICE restart | `iceRestart` and `reoffer` exist, with a rebuild budget | Reconcile the new window with the existing budget |
 | P8.1 Quality HUD | No visibility into poor networks | `PacketLossMeter` exists, and `AGENTS.md` documents a link-quality badge | Verify what is missing before building |
 | P8.4 Voice-note speed | Add 1x, 1.5x, 2x | Already in `voice_message_bubble.dart` | Removed |
 | P8.4 Chat search | Drift FTS5 over cached messages | No FTS exists. The chat cache is Hive-encrypted, not Drift | Decide where the search index lives |
-| P9.2 Fare guide | Build a new guide | `local_fare_guide.dart`, `local_fare_guide_sheet.dart` and tests exist | Rescoped to a sourced content audit |
+| P9.2 Fare guide | Build a new guide | `local_fare_guide.dart`, `local_fare_guide_sheet.dart` and tests exist | Rescoped to a sourced content audit. The header now says estimates until entries are sourced |
 | P10.1 TrxID dedup | Write path not wired; use `runTransaction` | Wired in the expense batch (`tour_group_repository.dart`). The rule allows create only. `trip_ledger_repository.dart` does not exist | Drop the transaction plan. Add the duplicate message and rules tests |
 | P10.2 Statement PDF | No entry point in the ledger | `_exportMonthlyPdf` is wired in `expense_ledger_screen.dart` | Keep only the date-range choice and MFS status |
 | P7.3 Acknowledgement ping | Implies an existing endpoint | `POST /notify/notice/ping` does not exist | New work |
@@ -63,7 +63,7 @@ Formulas: meal rate = total bazar ÷ total logged meals; member owed = member's 
 **Task 9.4 — Samity receipts.** Remaining:
 - The admin attaches a signed receipt or transfer screenshot to `samity_payouts/{cycleKey}`.
 - The beneficiary's confirmation sets `payoutStatus: verified`.
-- Late-payment penalties wait for the policy decision (decision 2).
+- Late payments show as overdue, with the amount still owed. No penalty fields are added (section 6, decision 2).
 
 **Task 9.5 — Tests and checks.** Unit tests for the new meal and request logic, `dart format`, `flutter analyze --fatal-infos`, and `flutter test`.
 
@@ -76,8 +76,8 @@ Formulas: meal rate = total bazar ÷ total logged meals; member owed = member's 
 
 ### Sprint 9 — Travel and Live Journey
 
-- **9.1 Live Journey GA.** The flag and the Remote Config keys already default to on. Fix the stale comment. Remaining: a 12-hour highway battery test on a device. This needs hardware, so it is a manual gate.
-- **9.2 Fare guide.** The content and the sheet exist. Remaining: a sourced audit, with a date on every fare. Someone must own the data (decision 3).
+- **9.1 Live Journey GA.** The flag and the Remote Config keys already default to on. The stale comment above the flag is corrected. Remaining: a 12-hour highway battery test on a device. This needs hardware, so it is a manual gate.
+- **9.2 Fare guide.** The content and the sheet exist. Remaining: a sourced audit, with a source and an as-of date on every fare. The repository owner owns the data and reviews it quarterly (section 6, decision 3).
 - **9.3 Route checkpoint overlay.** `RoutePlan` exists in `route_engine.dart`. Add GeoJSON route lines and numbered checkpoints to `offline_map_viewer_screen.dart`.
 - **9.4 Itinerary PDF.** New. A multi-stop itinerary built with `bangla_pdf`.
 
@@ -122,9 +122,11 @@ Google Drive backups of chat data wait for this track (decision D-04 in `AGENTS.
 
 ## 6. Open decisions
 
-1. Is end-to-end encryption in scope for the 1.9 line? If yes, it gets its own budget.
-2. Are samity late-payment penalties acceptable, given that the app moves no money?
-3. Who owns and verifies fare data, and how often is it refreshed?
+Decisions 1 to 3 are settled as of 2026-11-07. Decisions 4 and 5 are still open.
+
+1. **Decided: end-to-end encryption is not in the 1.9 line.** It stays Track E, with its own design, threat model, budget and external review.
+2. **Decided: samity late payments are shown, not fined.** Task 9.4 adds no penalty fields. `SamityLedger` already gives each cycle a status, overdue included, and what each member still owes. Any fine is the group's own rule, applied outside the app, because the app moves no money.
+3. **Decided: fare data has one owner and a sourcing rule.** The repository owner owns the data. Each fare needs a source and an as-of date before the sheet presents it as verified. The data is reviewed once a quarter, and before any release that changes a fare.
 4. Is the picnic and event tracker (task 9.3) wanted?
 5. Where should the chat search index live: the encrypted Hive cache, or a new Drift table?
 
@@ -134,3 +136,5 @@ Google Drive backups of chat data wait for this track (decision D-04 in `AGENTS.
 - The `--admin` merge gate is removed.
 - Task numbers follow `IMPLEMENTATION_PLAN.md`.
 - End-to-end encryption is a separate track, not a sprint.
+- Decisions 1 to 3 in section 6 are settled: end-to-end encryption has its own track, samity late payments are shown and not fined, and fare data has one owner and a sourcing rule.
+- The flag comments and AGENTS.md now match the code: both feature flags default to on. The fare guide header says estimates, not verified fares. These are comment and documentation changes only.
