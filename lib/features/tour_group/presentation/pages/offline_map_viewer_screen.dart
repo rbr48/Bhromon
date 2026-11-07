@@ -117,6 +117,9 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
           circleColor: '#52B788',
           circleStrokeWidth: 2.0,
           circleStrokeColor: '#FFFFFF',
+          circleBlur: 0.0,
+          circleOpacity: 1.0,
+          circleStrokeOpacity: 1.0,
         ),
       );
     }
