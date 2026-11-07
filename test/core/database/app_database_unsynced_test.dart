@@ -22,11 +22,15 @@ void main() {
     });
 
     test('counts pending, processing, and failed outbox entries', () async {
-      await db.enqueueOutbox('e1', 1000, '{"action":"post"}', status: 'pending');
-      await db.enqueueOutbox('e2', 2000, '{"action":"comment"}', status: 'failed');
-      await db.enqueueOutbox('e3', 3000, '{"action":"notice"}', status: 'processing');
+      await db.enqueueOutbox('e1', 1000, '{"action":"post"}',
+          status: 'pending');
+      await db.enqueueOutbox('e2', 2000, '{"action":"comment"}',
+          status: 'failed');
+      await db.enqueueOutbox('e3', 3000, '{"action":"notice"}',
+          status: 'processing');
       // Completed / synced items should not be counted
-      await db.enqueueOutbox('e4', 4000, '{"action":"ledger"}', status: 'completed');
+      await db.enqueueOutbox('e4', 4000, '{"action":"ledger"}',
+          status: 'completed');
 
       expect(await db.getPendingOutboxCount(), equals(3));
     });
@@ -53,8 +57,10 @@ void main() {
     });
 
     test('computes total unsynced changes accurately', () async {
-      await db.enqueueOutbox('e1', 1000, '{"action":"post"}', status: 'pending');
-      await db.enqueueOutbox('e2', 2000, '{"action":"comment"}', status: 'pending');
+      await db.enqueueOutbox('e1', 1000, '{"action":"post"}',
+          status: 'pending');
+      await db.enqueueOutbox('e2', 2000, '{"action":"comment"}',
+          status: 'pending');
 
       await db.into(db.tripLogsTable).insert(
             TripLogsTableCompanion.insert(
