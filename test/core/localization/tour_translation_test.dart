@@ -90,8 +90,8 @@ void main() {
       expect(LocaleController.isSupported('fr'), isFalse);
     });
 
-    test('starts in Bengali, the existing default', () {
-      expect(LocaleController.instance.locale.languageCode, 'bn');
+    test('starts in English, the default', () {
+      expect(LocaleController.instance.locale.languageCode, 'en');
     });
   });
 }

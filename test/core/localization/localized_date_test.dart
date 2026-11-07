@@ -18,8 +18,8 @@ void main() {
 
   final date = DateTime(2026, 3, 7, 14, 5);
 
-  test('the default language is Bengali', () {
-    expect(LocaleController.instance.locale.languageCode, 'bn');
+  test('the default language is English', () {
+    expect(LocaleController.instance.locale.languageCode, 'en');
   });
 
   test('English dates use English month names', () async {

@@ -18,6 +18,7 @@ import '../../data/active_group.dart';
 import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/localization/locale_controller.dart';
 import '../widgets/bhromon_bottom_nav.dart';
 import '../widgets/groups/group_card.dart';
 import '../widgets/groups/members_sheet.dart';
@@ -1298,6 +1299,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ],
             ),
             actions: [
+              ListenableBuilder(
+                listenable: LocaleController.instance,
+                builder: (context, _) {
+                  final isBn =
+                      LocaleController.instance.locale.languageCode == 'bn';
+                  return IconButton(
+                    tooltip: isBn ? 'Switch to English' : 'বাংলায় দেখুন',
+                    icon: const Icon(Icons.language_rounded,
+                        color: AppColors.midGreen),
+                    onPressed: () {
+                      final next = isBn ? 'en' : 'bn';
+                      LocaleController.instance.setLanguage(next);
+                    },
+                  );
+                },
+              ),
               PopupMenuButton<String>(
                 tooltip: context.l10n.translate('hub_add_menu'),
                 icon: const Icon(Icons.add_circle_outline,
