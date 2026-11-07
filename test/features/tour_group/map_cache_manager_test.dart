@@ -62,9 +62,9 @@ void main() {
           isFalse);
     });
 
-    test('exposes default style URL pointing to demo vector tiles', () {
+    test('exposes default style URL pointing to open vector tiles', () {
       expect(MapCacheManager.defaultStyleUrl,
-          contains('https://demotiles.maplibre.org/style.json'));
+          contains('https://tiles.openfreemap.org/styles/liberty'));
     });
   });
 }
