@@ -40,6 +40,21 @@ void main() {
       expect(result.type, 'video');
     });
 
+    test('MediaPickResult supports multi-image xFiles list', () {
+      final f1 = XFile('test/path/img1.jpg');
+      final f2 = XFile('test/path/img2.jpg');
+      final result = MediaPickResult(
+        xFile: f1,
+        type: 'image',
+        xFiles: [f1, f2],
+      );
+
+      expect(result.xFiles?.length, 2);
+      expect(result.allFiles.length, 2);
+      expect(result.allFiles.first.path, 'test/path/img1.jpg');
+      expect(result.allFiles.last.path, 'test/path/img2.jpg');
+    });
+
     testWidgets('VoiceMessageBubble renders correctly with duration',
         (tester) async {
       await tester.pumpWidget(
@@ -287,6 +302,23 @@ void main() {
 
       expect(result.caption, 'Sunset at Inani Beach');
       expect(result.isViewOnce, isTrue);
+    });
+
+    test(
+        'MediaCaptionResult stores multiple files and preserves backward-compatible file getter',
+        () {
+      final f1 = XFile('test/photo1.jpg');
+      final f2 = XFile('test/photo2.jpg');
+      final result = MediaCaptionResult(
+        files: [f1, f2],
+        caption: 'Group photos at Sajek',
+        isViewOnce: false,
+      );
+
+      expect(result.files.length, 2);
+      expect(result.file.path, 'test/photo1.jpg');
+      expect(result.caption, 'Group photos at Sajek');
+      expect(result.isViewOnce, isFalse);
     });
 
     test('ChatLocalCache biometric locked chats interface', () {

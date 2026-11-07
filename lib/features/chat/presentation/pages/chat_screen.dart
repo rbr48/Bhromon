@@ -1824,7 +1824,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onDocumentPicked: (file) =>
             _sendDocumentMessage(file, currentUid, currentName),
         onMediaPicked: (file, isVideo) =>
-            _openMediaCaptionFlow(file, isVideo, currentUid, currentName),
+            _openMediaCaptionFlow([file], isVideo, currentUid, currentName),
+        onMultiMediaPicked: (files, isVideo) =>
+            _openMediaCaptionFlow(files, isVideo, currentUid, currentName),
         onAudioPicked: (audioFile) =>
             _sendDocumentMessage(audioFile, currentUid, currentName),
         onLocationPicked: (pos, title) =>
@@ -1836,32 +1838,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _openMediaCaptionFlow(
-    XFile file,
+    List<XFile> files,
     bool isVideo,
     String currentUid,
     String currentName,
   ) async {
+    if (files.isEmpty) return;
     final result = await Navigator.of(context).push<MediaCaptionResult>(
       MaterialPageRoute(
         builder: (ctx) => ChatMediaCaptionScreen(
-          file: file,
+          files: files,
           isVideo: isVideo,
         ),
       ),
     );
 
-    if (result != null) {
-      _sendMediaMessage(
-        MediaPickResult(
-          file: !kIsWeb ? File(result.file.path) : null,
-          xFile: result.file,
-          type: isVideo ? 'video' : 'image',
-        ),
-        currentUid,
-        currentName,
-        caption: result.caption,
-        isViewOnce: result.isViewOnce,
-      );
+    if (result != null && result.files.isNotEmpty) {
+      for (int i = 0; i < result.files.length; i++) {
+        final xf = result.files[i];
+        final caption =
+            (i == 0 && result.caption.isNotEmpty) ? result.caption : null;
+        await _sendMediaMessage(
+          MediaPickResult(
+            file: !kIsWeb ? File(xf.path) : null,
+            xFile: xf,
+            type: isVideo ? 'video' : 'image',
+          ),
+          currentUid,
+          currentName,
+          caption: caption,
+          isViewOnce: result.isViewOnce,
+        );
+      }
     }
   }
 

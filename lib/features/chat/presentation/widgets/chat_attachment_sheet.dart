@@ -20,7 +20,8 @@ enum AttachmentType {
 /// WhatsApp-style circular icon grid attachment bottom sheet.
 class ChatAttachmentSheet extends StatelessWidget {
   final void Function(PlatformFile file) onDocumentPicked;
-  final void Function(XFile file, bool isVideo) onMediaPicked;
+  final void Function(XFile file, bool isVideo)? onMediaPicked;
+  final void Function(List<XFile> files, bool isVideo)? onMultiMediaPicked;
   final void Function(PlatformFile audioFile) onAudioPicked;
   final void Function(Position position, String title) onLocationPicked;
   final VoidCallback onExpenseSplit;
@@ -29,7 +30,8 @@ class ChatAttachmentSheet extends StatelessWidget {
   const ChatAttachmentSheet({
     super.key,
     required this.onDocumentPicked,
-    required this.onMediaPicked,
+    this.onMediaPicked,
+    this.onMultiMediaPicked,
     required this.onAudioPicked,
     required this.onLocationPicked,
     required this.onExpenseSplit,
@@ -69,7 +71,11 @@ class ChatAttachmentSheet extends StatelessWidget {
       final photo =
           await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
       if (photo != null) {
-        onMediaPicked(photo, false);
+        if (onMultiMediaPicked != null) {
+          onMultiMediaPicked!([photo], false);
+        } else if (onMediaPicked != null) {
+          onMediaPicked!(photo, false);
+        }
       }
     } catch (e) {
       logError('Error capturing photo: $e');
@@ -80,13 +86,40 @@ class ChatAttachmentSheet extends StatelessWidget {
     Navigator.pop(context);
     try {
       final picker = ImagePicker();
-      final media =
-          await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-      if (media != null) {
-        onMediaPicked(media, false);
+      final images = await picker.pickMultiImage(
+        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      );
+      if (images.isNotEmpty) {
+        if (onMultiMediaPicked != null) {
+          onMultiMediaPicked!(images, false);
+        } else if (onMediaPicked != null) {
+          onMediaPicked!(images.first, false);
+        }
       }
     } catch (e) {
-      logError('Error picking gallery image: $e');
+      logError('Error picking gallery images: $e');
+    }
+  }
+
+  Future<void> _pickVideo(BuildContext context) async {
+    Navigator.pop(context);
+    try {
+      final picker = ImagePicker();
+      final video = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 120),
+      );
+      if (video != null) {
+        if (onMultiMediaPicked != null) {
+          onMultiMediaPicked!([video], true);
+        } else if (onMediaPicked != null) {
+          onMediaPicked!(video, true);
+        }
+      }
+    } catch (e) {
+      logError('Error picking video: $e');
     }
   }
 
@@ -171,6 +204,13 @@ class ChatAttachmentSheet extends StatelessWidget {
             color: const Color(0xFFAC44CF),
             label: context.l10n.translate('chat_attach_gallery'),
             onTap: () => _pickFromGallery(context),
+          ),
+          _buildItem(
+            context,
+            icon: Icons.videocam_rounded,
+            color: const Color(0xFFE4175B),
+            label: context.l10n.translate('chat_video_label'),
+            onTap: () => _pickVideo(context),
           ),
           _buildItem(
             context,
