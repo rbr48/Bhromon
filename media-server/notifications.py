@@ -83,20 +83,43 @@ def call_may_still_ring(created_at: Any, now: Optional[datetime] = None) -> bool
 class NotificationEngine:
     """Core push notification and maintenance worker backed by Firebase Admin SDK."""
 
-    def __init__(self, db=None, auth_mod=None, messaging_mod=None) -> None:
+    def __init__(self, db=None, auth_mod=None, messaging_mod=None, chat_db=None) -> None:
         self._db = db
         self._auth = auth_mod
         self._messaging = messaging_mod
+        self._chat_db = chat_db
         self.stats = {
             "sos_sent": 0,
             "channel_pushes_sent": 0,
             "chat_pushes_sent": 0,
             "call_pushes_sent": 0,
+            "post_pushes_sent": 0,
+            "comment_pushes_sent": 0,
+            "reaction_pushes_sent": 0,
+            "notice_pushes_sent": 0,
+            "ledger_pushes_sent": 0,
+            "broadcast_pushes_sent": 0,
             "dead_tokens_purged": 0,
             "errors": 0,
         }
         self._call_push_times: Dict[str, deque[float]] = {}
         self._call_lock = threading.Lock()
+        self._seen_keys: Set[str] = set()
+        self._seen_lock = threading.Lock()
+
+    def is_seen(self, key: str) -> bool:
+        """Atomic deduplication check. Returns True if key was already processed."""
+        with self._seen_lock:
+            if key in self._seen_keys:
+                return True
+            self._seen_keys.add(key)
+            if len(self._seen_keys) > 10000:
+                for old in list(self._seen_keys)[:2000]:
+                    self._seen_keys.remove(old)
+            return False
+
+    def set_chat_db(self, chat_db: Any) -> None:
+        self._chat_db = chat_db
 
     def _get_db(self):
         if self._db is None:
@@ -305,6 +328,9 @@ class NotificationEngine:
         sender_name: str = "A member",
     ) -> Dict[str, Any]:
         """Send emergency SOS alert to all other active tour members."""
+        if self.is_seen(f"sos_{alert_id}"):
+            logger.info("SOS alert %s already sent; skipping duplicate", alert_id)
+            return {"status": "already_sent"}
         logger.info("Triggering SOS alert for tour=%s sender=%s", tour_id, sender_email)
         try:
             emails = self.get_active_tour_members(tour_id, except_email=sender_email)
@@ -412,6 +438,9 @@ class NotificationEngine:
         Everyone hears about a message in a group channel. The emergency
         channel is high priority.
         """
+        if self.is_seen(f"channel_{tour_id}_{channel_id}_{message_id}"):
+            logger.info("Channel message %s already sent; skipping duplicate", message_id)
+            return {"status": "already_sent"}
         try:
             members = self.get_active_tour_members(tour_id, except_email=sender_email)
             recipients = members
@@ -537,6 +566,9 @@ class NotificationEngine:
         iOS gets an APNs alert block so the system alerts the recipient.
         """
         logger.info("Triggering call push for call=%s from caller=%s to callee=%s", call_id, caller_id, callee_id)
+        if self.is_seen(f"call_{call_id}"):
+            logger.info("Call push for %s already sent; skipping duplicate", call_id)
+            return {"status": "already_sent"}
         now = time.monotonic()
         # Rate limiting check
         with self._call_lock:
@@ -705,6 +737,286 @@ class NotificationEngine:
             logger.error("Error in send_call_ended_push: %s", e)
             return {"status": "error", "error": str(e)}
 
+    def send_post_notification(
+        self,
+        tour_id: str,
+        post_id: str,
+        author_email: str,
+        author_name: str = "A member",
+        caption: str = "",
+        is_reel: bool = False,
+        image_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Push notification when a member posts a photo or reel in Moments."""
+        if self.is_seen(f"post_{tour_id}_{post_id}"):
+            return {"status": "already_sent"}
+        try:
+            members = self.get_active_tour_members(tour_id, except_email=author_email)
+            if not members:
+                return {"status": "no_recipients"}
+
+            uids = self.get_uids_for_emails(members)
+            targets = self.get_push_targets_for_uids(uids)
+
+            data = {
+                "action": "post",
+                "tourId": str(tour_id),
+                "postId": str(post_id),
+            }
+
+            clean_caption = (caption or "").strip()
+            short_caption = (
+                (clean_caption[:99] + "…") if len(clean_caption) > 100 else clean_caption
+            )
+            title_key = "post.reel.title" if is_reel else "post.photo.title"
+            body_fallback_key = "post.reel.body" if is_reel else "post.photo.body"
+
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, title_key, sender=author_name),
+                    short_caption if short_caption else push_text(lang, body_fallback_key),
+                ),
+                data,
+                high_priority=False,
+            )
+            self.stats["post_pushes_sent"] += count
+            return {"status": "success", "recipients": len(members), "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_post_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_comment_notification(
+        self,
+        tour_id: str,
+        post_id: str,
+        comment_id: str,
+        post_author_email: str,
+        commenter_email: str,
+        commenter_name: str = "A member",
+        text: str = "",
+    ) -> Dict[str, Any]:
+        """Push notification to the post author when someone comments on their post."""
+        if self.is_seen(f"comment_{tour_id}_{post_id}_{comment_id}"):
+            return {"status": "already_sent"}
+        clean_author = post_author_email.strip().lower()
+        clean_commenter = commenter_email.strip().lower()
+        if not clean_author or clean_author == clean_commenter:
+            return {"status": "self_comment"}
+        try:
+            uids = self.get_uids_for_emails([clean_author])
+            if not uids:
+                return {"status": "no_recipients"}
+            targets = self.get_push_targets_for_uids(uids)
+
+            data = {
+                "action": "comment",
+                "tourId": str(tour_id),
+                "postId": str(post_id),
+                "commentId": str(comment_id),
+            }
+
+            clean_text = (text or "").strip()
+            short_text = (
+                (clean_text[:99] + "…") if len(clean_text) > 100 else clean_text
+            )
+
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "comment.title", sender=commenter_name),
+                    short_text if short_text else push_text(lang, "comment.default"),
+                ),
+                data,
+                high_priority=False,
+            )
+            self.stats["comment_pushes_sent"] += count
+            return {"status": "success", "recipients": 1, "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_comment_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_reaction_notification(
+        self,
+        tour_id: str,
+        post_id: str,
+        post_author_email: str,
+        liker_name: str = "A member",
+        liker_email: str = "",
+        reactor_name: Optional[str] = None,
+        reactor_email: Optional[str] = None,
+        reaction: str = "like",
+    ) -> Dict[str, Any]:
+        """Push notification to post author when someone likes their post."""
+        liker_name = reactor_name or liker_name
+        liker_email = reactor_email or liker_email
+        clean_author = post_author_email.strip().lower()
+        clean_liker = liker_email.strip().lower()
+        if not clean_author or clean_author == clean_liker:
+            return {"status": "self_like"}
+        if self.is_seen(f"like_{tour_id}_{post_id}_{clean_liker}"):
+            return {"status": "already_sent"}
+        try:
+            uids = self.get_uids_for_emails([clean_author])
+            if not uids:
+                return {"status": "no_recipients"}
+            targets = self.get_push_targets_for_uids(uids)
+            data = {
+                "action": "like",
+                "tourId": str(tour_id),
+                "postId": str(post_id),
+            }
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "reaction.like.title"),
+                    push_text(lang, "reaction.like.body", sender=liker_name),
+                ),
+                data,
+                high_priority=False,
+            )
+            self.stats["reaction_pushes_sent"] += count
+            return {"status": "success", "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_reaction_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_notice_notification(
+        self,
+        tour_id: str,
+        notice_id: str,
+        author_email: str,
+        title: str = "",
+        body: str = "",
+        priority: str = "normal",
+    ) -> Dict[str, Any]:
+        """Push a new group notice/announcement to all active members."""
+        if self.is_seen(f"notice_{tour_id}_{notice_id}"):
+            return {"status": "already_sent"}
+        try:
+            members = self.get_active_tour_members(tour_id, except_email=author_email)
+            if not members:
+                return {"status": "no_recipients"}
+
+            uids = self.get_uids_for_emails(members)
+            targets = self.get_push_targets_for_uids(uids)
+
+            data = {
+                "action": "notice",
+                "tourId": str(tour_id),
+                "noticeId": str(notice_id),
+            }
+
+            clean_title = (title or "").strip()
+            clean_body = (body or "").strip()
+            short_body = (
+                (clean_body[:99] + "…") if len(clean_body) > 100 else clean_body
+            )
+            is_high = priority.lower() in ("high", "urgent", "emergency")
+
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "notice.title", title=clean_title)
+                    if clean_title
+                    else push_text(lang, "notice.untitled"),
+                    short_body if short_body else push_text(lang, "notice.body", body=clean_title),
+                ),
+                data,
+                high_priority=is_high,
+            )
+            self.stats["notice_pushes_sent"] += count
+            return {"status": "success", "recipients": len(members), "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_notice_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_ledger_notification(
+        self,
+        tour_id: str,
+        expense_id: str,
+        added_by_email: str,
+        payer_name: str = "A member",
+        title: str = "trip expense",
+        amount_paisa: int = 0,
+    ) -> Dict[str, Any]:
+        """Push notification when a member records a group expense in Trip Ledger."""
+        if self.is_seen(f"ledger_{tour_id}_{expense_id}"):
+            return {"status": "already_sent"}
+        try:
+            members = self.get_active_tour_members(tour_id, except_email=added_by_email)
+            if not members:
+                return {"status": "no_recipients"}
+
+            uids = self.get_uids_for_emails(members)
+            targets = self.get_push_targets_for_uids(uids)
+
+            data = {
+                "action": "ledger",
+                "tourId": str(tour_id),
+                "expenseId": str(expense_id),
+            }
+
+            taka = round(amount_paisa / 100)
+            clean_title = (title or "expense").strip()
+
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "ledger.title", taka=str(taka)),
+                    push_text(lang, "ledger.body", payer=payer_name, taka=str(taka), title=clean_title),
+                ),
+                data,
+                high_priority=False,
+            )
+            self.stats["ledger_pushes_sent"] += count
+            return {"status": "success", "recipients": len(members), "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_ledger_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_broadcast_notification(
+        self,
+        title: str,
+        body: str,
+        data: Optional[Dict[str, str]] = None,
+        image_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Broadcast global notification to all registered devices in batches of 500."""
+        try:
+            db = self._get_db()
+            targets: List[Tuple[str, Any]] = []
+            seen_tokens: Set[str] = set()
+
+            token_docs = db.collection("fcm_tokens").stream()
+            for doc in token_docs:
+                doc_data = doc.to_dict() or {}
+                tok = doc_data.get("token")
+                if tok and tok not in seen_tokens:
+                    seen_tokens.add(tok)
+                    targets.append((tok, doc.reference))
+
+                for dev in doc.reference.collection("devices").stream():
+                    d_data = dev.to_dict() or {}
+                    d_tok = d_data.get("token")
+                    if d_tok and d_tok not in seen_tokens:
+                        seen_tokens.add(d_tok)
+                        targets.append((d_tok, dev.reference))
+
+            extra_data = data or {"action": "broadcast"}
+            sent = self.send_multicast(targets, title, body, extra_data, high_priority=True)
+            self.stats["broadcast_pushes_sent"] += sent
+            return {"status": "success", "devices_sent": sent}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_broadcast_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
     def run_retention_sweep(self, max_days: int = 90) -> Dict[str, int]:
         """Purge trust events and audit logs older than max_days."""
         try:
@@ -727,8 +1039,19 @@ class NotificationEngine:
                 doc.reference.delete()
                 purged_logs += 1
 
-            logger.info("Retention sweep: purged %d events, %d logs", purged_events, purged_logs)
-            return {"purged_events": purged_events, "purged_logs": purged_logs}
+            purged_tokens = 0
+            if self._chat_db is not None and hasattr(self._chat_db, "prune_stale_device_tokens"):
+                try:
+                    purged_tokens = self._chat_db.prune_stale_device_tokens(max_age_days=180)
+                except Exception as ex:
+                    logger.warning("Could not prune stale device tokens: %s", ex)
+
+            logger.info("Retention sweep: purged %d events, %d logs, %d stale tokens", purged_events, purged_logs, purged_tokens)
+            return {
+                "purged_events": purged_events,
+                "purged_logs": purged_logs,
+                "purged_tokens": purged_tokens,
+            }
         except Exception as e:
             logger.error("Retention sweep error: %s", e)
             return {"error": str(e)}
@@ -930,34 +1253,171 @@ class FirestoreNotificationWatcher:
             logger.debug("Member name not read for %s: %s", email, error)
         return "A member"
 
-    def start(self) -> None:
-        """Start real-time Firestore listeners."""
-        if self._is_running:
-            return
-        self._is_running = True
+    def on_posts_snapshot(self, col_snapshot, changes, read_time):
+        """Called when Moments posts are created in Firestore."""
+        for change in changes:
+            if change.type.name in {"ADDED", "MODIFIED"}:
+                doc = change.document
+                tour_ref = doc.reference.parent.parent
+                tour_id = tour_ref.id if tour_ref else ""
+                post_id = doc.id
+                if not tour_id or self.is_seen(f"post_{tour_id}_{post_id}"):
+                    continue
+                data = doc.to_dict() or {}
+                created_at = data.get("createdAt")
+                if isinstance(created_at, datetime):
+                    if created_at.tzinfo is None:
+                        created_at = created_at.replace(tzinfo=timezone.utc)
+                    if created_at < self.started_at:
+                        continue
+                author_email = str(data.get("authorEmail", "")).strip().lower()
+                author_name = str(data.get("authorName", "A member")).strip()
+                caption = str(data.get("caption", ""))
+                is_reel = bool(data.get("isReel", False))
+                image_url = data.get("coverUrl") or (data.get("images") or [None])[0]
+                if author_email:
+                    self.engine.send_post_notification(
+                        tour_id=tour_id,
+                        post_id=post_id,
+                        author_email=author_email,
+                        author_name=author_name,
+                        caption=caption,
+                        is_reel=is_reel,
+                        image_url=image_url,
+                    )
+
+    def on_notices_snapshot(self, col_snapshot, changes, read_time):
+        """Called when notices are posted in Firestore."""
+        for change in changes:
+            if change.type.name in {"ADDED", "MODIFIED"}:
+                doc = change.document
+                tour_ref = doc.reference.parent.parent
+                tour_id = tour_ref.id if tour_ref else ""
+                notice_id = doc.id
+                if not tour_id or self.is_seen(f"notice_{tour_id}_{notice_id}"):
+                    continue
+                data = doc.to_dict() or {}
+                created_at = data.get("createdAt")
+                if isinstance(created_at, datetime):
+                    if created_at.tzinfo is None:
+                        created_at = created_at.replace(tzinfo=timezone.utc)
+                    if created_at < self.started_at:
+                        continue
+                author_email = str(data.get("authorEmail", "")).strip().lower()
+                title = str(data.get("title", ""))
+                body = str(data.get("body", ""))
+                priority = str(data.get("priority", "normal"))
+                if author_email:
+                    self.engine.send_notice_notification(
+                        tour_id=tour_id,
+                        notice_id=notice_id,
+                        author_email=author_email,
+                        title=title,
+                        body=body,
+                        priority=priority,
+                    )
+
+    def on_expenses_snapshot(self, col_snapshot, changes, read_time):
+        """Called when expenses are added to Trip Ledger in Firestore."""
+        for change in changes:
+            if change.type.name in {"ADDED", "MODIFIED"}:
+                doc = change.document
+                tour_ref = doc.reference.parent.parent
+                tour_id = tour_ref.id if tour_ref else ""
+                expense_id = doc.id
+                if not tour_id or self.is_seen(f"ledger_{tour_id}_{expense_id}"):
+                    continue
+                data = doc.to_dict() or {}
+                created_at = data.get("createdAt")
+                if isinstance(created_at, datetime):
+                    if created_at.tzinfo is None:
+                        created_at = created_at.replace(tzinfo=timezone.utc)
+                    if created_at < self.started_at:
+                        continue
+                added_by = str(data.get("addedByEmail", "")).strip().lower()
+                payer_name = str(data.get("payerName", "A member")).strip()
+                title = str(data.get("title", "expense")).strip()
+                amount_paisa = int(data.get("amountPaisa", 0))
+                if added_by:
+                    self.engine.send_ledger_notification(
+                        tour_id=tour_id,
+                        expense_id=expense_id,
+                        added_by_email=added_by,
+                        payer_name=payer_name,
+                        title=title,
+                        amount_paisa=amount_paisa,
+                    )
+
+    def _attach_listeners(self) -> None:
+        """Attaches real-time Firestore listeners."""
         try:
             db = self.engine._get_db()
-            logger.info("Starting FirestoreNotificationWatcher listeners...")
+            logger.info("Attaching FirestoreNotificationWatcher listeners...")
+            new_listeners = []
             sos_watch = db.collection_group("sos").on_snapshot(self.on_sos_snapshot)
-            self.active_listeners.append(sos_watch)
-            # Only calls from around the start onwards: older ones can no longer
-            # ring, and reading the whole history on every start costs reads.
+            new_listeners.append(sos_watch)
+
+            # Only calls from around the start onwards
             calls_since = self.started_at - timedelta(seconds=CALL_PUSH_WINDOW_SECONDS)
             calls_watch = (
                 db.collection("calls")
                 .where("createdAt", ">=", calls_since)
                 .on_snapshot(self.on_call_snapshot)
             )
-            self.active_listeners.append(calls_watch)
+            new_listeners.append(calls_watch)
+
             journey_since = self.started_at - timedelta(seconds=JOURNEY_PUSH_WINDOW_SECONDS)
             journey_watch = (
                 db.collection_group("journey_events")
                 .where("createdAt", ">=", journey_since)
                 .on_snapshot(self.on_journey_snapshot)
             )
-            self.active_listeners.append(journey_watch)
+            new_listeners.append(journey_watch)
+
+            posts_watch = (
+                db.collection_group("posts")
+                .where("createdAt", ">=", self.started_at)
+                .on_snapshot(self.on_posts_snapshot)
+            )
+            new_listeners.append(posts_watch)
+
+            notices_watch = (
+                db.collection_group("notices")
+                .where("createdAt", ">=", self.started_at)
+                .on_snapshot(self.on_notices_snapshot)
+            )
+            new_listeners.append(notices_watch)
+
+            expenses_watch = (
+                db.collection_group("expenses")
+                .where("createdAt", ">=", self.started_at)
+                .on_snapshot(self.on_expenses_snapshot)
+            )
+            new_listeners.append(expenses_watch)
+
+            self.active_listeners = new_listeners
+            logger.info("Successfully attached %d real-time Firestore listeners.", len(new_listeners))
         except Exception as e:
-            logger.warning("Could not attach real-time Firestore listener: %s", e)
+            logger.warning("Could not attach real-time Firestore listeners: %s", e)
+
+    def _watchdog_loop(self) -> None:
+        """Watchdog to ensure listeners remain active across intermittent connection drops."""
+        while self._is_running:
+            time.sleep(60)
+            if not self._is_running:
+                break
+            if len(self.active_listeners) == 0:
+                logger.info("Watchdog detected 0 active listeners; attempting reconnection...")
+                self._attach_listeners()
+
+    def start(self) -> None:
+        """Start real-time Firestore listeners with watchdog thread."""
+        if self._is_running:
+            return
+        self._is_running = True
+        self._attach_listeners()
+        self._watchdog = threading.Thread(target=self._watchdog_loop, daemon=True)
+        self._watchdog.start()
 
     def stop(self) -> None:
         """Unsubscribe all listeners."""

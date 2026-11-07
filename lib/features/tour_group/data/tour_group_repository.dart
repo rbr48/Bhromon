@@ -1720,6 +1720,15 @@ class TourGroupRepository {
       });
     }
     await batch.commit();
+    unawaited(VpsNotificationService().notifyLedger(
+      tourId: tourId,
+      expenseId: expense.id,
+      payerName: (expense.paidByName != null && expense.paidByName!.isNotEmpty)
+          ? expense.paidByName!
+          : currentDisplayName,
+      title: expense.title,
+      amountPaisa: expense.amountPaisa,
+    ));
     return expense.id;
   }
 
@@ -1921,13 +1930,20 @@ class TourGroupRepository {
   /// [notice] supplies everything else.
   Future<void> postNotice(String tourId, TourNotice notice) async {
     final email = _requireEmail();
-    await _sub(tourId, 'notices').add({
+    final docRef = await _sub(tourId, 'notices').add({
       ...notice.toEditableMap(),
       'author': currentDisplayName,
       'authorEmail': email,
       'ackBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
+    unawaited(VpsNotificationService().notifyNotice(
+      tourId: tourId,
+      noticeId: docRef.id,
+      title: notice.title,
+      body: notice.content,
+      priority: notice.urgent ? 'high' : 'normal',
+    ));
   }
 
   /// Saves an edited notice. The author, original time and answers stay as
@@ -2995,6 +3011,14 @@ class TourGroupRepository {
     );
     final map = post.toMap()..['createdAt'] = FieldValue.serverTimestamp();
     await _sub(tourId, 'posts').doc(id).set(map);
+    unawaited(VpsNotificationService().notifyPost(
+      tourId: tourId,
+      postId: id,
+      authorName: currentDisplayName,
+      caption: caption,
+      isReel: videoUrl != null && videoUrl.isNotEmpty,
+      imageUrl: coverUrl ?? (images.isNotEmpty ? images.first : null),
+    ));
   }
 
   Future<void> updatePostCaption(
@@ -3034,14 +3058,27 @@ class TourGroupRepository {
 
   /// Likes or unlikes a post. arrayUnion/arrayRemove mean two people liking at
   /// the same moment both count.
-  Future<void> setPostLiked(String tourId, String postId,
-      {required bool liked}) async {
+  Future<void> setPostLiked(
+    String tourId,
+    String postId, {
+    required bool liked,
+    String? postAuthorEmail,
+  }) async {
     final email = _requireEmail();
     await _sub(tourId, 'posts').doc(postId).update({
       'likes': liked
           ? FieldValue.arrayUnion([email])
           : FieldValue.arrayRemove([email]),
     });
+    if (liked) {
+      unawaited(VpsNotificationService().notifyReaction(
+        tourId: tourId,
+        postId: postId,
+        reactorName: currentDisplayName,
+        reaction: 'like',
+        postAuthorEmail: postAuthorEmail,
+      ));
+    }
   }
 
   /// Records a member's view on a post. A member counts once: the count moves
@@ -3263,6 +3300,7 @@ class TourGroupRepository {
     required String text,
     String? reaction,
     String? parentId,
+    String? postAuthorEmail,
   }) async {
     final email = _requireEmail();
     final trimmed = text.trim();
@@ -3287,6 +3325,14 @@ class TourGroupRepository {
     batch.set(postRef.collection('comments').doc(commentId), map);
     batch.update(postRef, {'commentCount': FieldValue.increment(1)});
     await batch.commit();
+    unawaited(VpsNotificationService().notifyComment(
+      tourId: tourId,
+      postId: postId,
+      commentId: commentId,
+      commenterName: currentDisplayName,
+      text: trimmed,
+      postAuthorEmail: postAuthorEmail,
+    ));
   }
 
   Future<void> deleteComment(
