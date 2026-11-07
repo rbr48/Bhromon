@@ -26,7 +26,7 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Do **NOT** request broad storage permissions `READ_MEDIA_IMAGES` or `READ_MEDIA_VIDEO`.
    - Use the Android system Photo Picker via `image_picker` / system pickers.
 3. **Version Numbering**:
-   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.85+139`). Never reuse a version code across builds.
+   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.125+179`). Never reuse a version code across builds.
 4. **Windows Gradle Build Contention & Directory Locks**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
    - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, `cleanmergereleasejnilibfolders`, `cleanmergereleaseresources`, and `cleanpackagerelease`. Keep `nativesymboltable` enabled and keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }`: the release AAB fails to strip native libraries without them.
@@ -310,6 +310,35 @@ static session while the user visits other screens, and asks before discarding a
 - **Route suggestions** (LJ-5.2) never change the shared plan by themselves: a suggestion appears after two stable minutes and changes the plan only when a person confirms it.
 - **Store declarations.** The background-location permissions and the `location` background mode are declared in the platform commit. Do not release that commit alone: Google Play and App Store review need the declarations and the in-app disclosure first.
 - **Tests:** `flutter test test/features/tour_group/` (the `live_journey*`, `journey_*` and `leg_suggestions` files), `cd media-server && pytest tests/test_live_relay.py tests/test_journey_events.py`, and the `journey_events_rules` and `account_erasure` suites under the emulators.
+
+### J. Offline Vector Maps Engine & MapLibre Web Worker Invariant (`liberty_style.json`)
+- **OpenFreeMap Liberty Vector Tiles**: Migrated from outdated raster and demo styles to OpenFreeMap Liberty vector tiles (`https://tiles.openfreemap.org/planet`).
+- **Bundled Asset Style**: The complete vector style is bundled locally in `assets/map/liberty_style.json` (registered in `pubspec.yaml`). `MapCacheManager.defaultStyleUrl` points directly to this asset, guaranteeing instant vector rendering even on zero-connectivity networks with remote fallback to `https://tiles.openfreemap.org/styles/liberty`.
+- **Web Worker Null Filter Invariant (MANDATORY)**:
+  - In MapLibre GL JS (Web), vector tile parsing executes in a Web Worker thread (`loadTile -> parse -> populate -> filter -> evaluate`).
+  - If a style layer evaluates numeric comparison operators (`>=`, `<=`, `<`, `>`) on optional tile attributes (`rank`, `ref_length`) without a fallback, the worker throws `Expected value to be of type number, but found null instead`.
+  - This unhandled exception crashes vector tile parsing, causing the canvas to fail loading all feature buckets and leaving only the style's solid `#f8f4f0` beige background visible.
+  - **Rule**: All numeric filters in vector styles must be guarded with `['coalesce', ['get', '<prop>'], <fallback_number>]` (e.g. `['coalesce', ['get', 'rank'], 0]`). Layers sanitized: `poi_r20`, `poi_r7`, `poi_r1`, `highway-shield-non-us`, `highway-shield-us-interstate`, `road_shield_us`, and `label_country_3`.
+- **Missing POI Sprite Fallbacks**:
+  - OpenMapTiles features reference POI classes not present in standard OpenFreeMap sprite sheets (`ofm.json`).
+  - Mapped `ferry_terminal` to `ferry` and `swimming_pool` to `""` in the style JSON.
+  - `OfflineMapViewerScreen` pre-registers 1x1 transparent fallback PNG bytes via `controller.addImage(name, bytes)` for `ferry_terminal` and `swimming_pool` in `_onStyleLoaded` to prevent `Image could not be loaded` console spam.
+- **Curated Bangladesh Regions (`kCuratedOfflineRegions` in `offline_map_regions.dart`)**:
+  - Curated bounding boxes, center coordinates, zoom boundaries, and emergency contact numbers for high-traffic and remote eco-tourism destinations: Sajek Valley, Tanguar Haor, Bandarban Highlands, Sundarbans Mangrove, Saint Martin's Island, Sreemangal Tea Country, Cox's Bazar Marine Drive, and Kuakata.
+
+### K. Push Notification Consolidation onto Hostinger VPS
+- **Zero-Cost Firebase Spark Plan Operation**: All push notification dispatching (SOS siren alerts, channel messages, mentions, posts, comments, ledger expenses, and notice reminders) has been consolidated onto the Hostinger VPS `FirestoreNotificationWatcher` daemon (`media-server/notifications.py`).
+- **Cloud Functions Decommissioning**: Notification triggers were unexported from `functions/src/index.ts`, eliminating cloud function compute invocation costs.
+- **Realtime Collection Group Listeners**: The VPS watcher daemon connects directly to Firestore streams scoped by indexed collection groups with a deduplication ring buffer to eliminate duplicate pings.
+
+### L. Outbox Sync Guard & Backup Architecture (Option A)
+- **Sign-Out Data Loss Prevention**: `AppDatabase` provides `getTotalUnsyncedChangesCount()` by querying pending writes in `SyncOutboxTable` and unposted drafts in `TripLogsTable`.
+- `_confirmLogout` in `explorer_profile_screen.dart` inspects this count before showing the logout dialog, warning users of pending offline changes and preventing accidental local database purges before cloud sync completes.
+- **E2EE vs. Cloud Backup Invariant**: Evaluated WhatsApp-grade Google Drive app data backup. WhatsApp uses Drive backup because it stores chats solely on-device. Bhromon stores groups, ledger, and posts in Firestore (offline-cached) and chats on the Hostinger VPS. Google Drive backup is deferred until End-to-End Encryption (E2EE) is fully developed, avoiding redundant cloud storage permissions and keeping client dependencies lean.
+
+### M. Games Server & Cloud Functions Node 22 Upgrade
+- Upgraded `functions/Dockerfile` to `node:22-alpine` matching `"engines": { "node": ">=22" }`.
+- Resolved all strict TypeScript compilation errors across `functions/src/gameTable/` and game callables (`(tx: Transaction)`).
 
 ## 5. Testing & Quality Verification Checklist
 Before shipping or pushing changes:

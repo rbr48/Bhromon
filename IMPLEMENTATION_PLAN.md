@@ -53,8 +53,8 @@ Completely consolidate push notification dispatching, token tracking, and schedu
   - Run `pytest media-server/tests/`.
   - Run `dart analyze` and `flutter test`.
   - Run `npm test` in `functions/`.
-- [ ] **Task 5.3: Production Deployment to Hostinger VPS**
-  - Run `media-server/deploy.sh` on Hostinger VPS.
+- [x] **Task 5.3: Production Deployment to Hostinger VPS**
+  - Run `media-server/deploy.sh` on Hostinger VPS and deploy notification worker.
 
 ---
 
@@ -81,14 +81,14 @@ Resolve all TypeScript compilation errors (`tsc exit code: 2`) across `functions
 - [x] **Task 6.5: Verify Compilation & Build Locally and on VPS**
   - Run `npm run build` in `functions/`.
   - Test `docker compose build bhromon-games` on VPS.
-  - Open GitHub PR and merge to `main`.
+  - Open GitHub PR and merge to `main` (PR #364).
 
 ---
 
 ## Phase 7: Outbox Sync Guard & Unsent Changes Sign-Out Protection (Option A)
 
 ### Objective
-Protect offline, device-only writes from accidental loss during sign-out or account switching. Implement queries in `AppDatabase` to detect pending outbox entries (`SyncOutboxTable`) and unpublished drafts (`TripLogsTable`), and add a safety confirmation guard before sign-out with clear localized warnings and options to wait for sync.
+Protect offline, device-only writes from accidental loss during sign-out or account switching. Implement queries in `AppDatabase` to detect pending outbox entries (`SyncOutboxTable`) and unpublished drafts (`TripLogsTable`), and add a safety confirmation guard before sign-out with clear localized warnings and options to wait for sync. Defer Google Drive backup until E2EE is fully implemented.
 
 ### Tasks
 - [x] **Task 7.1: Add Pending Sync Count Queries in `AppDatabase`**
@@ -102,4 +102,30 @@ Protect offline, device-only writes from accidental loss during sign-out or acco
   - Write unit tests in `test/core/database/` or `test/features/` testing the outbox query and logout guard behavior.
   - Run `flutter test` and `dart analyze`.
 - [x] **Task 7.5: Commit, Pull Request & Merge**
-  - Commit changes, push branch, open PR, and merge to `main`.
+  - Commit changes, push branch, open PR, and merge to `main` (PR #366).
+
+---
+
+## Phase 8: Offline Vector Maps & MapLibre Web Worker Null Filter Sanitization
+
+### Objective
+Migrate offline maps from outdated raster/demo styles to OpenFreeMap Liberty vector tiles, eliminate Web Worker parsing exceptions (`Expected value to be of type number, but found null instead`), register missing POI sprites, and bundle the sanitized style locally in `assets/map/liberty_style.json` for 100% offline reliability.
+
+### Tasks
+- [x] **Task 8.1: Migrate to OpenFreeMap Liberty Vector Style (`PR #368`)**
+  - Point `MapCacheManager.defaultStyleUrl` to OpenFreeMap Liberty vector tile endpoint.
+  - Enable crisp multi-zoom vector tile rendering across Bangladesh travel zones.
+- [x] **Task 8.2: MapLibre CircleOptions Opacity & Blur Null Safety (`PR #369`)**
+  - Provide non-null defaults for `circleOpacity`, `circleBlur`, and `circleStrokeOpacity` in waypoint circle options.
+- [x] **Task 8.3: Bundle Sanitized Offline Style & Coalesce Filter Guards (`PR #371`)**
+  - Create `assets/map/liberty_style.json` bundled directly within Flutter app assets.
+  - Guard all numeric comparison filters (`poi_r20`, `poi_r7`, `poi_r1`, `highway-shield-*`, `road_shield_us`, `label_country_3`) with `['coalesce', ['get', '...'], 0]` to eliminate worker type exceptions.
+  - Remap missing OpenMapTiles POI classes (`ferry_terminal` → `ferry`, `swimming_pool` → `""`).
+  - Pre-register transparent 1x1 fallback pixels in `OfflineMapViewerScreen` via `controller.addImage()`.
+- [x] **Task 8.4: Verification, PR & Multi-Platform Release (v1.8.125+179)**
+  - Unit tests in `test/features/tour_group/map_cache_manager_test.dart` and `offline_map_viewer_screen_test.dart`.
+  - Static analysis: `flutter analyze` clean.
+  - Merged PR #371 to `main`.
+  - Deployed Flutter Web release to Firebase Hosting (`app.bhromon.fun`).
+  - Built signed release APK (`173.2 MB`) and deployed to Hostinger VPS (`https://bhromon.fun/media/apk/app-release.apk`).
+  - Built Play Store App Bundle (`135.0 MB`, `app-release.aab`).
