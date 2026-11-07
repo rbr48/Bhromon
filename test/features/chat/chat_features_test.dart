@@ -5,6 +5,7 @@ import 'package:bhromon/features/chat/data/call_signaling_service.dart';
 import 'package:bhromon/features/chat/data/call_notification_service.dart';
 import 'package:bhromon/features/chat/data/chat_local_cache.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_media_picker.dart';
+import 'package:bhromon/features/chat/presentation/widgets/chat_media_bubble.dart';
 import 'package:bhromon/features/chat/presentation/widgets/voice_message_bubble.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_reply_preview.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_reaction_bar.dart';
@@ -393,6 +394,51 @@ void main() {
       final epoch = DateTime(2026, 10, 26, 12, 30).millisecondsSinceEpoch;
       final parsedFromNum = DateTime.fromMillisecondsSinceEpoch(epoch);
       expect(parsedFromNum.year, 2026);
+    });
+
+    testWidgets('ChatMediaBubble renders multi-image collage for 2 photos',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatMediaBubble(
+              mediaUrls: [
+                'https://example.com/photo1.jpg',
+                'https://example.com/photo2.jpg',
+              ],
+              type: 'image',
+              isMe: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ChatMediaBubble), findsOneWidget);
+    });
+
+    testWidgets('ChatMediaBubble renders 5+ photos with remaining count badge',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatMediaBubble(
+              mediaUrls: [
+                'https://example.com/p1.jpg',
+                'https://example.com/p2.jpg',
+                'https://example.com/p3.jpg',
+                'https://example.com/p4.jpg',
+                'https://example.com/p5.jpg',
+                'https://example.com/p6.jpg',
+              ],
+              type: 'image',
+              isMe: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ChatMediaBubble), findsOneWidget);
+      expect(find.text('+3'), findsOneWidget);
     });
   });
 }
