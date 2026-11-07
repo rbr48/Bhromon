@@ -162,14 +162,17 @@ class AppTheme {
 
       appBarTheme: AppBarTheme(
         backgroundColor:
-            isDark ? AppColors.backgroundDark : AppColors.darkGreen,
-        foregroundColor: AppColors.offWhite,
+            isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        foregroundColor: isDark ? AppColors.offWhite : AppColors.darkText,
         elevation: 0,
         scrolledUnderElevation: 2,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
-        titleTextStyle:
-            textTheme.titleLarge?.copyWith(color: AppColors.offWhite),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: isDark ? AppColors.offWhite : AppColors.darkText,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
         // No fixed style: each AppBar takes its status-bar icons from its own
         // background, so light screens get dark icons and dark ones light icons.
       ),

@@ -563,9 +563,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1B1E)),
       appBar: AppBar(
         title: Text(context.l10n.translate('fsh_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         foregroundColor: context.forest.text,
+        iconTheme: IconThemeData(color: context.forest.text),
         elevation: 0,
       ),
       body: SafeArea(
