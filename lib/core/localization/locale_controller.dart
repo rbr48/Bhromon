@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/app_logger.dart';
 
-/// The language the user picked for the whole app. Bengali stays the default,
-/// as it always was. The choice is kept on this device only.
+/// The language the user picked for the whole app. English is the default.
+/// The choice is kept on this device only.
 class LocaleController extends ChangeNotifier {
   LocaleController._();
 
   static final LocaleController instance = LocaleController._();
 
-  static const List<String> supportedLanguages = ['bn', 'en'];
+  static const List<String> supportedLanguages = ['en', 'bn'];
   static const String _boxName = 'app_prefs';
   static const String _key = 'app_language';
 
-  Locale _locale = const Locale('bn');
+  Locale _locale = const Locale('en');
 
   Locale get locale => _locale;
 
   static bool isSupported(String code) => supportedLanguages.contains(code);
 
-  /// Reads the saved choice. A missing or unknown value keeps Bengali.
+  /// Reads the saved choice. A missing or unknown value keeps English.
   Future<void> load() async {
     try {
       final box = await _openBox();
