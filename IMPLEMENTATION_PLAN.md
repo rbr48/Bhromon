@@ -129,3 +129,32 @@ Migrate offline maps from outdated raster/demo styles to OpenFreeMap Liberty vec
   - Deployed Flutter Web release to Firebase Hosting (`app.bhromon.fun`).
   - Built signed release APK (`173.2 MB`) and deployed to Hostinger VPS (`https://bhromon.fun/media/apk/app-release.apk`).
   - Built Play Store App Bundle (`135.0 MB`, `app-release.aab`).
+
+---
+
+## Phase 9: Everyday Group Specializations (Sprint 7 — Active Queue)
+
+### Objective
+Deliver complete, automated business workflows for daily group presets so that members interact with Bhromon every single day: monthly mess meal auto-balancing and printable sheets, apartment society service request photos and resolution timelines, office/campus acknowledgment dashboards with targeted reminder pings, and samity digital payout receipts.
+
+### Tasks
+- [ ] **Task 9.1: Mess Monthly Meal Rate Auto-Balancing & Settlement Generation**
+  - Implement meal rate formula in `meal_engine.dart` (`Total Bazaar / Total Meals`).
+  - Calculate member meal shares, compare against deposits, and compute net balances.
+  - Build monthly settlement overview in `mess_ledger_screen.dart` with one-tap transfer creation.
+  - Generate printable 31-day meal sheet PDF using `bangla_pdf`.
+- [ ] **Task 9.2: Housing Society Service Request Photos & 3-State Timeline**
+  - Enable multi-photo attachments (up to 3 photos) via `TourMediaUploader`.
+  - Implement 3-state resolution timeline (Open $\rightarrow$ In Progress $\rightarrow$ Resolved) with admin notes.
+  - Add flat number associations (`4A`, `6B`) with one-tap direct call shortcut.
+  - Add one-tap action to book resolved repair costs directly to Society Maintenance in Ledger.
+- [ ] **Task 9.3: Office & Campus Real-Time Acknowledgment Dashboard**
+  - Add progress ring & counter on notices (`28/35 acknowledged (80%)`).
+  - Add pending member drawer with one-click admin reminder ping via VPS.
+  - Add campus picnic/event registration and contribution tracker.
+- [ ] **Task 9.4: Samity Digital Payout Receipts & Rotation Handover**
+  - Allow admin to attach photo of signed payout receipt or bank slip to `samity_payouts/{cycleKey}`.
+  - Add beneficiary confirmation action (`payoutStatus: verified`).
+- [ ] **Task 9.5: Automated Testing, PR & Verification**
+  - Add unit tests for `meal_engine.dart` and `service_request_models.dart`.
+  - Format with `dart format .` and verify with `flutter analyze`.
