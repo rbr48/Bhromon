@@ -214,6 +214,32 @@ Allow members to seamlessly share/repost Moments photos, videos, and reels from 
 - [x] **Task 10.7: Automated Unit & Widget Tests**
   - Add tests for model serialization, cross-group UI components, and attribution rendering.
   - Verify static analysis (`dart analyze`), formatting (`dart format`), and guard rules.
-- [ ] **Task 10.8: PR, CI Green Check, Merge & Web Deployment**
+- [x] **Task 10.8: PR, CI Green Check, Merge & Web Deployment**
   - Increment version to `1.8.134+188`.
   - Create GitHub PR, monitor CI until 100% green, merge to `main`, and deploy to Firebase Hosting (`app.bhromon.fun`).
+
+---
+
+## Phase 11: Group Search in Group Section
+
+### Objective
+Provide instant, intuitive, and comprehensive search capabilities across groups in the Group Section (`/group-hub`) and the Circle Switcher bottom sheet. Users can filter their groups by name, category/preset (both in English and Bengali), trip destination, and invite code with real-time feedback, clear controls, and empty-state guidance.
+
+### Tasks
+- [x] **Task 11.1: Localization Strings in `tour_translation_keys.dart`**
+  - Add English and Bengali keys for `hub_search_groups_hint`, `hub_clear_search`, `hub_no_groups_found`, `hub_no_groups_found_query`, and `hub_no_groups_found_sub`.
+- [x] **Task 11.2: Group Search Filter Engine**
+  - Implement robust matching logic that searches group names, presets, localized kind badges (e.g. Friends / বন্ধু, Mess / মেস, Office / অফিস, Family / পরিবার, etc.), destinations, and invite codes.
+- [x] **Task 11.3: Group Hub Search UI in `tour_group_hub_screen.dart`**
+  - Add inline search field in `_buildGroupsList` above the group cards with clear button.
+  - Render empty search results card (`Icons.search_off_rounded`, localized message, and quick clear action) when no groups match.
+  - Properly dispose `_searchController`.
+- [x] **Task 11.4: Search in Circle Switcher (`_showCircleSwitcher`)**
+  - Support instant filtering inside the circle switcher modal sheet when a user has multiple circles.
+- [x] **Task 11.5: Automated Unit & Widget Tests**
+  - Add tests in `test/features/tour_group/group_search_test.dart` verifying search filtering across names, types, destinations, and empty states.
+  - Verify static analysis (`dart analyze lib/ test/`), formatting, and stream build guard.
+- [ ] **Task 11.6: PR, CI Green Check, Merge & Web Deployment**
+  - Increment version to `1.8.135+189` in `pubspec.yaml`.
+  - Create GitHub PR via `gh pr create --base main`.
+  - Monitor CI until 100% green, squash-merge to `main`, build web release, and deploy to Firebase Hosting (`app.bhromon.fun`).

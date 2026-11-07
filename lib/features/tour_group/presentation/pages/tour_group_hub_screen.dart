@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/group_search_engine.dart';
 import '../../domain/services/hub_modules.dart';
 import '../../domain/services/tour_choice.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -84,6 +85,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   /// The currently expanded group id on the groups list. Empty string means explicitly collapsed.
   String? _expandedGroupId;
   late Stream<List<TourGroup>> _groupsStream;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -159,70 +168,163 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     List<TourGroup> allGroups,
     TourGroup current,
   ) {
-    // A housing society or a gym is a family-kind circle, but not a family circle.
-    final families = [
-      for (final g in allGroups)
-        if (g.isHousehold) g
-    ];
-    final circles = [
-      for (final g in allGroups)
-        if (g.isFamily && !g.isHousehold) g
-    ];
-    final trips = [
-      for (final g in allGroups)
-        if (!g.isFamily) g
-    ];
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: context.forest.card,
+      isScrollControlled: true,
       builder: (sheetContext) {
-        final l10n = context.l10n;
-        Widget header(String text) => Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(text,
-                  style: TextStyle(
-                      color: context.forest.text54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+        String switcherQuery = '';
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final l10n = context.l10n;
+            final filtered = GroupSearchEngine.filter(
+              groups: allGroups,
+              rawQuery: switcherQuery,
             );
-        Widget tile(TourGroup g) {
-          final selected = g.id == current.id;
-          return ListTile(
-            leading: GroupAvatar(
-                typeIcon: groupTypeIcon(g), photoUrl: g.photoUrl, size: 40),
-            title: Text(g.name,
-                style: TextStyle(
-                    color: selected
-                        ? context.forest.accentText
-                        : context.forest.text,
-                    fontWeight:
-                        selected ? FontWeight.bold : FontWeight.normal)),
-            onTap: () {
-              Navigator.pop(sheetContext);
-              _selectTour(g);
-            },
-          );
-        }
+            final families = [
+              for (final g in filtered)
+                if (g.isHousehold) g
+            ];
+            final circles = [
+              for (final g in filtered)
+                if (g.isFamily && !g.isHousehold) g
+            ];
+            final trips = [
+              for (final g in filtered)
+                if (!g.isFamily) g
+            ];
 
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 12),
-            children: [
-              if (families.isNotEmpty) ...[
-                header(l10n.translate('hub_section_family')),
-                for (final g in families) tile(g),
-              ],
-              if (circles.isNotEmpty) ...[
-                header(l10n.translate('hub_section_groups')),
-                for (final g in circles) tile(g),
-              ],
-              if (trips.isNotEmpty) ...[
-                header(l10n.translate('hub_section_trips')),
-                for (final g in trips) tile(g),
-              ],
-            ],
-          ),
+            Widget header(String text) => Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(text,
+                      style: TextStyle(
+                          color: context.forest.text54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                );
+            Widget tile(TourGroup g) {
+              final selected = g.id == current.id;
+              return ListTile(
+                leading: GroupAvatar(
+                    typeIcon: groupTypeIcon(g), photoUrl: g.photoUrl, size: 40),
+                title: Text(g.name,
+                    style: TextStyle(
+                        color: selected
+                            ? context.forest.accentText
+                            : context.forest.text,
+                        fontWeight:
+                            selected ? FontWeight.bold : FontWeight.normal)),
+                subtitle: Text(
+                  l10n.translate(groupTypeKey(g)),
+                  style: TextStyle(
+                    color: context.forest.text54,
+                    fontSize: 12,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _selectTour(g);
+                },
+              );
+            }
+
+            return SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+                ),
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(bottom: 12),
+                  children: [
+                    if (allGroups.length > 3)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: context.forest.background,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: context.forest.divider10),
+                          ),
+                          child: TextField(
+                            style: TextStyle(
+                              color: context.forest.text,
+                              fontSize: 13,
+                            ),
+                            decoration: InputDecoration(
+                              hintText:
+                                  l10n.translate('hub_search_groups_hint'),
+                              hintStyle: TextStyle(
+                                color: context.forest.text54,
+                                fontSize: 12,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                color: switcherQuery.isNotEmpty
+                                    ? AppColors.midGreen
+                                    : context.forest.text54,
+                                size: 18,
+                              ),
+                              suffixIcon: switcherQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear_rounded,
+                                        color: context.forest.text54,
+                                        size: 16,
+                                      ),
+                                      onPressed: () {
+                                        setSheetState(() => switcherQuery = '');
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            onChanged: (val) {
+                              setSheetState(() => switcherQuery = val);
+                            },
+                          ),
+                        ),
+                      ),
+                    if (filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 32, horizontal: 16),
+                        child: Center(
+                          child: Text(
+                            l10n.translate(
+                              'hub_no_groups_found_query',
+                              args: {'query': switcherQuery.trim()},
+                            ),
+                            style: TextStyle(
+                              color: context.forest.text54,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      )
+                    else ...[
+                      if (families.isNotEmpty) ...[
+                        header(l10n.translate('hub_section_family')),
+                        for (final g in families) tile(g),
+                      ],
+                      if (circles.isNotEmpty) ...[
+                        header(l10n.translate('hub_section_groups')),
+                        for (final g in circles) tile(g),
+                      ],
+                      if (trips.isNotEmpty) ...[
+                        header(l10n.translate('hub_section_trips')),
+                        for (final g in trips) tile(g),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -956,7 +1058,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  /// The clean groups list: expandable group cards showing members and tools inline.
+  /// The clean groups list: expandable group cards showing members and tools inline,
+  /// with real-time bilingual group search filtering.
   Widget _buildGroupsList(
     BuildContext context,
     AsyncSnapshot<List<TourGroup>> snapshot,
@@ -967,6 +1070,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         !snapshot.hasData;
     final selectedId = _active.current;
     final effectiveExpandedId = _expandedGroupId;
+    final filteredGroups = GroupSearchEngine.filter(
+      groups: groups,
+      rawQuery: _searchQuery,
+    );
+    final hasSearchQuery = _searchQuery.trim().isNotEmpty;
+
     return Scaffold(
       backgroundColor: context.forest.background,
       appBar: _hubAppBar(context),
@@ -994,14 +1103,70 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 ),
               ],
               const SizedBox(height: 12),
+              if (groups.isNotEmpty || hasSearchQuery) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: context.forest.card,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: context.forest.divider10),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: TextStyle(
+                      color: context.forest.text,
+                      fontSize: 14,
+                    ),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: l10n.translate('hub_search_groups_hint'),
+                      hintStyle: TextStyle(
+                        color: context.forest.text54,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: hasSearchQuery
+                            ? AppColors.midGreen
+                            : context.forest.text54,
+                        size: 20,
+                      ),
+                      suffixIcon: hasSearchQuery
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear_rounded,
+                                color: context.forest.text54,
+                                size: 18,
+                              ),
+                              tooltip: l10n.translate('hub_clear_search'),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setState(() => _searchQuery = val);
+                    },
+                  ),
+                ),
+              ],
               if (loading)
                 const GroupSkeleton()
               else if (snapshot.hasError && groups.isEmpty)
                 _buildGroupsError(context)
               else if (groups.isEmpty)
                 _buildEmptyState(context)
+              else if (filteredGroups.isEmpty)
+                _buildNoSearchResults(context)
               else ...[
-                for (final group in groups)
+                for (final group in filteredGroups)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: GroupCard(
@@ -1014,14 +1179,80 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           : null,
                     ),
                   ),
-                // After the groups, so the first group's layout is unchanged.
-                const OfficialFeedEntryCard(),
+                // After the groups, show official feed when not actively searching non-official
+                if (!hasSearchQuery ||
+                    'official feed অফিসিয়াল ফিড bhromon ভ্রমণ'
+                        .contains(_searchQuery.trim().toLowerCase()))
+                  const OfficialFeedEntryCard(),
               ],
             ],
           ),
         ),
       ),
       bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
+    );
+  }
+
+  /// Empty state rendered when a search query matches none of the user's groups.
+  Widget _buildNoSearchResults(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: context.forest.card,
+                shape: BoxShape.circle,
+                border: Border.all(color: context.forest.divider10),
+              ),
+              child: Icon(
+                Icons.search_off_rounded,
+                size: 28,
+                color: context.forest.text54,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              l10n.translate(
+                'hub_no_groups_found_query',
+                args: {'query': _searchQuery.trim()},
+              ),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.forest.text,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.translate('hub_no_groups_found_sub'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.forest.text54,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.midGreen,
+              ),
+              icon: const Icon(Icons.clear_rounded, size: 16),
+              label: Text(l10n.translate('hub_clear_search')),
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
