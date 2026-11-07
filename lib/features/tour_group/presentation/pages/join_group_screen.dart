@@ -70,7 +70,9 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       final target = '/join/$_normalizedCode?auto=true';
       try {
         context.go('/login?redirect=${Uri.encodeComponent(target)}');
-      } catch (_) {}
+      } catch (_) {
+        // Safe fallback if GoRouter is unattached.
+      }
       return;
     }
 
@@ -90,7 +92,9 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       final joined = await _repo.joinGroupWithCode(_normalizedCode);
       try {
         await ActiveGroup.instance.select(joined.id);
-      } catch (_) {}
+      } catch (_) {
+        // Safe fallback if local active group cache fails.
+      }
 
       if (!mounted) return;
       setState(() {
@@ -112,7 +116,9 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       if (!mounted) return;
       try {
         context.go('/group/${joined.id}/channels');
-      } catch (_) {}
+      } catch (_) {
+        // Safe fallback if navigation route is detached.
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -517,7 +523,9 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                 try {
                                   context.go(
                                       '/group/${_joinedGroup!.id}/channels');
-                                } catch (_) {}
+                                } catch (_) {
+                                  // Safe fallback if navigation route is detached.
+                                }
                               },
                             ),
                           ),
@@ -548,7 +556,9 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                 try {
                                   context.go(
                                       '/login?redirect=${Uri.encodeComponent(target)}');
-                                } catch (_) {}
+                                } catch (_) {
+                                  // Safe fallback if navigation route is detached.
+                                }
                               },
                             ),
                           ),
