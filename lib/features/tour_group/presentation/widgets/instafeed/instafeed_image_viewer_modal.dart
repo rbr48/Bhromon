@@ -1,9 +1,12 @@
+import 'dart:ui';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/like_state.dart';
+import 'instafeed_carousel.dart';
 import 'instafeed_zoomable_media.dart';
 import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
@@ -158,6 +161,24 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
     }
   }
 
+  void _goToPrevious() {
+    if (_currentIndex > 0) {
+      _pageCtrl.previousPage(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _goToNext() {
+    if (_currentIndex < _images.length - 1) {
+      _pageCtrl.nextPage(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final images = _images;
@@ -189,33 +210,43 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
       );
     }
 
-    return Scaffold(
+    final modalBody = Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Swipeable Fullscreen Images with Pinch-to-Zoom
-          PageView.builder(
-            controller: _pageCtrl,
-            itemCount: images.length,
-            onPageChanged: (idx) => setState(() => _currentIndex = idx),
-            itemBuilder: (context, index) {
-              final imgUrl = images[index];
-              return GestureDetector(
-                onTap: () => setState(() => _showOverlays = !_showOverlays),
-                onDoubleTap: _onDoubleTap,
-                child: InteractiveViewer(
-                  minScale: 1.0,
-                  maxScale: 4.5,
-                  child: Center(
-                    child: TourSafeNetworkImage(
-                      imageUrl: imgUrl,
-                      fit: BoxFit.contain,
+          // 1. Swipeable Fullscreen Images with Pinch-to-Zoom and Mouse Drag
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+                PointerDeviceKind.stylus,
+              },
+            ),
+            child: PageView.builder(
+              controller: _pageCtrl,
+              itemCount: images.length,
+              onPageChanged: (idx) => setState(() => _currentIndex = idx),
+              itemBuilder: (context, index) {
+                final imgUrl = images[index];
+                return GestureDetector(
+                  onTap: () => setState(() => _showOverlays = !_showOverlays),
+                  onDoubleTap: _onDoubleTap,
+                  child: InteractiveViewer(
+                    minScale: 1.0,
+                    maxScale: 4.5,
+                    child: Center(
+                      child: TourSafeNetworkImage(
+                        imageUrl: imgUrl,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
 
           // 2. Double-tap Heart Burst Animation
@@ -225,6 +256,46 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
               onComplete: () => setState(() => _showHeartBurst = false),
             ),
           ),
+
+          // Left Chevron Navigation Button (Fullscreen)
+          if (images.length > 1 && _currentIndex > 0)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              left: _showOverlays ? 20 : -80,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: CarouselNavButton(
+                  key: const ValueKey('modal_prev_button'),
+                  size: 46,
+                  iconSize: 28,
+                  icon: Icons.chevron_left_rounded,
+                  tooltip: context.l10n.translate('ig_prev_photo'),
+                  onPressed: _goToPrevious,
+                ),
+              ),
+            ),
+
+          // Right Chevron Navigation Button (Fullscreen)
+          if (images.length > 1 && _currentIndex < images.length - 1)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              right: _showOverlays ? 20 : -80,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: CarouselNavButton(
+                  key: const ValueKey('modal_next_button'),
+                  size: 46,
+                  iconSize: 28,
+                  icon: Icons.chevron_right_rounded,
+                  tooltip: context.l10n.translate('ig_next_photo'),
+                  onPressed: _goToNext,
+                ),
+              ),
+            ),
 
           // 3. Top Header Bar (Animated Overlay)
           AnimatedPositioned(
@@ -429,6 +500,20 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
             ),
           ),
         ],
+      ),
+    );
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): _goToPrevious,
+        const SingleActivator(LogicalKeyboardKey.arrowRight): _goToNext,
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          Navigator.maybePop(context);
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: modalBody,
       ),
     );
   }

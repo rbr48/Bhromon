@@ -1,12 +1,15 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
+import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/theme/colors.dart';
 import 'instafeed_zoomable_media.dart';
 import 'tour_safe_network_image.dart';
-import '../../../../../core/theme/colors.dart';
 
 /// Interactive multi-image carousel with smooth dynamic worm dot indicators,
-/// pinch-to-zoom support on every slide, and double-tap heart triggers.
+/// pinch-to-zoom support on every slide, desktop mouse/trackpad drag swiping,
+/// clickable pagination dots, and desktop chevron navigation buttons.
 class InstafeedCarousel extends StatefulWidget {
   final List<String> imageUrls;
   final double aspectRatio;
@@ -43,6 +46,36 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
     super.dispose();
   }
 
+  void _goToPrevious() {
+    if (_currentIndex > 0) {
+      _pageCtrl.previousPage(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _goToNext() {
+    if (_currentIndex < widget.imageUrls.length - 1) {
+      _pageCtrl.nextPage(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _goToPage(int index) {
+    if (index >= 0 &&
+        index < widget.imageUrls.length &&
+        index != _currentIndex) {
+      _pageCtrl.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.imageUrls.isEmpty) {
@@ -67,31 +100,73 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
           fit: StackFit.expand,
           clipBehavior: Clip.hardEdge,
           children: [
-            // Media PageView
-            PageView.builder(
-              controller: _pageCtrl,
-              physics: isMulti
-                  ? const PageScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
-              itemCount: widget.imageUrls.length,
-              onPageChanged: (idx) {
-                setState(() => _currentIndex = idx);
-              },
-              itemBuilder: (context, index) {
-                final url = widget.imageUrls[index];
-                final imageWidget = TourSafeNetworkImage(
-                  imageUrl: url,
-                  fit: BoxFit.cover,
-                  colorFilter: widget.colorFilter,
-                );
+            // Media PageView with mouse, trackpad, and touch drag support
+            ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.trackpad,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              child: PageView.builder(
+                controller: _pageCtrl,
+                physics: isMulti
+                    ? const PageScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
+                itemCount: widget.imageUrls.length,
+                onPageChanged: (idx) {
+                  setState(() => _currentIndex = idx);
+                },
+                itemBuilder: (context, index) {
+                  final url = widget.imageUrls[index];
+                  final imageWidget = TourSafeNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    colorFilter: widget.colorFilter,
+                  );
 
-                return InstafeedZoomableMedia(
-                  onTap: () => widget.onImageTap?.call(index),
-                  onDoubleTap: widget.onDoubleTap,
-                  child: imageWidget,
-                );
-              },
+                  return InstafeedZoomableMedia(
+                    onTap: () => widget.onImageTap?.call(index),
+                    onDoubleTap: widget.onDoubleTap,
+                    child: imageWidget,
+                  );
+                },
+              ),
             ),
+
+            // Left Chevron Navigation Button (desktop & tablet friendly)
+            if (isMulti && _currentIndex > 0)
+              Positioned(
+                left: 10,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: CarouselNavButton(
+                    key: const ValueKey('carousel_prev_button'),
+                    icon: Icons.chevron_left_rounded,
+                    tooltip: context.l10n.translate('ig_prev_photo'),
+                    onPressed: _goToPrevious,
+                  ),
+                ),
+              ),
+
+            // Right Chevron Navigation Button (desktop & tablet friendly)
+            if (isMulti && _currentIndex < widget.imageUrls.length - 1)
+              Positioned(
+                right: 10,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: CarouselNavButton(
+                    key: const ValueKey('carousel_next_button'),
+                    icon: Icons.chevron_right_rounded,
+                    tooltip: context.l10n.translate('ig_next_photo'),
+                    onPressed: _goToNext,
+                  ),
+                ),
+              ),
 
             // Upper-right index badge (e.g., 2/5)
             if (isMulti)
@@ -118,7 +193,7 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                 ),
               ),
 
-            // Bottom smooth expanding dot indicator
+            // Bottom smooth expanding dot indicator with clickable dots
             if (isMulti)
               Positioned(
                 bottom: 12,
@@ -129,24 +204,35 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
+                      color: Colors.black.withValues(alpha: 0.45),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: List.generate(widget.imageUrls.length, (index) {
                         final isActive = index == _currentIndex;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOutCubic,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          width: isActive ? 16 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? AppColors.mintGreen
-                                : context.forest.text.withValues(alpha: 0.45),
-                            borderRadius: BorderRadius.circular(3),
+                        return MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _goToPage(index),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 3, vertical: 4),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeOutCubic,
+                                width: isActive ? 16 : 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? AppColors.mintGreen
+                                      : context.forest.text
+                                          .withValues(alpha: 0.45),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       }),
@@ -181,6 +267,81 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// High-contrast circular navigation button with hover glow effect for carousels.
+class CarouselNavButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String tooltip;
+  final double size;
+  final double iconSize;
+
+  const CarouselNavButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
+    this.size = 36,
+    this.iconSize = 22,
+  });
+
+  @override
+  State<CarouselNavButton> createState() => _CarouselNavButtonState();
+}
+
+class _CarouselNavButtonState extends State<CarouselNavButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Tooltip(
+        message: widget.tooltip,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onPressed,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _isHovered
+                  ? const Color(0xFF1E293B).withValues(alpha: 0.95)
+                  : Colors.black.withValues(alpha: 0.60),
+              border: Border.all(
+                color: _isHovered
+                    ? AppColors.mintGreen
+                    : Colors.white.withValues(alpha: 0.28),
+                width: _isHovered ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _isHovered
+                      ? AppColors.mintGreen.withValues(alpha: 0.35)
+                      : Colors.black.withValues(alpha: 0.40),
+                  blurRadius: _isHovered ? 8 : 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                widget.icon,
+                size: widget.iconSize,
+                color: _isHovered ? AppColors.mintGreen : Colors.white,
+              ),
+            ),
+          ),
         ),
       ),
     );
