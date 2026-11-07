@@ -18,6 +18,7 @@ import '../features/chat/presentation/pages/chat_screen.dart';
 import '../features/chat/presentation/pages/call_screen.dart';
 import '../features/chat/presentation/pages/starred_messages_screen.dart';
 
+import '../features/tour_group/presentation/pages/join_group_screen.dart';
 import '../features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
 import '../features/tour_group/presentation/pages/tour_logistics_hub_screen.dart';
@@ -76,10 +77,17 @@ class AppRouter {
       final bool loggingIn = state.matchedLocation == '/login';
 
       if (authState is Unauthenticated) {
+        if (state.matchedLocation.startsWith('/join')) {
+          return null;
+        }
         return loggingIn ? null : '/login';
       }
 
       if (authState is Authenticated && loggingIn) {
+        final redirect = state.uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          return redirect;
+        }
         return '/group-hub';
       }
 
@@ -90,6 +98,27 @@ class AppRouter {
       GoRoute(
         path: '/',
         redirect: (context, state) => '/group-hub',
+      ),
+      GoRoute(
+        path: '/join',
+        redirect: (context, state) {
+          final code = state.uri.queryParameters['code'];
+          if (code != null && code.isNotEmpty) {
+            return '/join/$code';
+          }
+          return '/group-hub';
+        },
+      ),
+      GoRoute(
+        path: '/join/:code',
+        pageBuilder: (context, state) {
+          final code = state.pathParameters['code'] ?? '';
+          final auto = state.uri.queryParameters['auto'] == 'true';
+          return _customPageTransition(
+            state,
+            JoinGroupScreen(inviteCode: code, autoJoin: auto),
+          );
+        },
       ),
       GoRoute(
         path: '/login',
