@@ -78,7 +78,7 @@ Resolve all TypeScript compilation errors (`tsc exit code: 2`) across `functions
   - Fix `functions/src/tourContentPurge.ts` (`error`, `tx: Transaction`, query snapshots).
 - [x] **Task 6.4: Upgrade `functions/Dockerfile` to `node:22-alpine`**
   - Match `"engines": { "node": ">=22" }` and AGENTS.md requirement.
-- [ ] **Task 6.5: Verify Compilation & Build Locally and on VPS**
+- [x] **Task 6.5: Verify Compilation & Build Locally and on VPS**
   - Run `npm run build` in `functions/`.
   - Test `docker compose build bhromon-games` on VPS.
   - Open GitHub PR and merge to `main`.
