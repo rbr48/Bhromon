@@ -456,6 +456,20 @@ class TourGroup {
     return null;
   }
 
+  /// The active stop on [day] (or first stop), stripped of any ' → ' arrows.
+  String currentDestination([DateTime? day]) {
+    final activeStop =
+        (day != null ? stopOn(day) : null) ?? effectiveStops.firstOrNull;
+    if (activeStop != null && activeStop.name.trim().isNotEmpty) {
+      return activeStop.name.trim();
+    }
+    final raw = destination.trim();
+    if (raw.contains(' → ')) {
+      return raw.split(' → ').first.trim();
+    }
+    return raw.isNotEmpty ? raw : 'Destination';
+  }
+
   /// The legs in order: origin to the first stop, stop to stop, and back to
   /// the origin when [returnHome] is set.
   List<String> get routeLegKeys {

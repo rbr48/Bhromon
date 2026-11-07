@@ -2986,6 +2986,10 @@ class TourGroupRepository {
     double? expenseAmount,
     String? expenseCategory,
     String? coverUrl,
+    String? resharedFromTourId,
+    String? resharedFromTourName,
+    String? resharedFromAuthorName,
+    String? resharedPostId,
   }) async {
     final email = _requireEmail();
     final mediaUrls = [...images, if (videoUrl != null) videoUrl];
@@ -3023,6 +3027,10 @@ class TourGroupRepository {
       expenseAmount: expenseAmount,
       expenseCategory: expenseCategory,
       coverUrl: coverUrl,
+      resharedFromTourId: resharedFromTourId,
+      resharedFromTourName: resharedFromTourName,
+      resharedFromAuthorName: resharedFromAuthorName,
+      resharedPostId: resharedPostId,
     );
     final map = post.toMap()..['createdAt'] = FieldValue.serverTimestamp();
     await _sub(tourId, 'posts').doc(id).set(map);

@@ -8,7 +8,9 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_media_journal.dart';
 import 'package:bhromon/features/tour_group/data/tour_media_uploader.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'cross_group_share_sheet.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/utils/logger.dart';
@@ -36,9 +38,15 @@ class _ShareChannelTargets extends StatefulWidget {
 
 class _ShareChannelTargetsState extends State<_ShareChannelTargets> {
   // Opened once, so rebuilding the sheet does not start another listener.
-  late final Stream<List<TourChannel>> _docs =
-      TourChannelRepository(groups: widget.repository)
+  late final Stream<List<TourChannel>> _docs = () {
+    try {
+      return TourChannelRepository(groups: widget.repository)
           .watchChannels(widget.tourId);
+    } catch (e, st) {
+      logWarning('[ShareSheet] watchChannels fallback: $e', e, st);
+      return Stream.value(const <TourChannel>[]);
+    }
+  }();
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +100,8 @@ class InstafeedShareSheet extends StatelessWidget {
   final String tourId;
   final TourPostItem post;
   final VoidCallback? onResharedToStory;
+  final String? groupName;
+  final TourGroup? group;
 
   const InstafeedShareSheet({
     super.key,
@@ -99,6 +109,8 @@ class InstafeedShareSheet extends StatelessWidget {
     required this.tourId,
     required this.post,
     this.onResharedToStory,
+    this.groupName,
+    this.group,
   });
 
   static const List<Map<String, dynamic>> _channels = [
@@ -242,6 +254,21 @@ class InstafeedShareSheet extends StatelessWidget {
     }
   }
 
+  void _openCrossGroupShare(BuildContext context) {
+    Navigator.pop(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => CrossGroupShareSheet(
+        repository: repository,
+        sourceTourId: tourId,
+        sourceTourName: groupName ?? group?.name ?? 'Tour',
+        post: post,
+      ),
+    );
+  }
+
   void _copyLink(BuildContext context) {
     final link = 'https://app.bhromon.fun/tours/$tourId/posts/${post.id}';
     Clipboard.setData(ClipboardData(text: link));
@@ -263,100 +290,126 @@ class InstafeedShareSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: context.forest.feedSurface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: context.forest.text24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              context.l10n.translate('ig_share_post_title'),
-              style: TextStyle(
-                color: context.forest.text,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Share to Story shortcut
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: AppColors.mintGreen,
-                child: Icon(Icons.auto_stories,
-                    color: AppColors.darkGreen, size: 20),
-              ),
-              title: Text(context.l10n.translate('ig_add_to_story'),
-                  style: TextStyle(
-                      color: context.forest.text, fontWeight: FontWeight.bold)),
-              subtitle: Text(context.l10n.translate('ig_story_lasts'),
-                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
-              onTap: () => _shareToStory(context),
-            ),
-            Divider(color: context.forest.divider10),
-
-            // Send to Tour Channels
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Text(
-                context.l10n.translate('ig_send_to_channel'),
-                style: TextStyle(
-                    color: context.forest.text70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
-            _ShareChannelTargets(
-              repository: repository,
-              tourId: tourId,
-              channels: _channels,
-              titleOf: _channelTitle,
-              onPick: (channelId, title) =>
-                  _sendToChannel(context, channelId, title),
-            ),
-
-            Divider(color: context.forest.divider10),
-
-            // External Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Material(
+      color: context.forest.feedSurface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildActionButton(
-                  context: context,
-                  icon: Icons.link,
-                  label: context.l10n.translate('ig_copy_link'),
-                  onTap: () => _copyLink(context),
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: context.forest.text24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-                _buildActionButton(
-                  context: context,
-                  icon: Icons.share,
-                  label: context.l10n.translate('ig_other_apps'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _shareExternal(context);
-                  },
+                const SizedBox(height: 14),
+                Text(
+                  context.l10n.translate('ig_share_post_title'),
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                const SizedBox(height: 16),
+
+                // Share to Story shortcut
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(
+                    backgroundColor: AppColors.mintGreen,
+                    child: Icon(Icons.auto_stories,
+                        color: AppColors.darkGreen, size: 20),
+                  ),
+                  title: Text(context.l10n.translate('ig_add_to_story'),
+                      style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold)),
+                  subtitle: Text(context.l10n.translate('ig_story_lasts'),
+                      style: TextStyle(
+                          color: context.forest.text54, fontSize: 12)),
+                  onTap: () => _shareToStory(context),
+                ),
+
+                // Share to Another Group shortcut
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor:
+                        Colors.purpleAccent.withValues(alpha: 0.18),
+                    child: const Icon(Icons.swap_horiz_rounded,
+                        color: Colors.purpleAccent, size: 20),
+                  ),
+                  title: Text(
+                      context.l10n.translate('ig_share_to_another_group'),
+                      style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                      context.l10n.translate('ig_share_to_another_group_sub'),
+                      style: TextStyle(
+                          color: context.forest.text54, fontSize: 12)),
+                  onTap: () => _openCrossGroupShare(context),
+                ),
+                Divider(color: context.forest.divider10),
+
+                // Send to Tour Channels
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    context.l10n.translate('ig_send_to_channel'),
+                    style: TextStyle(
+                        color: context.forest.text70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                _ShareChannelTargets(
+                  repository: repository,
+                  tourId: tourId,
+                  channels: _channels,
+                  titleOf: _channelTitle,
+                  onPick: (channelId, title) =>
+                      _sendToChannel(context, channelId, title),
+                ),
+
+                Divider(color: context.forest.divider10),
+
+                // External Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.link,
+                      label: context.l10n.translate('ig_copy_link'),
+                      onTap: () => _copyLink(context),
+                    ),
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.share,
+                      label: context.l10n.translate('ig_other_apps'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _shareExternal(context);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
               ],
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );
@@ -493,111 +546,118 @@ class InstafeedStoryShareSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: context.forest.feedSurface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: context.forest.text24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              context.l10n.translate('ig_share_story_title'),
-              style: TextStyle(
-                color: context.forest.text,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Send to Tour Channels
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Text(
-                context.l10n.translate('ig_send_to_channel'),
-                style: TextStyle(
-                    color: context.forest.text70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
-            _ShareChannelTargets(
-              repository: repository,
-              tourId: tourId,
-              channels: _channels,
-              titleOf: _channelTitle,
-              onPick: (channelId, title) =>
-                  _sendToChannel(context, channelId, title),
-            ),
-
-            Divider(color: context.forest.divider10),
-
-            // External Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Material(
+      color: context.forest.feedSurface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                InkWell(
-                  onTap: () => _copyLink(context),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: context.forest.divider12,
-                          child: Icon(Icons.link, color: context.forest.text),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(context.l10n.translate('ig_copy_link'),
-                            style: TextStyle(
-                                color: context.forest.text70, fontSize: 12)),
-                      ],
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: context.forest.text24,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context);
-                    _shareExternal(context);
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: context.forest.divider12,
-                          child: Icon(Icons.share, color: context.forest.text),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(context.l10n.translate('ig_other_apps'),
-                            style: TextStyle(
-                                color: context.forest.text70, fontSize: 12)),
-                      ],
-                    ),
+                const SizedBox(height: 14),
+                Text(
+                  context.l10n.translate('ig_share_story_title'),
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Send to Tour Channels
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    context.l10n.translate('ig_send_to_channel'),
+                    style: TextStyle(
+                        color: context.forest.text70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                _ShareChannelTargets(
+                  repository: repository,
+                  tourId: tourId,
+                  channels: _channels,
+                  titleOf: _channelTitle,
+                  onPick: (channelId, title) =>
+                      _sendToChannel(context, channelId, title),
+                ),
+
+                Divider(color: context.forest.divider10),
+
+                // External Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    InkWell(
+                      onTap: () => _copyLink(context),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: context.forest.divider12,
+                              child:
+                                  Icon(Icons.link, color: context.forest.text),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(context.l10n.translate('ig_copy_link'),
+                                style: TextStyle(
+                                    color: context.forest.text70,
+                                    fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _shareExternal(context);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: context.forest.divider12,
+                              child:
+                                  Icon(Icons.share, color: context.forest.text),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(context.l10n.translate('ig_other_apps'),
+                                style: TextStyle(
+                                    color: context.forest.text70,
+                                    fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
               ],
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );
