@@ -1374,27 +1374,6 @@ class FirestoreNotificationWatcher:
             )
             new_listeners.append(journey_watch)
 
-            posts_watch = (
-                db.collection_group("posts")
-                .where("createdAt", ">=", self.started_at)
-                .on_snapshot(self.on_posts_snapshot)
-            )
-            new_listeners.append(posts_watch)
-
-            notices_watch = (
-                db.collection_group("notices")
-                .where("createdAt", ">=", self.started_at)
-                .on_snapshot(self.on_notices_snapshot)
-            )
-            new_listeners.append(notices_watch)
-
-            expenses_watch = (
-                db.collection_group("expenses")
-                .where("createdAt", ">=", self.started_at)
-                .on_snapshot(self.on_expenses_snapshot)
-            )
-            new_listeners.append(expenses_watch)
-
             self.active_listeners = new_listeners
             logger.info("Successfully attached %d real-time Firestore listeners.", len(new_listeners))
         except Exception as e:
