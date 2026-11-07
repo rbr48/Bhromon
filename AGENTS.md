@@ -300,8 +300,8 @@ static session while the user visits other screens, and asks before discarding a
 
 ---
 
-### I. Live journey and destination alarms (`kLiveJourney`, off in release)
-- **Off by default.** `kLiveJourney` is a compile-time flag (`bool.fromEnvironment('LIVE_JOURNEY')`). Remote Config switches can turn off the parts that matter in production: `journey_relay_enabled` (positions), `journey_alarms_enabled` (new alarms) and `analytics_enabled` (usage counts). A failed fetch keeps the feature as released.
+### I. Live journey and destination alarms (`kLiveJourney`, on by default)
+- **On by default.** `kLiveJourney` is a compile-time flag (`bool.fromEnvironment('LIVE_JOURNEY', defaultValue: true)`). A build turns it off with `--dart-define=LIVE_JOURNEY=false`. Remote Config switches can turn off the parts that matter in production: `journey_relay_enabled` (positions), `journey_alarms_enabled` (new alarms) and `analytics_enabled` (usage counts). A failed fetch keeps the feature as released.
 - **Tracking runs only during a trip the user starts** (roadmap rule 1). A trip ends when the user ends it or after 36 hours with no reading. Sharing is a separate switch, off by default (rule 2), and the relay is connected only while it is on.
 - **Alarms are per device** (rule 3). Stop notices (5 km and 1 km) and arrivals at each stop come from `HubAlertEngine`; the destination rings at 500 m, runs its overshoot alarm, and has a time alarm 25 minutes before the ETA. Scheduled alarms are absolute instants with the alarm clock mode, so no exact-alarm permission is used (D-3). The alarm page keeps the screen on and repeats up to ten rings.
 - **Pure logic lives in `domain/services`** (`journey_geometry`, `live_journey_tracker`, `hub_alert_engine`, `trip_alarm_plan`, `journey_trip`, `journey_access_policy`, `journey_alarm_ring`, `journey_targets`, `leg_suggestions`). `LiveJourneySession` (`data/live_journey_session.dart`) holds no plugin: its ports are injected, and `LiveJourneyRuntime` (`presentation/live_journey_runtime.dart`) wires the real ones.
