@@ -101,5 +101,5 @@ Protect offline, device-only writes from accidental loss during sign-out or acco
 - [x] **Task 7.4: Automated Unit & Widget Verification**
   - Write unit tests in `test/core/database/` or `test/features/` testing the outbox query and logout guard behavior.
   - Run `flutter test` and `dart analyze`.
-- [ ] **Task 7.5: Commit, Pull Request & Merge**
+- [x] **Task 7.5: Commit, Pull Request & Merge**
   - Commit changes, push branch, open PR, and merge to `main`.
