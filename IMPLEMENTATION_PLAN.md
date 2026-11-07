@@ -132,6 +132,35 @@ Migrate offline maps from outdated raster/demo styles to OpenFreeMap Liberty vec
 
 ---
 
+## Phase 8B: Light Theme Contrast, Profile Memory Tab Removal & SOS Alert Hardening (Completed)
+
+### Objective
+Ensure full readability in Light Theme across the Tour Magazine/Scrapbook and Family Safety Hub screens, eliminate redundant Memory/Vault tab from user profile keeping SOS exclusively in group modules, and resolve Firestore [permission-denied] when resolving SOS emergency alerts.
+
+### Tasks
+- [x] **Task 8B.1: Light Theme Contrast in Tour Magazine & Scrapbook (scrapbook_magazine.dart)**
+  - Replace static _ink, _gold, _muted constants with theme-aware _MagPalette (context.mag).
+  - High-contrast ink on light paper (14:1+ contrast) and deep amber gold (4.5:1+ contrast) in Light Mode.
+  - Preserve dark scrim contrast on Cover Page and chip badges.
+- [x] **Task 8B.2: Light Theme Contrast in Family Safety Hub (`family_safety_hub_screen.dart`)**
+  - Fix SOS beacon text (title & description) to use context.forest.text and context.forest.text70 when siren is inactive.
+  - Audit border and icon styling for high-contrast presentation.
+- [x] **Task 8B.3: Remove Redundant "Memory" Tab from Profile (profile_tabs.dart & explorer_profile_screen.dart)**
+  - Remove 'vault' from profileTabKeys().
+  - Remove vault tab item, switch case, and _buildKeepsakesTab() from explorer_profile_screen.dart.
+  - Update test/features/explorer/profile_tabs_test.dart.
+- [x] **Task 8B.4: Fix SOS Alert Permission-Denied Issue**
+  - Add _pendingRaiseFuture in amily_safety_hub_screen.dart to await pending create before resolving.
+  - In TourGroupRepository.resolveSafetyAlert, verify doc existence and handle already-resolved states gracefully.
+  - Ensure irestore.rules case-insensitivity on esource.data.senderEmail.lower() == tourUserEmail().
+- [x] **Task 8B.5: Verification, Tests, PR & Deployment (v1.8.126+180)**
+  - Monotonic version bump in pubspec.yaml to 1.8.126+180.
+  - Run dart format ., lutter analyze, and unit test suite.
+  - Push branch, open PR via gh pr create --base main, and merge to main.
+  - Deploy Flutter Web to Firebase Hosting.
+
+---
+
 ## Phase 9: Everyday Group Specializations (Sprint 7 — Active Queue)
 
 ### Objective

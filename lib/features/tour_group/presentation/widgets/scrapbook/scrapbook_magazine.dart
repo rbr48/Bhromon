@@ -17,9 +17,31 @@ import '../instafeed/tour_safe_network_image.dart';
 import '../../../../../core/localization/localized_date.dart';
 
 const _paper = Color(0xFF15110D);
-const _ink = Color(0xFFF5EEDC);
-const _gold = Color(0xFFE8B04B);
-const _muted = Color(0xFFB9AE98);
+
+/// High-contrast theme palette for the scrapbook magazine:
+/// - Dark Mode: classic deep paper with warm cream ink and amber gold.
+/// - Light Mode: warm off-white parchment paper, deep espresso ink (14:1+),
+///   warm slate muted text (6.5:1+), and rich amber gold (4.6:1+).
+class _MagPalette {
+  final bool isDark;
+  const _MagPalette(this.isDark);
+
+  Color get paper =>
+      isDark ? const Color(0xFF15110D) : const Color(0xFFFBF8F2);
+  Color get ink =>
+      isDark ? const Color(0xFFF5EEDC) : const Color(0xFF1C1814);
+  Color get muted =>
+      isDark ? const Color(0xFFB9AE98) : const Color(0xFF5A5145);
+  Color get gold =>
+      isDark ? const Color(0xFFE8B04B) : const Color(0xFFA06200);
+  Color get goldForeground =>
+      isDark ? const Color(0xFF15110D) : Colors.white;
+}
+
+extension _MagContext on BuildContext {
+  _MagPalette get mag =>
+      _MagPalette(Theme.of(this).brightness == Brightness.dark);
+}
 
 /// The tour magazine: a set of pages the family flips through, built from
 /// [issue]. Pages without data behind them are left out.
@@ -153,6 +175,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
     final pages = _pages(l10n);
     while (_pageKeys.length < pages.length) {
       _pageKeys.add(GlobalKey());
@@ -166,7 +189,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
           value: (page + 1) / total,
           minHeight: 3,
           backgroundColor: context.forest.divider10,
-          valueColor: const AlwaysStoppedAnimation(_gold),
+          valueColor: AlwaysStoppedAnimation(mag.gold),
         ),
         Expanded(
           child: PageView.builder(
@@ -179,7 +202,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
               child: RepaintBoundary(
                 key: _pageKeys[i],
                 child: ColoredBox(
-                    color: context.forest.surfaceFor(_paper), child: pages[i]),
+                    color: mag.paper, child: pages[i]),
               ),
             ),
           ),
@@ -198,7 +221,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
                           _go(page - 1, total);
                         }
                       : null,
-                  icon: const Icon(Icons.chevron_left_rounded, color: _ink),
+                  icon: Icon(Icons.chevron_left_rounded, color: mag.ink),
                 ),
                 IconButton(
                   tooltip: l10n
@@ -208,7 +231,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
                     _player == null
                         ? Icons.play_circle_outline_rounded
                         : Icons.pause_circle_outline_rounded,
-                    color: _gold,
+                    color: mag.gold,
                   ),
                 ),
                 Expanded(
@@ -218,19 +241,19 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
                       'total': l10n.number(total),
                     }),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: _muted, fontSize: 12),
+                    style: TextStyle(color: mag.muted, fontSize: 12),
                   ),
                 ),
                 IconButton(
                   tooltip: l10n.translate('mag_share_page'),
                   onPressed: _sharing ? null : () => _sharePage(page),
                   icon: _sharing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: _gold))
-                      : const Icon(Icons.ios_share_rounded, color: _ink),
+                              strokeWidth: 2, color: mag.gold))
+                      : Icon(Icons.ios_share_rounded, color: mag.ink),
                 ),
                 IconButton(
                   tooltip: l10n.translate('mag_next'),
@@ -240,7 +263,7 @@ class _ScrapbookMagazineState extends State<ScrapbookMagazine> {
                           _go(page + 1, total);
                         }
                       : null,
-                  icon: const Icon(Icons.chevron_right_rounded, color: _ink),
+                  icon: Icon(Icons.chevron_right_rounded, color: mag.ink),
                 ),
               ],
             ),
@@ -297,24 +320,25 @@ class _PageHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mag = context.mag;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(kicker.toUpperCase(),
-            style: const TextStyle(
-                color: _gold,
+            style: TextStyle(
+                color: mag.gold,
                 fontSize: 11,
                 letterSpacing: 2.4,
                 fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
         Text(title,
-            style: const TextStyle(
-                color: _ink,
+            style: TextStyle(
+                color: mag.ink,
                 fontSize: 28,
                 height: 1.15,
                 fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
-        Container(width: 48, height: 3, color: _gold),
+        Container(width: 48, height: 3, color: mag.gold),
         const SizedBox(height: 18),
       ],
     );
@@ -379,8 +403,8 @@ class _PostPicture extends StatelessWidget {
                 color: context.forest.surfaceFor(const Color(0xFF2A231C))),
             errorWidget: ColoredBox(
               color: context.forest.surfaceFor(const Color(0xFF2A231C)),
-              child: const Center(
-                  child: Icon(Icons.broken_image_outlined, color: _muted)),
+              child: Center(
+                  child: Icon(Icons.broken_image_outlined, color: context.mag.muted)),
             ),
           );
 
@@ -441,10 +465,11 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mag = context.mag;
     final url = photo;
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: _gold,
+      backgroundColor: mag.gold,
       backgroundImage: url != null && isRemoteMediaUrl(url)
           ? CachedNetworkImageProvider(url)
           : null,
@@ -452,7 +477,7 @@ class _Avatar extends StatelessWidget {
           ? null
           : Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(),
               style: TextStyle(
-                  color: context.forest.surfaceFor(_paper),
+                  color: mag.goldForeground,
                   fontWeight: FontWeight.w800)),
     );
   }
@@ -528,7 +553,7 @@ class _CoverPage extends StatelessWidget {
             children: [
               const Text('BHROMON',
                   style: TextStyle(
-                      color: _ink,
+                      color: Color(0xFFF5EEDC),
                       fontSize: 44,
                       height: 1,
                       letterSpacing: 6,
@@ -541,7 +566,7 @@ class _CoverPage extends StatelessWidget {
                       l10n.translate('scrap_destination_unknown'),
                 }).toUpperCase(),
                 style: const TextStyle(
-                    color: _gold,
+                    color: Color(0xFFE8B04B),
                     fontSize: 11,
                     letterSpacing: 2,
                     fontWeight: FontWeight.w700),
@@ -549,14 +574,16 @@ class _CoverPage extends StatelessWidget {
               const Spacer(),
               Text(
                 g?.name ?? l10n.translate('scrap_default_name'),
-                style: TextStyle(
-                    color: context.forest.text,
+                style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 32,
                     height: 1.1,
                     fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              Text(dates, style: const TextStyle(color: _ink, fontSize: 13)),
+              Text(dates,
+                  style:
+                      const TextStyle(color: Color(0xFFF5EEDC), fontSize: 13)),
               const SizedBox(height: 14),
               Text(
                 issue.isEmpty
@@ -567,7 +594,9 @@ class _CoverPage extends StatelessWidget {
                         'travellers': l10n.number(travellers),
                       }),
                 style: const TextStyle(
-                    color: _gold, fontSize: 13, fontWeight: FontWeight.w600),
+                    color: Color(0xFFE8B04B),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -585,6 +614,8 @@ class _NumbersPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final tiles = <(String, String, IconData)>[
       (
         l10n.number(stats.photos),
@@ -638,22 +669,34 @@ class _NumbersPage extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: context.forest.text.withValues(alpha: 0.04),
+                  color: isDark
+                      ? context.forest.text.withValues(alpha: 0.04)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _gold.withValues(alpha: 0.25)),
+                  border: Border.all(
+                      color: mag.gold.withValues(alpha: isDark ? 0.25 : 0.35)),
+                  boxShadow: isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(t.$3, color: _gold, size: 20),
+                    Icon(t.$3, color: mag.gold, size: 20),
                     const SizedBox(height: 8),
                     Text(t.$1,
-                        style: const TextStyle(
-                            color: _ink,
+                        style: TextStyle(
+                            color: mag.ink,
                             fontSize: 30,
                             fontWeight: FontWeight.w900)),
                     Text(t.$2,
-                        style: const TextStyle(color: _muted, fontSize: 12)),
+                        style: TextStyle(color: mag.muted, fontSize: 12)),
                   ],
                 ),
               ),
@@ -666,24 +709,30 @@ class _NumbersPage extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-                colors: [Color(0xFF3E2A10), Color(0xFF1E160C)]),
+            gradient: LinearGradient(
+                colors: isDark
+                    ? const [Color(0xFF3E2A10), Color(0xFF1E160C)]
+                    : const [Color(0xFFFFF6E5), Color(0xFFF5E6CC)]),
             borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+                color: mag.gold.withValues(alpha: isDark ? 0.3 : 0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.translate('mag_stat_spent'),
-                  style: const TextStyle(color: _muted, fontSize: 12)),
+                  style: TextStyle(color: mag.muted, fontSize: 12)),
               const SizedBox(height: 4),
               Text(_taka(l10n, stats.spentPaisa),
-                  style: const TextStyle(
-                      color: _gold, fontSize: 34, fontWeight: FontWeight.w900)),
+                  style: TextStyle(
+                      color: mag.gold,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900)),
               if (stats.topSpendCategory != null)
                 Text(
                     l10n.translate('mag_spent_top',
                         args: {'category': stats.topSpendCategory!}),
-                    style: const TextStyle(color: _ink, fontSize: 13)),
+                    style: TextStyle(color: mag.ink, fontSize: 13)),
             ],
           ),
         ),
@@ -700,6 +749,7 @@ class _YourPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
     final best = recap.bestPost;
     return _PageBody(children: [
       _PageHeading(
@@ -711,28 +761,28 @@ class _YourPage extends StatelessWidget {
           'likes': l10n.number(recap.likesReceived),
           'comments': l10n.number(recap.commentsReceived),
         }),
-        style: const TextStyle(color: _ink, fontSize: 16, height: 1.4),
+        style: TextStyle(color: mag.ink, fontSize: 16, height: 1.4),
       ),
       if (recap.places > 0) ...[
         const SizedBox(height: 6),
         Text(
             l10n.translate('mag_your_places',
                 args: {'count': l10n.number(recap.places)}),
-            style: const TextStyle(color: _muted, fontSize: 13)),
+            style: TextStyle(color: mag.muted, fontSize: 13)),
       ],
       if (best != null && best.hasRemoteMedia) ...[
         const SizedBox(height: 20),
         Text(l10n.translate('mag_your_best'),
-            style: const TextStyle(
-                color: _gold, fontSize: 13, fontWeight: FontWeight.w700)),
+            style: TextStyle(
+                color: mag.gold, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         AspectRatio(aspectRatio: 4 / 3, child: _PostPicture(post: best)),
       ],
       if (recap.awards.isNotEmpty) ...[
         const SizedBox(height: 20),
         Text(l10n.translate('mag_your_awards'),
-            style: const TextStyle(
-                color: _gold, fontSize: 13, fontWeight: FontWeight.w700)),
+            style: TextStyle(
+                color: mag.gold, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -741,11 +791,11 @@ class _YourPage extends StatelessWidget {
             for (final kind in recap.awards)
               Chip(
                 avatar: Icon(Icons.emoji_events_rounded,
-                    color: context.forest.surfaceFor(_paper), size: 18),
-                backgroundColor: _gold,
+                    color: mag.goldForeground, size: 18),
+                backgroundColor: mag.gold,
                 label: Text(l10n.translate(_awardTitleKey(kind)),
                     style: TextStyle(
-                        color: context.forest.surfaceFor(_paper),
+                        color: mag.goldForeground,
                         fontWeight: FontWeight.w700)),
               ),
           ],
@@ -753,8 +803,8 @@ class _YourPage extends StatelessWidget {
       ],
       const SizedBox(height: 20),
       Text(l10n.translate('mag_your_nudge'),
-          style: const TextStyle(
-              color: _muted, fontSize: 12, fontStyle: FontStyle.italic)),
+          style: TextStyle(
+              color: mag.muted, fontSize: 12, fontStyle: FontStyle.italic)),
     ]);
   }
 }
@@ -768,6 +818,7 @@ class _ChapterPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
     final hero = chapter.hero;
     final title = chapter.day?.label ??
         '${l10n.translate('mag_chapter_extra')} · ${localizedDateFormat('d MMM').format(chapter.date)}';
@@ -785,12 +836,12 @@ class _ChapterPage extends StatelessWidget {
           'posts': l10n.number(chapter.posts.length),
           'likes': l10n.number(chapter.likes),
         }),
-        style: const TextStyle(color: _muted, fontSize: 12),
+        style: TextStyle(color: mag.muted, fontSize: 12),
       ),
       const SizedBox(height: 14),
       if (hero == null)
         Text(l10n.translate('mag_chapter_no_media'),
-            style: const TextStyle(color: _muted, fontSize: 13))
+            style: TextStyle(color: mag.muted, fontSize: 13))
       else ...[
         AspectRatio(aspectRatio: 4 / 3, child: _PostPicture(post: hero)),
         if (hero.caption.trim().isNotEmpty) ...[
@@ -798,10 +849,10 @@ class _ChapterPage extends StatelessWidget {
           Text(hero.caption,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _ink, fontSize: 13, height: 1.4)),
+              style: TextStyle(color: mag.ink, fontSize: 13, height: 1.4)),
         ],
         Text('— ${hero.authorName}',
-            style: const TextStyle(color: _gold, fontSize: 12)),
+            style: TextStyle(color: mag.gold, fontSize: 12)),
       ],
       if (chapter.gallery.isNotEmpty) ...[
         const SizedBox(height: 14),
@@ -829,11 +880,11 @@ class _ChapterPage extends StatelessWidget {
           children: [
             for (final place in chapter.places)
               Chip(
-                avatar: const Icon(Icons.place_rounded, color: _gold, size: 16),
+                avatar: Icon(Icons.place_rounded, color: mag.gold, size: 16),
                 backgroundColor: context.forest.text.withValues(alpha: 0.05),
-                side: BorderSide(color: _gold.withValues(alpha: 0.3)),
+                side: BorderSide(color: mag.gold.withValues(alpha: 0.3)),
                 label: Text(place,
-                    style: const TextStyle(color: _ink, fontSize: 12)),
+                    style: TextStyle(color: mag.ink, fontSize: 12)),
               ),
           ],
         ),
@@ -850,16 +901,17 @@ class _PullQuote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mag = context.mag;
     return Container(
       padding: const EdgeInsets.only(left: 14),
-      decoration: const BoxDecoration(
-          border: Border(left: BorderSide(color: _gold, width: 3))),
+      decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: mag.gold, width: 3))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('“$text”',
-              style: const TextStyle(
-                  color: _ink,
+              style: TextStyle(
+                  color: mag.ink,
                   fontSize: 18,
                   height: 1.4,
                   fontStyle: FontStyle.italic,
@@ -867,7 +919,7 @@ class _PullQuote extends StatelessWidget {
           if (author != null) ...[
             const SizedBox(height: 6),
             Text('— $author',
-                style: const TextStyle(color: _gold, fontSize: 12)),
+                style: TextStyle(color: mag.gold, fontSize: 12)),
           ],
         ],
       ),
@@ -883,6 +935,7 @@ class _MomentsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
     return _PageBody(children: [
       _PageHeading(
           kicker: l10n.translate('mag_kicker_moments'),
@@ -896,8 +949,8 @@ class _MomentsPage extends StatelessWidget {
               SizedBox(
                 width: 34,
                 child: Text(l10n.number(i + 1),
-                    style: const TextStyle(
-                        color: _gold,
+                    style: TextStyle(
+                        color: mag.gold,
                         fontSize: 28,
                         fontWeight: FontWeight.w900)),
               ),
@@ -916,21 +969,21 @@ class _MomentsPage extends StatelessWidget {
                           : posts[i].caption,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: _ink,
+                      style: TextStyle(
+                          color: mag.ink,
                           fontSize: 13,
                           fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
                     Text(posts[i].authorName,
-                        style: const TextStyle(color: _muted, fontSize: 12)),
+                        style: TextStyle(color: mag.muted, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(
                       l10n.translate('mag_moment_line', args: {
                         'likes': l10n.number(posts[i].likes.length),
                         'comments': l10n.number(posts[i].commentCount),
                       }),
-                      style: const TextStyle(color: _gold, fontSize: 12),
+                      style: TextStyle(color: mag.gold, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1002,6 +1055,8 @@ class _AwardsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return _PageBody(children: [
       _PageHeading(
           kicker: l10n.translate('mag_kicker_awards'),
@@ -1011,9 +1066,21 @@ class _AwardsPage extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: context.forest.text.withValues(alpha: 0.04),
+            color: isDark
+                ? context.forest.text.withValues(alpha: 0.04)
+                : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _gold.withValues(alpha: 0.3)),
+            border: Border.all(
+                color: mag.gold.withValues(alpha: isDark ? 0.3 : 0.35)),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Row(
             children: [
@@ -1026,9 +1093,9 @@ class _AwardsPage extends StatelessWidget {
                     bottom: -4,
                     child: CircleAvatar(
                       radius: 12,
-                      backgroundColor: _gold,
+                      backgroundColor: mag.gold,
                       child: Icon(_awardIcon(a.kind),
-                          size: 14, color: context.forest.surfaceFor(_paper)),
+                          size: 14, color: mag.goldForeground),
                     ),
                   ),
                 ],
@@ -1039,21 +1106,21 @@ class _AwardsPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.translate(_awardTitleKey(a.kind)).toUpperCase(),
-                        style: const TextStyle(
-                            color: _gold,
+                        style: TextStyle(
+                            color: mag.gold,
                             fontSize: 11,
                             letterSpacing: 1.6,
                             fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
                     Text(a.winnerName,
-                        style: const TextStyle(
-                            color: _ink,
+                        style: TextStyle(
+                            color: mag.ink,
                             fontSize: 17,
                             fontWeight: FontWeight.w800)),
                     Text(
                         l10n.translate(_awardDetailKey(a.kind),
                             args: {'value': l10n.number(a.value)}),
-                        style: const TextStyle(color: _muted, fontSize: 12)),
+                        style: TextStyle(color: mag.muted, fontSize: 12)),
                   ],
                 ),
               ),
@@ -1072,6 +1139,7 @@ class _PlacesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
     return _PageBody(children: [
       _PageHeading(
           kicker: l10n.translate('mag_kicker_route'),
@@ -1091,16 +1159,17 @@ class _PlacesPage extends StatelessWidget {
                       margin: const EdgeInsets.only(top: 3),
                       decoration: BoxDecoration(
                         color: i == 0 || i == places.length - 1
-                            ? _gold
-                            : context.forest.surfaceFor(_paper),
+                            ? mag.gold
+                            : mag.paper,
                         shape: BoxShape.circle,
-                        border: Border.all(color: _gold, width: 2),
+                        border: Border.all(color: mag.gold, width: 2),
                       ),
                     ),
                     if (i < places.length - 1)
                       Expanded(
                           child: Container(
-                              width: 2, color: _gold.withValues(alpha: 0.4))),
+                              width: 2,
+                              color: mag.gold.withValues(alpha: 0.4))),
                   ],
                 ),
               ),
@@ -1111,15 +1180,15 @@ class _PlacesPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(places[i].name,
-                          style: const TextStyle(
-                              color: _ink,
+                          style: TextStyle(
+                              color: mag.ink,
                               fontSize: 16,
                               fontWeight: FontWeight.w700)),
                       Text(
                         '${localizedDateFormat('d MMM, h:mm a').format(places[i].firstVisit)} · ${l10n.translate('mag_place_line', args: {
                               'count': l10n.number(places[i].posts)
                             })}',
-                        style: const TextStyle(color: _muted, fontSize: 12),
+                        style: TextStyle(color: mag.muted, fontSize: 12),
                       ),
                     ],
                   ),
@@ -1141,25 +1210,26 @@ class _BackCoverPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final mag = context.mag;
     return _PageBody(children: [
       _PageHeading(
           kicker: l10n.translate('mag_kicker_thanks'),
           title: l10n.translate('scrap_honor_roll')),
       Text(l10n.translate('scrap_honor_text'),
-          style: const TextStyle(color: _ink, fontSize: 14, height: 1.6)),
+          style: TextStyle(color: mag.ink, fontSize: 14, height: 1.6)),
       const SizedBox(height: 22),
       Text(
           l10n.translate('mag_made_by',
               args: {'travellers': l10n.number(travellers)}),
-          style: const TextStyle(
-              color: _gold, fontSize: 13, fontWeight: FontWeight.w700)),
+          style: TextStyle(
+              color: mag.gold, fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(height: 22),
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
           style: FilledButton.styleFrom(
-            backgroundColor: _gold,
-            foregroundColor: context.forest.surfaceFor(_paper),
+            backgroundColor: mag.gold,
+            foregroundColor: mag.goldForeground,
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           onPressed: onShare,

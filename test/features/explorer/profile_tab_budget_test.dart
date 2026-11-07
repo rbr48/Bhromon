@@ -205,7 +205,7 @@ void main() {
     final baseline = (repo.watchCalls, repo.upstreamOpens);
     expect(baseline, (1, 1), reason: 'one stream for the screen, one upstream');
 
-    const tabs = ['গ্রুপসমূহ', 'গেমিং', 'স্মৃতি', 'সেটিংস'];
+    const tabs = ['গ্রুপসমূহ', 'গেমিং', 'সেটিংস'];
     for (var tap = 0; tap < 20; tap++) {
       final label = tabs[tap % tabs.length];
       await tester.tap(find.text(label).first);
@@ -229,7 +229,7 @@ void main() {
     expect(find.text('গ্রুপসমূহ'), findsNothing,
         reason: 'the groups-V2 profile has no groups tab');
 
-    const tabs = ['গেমিং', 'স্মৃতি', 'সেটিংস'];
+    const tabs = ['গেমিং', 'সেটিংস'];
     // Each tab loads once first. The budget is what the taps add after that.
     for (final label in tabs) {
       await tester.tap(find.text(label).first);

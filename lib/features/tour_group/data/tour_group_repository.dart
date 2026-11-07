@@ -2495,11 +2495,26 @@ class TourGroupRepository {
   /// Marks an alert resolved. Only the sender or an admin may do this.
   Future<bool> resolveSafetyAlert(String tourId, String alertId) async {
     final email = _requireEmail();
-    return _awaitServer(_sub(tourId, 'sos').doc(alertId).update({
-      'resolved': true,
-      'resolvedByEmail': email,
-      'resolvedAt': FieldValue.serverTimestamp(),
-    }));
+    final docRef = _sub(tourId, 'sos').doc(alertId);
+    try {
+      final docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return true;
+      }
+      final data = docSnap.data();
+      if (data?['resolved'] == true) {
+        return true;
+      }
+      return await _awaitServer(docRef.update({
+        'resolved': true,
+        'resolvedByEmail': email,
+        'resolvedAt': FieldValue.serverTimestamp(),
+      }));
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] resolveSafetyAlert failed for $alertId',
+          e, st);
+      rethrow;
+    }
   }
 
   /// The most recent alerts, newest first. Callers pick out the open ones.
