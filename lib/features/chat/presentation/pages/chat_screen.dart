@@ -86,7 +86,9 @@ class ChatScreen extends StatefulWidget {
 class _PendingUpload {
   final String id;
   File? file;
+  List<File>? files;
   Uint8List? bytes;
+  List<Uint8List>? multiBytes;
   final String type;
   double progress = 0.0;
 
@@ -100,7 +102,9 @@ class _PendingUpload {
   _PendingUpload({
     required this.id,
     this.file,
+    this.files,
     this.bytes,
+    this.multiBytes,
     required this.type,
     this.fileName,
     this.fileSizeBytes,
@@ -1347,6 +1351,233 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Uploads multiple photos and bundles them into a single chat message document.
+
+  Future<void> _sendMultiImageMessage(
+    List<XFile> xFiles,
+    String currentUid,
+    String currentName, {
+    String? caption,
+    bool isViewOnce = false,
+  }) async {
+    if (xFiles.isEmpty) return;
+
+    if (xFiles.length == 1) {
+      await _sendMediaMessage(
+        MediaPickResult(
+          file: !kIsWeb ? File(xFiles.first.path) : null,
+          xFile: xFiles.first,
+          type: 'image',
+        ),
+        currentUid,
+        currentName,
+        caption: caption,
+        isViewOnce: isViewOnce,
+      );
+
+      return;
+    }
+
+    final l10n = context.l10n;
+
+    final uploadId = const Uuid().v4();
+
+    final List<File> localFiles = [];
+
+    final List<Uint8List> multiBytes = [];
+
+    for (final xf in xFiles) {
+      if (!kIsWeb) {
+        localFiles.add(File(xf.path));
+      }
+
+      try {
+        final b = await xf.readAsBytes();
+
+        multiBytes.add(b);
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+    }
+
+    final pending = _PendingUpload(
+      id: uploadId,
+      files: localFiles.isNotEmpty ? localFiles : null,
+      multiBytes: multiBytes.isNotEmpty ? multiBytes : null,
+      type: 'image',
+    );
+
+    if (mounted) setState(() => _pendingUploads.add(pending));
+
+    Trace? uploadTrace;
+
+    if (!kIsWeb) {
+      try {
+        uploadTrace =
+            FirebasePerformance.instance.newTrace('multi_image_upload');
+
+        await uploadTrace.start();
+
+        uploadTrace.putAttribute('imageCount', xFiles.length.toString());
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+    }
+
+    final total = xFiles.length;
+
+    final List<String> downloadUrls = [];
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null) {
+        try {
+          await currentUser.getIdToken();
+        } catch (e) {
+          logWarning('Auth token refresh error: $e');
+        }
+      }
+
+      for (int i = 0; i < total; i++) {
+        final xf = xFiles[i];
+
+        final downloadUrl = await MediaUploadService.uploadXFile(
+          file: xf,
+          tourOrChatId: widget.chatId,
+          folder: 'chat_media',
+          onProgress: (progress) {
+            if (mounted) {
+              final overall = (i + progress.clamp(0.0, 1.0)) / total;
+
+              setState(() => pending.progress = overall);
+            }
+          },
+        );
+
+        downloadUrls.add(downloadUrl);
+
+        if (mounted) {
+          setState(() => pending.progress = (i + 1) / total);
+        }
+      }
+
+      if (downloadUrls.isEmpty) return;
+
+      final resolvedOtherUid = _resolveOtherUid(currentUid);
+
+      _ensureChatDocument(currentUid);
+
+      final msgRef = FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .doc();
+
+      final replyPayload = _replyingMessage?.toMap();
+
+      setState(() => _replyingMessage = null);
+
+      final msgData = <String, dynamic>{
+        'senderId': currentUid,
+        'type': 'image',
+        'text': caption ?? '',
+        'mediaUrl': downloadUrls.first,
+        'mediaUrls': downloadUrls,
+        if (replyPayload != null) 'replyTo': replyPayload,
+        if (isViewOnce) 'isViewOnce': true,
+        if (isViewOnce) 'isOpened': false,
+        'seen': false,
+        'status': 'sent',
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+
+      final lastMsg = (caption != null && caption.isNotEmpty)
+          ? '📷 $caption'
+          : '📷 ${downloadUrls.length} Photos';
+
+      final chatRef =
+          FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+
+      final chatMeta = _buildChatMeta(
+        lastMessage: lastMsg,
+        lastMessageType: 'image',
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
+
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: caption ?? '',
+          type: 'image',
+          senderName: currentName,
+          mediaUrl: downloadUrls.first,
+          replyTo: replyPayload,
+        ));
+      }
+
+      try {
+        await msgRef.set(msgData);
+
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          logWarning('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: lastMsg,
+        );
+      } catch (e) {
+        logWarning('Firestore multi-image write skipped/quota: $e');
+      }
+
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } catch (e, st) {
+      logWarning('Failed to send multi-image message: $e\n$st');
+
+      final String msg;
+
+      if (e is FirebaseException &&
+          e.message != null &&
+          e.message!.isNotEmpty) {
+        msg = l10n.translate('chat_send_media_failed_detail',
+            args: {'error': e.message.toString()});
+      } else {
+        msg = l10n.translate('chat_send_media_failed_detail', args: {
+          'error': e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      try {
+        await uploadTrace?.stop();
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+
+      if (mounted) {
+        setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
+      }
+    }
+  }
+
   /// Uploads a recorded voice message to Firebase Storage and records it in Firestore.
   Future<void> _sendVoiceMessage(
     String filePath,
@@ -1854,19 +2085,29 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
 
     if (result != null && result.files.isNotEmpty) {
-      for (int i = 0; i < result.files.length; i++) {
-        final xf = result.files[i];
-        final caption =
-            (i == 0 && result.caption.isNotEmpty) ? result.caption : null;
-        await _sendMediaMessage(
-          MediaPickResult(
-            file: !kIsWeb ? File(xf.path) : null,
-            xFile: xf,
-            type: isVideo ? 'video' : 'image',
-          ),
+      if (isVideo || result.files.length == 1) {
+        for (int i = 0; i < result.files.length; i++) {
+          final xf = result.files[i];
+          final caption =
+              (i == 0 && result.caption.isNotEmpty) ? result.caption : null;
+          await _sendMediaMessage(
+            MediaPickResult(
+              file: !kIsWeb ? File(xf.path) : null,
+              xFile: xf,
+              type: isVideo ? 'video' : 'image',
+            ),
+            currentUid,
+            currentName,
+            caption: caption,
+            isViewOnce: result.isViewOnce,
+          );
+        }
+      } else {
+        await _sendMultiImageMessage(
+          result.files,
           currentUid,
           currentName,
-          caption: caption,
+          caption: result.caption.isNotEmpty ? result.caption : null,
           isViewOnce: result.isViewOnce,
         );
       }
@@ -2226,6 +2467,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final text = (data['text'] as String?) ?? '';
     final type = (data['type'] as String?) ?? 'text';
     final mediaUrl = data['mediaUrl'] as String?;
+    final mediaUrls = (data['mediaUrls'] is List)
+        ? (data['mediaUrls'] as List).cast<String>()
+        : null;
 
     showDialog<void>(
       context: context,
@@ -2234,14 +2478,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         forwardText: text,
         forwardType: type,
         forwardMediaUrl: mediaUrl,
-        onForward: (targetChatId) =>
-            _forwardMessage(targetChatId, text, type, mediaUrl, currentUid),
+        onForward: (targetChatId) => _forwardMessage(
+            targetChatId, text, type, mediaUrl, currentUid,
+            mediaUrls: mediaUrls),
       ),
     );
   }
 
   void _forwardMessage(String targetChatId, String text, String type,
-      String? mediaUrl, String currentUid) async {
+      String? mediaUrl, String currentUid,
+      {List<String>? mediaUrls}) async {
     setState(() => _selectedMessageIds.clear());
     try {
       _ensureChatDocument(currentUid);
@@ -2256,6 +2502,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'type': type,
         'text': text,
         if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
+        if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
         'isForwarded': true,
         'seen': false,
         'status': 'sent',
@@ -3329,7 +3576,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                   )
                                                 : ChatMediaBubble(
                                                     localFile: pending.file,
+                                                    localFiles: pending.files,
                                                     bytes: pending.bytes,
+                                                    multiBytes:
+                                                        pending.multiBytes,
                                                     type: pending.type,
                                                     uploadProgress:
                                                         pending.progress,
@@ -3369,6 +3619,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                     (data['text'] as String?) ?? '';
                                 final String mediaUrl =
                                     (data['mediaUrl'] as String?) ?? '';
+                                final List<String>? mediaUrls =
+                                    (data['mediaUrls'] is List)
+                                        ? (data['mediaUrls'] as List)
+                                            .cast<String>()
+                                        : null;
                                 final senderId = data['senderId'] ?? '';
                                 final isMe = senderId == currentUid;
                                 final bool seen =
@@ -3852,6 +4107,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             ),
                                           ChatMediaBubble(
                                             mediaUrl: mediaUrl,
+                                            mediaUrls: mediaUrls,
                                             type: msgType,
                                             isMe: isMe,
                                           ),

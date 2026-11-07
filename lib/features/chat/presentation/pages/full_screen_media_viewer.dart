@@ -13,11 +13,15 @@ import '../../../../core/utils/image_sizing.dart';
 /// • Videos use [VideoPlayerController] with a simple play/pause/seek bar.
 class FullScreenMediaViewer extends StatefulWidget {
   final String mediaUrl;
+  final List<String>? mediaUrls;
+  final int initialIndex;
   final String type; // 'image' | 'video'
 
   const FullScreenMediaViewer({
     super.key,
     required this.mediaUrl,
+    this.mediaUrls,
+    this.initialIndex = 0,
     required this.type,
   });
 
@@ -29,10 +33,18 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   bool _controlsVisible = true;
+  late final List<String> _urls;
+  late int _currentIndex;
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _urls = (widget.mediaUrls != null && widget.mediaUrls!.isNotEmpty)
+        ? widget.mediaUrls!
+        : [widget.mediaUrl];
+    _currentIndex = widget.initialIndex.clamp(0, _urls.length - 1);
+    _pageController = PageController(initialPage: _currentIndex);
     if (widget.type == 'video') {
       _initVideo();
     }
@@ -51,6 +63,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _videoController?.dispose();
     super.dispose();
   }
@@ -67,6 +80,46 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
     });
   }
 
+  Widget _buildImageView(String url) {
+    return InteractiveViewer(
+      minScale: 0.8,
+      maxScale: 5.0,
+      child: kIsWeb
+          ? Image.network(
+              signedMediaUrl(url),
+              fit: BoxFit.contain,
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF00A884)),
+                );
+              },
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.broken_image_outlined,
+                color: Colors.white54,
+                size: 64,
+              ),
+            )
+          : CachedNetworkImage(
+              memCacheWidth: kMaxDecodeDimension,
+              imageUrl: signedMediaUrl(url),
+              fit: BoxFit.contain,
+              placeholder: (_, __) => const Center(
+                child: CircularProgressIndicator(color: Color(0xFF00A884)),
+              ),
+              errorWidget: (_, __, ___) => Image.network(
+                signedMediaUrl(url),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.broken_image_outlined,
+                  color: Colors.white54,
+                  size: 64,
+                ),
+              ),
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,45 +131,16 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
             onTap: _toggleControls,
             child: Center(
               child: widget.type == 'image'
-                  ? InteractiveViewer(
-                      minScale: 0.8,
-                      maxScale: 5.0,
-                      child: kIsWeb
-                          ? Image.network(
-                              signedMediaUrl(widget.mediaUrl),
-                              fit: BoxFit.contain,
-                              loadingBuilder: (_, child, progress) {
-                                if (progress == null) return child;
-                                return const Center(
-                                  child: CircularProgressIndicator(
-                                      color: Color(0xFF00A884)),
-                                );
-                              },
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.broken_image_outlined,
-                                color: Colors.white54,
-                                size: 64,
-                              ),
-                            )
-                          : CachedNetworkImage(
-                              memCacheWidth: kMaxDecodeDimension,
-                              imageUrl: signedMediaUrl(widget.mediaUrl),
-                              fit: BoxFit.contain,
-                              placeholder: (_, __) => const Center(
-                                child: CircularProgressIndicator(
-                                    color: Color(0xFF00A884)),
-                              ),
-                              errorWidget: (_, __, ___) => Image.network(
-                                signedMediaUrl(widget.mediaUrl),
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.white54,
-                                  size: 64,
-                                ),
-                              ),
-                            ),
-                    )
+                  ? (_urls.length > 1
+                      ? PageView.builder(
+                          controller: _pageController,
+                          itemCount: _urls.length,
+                          onPageChanged: (i) =>
+                              setState(() => _currentIndex = i),
+                          itemBuilder: (context, i) =>
+                              Center(child: _buildImageView(_urls[i])),
+                        )
+                      : _buildImageView(_urls.first))
                   : _buildVideoPlayer(),
             ),
           ),
@@ -143,6 +167,17 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
+                      if (_urls.length > 1) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_currentIndex + 1} / ${_urls.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       // Share media link
                       IconButton(
@@ -150,9 +185,12 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                             color: Colors.white),
                         tooltip: context.l10n.translate('chat_media_share'),
                         onPressed: () {
+                          final currentUrl = _urls.isNotEmpty
+                              ? _urls[_currentIndex]
+                              : widget.mediaUrl;
                           SharePlus.instance.share(
                             ShareParams(
-                              text: widget.mediaUrl,
+                              text: currentUrl,
                               subject: context.l10n
                                   .translate('chat_media_share_subject'),
                             ),
