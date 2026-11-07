@@ -55,7 +55,7 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
-  maplibre_gl: ^0.26.2
+  maplibre_gl: ^0.28.0
   connectivity_plus: ^6.0.3
   youtube_player_flutter: ^9.1.1
   cached_network_image: ^3.3.1
