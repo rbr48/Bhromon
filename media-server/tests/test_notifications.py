@@ -501,3 +501,169 @@ def test_call_alert_is_in_the_callees_language():
     assert alert["title"] == "আসছে ভয়েস কল"
     assert alert["body"] == "Rahim Bhromon-এ আপনাকে কল করছেন..."
 
+
+def test_send_post_notification():
+    engine = NotificationEngine()
+    engine.get_active_tour_members = MagicMock(return_value=["user1@test.com", "user2@test.com"])
+    engine.get_uids_for_emails = MagicMock(return_value=["u1", "u2"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok1", MagicMock(), "en")])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_post_notification(
+        tour_id="tour_123",
+        post_id="post_456",
+        author_email="author@test.com",
+        author_name="Shohag",
+        caption="Exploring Cox's Bazar",
+        is_reel=False,
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["post_pushes_sent"] == 1
+
+    # Deduplication test: sending again returns already_sent
+    res_dup = engine.send_post_notification(
+        tour_id="tour_123",
+        post_id="post_456",
+        author_email="author@test.com",
+    )
+    assert res_dup["status"] == "already_sent"
+
+
+def test_send_comment_notification():
+    engine = NotificationEngine()
+    engine.get_uids_for_emails = MagicMock(return_value=["u_author"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_author", MagicMock(), "bn")])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_comment_notification(
+        tour_id="tour_123",
+        post_id="post_456",
+        comment_id="comment_789",
+        commenter_email="friend@test.com",
+        commenter_name="Rahim",
+        text="Great picture!",
+        post_author_email="author@test.com",
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["comment_pushes_sent"] == 1
+
+
+def test_send_reaction_notification():
+    engine = NotificationEngine()
+    engine.get_uids_for_emails = MagicMock(return_value=["u_author"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_author", MagicMock(), "en")])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_reaction_notification(
+        tour_id="tour_123",
+        post_id="post_456",
+        reactor_email="friend@test.com",
+        reactor_name="Karim",
+        reaction="like",
+        post_author_email="author@test.com",
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["reaction_pushes_sent"] == 1
+
+
+def test_send_notice_notification():
+    engine = NotificationEngine()
+    engine.get_active_tour_members = MagicMock(return_value=["member1@test.com"])
+    engine.get_uids_for_emails = MagicMock(return_value=["u_m1"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_m1", MagicMock(), "bn")])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_notice_notification(
+        tour_id="tour_123",
+        notice_id="notice_99",
+        author_email="admin@test.com",
+        title="Bus Departs at 6 AM",
+        body="Please gather at the main gate.",
+        priority="high",
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["notice_pushes_sent"] == 1
+
+
+def test_send_ledger_notification():
+    engine = NotificationEngine()
+    engine.get_active_tour_members = MagicMock(return_value=["m1@test.com", "m2@test.com"])
+    engine.get_uids_for_emails = MagicMock(return_value=["u1", "u2"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok1", MagicMock(), "en")])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_ledger_notification(
+        tour_id="tour_123",
+        expense_id="exp_01",
+        added_by_email="payer@test.com",
+        payer_name="Shohag",
+        title="Lunch at Poushee",
+        amount_paisa=250000,
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["ledger_pushes_sent"] == 1
+
+
+def test_send_broadcast_notification():
+    engine = NotificationEngine()
+    mock_db = MagicMock()
+    doc1 = MagicMock()
+    doc1.to_dict.return_value = {"token": "tok_global_1"}
+    doc1.reference.collection.return_value.stream.return_value = []
+    mock_db.collection.return_value.stream.return_value = [doc1]
+    engine._get_db = MagicMock(return_value=mock_db)
+    engine.send_multicast = MagicMock(return_value=1)
+
+    res = engine.send_broadcast_notification(
+        title="Server Maintenance",
+        body="App update scheduled at midnight.",
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["broadcast_pushes_sent"] == 1
+
+
+def test_prune_stale_device_tokens():
+    from chat import ChatDatabase
+    import tempfile
+    import os
+    import time
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = os.path.join(tmpdir, "test_chat.db")
+        chat_db = ChatDatabase(db_path)
+
+        # Save an active token and a stale token
+        now_ms = int(time.time() * 1000)
+        old_ms = now_ms - (200 * 86400 * 1000)  # 200 days old
+
+        conn = chat_db._get_conn()
+        with conn:
+            conn.execute(
+                "INSERT INTO device_tokens (uid, device_id, token, email, platform, language, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                ("u1", "d1", "tok_active", "u1@test.com", "android", "en", now_ms),
+            )
+            conn.execute(
+                "INSERT INTO device_tokens (uid, device_id, token, email, platform, language, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                ("u2", "d2", "tok_stale", "u2@test.com", "android", "en", old_ms),
+            )
+
+        assert chat_db.count_device_tokens() == 2
+
+        pruned = chat_db.prune_stale_device_tokens(max_age_days=180)
+        assert pruned == 1
+        assert chat_db.count_device_tokens() == 1
+        chat_db.close()
+
+

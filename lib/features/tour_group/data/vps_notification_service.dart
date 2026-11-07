@@ -84,4 +84,143 @@ class VpsNotificationService {
       logWarning('[VpsNotificationService] notifyChannelMessage error', e, st);
     }
   }
+
+  /// Direct trigger for a new Moments post (photo or reel).
+  Future<void> notifyPost({
+    required String tourId,
+    required String postId,
+    required String authorName,
+    String caption = '',
+    bool isReel = false,
+    String? imageUrl,
+  }) async {
+    try {
+      final token = await _getIdToken();
+      if (token == null) return;
+      await _dio.post<dynamic>(
+        '/notify/post',
+        data: {
+          'tourId': tourId,
+          'postId': postId,
+          'authorName': authorName,
+          'caption': caption,
+          'isReel': isReel,
+          'imageUrl': imageUrl,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifyPost error', e, st);
+    }
+  }
+
+  /// Direct trigger for a comment on a Moments post.
+  Future<void> notifyComment({
+    required String tourId,
+    required String postId,
+    required String commentId,
+    required String commenterName,
+    required String text,
+    String? postAuthorEmail,
+  }) async {
+    try {
+      final token = await _getIdToken();
+      if (token == null) return;
+      await _dio.post<dynamic>(
+        '/notify/comment',
+        data: {
+          'tourId': tourId,
+          'postId': postId,
+          'commentId': commentId,
+          'commenterName': commenterName,
+          'text': text,
+          'postAuthorEmail': postAuthorEmail,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifyComment error', e, st);
+    }
+  }
+
+  /// Direct trigger for a reaction / like on a Moments post.
+  Future<void> notifyReaction({
+    required String tourId,
+    required String postId,
+    required String reactorName,
+    String reaction = 'like',
+    String? postAuthorEmail,
+  }) async {
+    try {
+      final token = await _getIdToken();
+      if (token == null) return;
+      await _dio.post<dynamic>(
+        '/notify/reaction',
+        data: {
+          'tourId': tourId,
+          'postId': postId,
+          'reactorName': reactorName,
+          'reaction': reaction,
+          'postAuthorEmail': postAuthorEmail,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifyReaction error', e, st);
+    }
+  }
+
+  /// Direct trigger for a group notice.
+  Future<void> notifyNotice({
+    required String tourId,
+    required String noticeId,
+    required String title,
+    String body = '',
+    String priority = 'normal',
+  }) async {
+    try {
+      final token = await _getIdToken();
+      if (token == null) return;
+      await _dio.post<dynamic>(
+        '/notify/notice',
+        data: {
+          'tourId': tourId,
+          'noticeId': noticeId,
+          'title': title,
+          'body': body,
+          'priority': priority,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifyNotice error', e, st);
+    }
+  }
+
+  /// Direct trigger for an expense recorded in Trip Ledger.
+  Future<void> notifyLedger({
+    required String tourId,
+    required String expenseId,
+    required String payerName,
+    required String title,
+    required int amountPaisa,
+  }) async {
+    try {
+      final token = await _getIdToken();
+      if (token == null) return;
+      await _dio.post<dynamic>(
+        '/notify/ledger',
+        data: {
+          'tourId': tourId,
+          'expenseId': expenseId,
+          'payerName': payerName,
+          'title': title,
+          'amountPaisa': amountPaisa,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifyLedger error', e, st);
+    }
+  }
 }

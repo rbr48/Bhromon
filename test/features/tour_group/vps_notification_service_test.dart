@@ -31,6 +31,56 @@ void main() {
         ),
         completes,
       );
+
+      await expectLater(
+        service.notifyPost(
+          tourId: 't1',
+          postId: 'p1',
+          authorName: 'Tester',
+          caption: 'Great trip',
+        ),
+        completes,
+      );
+
+      await expectLater(
+        service.notifyComment(
+          tourId: 't1',
+          postId: 'p1',
+          commentId: 'c1',
+          commenterName: 'Tester',
+          text: 'Nice picture',
+        ),
+        completes,
+      );
+
+      await expectLater(
+        service.notifyReaction(
+          tourId: 't1',
+          postId: 'p1',
+          reactorName: 'Tester',
+        ),
+        completes,
+      );
+
+      await expectLater(
+        service.notifyNotice(
+          tourId: 't1',
+          noticeId: 'n1',
+          title: 'Meeting at 5',
+        ),
+        completes,
+      );
+
+      await expectLater(
+        service.notifyLedger(
+          tourId: 't1',
+          expenseId: 'e1',
+          payerName: 'Tester',
+          title: 'Lunch',
+          amountPaisa: 50000,
+        ),
+        completes,
+      );
     });
   });
 }
