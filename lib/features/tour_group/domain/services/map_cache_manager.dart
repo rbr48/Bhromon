@@ -11,9 +11,9 @@ class MapCacheManager {
   static const String boxName = 'offline_map_packs_box';
   static const String keyDownloaded = 'downloaded_region_ids';
 
-  /// Default open-source vector tile style URL (MapLibre Demo Tiles, free & open).
+  /// Default open-source vector tile style URL (OpenFreeMap Liberty, free & open vector tiles).
   static const String defaultStyleUrl =
-      'https://demotiles.maplibre.org/style.json';
+      'https://tiles.openfreemap.org/styles/liberty';
 
   static final MapCacheManager instance = MapCacheManager._();
   MapCacheManager._();
