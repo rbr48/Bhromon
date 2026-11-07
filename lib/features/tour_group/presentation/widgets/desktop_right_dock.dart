@@ -764,9 +764,8 @@ class _DesktopDirectChatItem extends StatelessWidget {
                 ? cachedName
                 : (isBn ? 'সদস্য' : 'Member'));
 
-        final avatarUrl = (pAvatar != null && pAvatar.isNotEmpty)
-            ? pAvatar
-            : cachedAvatar;
+        final avatarUrl =
+            (pAvatar != null && pAvatar.isNotEmpty) ? pAvatar : cachedAvatar;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -854,9 +853,7 @@ class _DesktopDirectChatItem extends StatelessWidget {
                         Text(
                           lastMsg.isNotEmpty
                               ? lastMsg
-                              : (isBn
-                                  ? 'কোনো বার্তা নেই'
-                                  : 'No messages yet'),
+                              : (isBn ? 'কোনো বার্তা নেই' : 'No messages yet'),
                           style: TextStyle(
                             color: unread > 0
                                 ? context.forest.accentText
@@ -901,8 +898,7 @@ class _DesktopDirectChatItem extends StatelessWidget {
   }
 
   Widget _avatarFallback(BuildContext context, String name) {
-    final initial =
-        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'U';
     return Center(
       child: Text(
         initial,
