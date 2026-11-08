@@ -174,7 +174,9 @@ void main() {
       expect(blocks[2], isA<ChatParagraphBlock>());
     });
 
-    test('parseChatBlocks parses Bengali comparison table with leading paragraphs', () {
+    test(
+        'parseChatBlocks parses Bengali comparison table with leading paragraphs',
+        () {
       const input = '''
 হোয়াটসঅ্যাপের চ্যাটে নোটিশ আর হিসাব হারিয়ে যায়? বেছে নিন ‘ভ্রমণ (Bhromon)’! 🇧🇩✨
 ⚖️ হোয়াটসঅ্যাপ বনাম ভ্রমণ (Bhromon): পার্থক্য কোথায়?
@@ -185,7 +187,8 @@ void main() {
 ''';
       final blocks = parseChatBlocks(input.trim());
       expect(blocks.any((b) => b is ChatTableBlock), isTrue);
-      final table = blocks.firstWhere((b) => b is ChatTableBlock) as ChatTableBlock;
+      final table =
+          blocks.firstWhere((b) => b is ChatTableBlock) as ChatTableBlock;
       expect(table.headers, hasLength(3));
       expect(table.rows, hasLength(2));
     });

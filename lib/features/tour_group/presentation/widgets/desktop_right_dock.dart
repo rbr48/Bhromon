@@ -598,8 +598,11 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                     if (snapshot.hasError) {
                       return Center(
                         child: Text(
-                          isBn ? 'চ্যাট লোড করা যায়নি' : 'Failed to load chats',
-                          style: TextStyle(color: context.forest.text38, fontSize: 11),
+                          isBn
+                              ? 'চ্যাট লোড করা যায়নি'
+                              : 'Failed to load chats',
+                          style: TextStyle(
+                              color: context.forest.text38, fontSize: 11),
                         ),
                       );
                     }
