@@ -104,13 +104,15 @@ void main() {
       expect(result.single.sharedTourId, 't1');
     });
 
-    test('leaves out a chat outside my tours and a chat with no tour', () {
+    test(
+        'leaves out a chat outside my tours, and offers a chat from before tours',
+        () {
       final result = _destinations([
         MapEntry('elsewhere', _chat(tour: 't9')),
         MapEntry('legacy', _chat(tour: null)),
       ]);
 
-      expect(result, isEmpty);
+      expect(result.map((destination) => destination.chatId), ['legacy']);
     });
 
     test('leaves out a blocked person, a locked chat and a chat alone', () {
