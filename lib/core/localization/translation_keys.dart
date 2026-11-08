@@ -28,6 +28,14 @@ class TranslationKeys {
       'chat_share_location_failed': 'Failed to share location: {error}',
       'chat_send_expense_failed': 'Failed to send expense: {error}',
       'chat_pinned_label': 'Pinned: {text}',
+      'chat_pinned_full_title': 'Pinned Message',
+      'chat_pinned_jump': 'Go to message',
+      'chat_pinned_view_full': 'View in full',
+      'chat_pinned_copy': 'Copy text',
+      'chat_pinned_unpin': 'Unpin message',
+      'chat_pinned_copied': 'Message text copied to clipboard',
+      'chat_pinned_not_found':
+          'Pinned message could not be found in loaded history',
       'chat_disappearing_banner':
           'Messages disappear after {duration}. Tap to change.',
       'chat_start_conversation': 'Start the conversation with {name}!',
@@ -482,6 +490,13 @@ class TranslationKeys {
       'chat_share_location_failed': 'অবস্থান শেয়ার করা যায়নি: {error}',
       'chat_send_expense_failed': 'খরচ পাঠানো যায়নি: {error}',
       'chat_pinned_label': 'পিন করা: {text}',
+      'chat_pinned_full_title': 'পিন করা বার্তা',
+      'chat_pinned_jump': 'বার্তাটিতে যান',
+      'chat_pinned_view_full': 'সম্পূর্ণ দেখুন',
+      'chat_pinned_copy': 'টেক্সট কপি করুন',
+      'chat_pinned_unpin': 'আনপিন করুন',
+      'chat_pinned_copied': 'বার্তাটি ক্লিপবোর্ডে কপি করা হয়েছে',
+      'chat_pinned_not_found': 'পিন করা বার্তাটি ইতিহাসে পাওয়া যায়নি',
       'chat_disappearing_banner':
           '{duration} পর বার্তা মুছে যাবে। বদলাতে ট্যাপ করুন।',
       'chat_start_conversation': '{name}-এর সঙ্গে কথোপকথন শুরু করুন!',

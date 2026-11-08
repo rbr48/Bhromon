@@ -206,6 +206,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   int _searchMatchIndex = 0;
   final List<int> _matchingIndices = [];
   String? _highlightedMessageId;
+  final Map<String, GlobalKey> _messageItemKeys = {};
   QueryDocumentSnapshot? _reactionTargetDoc;
 
   // Pending uploads shown optimistically before Firestore write completes.
@@ -2329,19 +2330,282 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _scrollToMessage(String messageId) {
-    final idx = _visibleMessages.indexWhere((d) => d.id == messageId);
-    if (idx != -1) {
-      _scrollController.animateTo(
-        idx * 60.0,
+  Future<void> _scrollToMessage(String messageId) async {
+    if (messageId.isEmpty) return;
+    int idx = _visibleMessages.indexWhere((d) => d.id == messageId);
+
+    if (idx == -1 && _hasMoreMessages) {
+      int attempts = 0;
+      while (idx == -1 && _hasMoreMessages && attempts < 5) {
+        attempts++;
+        await _loadEarlierMessages();
+        idx = _visibleMessages.indexWhere((d) => d.id == messageId);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (idx == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.translate('chat_pinned_not_found')),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final key = _messageItemKeys[messageId];
+    if (key?.currentContext != null && key!.currentContext!.mounted) {
+      await Scrollable.ensureVisible(
+        key.currentContext!,
+        alignment: 0.5,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    } else if (_scrollController.hasClients) {
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      final targetFraction = (idx + 0.5) / _visibleMessages.length;
+      final estimatedOffset =
+          (targetFraction * maxExtent).clamp(0.0, maxExtent);
+
+      await _scrollController.animateTo(
+        estimatedOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+
+      if (!mounted) return;
+      await WidgetsBinding.instance.endOfFrame;
+
+      final fineKey = _messageItemKeys[messageId];
+      if (fineKey?.currentContext != null && fineKey!.currentContext!.mounted) {
+        await Scrollable.ensureVisible(
+          fineKey.currentContext!,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+
+    if (mounted) {
       setState(() => _highlightedMessageId = messageId);
       Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _highlightedMessageId = null);
+        if (mounted && _highlightedMessageId == messageId) {
+          setState(() => _highlightedMessageId = null);
+        }
       });
     }
+  }
+
+  Future<void> _showPinnedMessageFullView(Map<String, dynamic> pinned) async {
+    final l10n = context.l10n;
+    final messageId = (pinned['id'] as String?) ?? '';
+    if (messageId.isEmpty) return;
+
+    Map<String, dynamic>? fullData;
+    final cached = _allMessages.where((d) => d.id == messageId).firstOrNull;
+    if (cached != null) {
+      fullData = cached.data() as Map<String, dynamic>?;
+    } else {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('chats')
+            .doc(widget.chatId)
+            .collection('messages')
+            .doc(messageId)
+            .get();
+        if (snap.exists) {
+          fullData = snap.data();
+        }
+      } catch (e) {
+        logWarning('Could not fetch pinned message details: $e');
+      }
+    }
+
+    final text =
+        (fullData?['text'] as String?) ?? (pinned['text'] as String?) ?? '';
+    final msgType =
+        (fullData?['type'] as String?) ?? (pinned['type'] as String?) ?? 'text';
+    final mediaUrl = (fullData?['mediaUrl'] as String?) ??
+        (pinned['mediaUrl'] as String?) ??
+        '';
+    final mediaUrls = (fullData?['mediaUrls'] is List)
+        ? (fullData!['mediaUrls'] as List).cast<String>()
+        : (pinned['mediaUrls'] is List)
+            ? (pinned['mediaUrls'] as List).cast<String>()
+            : null;
+
+    DateTime? sentTime;
+    final tsRaw = fullData?['timestamp'] ?? pinned['pinnedAt'];
+    if (tsRaw is Timestamp) {
+      sentTime = tsRaw.toDate();
+    } else if (tsRaw is DateTime) {
+      sentTime = tsRaw;
+    }
+
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.chat.bar,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.midGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.push_pin_rounded,
+                        color: AppColors.midGreen, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.translate('chat_pinned_full_title'),
+                          style: TextStyle(
+                            color: context.chat.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (sentTime != null)
+                          Text(
+                            _formatTime(sentTime),
+                            style: TextStyle(
+                              color: context.chat.text54,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: context.chat.text70),
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Divider(height: 1, color: context.chat.recessedDeep),
+              const SizedBox(height: 14),
+              if (mediaUrls != null && mediaUrls.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: ChatMediaBubble(
+                      mediaUrls: mediaUrls,
+                      type: msgType,
+                      isMe: false,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else if (mediaUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: ChatMediaBubble(
+                      mediaUrl: mediaUrl,
+                      type: msgType,
+                      isMe: false,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (text.isNotEmpty && text != 'Media')
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      text,
+                      style: TextStyle(
+                        color: context.chat.text,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        _scrollToMessage(messageId);
+                      },
+                      icon: const Icon(Icons.arrow_downward_rounded, size: 18),
+                      label: Text(l10n.translate('chat_pinned_jump')),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00A884),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (text.isNotEmpty && text != 'Media') ...[
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: text));
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(l10n.translate('chat_pinned_copied')),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                      label: Text(l10n.translate('chat_pinned_copy')),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.chat.text,
+                        side: BorderSide(color: context.chat.text38),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _toggleReaction(
@@ -2441,6 +2705,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'pinnedMessage': {
           'id': docId,
           'text': text,
+          'type': data?['type'] ?? 'text',
+          'mediaUrl': data?['mediaUrl'] ?? '',
+          if (data?['mediaUrls'] != null) 'mediaUrls': data!['mediaUrls'],
+          'senderId': data?['senderId'] ?? '',
           'pinnedAt': FieldValue.serverTimestamp(),
         },
       }, SetOptions(merge: true));
@@ -3358,6 +3626,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 InkWell(
                                   onTap: () => _scrollToMessage(
                                       (pinned['id'] as String?) ?? ''),
+                                  onLongPress: () =>
+                                      _showPinnedMessageFullView(pinned),
                                   child: Container(
                                     color: context.chat.bar,
                                     padding: const EdgeInsets.symmetric(
@@ -3385,6 +3655,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                           ),
                                         ),
                                         IconButton(
+                                          tooltip: context.l10n.translate(
+                                              'chat_pinned_view_full'),
+                                          icon: Icon(Icons.open_in_full_rounded,
+                                              color: context.chat.text54,
+                                              size: 16),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6),
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () =>
+                                              _showPinnedMessageFullView(
+                                                  pinned),
+                                        ),
+                                        IconButton(
+                                          tooltip: context.l10n
+                                              .translate('chat_pinned_unpin'),
                                           icon: Icon(Icons.close,
                                               color: context.chat.text54,
                                               size: 16),
@@ -4260,73 +4545,78 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   );
                                 }
 
-                                return SwipeToReply(
-                                  isMe: isMe,
-                                  onReply: () => _setReplyToMessage(doc),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      if (_selectedMessageIds.isNotEmpty) {
+                                return KeyedSubtree(
+                                  key: _messageItemKeys.putIfAbsent(
+                                      doc.id, () => GlobalKey()),
+                                  child: SwipeToReply(
+                                    isMe: isMe,
+                                    onReply: () => _setReplyToMessage(doc),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        if (_selectedMessageIds.isNotEmpty) {
+                                          setState(() {
+                                            if (isSelected) {
+                                              _selectedMessageIds
+                                                  .remove(doc.id);
+                                            } else {
+                                              _selectedMessageIds.add(doc.id);
+                                            }
+                                          });
+                                        } else if (_reactionTargetDoc != null) {
+                                          setState(
+                                              () => _reactionTargetDoc = null);
+                                        }
+                                      },
+                                      onLongPress: () {
+                                        HapticFeedback.mediumImpact();
                                         setState(() {
-                                          if (isSelected) {
-                                            _selectedMessageIds.remove(doc.id);
-                                          } else {
-                                            _selectedMessageIds.add(doc.id);
-                                          }
+                                          _selectedMessageIds.add(doc.id);
+                                          _reactionTargetDoc = doc;
                                         });
-                                      } else if (_reactionTargetDoc != null) {
-                                        setState(
-                                            () => _reactionTargetDoc = null);
-                                      }
-                                    },
-                                    onLongPress: () {
-                                      HapticFeedback.mediumImpact();
-                                      setState(() {
-                                        _selectedMessageIds.add(doc.id);
-                                        _reactionTargetDoc = doc;
-                                      });
-                                    },
-                                    child: Container(
-                                      color: isSelected
-                                          ? const Color(0xFF00A884)
-                                              .withValues(alpha: 0.18)
-                                          : isHighlighted
-                                              ? const Color(0xFF00A884)
-                                                  .withValues(alpha: 0.28)
-                                              : Colors.transparent,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Align(
-                                            alignment: isMe
-                                                ? Alignment.centerRight
-                                                : Alignment.centerLeft,
-                                            child: Padding(
-                                              padding: EdgeInsets.only(
-                                                bottom: 8,
-                                                left: isMe ? 48 : 0,
-                                                right: isMe ? 0 : 48,
+                                      },
+                                      child: Container(
+                                        color: isSelected
+                                            ? const Color(0xFF00A884)
+                                                .withValues(alpha: 0.18)
+                                            : isHighlighted
+                                                ? const Color(0xFF00A884)
+                                                    .withValues(alpha: 0.28)
+                                                : Colors.transparent,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Align(
+                                              alignment: isMe
+                                                  ? Alignment.centerRight
+                                                  : Alignment.centerLeft,
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                  bottom: 8,
+                                                  left: isMe ? 48 : 0,
+                                                  right: isMe ? 0 : 48,
+                                                ),
+                                                child: bubbleBody,
                                               ),
-                                              child: bubbleBody,
                                             ),
-                                          ),
-                                          if (reactions.isNotEmpty)
-                                            Positioned(
-                                              bottom: 0,
-                                              right: isMe ? 8 : null,
-                                              left: isMe ? null : 8,
-                                              child: ChatReactionBadge(
-                                                reactions: reactions,
-                                                onTap: () =>
-                                                    showReactionDetailsSheet(
-                                                  context,
+                                            if (reactions.isNotEmpty)
+                                              Positioned(
+                                                bottom: 0,
+                                                right: isMe ? 8 : null,
+                                                left: isMe ? null : 8,
+                                                child: ChatReactionBadge(
                                                   reactions: reactions,
-                                                  currentUid: currentUid,
+                                                  onTap: () =>
+                                                      showReactionDetailsSheet(
+                                                    context,
+                                                    reactions: reactions,
+                                                    currentUid: currentUid,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
