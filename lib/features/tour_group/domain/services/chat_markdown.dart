@@ -214,7 +214,12 @@ String _restoreCollapsedStructure(String s) {
       );
       // 7. Break before Question X
       s = s.replaceAllMapped(
-        RegExp(r'([.!?\):])\s*(Question\s+\d+)'),
+        RegExp(r'([.!?\):\]])\s*(Question\s+\d+)'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 8. Break before Markdown headings (# H1 to ###### H6)
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):\]])\s*(#{1,6}\s+)'),
         (m) => '${m.group(1)}\n\n${m.group(2)}',
       );
     }
@@ -223,11 +228,47 @@ String _restoreCollapsedStructure(String s) {
 }
 
 /// Parses [text] into block-level elements (tables, code blocks, lists, headings, dividers, paragraphs).
+String _autoWrapRawLatex(String s) {
+  if (s.contains(r'$')) return s;
+  final trimmed = s.trim();
+  if (trimmed.isEmpty) return s;
+  const indicators = [
+    r'\frac',
+    r'\text{',
+    r'\times',
+    r'\sqrt',
+    r'\sum',
+    r'\mathbf{',
+    r'\implies',
+    r'\pm',
+    r'\div',
+    r'\cdot',
+    r'\le',
+    r'\ge',
+    r'\neq',
+    r'\approx',
+  ];
+  final hasIndicator = indicators.any((ind) => trimmed.contains(ind));
+  if (!hasIndicator) return s;
+
+  if (trimmed.startsWith(r'\text{') ||
+      trimmed.startsWith(r'\frac') ||
+      trimmed.startsWith(r'\sqrt') ||
+      trimmed.startsWith(r'\mathbf{') ||
+      trimmed.startsWith(r'\left') ||
+      trimmed.contains(r'\frac') ||
+      trimmed.contains(r'\times')) {
+    return '\$$trimmed\$';
+  }
+  return s;
+}
+
 List<ChatBlock> parseChatBlocks(String text) {
   final counter = _Counter();
 
-  // Normalize line endings
+  // Normalize line endings and unescape markdown brackets
   var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  normalized = normalized.replaceAll(r'\[', '[').replaceAll(r'\]', ']');
 
   // Wrap display math $$...$$ with line breaks so it forms its own block
   normalized = normalized.replaceAllMapped(
@@ -352,7 +393,8 @@ List<ChatBlock> parseChatBlocks(String text) {
       }
 
       final headers = headerRawCells
-          .map((c) => ChatTableCell(_inline(c, const _Style(), counter)))
+          .map((c) => ChatTableCell(
+              _inline(_autoWrapRawLatex(c), const _Style(), counter)))
           .toList();
 
       i += 2; // skip header and delimiter
@@ -369,7 +411,8 @@ List<ChatBlock> parseChatBlocks(String text) {
         final cells = <ChatTableCell>[];
         for (var col = 0; col < colCount; col++) {
           final cellText = col < rawCells.length ? rawCells[col] : '';
-          cells.add(ChatTableCell(_inline(cellText, const _Style(), counter)));
+          cells.add(ChatTableCell(
+              _inline(_autoWrapRawLatex(cellText), const _Style(), counter)));
         }
         rows.add(ChatTableRow(cells));
         i++;
