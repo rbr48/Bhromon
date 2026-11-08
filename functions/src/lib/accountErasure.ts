@@ -21,6 +21,8 @@ export const UID_DOCUMENTS: ReadonlyArray<string> = [
   'explorer_scores',
   'fcm_tokens',
   'direct_messages',
+  // The public keys and the one-time keys of encrypted chats (E2EE_DESIGN.md, section 6).
+  'e2ee_keys',
 ];
 
 const PAGE_SIZE = 200;

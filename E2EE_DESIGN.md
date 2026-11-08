@@ -92,7 +92,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 - **Verification:** a safety number is a fingerprint of both identity keys, computed in a canonical order. It is shown as digits and as a QR code. The exact encoding is fixed in M2 with test vectors.
 - **Key change:** if a contact's identity key changes, the chat shows a warning and marks the contact unverified. The chat is not blocked.
 - **Device loss:** the new device gets a new identity, and old history is not readable there. The app says so.
-- **Account deletion:** `gdprDeleteUser` removes the prekey bundle, and the client removes its sessions.
+- **Account deletion:** `gdprDeleteUser` removes the prekey bundle and its one-time keys (`UID_DOCUMENTS` in `functions/src/lib/accountErasure.ts`). The client does not yet clear its own sessions when an account closes.
 
 ## 7. Server and storage changes
 

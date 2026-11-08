@@ -55,6 +55,20 @@ describe('closing an account erases what the person owns', () => {
     expect((await db.doc('explorer_profiles/uid-a').get()).exists).toBe(false);
   });
 
+  test('the encryption keys go with the account, one-time keys included, and others keep theirs', async () => {
+    await db.doc('e2ee_keys/uid-a').set({ deviceId: 'device-a' });
+    await db.doc('e2ee_keys/uid-a/oneTimeKeys/K1').set({ deviceId: 'device-a' });
+    await db.doc('e2ee_keys/uid-b').set({ deviceId: 'device-b' });
+    await db.doc('e2ee_keys/uid-b/oneTimeKeys/K2').set({ deviceId: 'device-b' });
+
+    await eraseOwnedDocuments(db, 'uid-a');
+
+    expect((await db.doc('e2ee_keys/uid-a').get()).exists).toBe(false);
+    expect((await db.doc('e2ee_keys/uid-a/oneTimeKeys/K1').get()).exists).toBe(false);
+    expect((await db.doc('e2ee_keys/uid-b').get()).exists).toBe(true);
+    expect((await db.doc('e2ee_keys/uid-b/oneTimeKeys/K2').get()).exists).toBe(true);
+  });
+
   test('a member\'s journey events go with the account, and other members\' stay', async () => {
     const mine = 'tours/t1/journey_events/stop__a@x.com__arrive';
     const theirs = 'tours/t1/journey_events/stop__b@x.com__arrive';
