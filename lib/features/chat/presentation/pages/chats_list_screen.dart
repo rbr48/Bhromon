@@ -1740,7 +1740,8 @@ class _LockedChatTile extends StatelessWidget {
 
 /// The photo for a chat row: the chat's own copy when it has one, else the person's
 /// live profile, or a fallback (e.g. tour membership or Google photo). Null when none has a photo, so the row shows initials.
-String? chatAvatarUrl(String? fromChat, String? fromProfile, {String? fallback}) {
+String? chatAvatarUrl(String? fromChat, String? fromProfile,
+    {String? fallback}) {
   if (fromChat != null && fromChat.isNotEmpty) return fromChat;
   if (fromProfile != null && fromProfile.isNotEmpty) return fromProfile;
   if (fallback != null && fallback.isNotEmpty) return fallback;

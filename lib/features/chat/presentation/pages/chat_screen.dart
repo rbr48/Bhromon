@@ -3077,10 +3077,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final currentName = authState is Authenticated
         ? authState.profile.displayName
         : context.l10n.translate('chats_member');
-    final currentAvatarUrl = (authState is Authenticated
-            ? authState.profile.avatarUrl
-            : null) ??
-        TourGroupRepository().currentPhotoUrl;
+    final currentAvatarUrl =
+        (authState is Authenticated ? authState.profile.avatarUrl : null) ??
+            TourGroupRepository().currentPhotoUrl;
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
     // Opens the other person's profile from the header's name and avatar.
     final VoidCallback? openOtherProfile = resolvedOtherUid == 'guest'

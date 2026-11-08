@@ -21,7 +21,9 @@ void main() {
       );
     });
 
-    test('fallback (Google photo) fills in when chat copy and profile have no photo', () {
+    test(
+        'fallback (Google photo) fills in when chat copy and profile have no photo',
+        () {
       expect(
         chatAvatarUrl(
           null,
