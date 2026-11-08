@@ -169,16 +169,20 @@ final RegExp _orderedPattern = RegExp(r'^(\d+)\.\s+(.*)$');
 List<ChatBlock> parseChatBlocks(String text) {
   final counter = _Counter();
 
-  // Normalize line endings and collapsed single-line tables
+  // Normalize line endings
   var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-  normalized = normalized.replaceAllMapped(
-    RegExp(r'\|\s{1,}\|'),
-    (_) => '|\n|',
-  );
-  normalized = normalized.replaceAllMapped(
-    RegExp(r'(\|[^\n]+?)\s{2,}(\|?[^\n]+?\|)'),
-    (m) => '${m.group(1)}\n${m.group(2)}',
-  );
+
+  // If newlines were collapsed into a single line, expand collapsed table rows
+  if (!normalized.contains('\n') && normalized.contains('|')) {
+    normalized = normalized.replaceAllMapped(
+      RegExp(r'\|\s{1,}\|'),
+      (_) => '|\n|',
+    );
+    normalized = normalized.replaceAllMapped(
+      RegExp(r'(\|[^\n]+?)\s{2,}(\|?[^\n]+?\|)'),
+      (m) => '${m.group(1)}\n${m.group(2)}',
+    );
+  }
 
   final rawLines = normalized.split('\n');
   final blocks = <ChatBlock>[];
@@ -265,6 +269,10 @@ List<ChatBlock> parseChatBlocks(String text) {
         final rowLine = rawLines[i].trim();
         if (rowLine.isEmpty || !rowLine.contains('|')) break;
         final rawCells = splitTableRow(rowLine);
+        if (rowLine == '|' || rawCells.every((c) => c.isEmpty)) {
+          i++;
+          continue;
+        }
         final cells = <ChatTableCell>[];
         for (var col = 0; col < colCount; col++) {
           final cellText = col < rawCells.length ? rawCells[col] : '';

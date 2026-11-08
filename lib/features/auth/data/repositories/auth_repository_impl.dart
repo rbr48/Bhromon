@@ -316,6 +316,10 @@ class AuthRepositoryImpl implements IAuthRepository {
             user.photoURL != null &&
             user.photoURL!.isNotEmpty) {
           data['avatarUrl'] = user.photoURL;
+          _firestore
+              .collection('explorer_profiles')
+              .doc(user.uid)
+              .update({'avatarUrl': user.photoURL}).catchError((_) {});
         }
         final profile = ExplorerProfile.fromJson(data);
         await _updateLocalCache(profile);
