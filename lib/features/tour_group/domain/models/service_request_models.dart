@@ -15,6 +15,9 @@ const int kServiceRequestDetailsMax = 1000;
 /// The longest note the committee can leave on a request.
 const int kServiceRequestNoteMax = 500;
 
+/// The most photos a request can carry.
+const int kServiceRequestPhotosMax = 3;
+
 /// What a request is about. Stored by name; the labels are translated in the app.
 enum ServiceRequestCategory {
   lift,
@@ -63,7 +66,7 @@ class ServiceRequest {
     this.createdAt,
     this.updatedAt,
     this.adminNote = '',
-    this.photoUrl,
+    this.photoUrls = const [],
     this.inProgressAt,
     this.resolvedAt,
     this.resolvedByName,
@@ -92,8 +95,9 @@ class ServiceRequest {
   /// The committee's note for the residents: what was done, or what is needed.
   final String adminNote;
 
-  /// Optional photo attachment showing the issue / repair needed.
-  final String? photoUrl;
+  /// Photos showing the issue or the repair needed, at most [kServiceRequestPhotosMax], each
+  /// from this tour's own media space. The first one is the one a list shows.
+  final List<String> photoUrls;
 
   /// When the status changed to [ServiceRequestStatus.inProgress].
   final DateTime? inProgressAt;
@@ -114,7 +118,7 @@ class ServiceRequest {
     ServiceRequestCategory? category,
     ServiceRequestStatus? status,
     String? adminNote,
-    String? photoUrl,
+    List<String>? photoUrls,
     DateTime? inProgressAt,
     DateTime? resolvedAt,
     String? resolvedByName,
@@ -130,7 +134,7 @@ class ServiceRequest {
       createdAt: createdAt,
       updatedAt: updatedAt,
       adminNote: adminNote ?? this.adminNote,
-      photoUrl: photoUrl ?? this.photoUrl,
+      photoUrls: photoUrls ?? this.photoUrls,
       inProgressAt: inProgressAt ?? this.inProgressAt,
       resolvedAt: resolvedAt ?? this.resolvedAt,
       resolvedByName: resolvedByName ?? this.resolvedByName,
@@ -142,7 +146,7 @@ class ServiceRequest {
         'title': title,
         'details': details,
         'category': category.name,
-        if (photoUrl != null) 'photoUrl': photoUrl,
+        if (photoUrls.isNotEmpty) 'photoUrls': photoUrls,
       };
 
   /// Reads one stored request. Returns null when it has no title, so a damaged request
@@ -150,7 +154,6 @@ class ServiceRequest {
   static ServiceRequest? fromMap(String id, Map<String, dynamic> data) {
     final title = _text(data['title']).trim();
     if (title.isEmpty) return null;
-    final photo = _text(data['photoUrl']).trim();
     final resolver = _text(data['resolvedByName']).trim();
     return ServiceRequest(
       id: id,
@@ -163,7 +166,7 @@ class ServiceRequest {
       createdAt: readDate(data['createdAt']),
       updatedAt: readDate(data['updatedAt']),
       adminNote: _text(data['adminNote']).trim(),
-      photoUrl: photo.isEmpty ? null : photo,
+      photoUrls: _photos(data),
       inProgressAt: readDate(data['inProgressAt']),
       resolvedAt: readDate(data['resolvedAt']),
       resolvedByName: resolver.isEmpty ? null : resolver,
@@ -171,4 +174,22 @@ class ServiceRequest {
   }
 
   static String _text(Object? raw) => raw is String ? raw : '';
+
+  /// The photos a stored request carries, in order, without blanks or repeats, and at most
+  /// [kServiceRequestPhotosMax]. A request saved with the older single `photoUrl` keeps it.
+  static List<String> _photos(Map<String, dynamic> data) {
+    final urls = <String>[];
+    final raw = data['photoUrls'];
+    if (raw is List) {
+      for (final item in raw) {
+        final url = _text(item).trim();
+        if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+      }
+    }
+    if (urls.isEmpty) {
+      final legacy = _text(data['photoUrl']).trim();
+      if (legacy.isNotEmpty) urls.add(legacy);
+    }
+    return urls.take(kServiceRequestPhotosMax).toList();
+  }
 }

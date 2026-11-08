@@ -103,6 +103,8 @@ class ChatDatabase:
                 );
                 CREATE INDEX IF NOT EXISTS idx_device_tokens_uid ON device_tokens(uid);
                 CREATE INDEX IF NOT EXISTS idx_device_tokens_token ON device_tokens(token);
+                CREATE INDEX IF NOT EXISTS idx_device_tokens_email ON device_tokens(email);
+                CREATE INDEX IF NOT EXISTS idx_device_tokens_updated ON device_tokens(updated_at);
 
                 CREATE TABLE IF NOT EXISTS conversations (
                     chat_id TEXT PRIMARY KEY,
@@ -214,6 +216,33 @@ class ChatDatabase:
         conn = self._get_conn()
         with conn:
             conn.execute("DELETE FROM device_tokens WHERE token = ?", (token.strip(),))
+
+    def prune_stale_device_tokens(self, max_age_days: int = 180) -> int:
+        """Removes device tokens not refreshed in over max_age_days."""
+        cutoff_ms = int((time.time() - (max_age_days * 86400)) * 1000)
+        conn = self._get_conn()
+        with conn:
+            cursor = conn.execute(
+                "DELETE FROM device_tokens WHERE updated_at < ?",
+                (cutoff_ms,),
+            )
+            return cursor.rowcount
+
+    def count_device_tokens(self) -> int:
+        """Returns the total number of registered device tokens."""
+        conn = self._get_conn()
+        cursor = conn.execute("SELECT COUNT(*) FROM device_tokens")
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+    def close(self) -> None:
+        """Closes the current thread's database connection."""
+        if hasattr(self._local, "conn") and self._local.conn is not None:
+            try:
+                self._local.conn.close()
+            except Exception:
+                pass
+            self._local.conn = None
 
     def erase_user(self, uid: str, email: str = "") -> Dict[str, int]:
         """Removes one person from the chat service: their device tokens, the messages

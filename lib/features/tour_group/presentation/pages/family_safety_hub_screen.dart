@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/destination_catalog.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/device_battery_reader.dart';
 import '../../domain/models/date_codec.dart';
@@ -50,6 +51,17 @@ class FamilySafetyHubScreen extends StatefulWidget {
 
 class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     with SingleTickerProviderStateMixin {
+  String _effectiveDestination(BuildContext context) {
+    final raw = _tourGroup?.currentDestination() ??
+        _tourGroup?.destination ??
+        context.l10n.translate('fsh_default_destination');
+    final preset = presetForName(raw);
+    if (preset != null) {
+      return preset.nameFor(context.l10n.locale.languageCode);
+    }
+    return raw;
+  }
+
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
   bool _isSirenActive = false;
@@ -62,6 +74,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   TourRole? _myRole;
   // The alert this device raised and has not resolved yet.
   String? _activeAlertId;
+  Future<bool>? _pendingRaiseFuture;
   late final Stream<List<SafetyAlert>> _alerts =
       _repository.watchSafetyAlerts(widget.tourId);
   late final Stream<List<BatteryTelemetry>> _telemetry =
@@ -202,10 +215,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       return [
         TourLandmark(
           id: 'hotel_sea_moon',
-          name: context.l10n.translate('fsh_cox_hotel_name', args: {
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
-          }),
+          name: context.l10n.translate('fsh_cox_hotel_name',
+              args: {'destination': _effectiveDestination(context)}),
           subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 21.4326,
           lng: 91.9774,
@@ -217,8 +228,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           name: context.l10n.translate('fsh_cox_bus_name', args: {
             'origin': _tourGroup?.originCity ??
                 context.l10n.translate('fsh_default_origin'),
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
+            'destination': _effectiveDestination(context)
           }),
           subtitle: context.l10n.translate('fsh_main_bus_sub'),
           lat: 21.4385,
@@ -228,10 +238,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'sugandha_beach',
-          name: context.l10n.translate('fsh_cox_meetup_name', args: {
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
-          }),
+          name: context.l10n.translate('fsh_cox_meetup_name',
+              args: {'destination': _effectiveDestination(context)}),
           subtitle: context.l10n.translate('fsh_family_meetup_sub'),
           lat: 21.4298,
           lng: 91.9752,
@@ -240,10 +248,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'laboni_beach',
-          name: context.l10n.translate('fsh_cox_spot_name', args: {
-            'destination': _tourGroup?.destination ??
-                context.l10n.translate('fsh_default_destination')
-          }),
+          name: context.l10n.translate('fsh_cox_spot_name',
+              args: {'destination': _effectiveDestination(context)}),
           subtitle: context.l10n.translate('fsh_sightseeing_sub'),
           lat: 21.4390,
           lng: 91.9712,
@@ -301,6 +307,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     _telemetryTimer?.cancel();
     _alertTimer?.cancel();
     _sirenAnimController.dispose();
+    if (_isSirenActive && _activeAlertId != null) {
+      final alertId = _activeAlertId!;
+      unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId));
+    }
     // Stops sharing the place when the member leaves this screen.
     unawaited(_publisher.stop(DateTime.now()));
     super.dispose();
@@ -441,7 +451,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     } else {
       _sirenAnimController.stop();
       _sirenAnimController.value = 0;
-      _resolveAlert();
+      unawaited(_resolveAlert());
     }
   }
 
@@ -450,39 +460,60 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     final alertId = _repository.newSafetyAlertId();
     _activeAlertId = alertId;
     final pos = _currentPosition;
-    unawaited(_repository
-        .raiseSafetyAlert(
+    final future = _repository.raiseSafetyAlert(
       tourId: widget.tourId,
       alertId: alertId,
       latitude: pos?.latitude,
       longitude: pos?.longitude,
-    )
-        .then(
+    );
+    _pendingRaiseFuture = future;
+    future.then(
       (synced) {
-        if (!synced) {
+        if (!synced && mounted) {
           _showMessage(l10n.translate('fsh_alert_not_synced'));
         }
       },
-      onError: (Object e) => _showMessage(
-          l10n.translate('fsh_alert_send_failed', args: {'error': e})),
-    ));
+      onError: (Object e) {
+        if (_activeAlertId == alertId) {
+          _activeAlertId = null;
+        }
+        if (mounted) {
+          _showMessage(
+              l10n.translate('fsh_alert_send_failed', args: {'error': e}));
+        }
+      },
+    );
   }
 
   /// Resolves the alert this device raised, if any. Used when the siren stops.
-  void _resolveAlert() {
+  Future<void> _resolveAlert() async {
     final alertId = _activeAlertId;
+    final pending = _pendingRaiseFuture;
     _activeAlertId = null;
+    _pendingRaiseFuture = null;
     if (alertId == null) return;
+    if (pending != null) {
+      try {
+        final synced = await pending;
+        if (!synced) return;
+      } catch (_) {
+        return;
+      }
+    }
     _resolveById(alertId);
   }
 
   void _resolveById(String alertId) {
     final l10n = context.l10n;
     unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId).then(
-          (_) {},
-          onError: (Object e) => _showMessage(
-              l10n.translate('fsh_alert_close_failed', args: {'error': e})),
-        ));
+      (_) {},
+      onError: (Object e) {
+        if (mounted) {
+          _showMessage(
+              l10n.translate('fsh_alert_close_failed', args: {'error': e}));
+        }
+      },
+    ));
   }
 
   /// Closes an alert from its card. Closing this device's own live alert also
@@ -537,9 +568,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1B1E)),
       appBar: AppBar(
         title: Text(context.l10n.translate('fsh_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         foregroundColor: context.forest.text,
+        iconTheme: IconThemeData(color: context.forest.text),
         elevation: 0,
       ),
       body: SafeArea(
@@ -602,7 +637,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             color: alertColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: _isSirenActive ? Colors.redAccent : Colors.white12,
+              color:
+                  _isSirenActive ? Colors.redAccent : context.forest.divider12,
               width: _isSirenActive ? 2 : 1,
             ),
             boxShadow: _isSirenActive
@@ -643,8 +679,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           _isSirenActive
                               ? context.l10n.translate('fsh_alert_on')
                               : context.l10n.translate('fsh_family_sos'),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: _isSirenActive
+                                ? Colors.white
+                                : context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -654,8 +692,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           _isSirenActive
                               ? context.l10n.translate('fsh_alert_on_hint')
                               : context.l10n.translate('fsh_alert_off_hint'),
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
+                          style: TextStyle(
+                              color: _isSirenActive
+                                  ? Colors.white70
+                                  : context.forest.text70,
+                              fontSize: 12),
                         ),
                       ],
                     ),

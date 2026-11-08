@@ -427,8 +427,8 @@ class MyApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: const [
-            Locale('bn', ''),
             Locale('en', ''),
+            Locale('bn', ''),
           ],
           locale: LocaleController.instance.locale,
           builder: (context, child) {

@@ -143,6 +143,9 @@ void main() {
 class _NoFirebaseRepository extends TourGroupRepository {
   @override
   Stream<TourGroup?> watchGroup(String tourId) => Stream.value(null);
+
+  @override
+  Stream<List<TourGroup>> watchMyGroups() => Stream.value(const <TourGroup>[]);
 }
 
 class _Screen extends StatelessWidget {

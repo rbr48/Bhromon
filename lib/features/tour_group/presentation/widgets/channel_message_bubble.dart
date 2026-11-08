@@ -36,6 +36,7 @@ class ChannelMessageBubble extends StatefulWidget {
   /// The sender's photo link, when they have one. Shown beside the name on other
   /// people's messages.
   final String? senderPhotoUrl;
+  final bool isHighlighted;
   final VoidCallback onLongPress;
   final ValueChanged<String> onReact;
   final ValueChanged<int> onVote;
@@ -50,6 +51,7 @@ class ChannelMessageBubble extends StatefulWidget {
     required this.myEmail,
     required this.badge,
     this.senderPhotoUrl,
+    this.isHighlighted = false,
     required this.onLongPress,
     required this.onReact,
     required this.onVote,
@@ -89,18 +91,26 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
               BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
           decoration: BoxDecoration(
-            color: own
-                ? (context.forest.isDark ? AppColors.midGreen : kOwnBubbleLight)
-                : context.forest.surfaceFor(const Color(0xFF1E3326)),
+            color: widget.isHighlighted
+                ? (context.forest.isDark
+                    ? AppColors.gold.withValues(alpha: 0.32)
+                    : AppColors.gold.withValues(alpha: 0.22))
+                : (own
+                    ? (context.forest.isDark
+                        ? AppColors.midGreen
+                        : kOwnBubbleLight)
+                    : context.forest.surfaceFor(const Color(0xFF1E3326))),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14),
               topRight: const Radius.circular(14),
               bottomLeft: Radius.circular(own ? 14 : 2),
               bottomRight: Radius.circular(own ? 2 : 14),
             ),
-            border: widget.mentionsMe
-                ? Border.all(color: AppColors.gold, width: 1.5)
-                : null,
+            border: widget.isHighlighted
+                ? Border.all(color: AppColors.gold, width: 2)
+                : widget.mentionsMe
+                    ? Border.all(color: AppColors.gold, width: 1.5)
+                    : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

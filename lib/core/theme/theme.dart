@@ -10,10 +10,11 @@ import 'colors.dart';
 /// Bengali-first typography scale, and a complete set of component themes so
 /// buttons, inputs, dialogs, sheets and chips look consistent everywhere.
 class AppTheme {
-  // Bengali-first font stack: NotoSansBengali handles Bengali/Bangla codepoints (U+0980-U+09FF)
-  // HindSiliguri is the fallback for Latin characters.
+  // Bengali-first font stack: Standard Google NotoSansBengali provides crisp,
+  // high-definition typography with full Unicode coverage and modern glyph rendering.
+  // HindSiliguri and Roboto are the fallbacks.
   static const _fontFamily = 'NotoSansBengali';
-  static const _fontFamilyFallback = ['HindSiliguri'];
+  static const _fontFamilyFallback = ['HindSiliguri', 'Roboto', 'sans-serif'];
 
   // Shared shape language
   static const double radiusSmall = 10;
@@ -161,14 +162,17 @@ class AppTheme {
 
       appBarTheme: AppBarTheme(
         backgroundColor:
-            isDark ? AppColors.backgroundDark : AppColors.darkGreen,
-        foregroundColor: AppColors.offWhite,
+            isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        foregroundColor: isDark ? AppColors.offWhite : AppColors.darkText,
         elevation: 0,
         scrolledUnderElevation: 2,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
-        titleTextStyle:
-            textTheme.titleLarge?.copyWith(color: AppColors.offWhite),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: isDark ? AppColors.offWhite : AppColors.darkText,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
         // No fixed style: each AppBar takes its status-bar icons from its own
         // background, so light screens get dark icons and dark ones light icons.
       ),

@@ -12,12 +12,18 @@ class MediaPickResult {
   final XFile xFile;
   final File? file;
   final String type; // 'image' | 'video'
+  final List<XFile>? xFiles;
 
   const MediaPickResult({
     required this.xFile,
     this.file,
     required this.type,
+    this.xFiles,
   });
+
+  /// All files picked (returns [xFiles] if present, otherwise [xFile] as a single-element list).
+  List<XFile> get allFiles =>
+      xFiles != null && xFiles!.isNotEmpty ? xFiles! : [xFile];
 }
 
 /// Shows a WhatsApp-style bottom sheet to pick an image or video.
@@ -123,6 +129,7 @@ class _ChatMediaPickerSheet extends StatelessWidget {
 
     final picker = ImagePicker();
     XFile? xfile;
+    List<XFile>? multiFiles;
 
     try {
       if (mode == _PickMode.camera) {
@@ -133,16 +140,18 @@ class _ChatMediaPickerSheet extends StatelessWidget {
           maxHeight: 1920,
         );
       } else if (mode == _PickMode.gallery) {
-        xfile = await picker.pickImage(
-          source: ImageSource.gallery,
+        multiFiles = await picker.pickMultiImage(
           imageQuality: 85,
           maxWidth: 1920,
           maxHeight: 1920,
         );
+        if (multiFiles.isNotEmpty) {
+          xfile = multiFiles.first;
+        }
       } else {
         xfile = await picker.pickVideo(
           source: ImageSource.gallery,
-          maxDuration: const Duration(seconds: 60),
+          maxDuration: const Duration(seconds: 120),
         );
       }
     } catch (e) {
@@ -160,6 +169,7 @@ class _ChatMediaPickerSheet extends StatelessWidget {
       xFile: xfile,
       file: !kIsWeb ? File(xfile.path) : null,
       type: (mode == _PickMode.video) ? 'video' : 'image',
+      xFiles: multiFiles,
     );
 
     Navigator.of(context).pop(result);

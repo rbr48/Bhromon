@@ -6,15 +6,14 @@ void main() {
     test(
         'without kGroupsV2 the groups tab is first and the profile opens on it',
         () {
-      expect(profileTabKeys(groupsV2: false),
-          ['tours', 'games', 'vault', 'settings']);
+      expect(profileTabKeys(groupsV2: false), ['tours', 'games', 'settings']);
       expect(defaultProfileTab(groupsV2: false), 'tours');
     });
 
     test(
         'with kGroupsV2 there is no groups tab, and the profile opens on Games',
         () {
-      expect(profileTabKeys(groupsV2: true), ['games', 'vault', 'settings']);
+      expect(profileTabKeys(groupsV2: true), ['games', 'settings']);
       expect(defaultProfileTab(groupsV2: true), 'games');
     });
   });
@@ -23,8 +22,8 @@ void main() {
     final keys = profileTabKeys(groupsV2: true);
 
     test('moves one tab each way', () {
-      expect(stepProfileTab(keys, 'games', 1), 'vault');
-      expect(stepProfileTab(keys, 'vault', -1), 'games');
+      expect(stepProfileTab(keys, 'games', 1), 'settings');
+      expect(stepProfileTab(keys, 'settings', -1), 'games');
     });
 
     test('stops at the first and the last tab, without looping', () {
@@ -39,7 +38,7 @@ void main() {
         tab = stepProfileTab(keys, tab, 1);
         seen.add(tab);
       }
-      expect(seen, ['games', 'vault', 'settings', 'settings']);
+      expect(seen, ['games', 'settings', 'settings']);
     });
 
     test('an unknown tab stays where it is', () {

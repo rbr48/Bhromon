@@ -916,6 +916,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         repository: _repository,
         tourId: widget.tourId,
         post: post,
+        group: _tourGroup,
         onResharedToStory: () => setState(() {}),
       ),
     );

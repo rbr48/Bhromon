@@ -548,7 +548,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
         foregroundColor: context.forest.text,
         elevation: 0,
         title: Text(l10n.translate('route_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         actions: [
           if (_isAdmin && g != null)
             IconButton(

@@ -24,6 +24,7 @@ import '../../domain/services/media_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../../data/monthly_ledger_pdf.dart';
 import '../../domain/services/bangla_qr_engine.dart';
+import '../../domain/services/payment_profile_service.dart';
 import '../monthly_ledger_pdf_export.dart';
 import '../tour_routes.dart';
 import '../widgets/bangla_qr_view.dart';
@@ -215,7 +216,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
         title: Text(l10n.translate('fund_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         actions: [
           if (_isAdmin && group != null)
             IconButton(
@@ -2852,18 +2856,52 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                           ? 'বাংলা কিউআর তৈরি করুন'
                           : 'Generate Bangla QR',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(ctx).pop();
                     final parsedTaka =
                         int.tryParse(amountTaka.replaceAll(',', ''));
                     final rawAccount =
                         (s.toId != null && s.toId!.isNotEmpty) ? s.toId! : '';
+
+                    // Find payee member in tour members
+                    final payee = _members
+                        .where((m) =>
+                            m.email.toLowerCase() == s.toId?.toLowerCase() ||
+                            m.uid == s.toId)
+                        .firstOrNull;
+
+                    PaymentProfileInfo? paymentProfile;
+                    if (payee?.uid != null && payee!.uid!.isNotEmpty) {
+                      paymentProfile =
+                          await PaymentProfileService.getPaymentProfile(
+                        payee.uid!,
+                      );
+                    }
+
+                    final effectiveAccount =
+                        paymentProfile?.accountNumber?.isNotEmpty == true
+                            ? paymentProfile!.accountNumber!
+                            : (rawAccount.contains('@') ? '' : rawAccount);
+
+                    final effectiveProvider = paymentProfile?.provider != null
+                        ? BanglaQrProvider.values.firstWhere(
+                            (p) =>
+                                p.name.toLowerCase() ==
+                                paymentProfile!.provider!.toLowerCase(),
+                            orElse: () => BanglaQrProvider.bkash,
+                          )
+                        : BanglaQrProvider.bkash;
+
+                    if (!mounted) return;
                     showBanglaQrSheet(
                       context,
+                      savedQrUrl: paymentProfile?.banglaQrUrl,
+                      payeeUid: payee?.uid,
+                      isOwnQr: false,
                       payload: BanglaQrPayload(
-                        accountNumber:
-                            rawAccount.contains('@') ? '' : rawAccount,
+                        accountNumber: effectiveAccount,
                         payeeName: recipientName,
+                        provider: effectiveProvider,
                         amountTaka: parsedTaka,
                         reference: l10n.locale.languageCode == 'bn'
                             ? 'হিসাব মেলানো'

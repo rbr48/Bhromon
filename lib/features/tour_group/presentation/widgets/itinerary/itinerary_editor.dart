@@ -132,7 +132,11 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
       appBar: AppBar(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         foregroundColor: context.forest.text,
-        title: Text(l10n.translate('itin_title')),
+        title: Text(l10n.translate('itin_title'),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         actions: [
           IconButton(
             tooltip: 'লোকাল পরিবহন ভাড়া গাইড',

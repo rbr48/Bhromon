@@ -12,6 +12,7 @@ import '../../data/tour_group_repository.dart';
 import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/destination_catalog.dart';
 import '../../domain/services/notice_engine.dart';
 import '../../domain/services/notice_speech.dart';
 import '../widgets/notice/notice_composer.dart';
@@ -135,15 +136,35 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   // Meeting point
   // ---------------------------------------------------------------------------
 
-  String _meetingTitle(AppLocalizations l10n) =>
-      _group?.meetingPointTitle ??
-      l10n.translate('tour_meeting_point_default', args: {
-        'destination':
-            _group?.destination ?? l10n.translate('tour_default_destination'),
-      });
+  String _effectiveDestination(AppLocalizations l10n) {
+    final raw = _group?.currentDestination(_now) ??
+        _group?.destination ??
+        l10n.translate('tour_default_destination');
+    final preset = presetForName(raw);
+    if (preset != null) {
+      return preset.nameFor(l10n.locale.languageCode);
+    }
+    return raw;
+  }
 
-  Uri get _meetingMapUri => Uri.parse(_group?.meetingPointMapUrl ??
-      'https://maps.google.com/?q=${Uri.encodeComponent(_group?.meetingPointTitle ?? _group?.destination ?? 'Hotel Lobby')}');
+  String _meetingTitle(AppLocalizations l10n) {
+    if (_group?.meetingPointTitle != null &&
+        _group!.meetingPointTitle!.trim().isNotEmpty) {
+      return _group!.meetingPointTitle!;
+    }
+    return l10n.translate('tour_meeting_point_default', args: {
+      'destination': _effectiveDestination(l10n),
+    });
+  }
+
+  Uri get _meetingMapUri {
+    final dest = _group?.meetingPointTitle ??
+        _group?.currentDestination(_now) ??
+        _group?.destination ??
+        'Hotel Lobby';
+    return Uri.parse(_group?.meetingPointMapUrl ??
+        'https://maps.google.com/?q=${Uri.encodeComponent(dest)}');
+  }
 
   Future<void> _editMeetingPoint() async {
     final l10n = context.l10n;
@@ -510,9 +531,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('tour_notice_board_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
+        iconTheme: IconThemeData(color: context.forest.text),
         elevation: 0,
         actions: [
           if (today.isNotEmpty)
