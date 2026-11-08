@@ -132,15 +132,26 @@ Newer Windows OpenSSH clients (OpenSSH 9.0+) default to the SFTP subsystem. The 
 scp -O -P 2222 -i $env:USERPROFILE\.ssh\id_rsa_dbm -o StrictHostKeyChecking=no build\app\outputs\flutter-apk\app-release.apk root@148.135.137.245:/var/www/bhromon/downloads/app-release.apk
 ```
 
-### B. Symlink Structure & Permissions
-On the VPS:
+### B. Storage Recovery, Deduplication & Permissions
+To prevent VPS disk bloat, **never retain previous versions** of APKs or AABs:
+1. Delete all older APK files from `/var/www/bhromon/downloads/`.
+2. Keep only the single latest version file as `bhromon-latest.apk`.
+3. Use hardlinks (`ln -f`) for aliases (`app-release.apk`, `Bhromon_Release.apk`, and versioned tag `bhromon-v<version>.apk`) so all download links work without consuming duplicate disk space.
+4. Keep the directory at `755` and files at `644` with `www-data:www-data` ownership.
 - `/var/www/bhromon-media/apk/app-release.apk` is a symlink pointing to `/var/www/bhromon/downloads/app-release.apk`.
-- Set file permissions to `644` so Nginx can serve it.
-- Maintain a sync copy named `Bhromon_Release.apk`.
 
 Execute via SSH:
 ```powershell
-ssh -p 2222 -i $env:USERPROFILE\.ssh\id_rsa_dbm -o StrictHostKeyChecking=no root@148.135.137.245 'chmod 644 /var/www/bhromon/downloads/app-release.apk && cp -p /var/www/bhromon/downloads/app-release.apk /var/www/bhromon/downloads/Bhromon_Release.apk'
+ssh -p 2222 -i $env:USERPROFILE\.ssh\id_rsa_dbm -o StrictHostKeyChecking=no root@148.135.137.245 '
+cd /var/www/bhromon/downloads
+find . -maxdepth 1 -name "bhromon-*.apk" ! -name "bhromon-latest.apk" ! -name "bhromon-v1.8.149+203.apk" -delete
+ln -f app-release.apk bhromon-latest.apk
+ln -f app-release.apk Bhromon_Release.apk
+ln -f app-release.apk bhromon-v1.8.149+203.apk
+chmod 755 /var/www/bhromon/downloads
+chmod 644 /var/www/bhromon/downloads/*.apk
+chown www-data:www-data /var/www/bhromon/downloads/*.apk
+'
 ```
 
 ### C. Verify Download URL
