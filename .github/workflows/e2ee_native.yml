@@ -1,11 +1,12 @@
 name: E2EE native library
 
 # Builds and tests the vodozemac-based library for the end-to-end encrypted
-# one-to-one chat (native/e2ee_olm; E2EE_DESIGN.md, milestone M1).
+# one-to-one chat (native/e2ee_olm; E2EE_DESIGN.md, milestones M1 and M2).
 #
 # The Linux job runs the Rust checks, the C smoke test, the export check and the
-# libolm interoperability test. The Android job builds the shared library for three
-# ABIs with the NDK. The iOS job
+# libolm interoperability test. The dart job runs the Dart tests against the library
+# it builds; the native tests skip in the other Flutter jobs. The Android job builds
+# the shared library for three ABIs with the NDK. The iOS job
 # builds device and simulator libraries on macOS, which costs several times the
 # Linux minutes, so it runs on a manual start or when the repository variable
 # IOS_BUILD_ENABLED is 'true', as native_build.yml does.
@@ -16,6 +17,9 @@ on:
   pull_request:
     paths:
       - 'native/e2ee_olm/**'
+      - 'lib/features/chat/data/e2ee/**'
+      - 'lib/features/chat/domain/e2ee/**'
+      - 'test/features/chat/e2ee/**'
       - '.github/workflows/e2ee_native.yml'
   workflow_dispatch:
 
@@ -98,6 +102,42 @@ jobs:
             echo "| libe2ee_olm.so, stripped | $(wc -c < target/release/libe2ee_olm.so | tr -d " ") |"
             echo "| libe2ee_olm.a, all objects (not the app figure) | $(wc -c < target/release/libe2ee_olm.a | tr -d " ") |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  dart:
+    name: Dart tests against the built library
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # The Flutter steps run from the repository root, not the native directory.
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build the shared library (pinned Rust toolchain)
+        working-directory: native/e2ee_olm
+        run: |
+          rustup show
+          cargo build --release --locked
+
+      # Pinned to the version flutter_ci.yml uses (FLUTTER_VERSION). Keep them in step.
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # The native tests skip without E2EE_OLM_LIBRARY, so this step is what runs the
+      # Dart bindings against the library. The device-logic tests run here as well.
+      - name: Run the E2EE tests against the library
+        env:
+          E2EE_OLM_LIBRARY: ${{ github.workspace }}/native/e2ee_olm/target/release/libe2ee_olm.so
+        run: flutter test test/features/chat/e2ee/
 
   android:
     name: Android shared libraries
