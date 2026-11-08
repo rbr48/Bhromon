@@ -243,3 +243,31 @@ Provide instant, intuitive, and comprehensive search capabilities across groups 
   - Increment version to `1.8.135+189` in `pubspec.yaml`.
   - Create GitHub PR via `gh pr create --base main`.
   - Monitor CI until 100% green, squash-merge to `main`, build web release, and deploy to Firebase Hosting (`app.bhromon.fun`).
+
+---
+
+## Phase 12: Pinned Message Deep Audit, Clickable Full View & Precision Scrolling (1-on-1 & Channels)
+
+### Objective
+Deeply audit and fix message pinning across 1-on-1 Direct Chat (`chat_screen.dart`) and Group Channels (`group_channels_screen.dart`). Ensure pinned messages can be viewed in full (text, attachments, sender, time, copy action), tapping jumps accurately to the message with visual highlighting (replacing broken fixed offset calculations), older messages are paged back automatically, and group channel pinned messages are fully clickable with a top pinned banner.
+
+### Tasks
+- [ ] **Task 12.1: Localization Strings in `translation_keys.dart` & `tour_translation_keys.dart`**
+  - Add English and Bengali keys for pinned message full view dialog, go to message, copy, unpin, copied feedback, not found feedback, and channel pinned banners.
+- [ ] **Task 12.2: Direct Chat Pinned Message Overhaul (`chat_screen.dart`)**
+  - Implement `_showPinnedMessageFullView` sheet with full selectable text, sender info, media preview, "Go to message", and "Copy" actions.
+  - Add expand icon to direct chat pinned banner and keep unpin button.
+  - Replace broken `idx * 60.0` scrolling with `GlobalKey`-based `Scrollable.ensureVisible` and fallback pagination loop (`_loadEarlierMessages`) when message is older than 30 loaded items.
+- [ ] **Task 12.3: Group Channels Pinned Messages Deep Fix (`group_channels_screen.dart` & `channel_message_bubble.dart`)**
+  - Make `ListTile` in `_showPins` clickable (`onTap` dismisses and jumps to message; info/expand opens full view).
+  - Add modern pinned message top banner to channel chat when messages are pinned.
+  - Attach `ScrollController` and `GlobalKey`s to channel messages list, implement `_jumpToChannelMessage`, and add `isHighlighted` styling in `ChannelMessageBubble`.
+- [ ] **Task 12.4: Automated Unit & Widget Tests**
+  - Add unit/widget tests covering pinned message tap, full sheet display, scroll invocation, and channel pins.
+- [ ] **Task 12.5: PR, CI Green Check, Merge & Comprehensive Multi-Platform Deployment**
+  - Increment version to `1.8.136+190`.
+  - Submit GitHub PR via `gh pr create --base main`.
+  - Monitor CI checks until 100% green and squash-merge to `main`.
+  - Build and deploy Flutter Web to Firebase Hosting (`firebase deploy --only hosting`).
+  - Build Android Release APK and Play Store AAB.
+
