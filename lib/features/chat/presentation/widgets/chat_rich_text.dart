@@ -137,12 +137,15 @@ class _ChatRichTextState extends State<ChatRichText> {
         alignment: PlaceholderAlignment.middle,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Math.tex(
-            span.text,
-            textStyle: base,
-            onErrorFallback: (_) => Text(
-              '\$${span.text}\$',
-              style: base.copyWith(fontFamily: 'monospace'),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Math.tex(
+              span.text,
+              textStyle: base,
+              onErrorFallback: (_) => Text(
+                '\$${span.text}\$',
+                style: base.copyWith(fontFamily: 'monospace'),
+              ),
             ),
           ),
         ),
@@ -181,7 +184,10 @@ class _ChatRichTextState extends State<ChatRichText> {
     final double fontSize = switch (block.level) {
       1 => 18.5,
       2 => 17.0,
-      _ => 15.5,
+      3 => 15.5,
+      4 => 14.5,
+      5 => 13.5,
+      _ => 13.0,
     };
     final headingStyle = base.copyWith(
       fontSize: fontSize,

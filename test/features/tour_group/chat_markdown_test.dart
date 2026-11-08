@@ -222,6 +222,19 @@ And the next paragraph follows.
       expect(spans.any((s) => !s.math && s.text.contains(r'$100')), isTrue);
     });
 
+    test('parseChatBlocks parses headings up to H6', () {
+      final blocks =
+          parseChatBlocks('#### 1(a) Broad Question\n##### Sub-section');
+      expect(blocks, hasLength(2));
+      expect(blocks[0], isA<ChatHeadingBlock>());
+      expect((blocks[0] as ChatHeadingBlock).level, 4);
+      expect((blocks[0] as ChatHeadingBlock).spans.first.text,
+          '1(a) Broad Question');
+      expect(blocks[1], isA<ChatHeadingBlock>());
+      expect((blocks[1] as ChatHeadingBlock).level, 5);
+      expect((blocks[1] as ChatHeadingBlock).spans.first.text, 'Sub-section');
+    });
+
     test('parseChatBlocks restores line breaks for dense collapsed pasted text',
         () {
       // 300+ chars with 0 newlines
