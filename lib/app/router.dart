@@ -187,6 +187,7 @@ class AppRouter {
               otherUid: otherUid,
               sharedTourId: sharedTourId,
               otherEmail: extra?['otherEmail'] as String?,
+              otherAvatarUrl: extra?['otherAvatarUrl'] as String?,
               sharedFiles: (extra?['sharedFiles'] as List?)?.cast<SharedFile>(),
             ),
             tourId: sharedTourId,

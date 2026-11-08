@@ -66,6 +66,9 @@ class ChatScreen extends StatefulWidget {
   final String? sharedTourId;
   final String? otherEmail;
 
+  /// Fallback avatar URL for the other person (e.g. from tour membership or contact).
+  final String? otherAvatarUrl;
+
   /// Files another app shared into Bhromon, sent here once the chat opens.
   final List<SharedFile>? sharedFiles;
 
@@ -75,6 +78,7 @@ class ChatScreen extends StatefulWidget {
     this.otherUid,
     this.sharedTourId,
     this.otherEmail,
+    this.otherAvatarUrl,
     this.sharedFiles,
   });
 
@@ -656,9 +660,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       'sharedTourId': _sharedTourId,
       'memberEmails': {currentUid: _myEmail, otherUid: _otherEmail},
     };
+    final authState = context.read<AuthCubit>().state;
+    final myProfile = authState is Authenticated ? authState.profile : null;
+    final myAvatar =
+        myProfile?.avatarUrl ?? TourGroupRepository().currentPhotoUrl;
+    final myName = myProfile?.displayName ?? _myEmail;
     FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
       'participants': FieldValue.arrayUnion([currentUid, otherUid]),
       ...tour,
+      'participantProfiles': {
+        currentUid: {
+          'displayName': myName,
+          if (myAvatar != null && myAvatar.isNotEmpty) 'avatarUrl': myAvatar,
+        },
+      },
     }, SetOptions(merge: true)).then((_) {
       if (mounted && _messagesListener.documentWriteConfirmed()) {
         _subscribeToLatestMessages();
@@ -737,8 +752,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     required String lastMessageType,
     required String currentUid,
     required String currentName,
+    String? currentAvatarUrl,
     required String? resolvedOtherUid,
   }) {
+    final effectiveAvatar =
+        (currentAvatarUrl != null && currentAvatarUrl.isNotEmpty)
+            ? currentAvatarUrl
+            : TourGroupRepository().currentPhotoUrl;
     return {
       // Chats between tour members carry their tour and both emails, which the
       // rules check before anyone can write to them.
@@ -764,6 +784,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       'participantProfiles': {
         currentUid: {
           'displayName': currentName,
+          if (effectiveAvatar != null && effectiveAvatar.isNotEmpty)
+            'avatarUrl': effectiveAvatar,
         },
       },
     };
@@ -3056,7 +3078,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ? authState.profile.displayName
         : context.l10n.translate('chats_member');
     final currentAvatarUrl =
-        authState is Authenticated ? authState.profile.avatarUrl : null;
+        (authState is Authenticated ? authState.profile.avatarUrl : null) ??
+            TourGroupRepository().currentPhotoUrl;
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
     // Opens the other person's profile from the header's name and avatar.
     final VoidCallback? openOtherProfile = resolvedOtherUid == 'guest'
@@ -3077,7 +3100,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         final profileData = profileSnap.data?.data() as Map<String, dynamic>?;
         final String otherName = profileData?['displayName'] as String? ??
             '${context.l10n.translate('chats_member')} ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}';
-        final String? avatarUrl = profileData?['avatarUrl'] as String?;
+        final String? avatarUrl = (profileData?['avatarUrl'] as String?) ??
+            (profileData?['photoUrl'] as String?) ??
+            (profileData?['photoURL'] as String?) ??
+            widget.otherAvatarUrl;
         final initials = otherName.trim().isEmpty
             ? '?'
             : otherName

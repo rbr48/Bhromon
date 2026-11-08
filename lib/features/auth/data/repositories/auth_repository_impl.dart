@@ -310,6 +310,12 @@ class AuthRepositoryImpl implements IAuthRepository {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         data['uid'] = doc.id;
+        final existingAvatar = data['avatarUrl'] as String?;
+        if ((existingAvatar == null || existingAvatar.trim().isEmpty) &&
+            user.photoURL != null &&
+            user.photoURL!.isNotEmpty) {
+          data['avatarUrl'] = user.photoURL;
+        }
         final profile = ExplorerProfile.fromJson(data);
         await _updateLocalCache(profile);
         return Right(profile);
@@ -391,6 +397,20 @@ class AuthRepositoryImpl implements IAuthRepository {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         data['uid'] = doc.id;
+        final existingAvatar = data['avatarUrl'] as String?;
+        if ((existingAvatar == null || existingAvatar.trim().isEmpty) &&
+            user.photoURL != null &&
+            user.photoURL!.isNotEmpty) {
+          data['avatarUrl'] = user.photoURL;
+          try {
+            await _firestore
+                .collection('explorer_profiles')
+                .doc(user.uid)
+                .set({'avatarUrl': user.photoURL}, SetOptions(merge: true));
+          } catch (e, st) {
+            logWarning('AuthRepository: failed to backfill avatarUrl', e, st);
+          }
+        }
         profile = ExplorerProfile.fromJson(data);
       } else {
         profile = _buildFallbackProfile(user);
@@ -457,6 +477,9 @@ class AuthRepositoryImpl implements IAuthRepository {
     return ExplorerProfile(
       uid: user.uid,
       displayName: user.displayName ?? 'New Explorer',
+      avatarUrl: (user.photoURL != null && user.photoURL!.isNotEmpty)
+          ? user.photoURL
+          : null,
       division: 'Dhaka',
       tier: TrustTier.unverified,
       badges: [],
