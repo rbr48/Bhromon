@@ -115,7 +115,7 @@ void main() {
           ServiceRequest.fromMap('req_none', {'title': 'Water pressure low'});
       expect(req, isNotNull);
       expect(req!.photoUrls, isEmpty);
-      expect(req!.toTextFields().containsKey('photoUrls'), isFalse);
+      expect(req.toTextFields().containsKey('photoUrls'), isFalse);
     });
 
     test(
