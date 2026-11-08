@@ -62,14 +62,71 @@ jobs:
           if [ ! -f "$WRAPPER_DIR/gradle-8.14.3-bin.zip.ok" ] && [ ! -f "$WRAPPER_DIR/gradle-8.14.3-bin.zip" ]; then
             echo "Pre-fetching Gradle 8.14.3 wrapper distribution..."
             mkdir -p "$WRAPPER_DIR"
+            curl -fL --retry 3 --retry-delay 2 \
+              -o "$WRAPPER_DIR/gradle-8.14.3-bin.zip.tmp" \
+              "https://mirrors.cloud.tencent.com/gradle/gradle-8.14.3-bin.zip" || \
             curl -fL --retry 2 --retry-delay 1 \
               -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-              -o "$WRAPPER_DIR/gradle-8.14.3-bin.zip" \
-              "https://services.gradle.org/distributions/gradle-8.14.3-bin.zip" || \
-            curl -fL --retry 3 --retry-delay 2 \
-              -o "$WRAPPER_DIR/gradle-8.14.3-bin.zip" \
-              "https://mirrors.cloud.tencent.com/gradle/gradle-8.14.3-bin.zip"
+              -o "$WRAPPER_DIR/gradle-8.14.3-bin.zip.tmp" \
+              "https://services.gradle.org/distributions/gradle-8.14.3-bin.zip"
+            mv "$WRAPPER_DIR/gradle-8.14.3-bin.zip.tmp" "$WRAPPER_DIR/gradle-8.14.3-bin.zip"
           fi
+
+      # Configure a global Gradle init script to mirror Maven Central to Google Cloud Storage.
+      # When Maven Central redirects release jars (like kotlin-compiler-embeddable) to
+      # GitHub Releases, GitHub CDN 504 Gateway Timeouts fail the build. Google's mirror
+      # serves artifacts directly with no external redirects.
+      - name: Configure Gradle Maven Central mirror
+        run: |
+          mkdir -p "$HOME/.gradle/init.d"
+          cat << 'EOF' > "$HOME/.gradle/init.d/mirror.init.gradle"
+          allprojects {
+              buildscript {
+                  repositories {
+                      all { ArtifactRepository repo ->
+                          if (repo instanceof MavenArtifactRepository) {
+                              def u = repo.url.toString()
+                              if (u.contains("repo.maven.apache.org") || u.contains("repo1.maven.org")) {
+                                  repo.url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                              }
+                          }
+                      }
+                  }
+              }
+              repositories {
+                  all { ArtifactRepository repo ->
+                      if (repo instanceof MavenArtifactRepository) {
+                          def u = repo.url.toString()
+                          if (u.contains("repo.maven.apache.org") || u.contains("repo1.maven.org")) {
+                              repo.url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                          }
+                      }
+                  }
+              }
+          }
+          settingsEvaluated { settings ->
+              try {
+                  settings.pluginManagement.repositories.all { repo ->
+                      if (repo instanceof MavenArtifactRepository) {
+                          def u = repo.url.toString()
+                          if (u.contains("repo.maven.apache.org") || u.contains("repo1.maven.org")) {
+                              repo.url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                          }
+                      }
+                  }
+              } catch (Throwable ignored) {}
+              try {
+                  settings.dependencyResolutionManagement.repositories.all { repo ->
+                      if (repo instanceof MavenArtifactRepository) {
+                          def u = repo.url.toString()
+                          if (u.contains("repo.maven.apache.org") || u.contains("repo1.maven.org")) {
+                              repo.url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                          }
+                      }
+                  }
+              } catch (Throwable ignored) {}
+          }
+          EOF
 
       - name: Build debug APK
         env:
