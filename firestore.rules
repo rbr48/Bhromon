@@ -914,8 +914,14 @@ service cloud.firestore {
       // admin moves it on and leaves a note for the residents, and the author or an admin
       // removes it.
       match /service_requests/{requestId} {
+        // A photo is an upload from this tour's own media space.
+        function validPhoto(p) {
+          return p is string &&
+                 p.matches('https://bhromon\\.fun/media/' + tourId + '/media/[0-9a-f]{32}\\.(jpg|jpeg|png|webp|gif|heic|heif)');
+        }
+
         function validRequest(d) {
-          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail', 'photoUrl']) &&
+          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail', 'photoUrls', 'photoUrl']) &&
                  d.title is string && d.title.size() >= 3 && d.title.size() <= 120 &&
                  d.details is string && d.details.size() <= 1000 &&
                  d.category in ['lift', 'water', 'power', 'security', 'cleaning', 'other'] &&
@@ -924,10 +930,14 @@ service cloud.firestore {
                  d.createdByEmail is string &&
                  d.createdByName is string && d.createdByName.size() <= 200 &&
                  d.updatedByEmail == tourUserEmail() &&
-                 // At most one photo, and only from this tour's own media space.
-                 (!('photoUrl' in d) || d.photoUrl == null ||
-                  (d.photoUrl is string &&
-                   d.photoUrl.matches('https://bhromon\\.fun/media/' + tourId + '/media/[0-9a-f]{32}\\.(jpg|jpeg|png|webp|gif|heic|heif)')));
+                 // Up to three photos, each from this tour's own media space. A request raised
+                 // with the older single photoUrl stays valid until its author edits it.
+                 (!('photoUrl' in d) || d.photoUrl == null || validPhoto(d.photoUrl)) &&
+                 (!('photoUrls' in d) || d.photoUrls == null ||
+                  (d.photoUrls is list && d.photoUrls.size() <= 3 &&
+                   (d.photoUrls.size() < 1 || validPhoto(d.photoUrls[0])) &&
+                   (d.photoUrls.size() < 2 || validPhoto(d.photoUrls[1])) &&
+                   (d.photoUrls.size() < 3 || validPhoto(d.photoUrls[2]))));
         }
         allow read: if isActiveMember(tourId);
         allow create: if isSocietyTour(tourId) && isActiveMember(tourId) &&
@@ -946,7 +956,7 @@ service cloud.firestore {
                          request.resource.data.createdAt == resource.data.createdAt &&
                          request.resource.data.updatedAt == request.time &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['title', 'details', 'category', 'photoUrl', 'updatedAt', 'updatedByEmail']) &&
+                           .hasOnly(['title', 'details', 'category', 'photoUrls', 'photoUrl', 'updatedAt', 'updatedByEmail']) &&
                          validRequest(request.resource.data);
         allow update: if isSocietyTour(tourId) && isActiveMember(tourId) && isTourAdmin(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()

@@ -616,6 +616,8 @@ describe('Tour Group Firestore rules', () => {
     const SOC = 'soc1';
     const FAM = 'fam3';
     const notice = (by) => ({ title: 'Lift service on Friday', content: 'The lift is off from 10 to 12', authorEmail: by, createdAt: serverTimestamp() });
+    // A photo in this tour's media space: the folder is media and the name is a 32-digit hex id.
+    const societyPhoto = (tour, id = 'a', host = 'https://bhromon.fun') => `${host}/media/${tour}/media/${id.repeat(32)}.jpg`;
     const serviceRequest = (by, extra = {}) => ({
       title: 'Lift stops at floor 4',
       details: 'Since Monday',
@@ -684,26 +686,46 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(updateDoc(ref, { adminNote: 'fixed', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
     });
 
-    test('a request carries one photo from its own tour; another tour or host is refused', async () => {
-      const photo = (tour, host = 'https://bhromon.fun') => `${host}/media/${tour}/media/0123456789abcdef0123456789abcdef.jpg`;
-      const raise = (extra) => addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, extra));
-      await assertSucceeds(raise({ photoUrl: photo(SOC) }));
-      await assertFails(raise({ photoUrl: photo(FAM) }));
-      await assertFails(raise({ photoUrl: photo(SOC, 'https://example.com') }));
-      await assertFails(raise({ photoUrl: `https://bhromon.fun/media/${SOC}/media/not-a-hash.jpg` }));
-      await assertFails(raise({ photoUrl: 42 }));
+    test('a request carries up to three photos from its own tour; another tour, host, type or a fourth is refused', async () => {
+      const raise = (photoUrls) => addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { photoUrls }));
+      await assertSucceeds(raise([societyPhoto(SOC)]));
+      await assertSucceeds(raise([societyPhoto(SOC, 'a'), societyPhoto(SOC, 'b'), societyPhoto(SOC, 'c')]));
+      await assertFails(raise([societyPhoto(SOC, 'a'), societyPhoto(SOC, 'b'), societyPhoto(SOC, 'c'), societyPhoto(SOC, 'd')]));
+      await assertFails(raise([societyPhoto(SOC), societyPhoto(FAM)]));
+      await assertFails(raise([societyPhoto(SOC), societyPhoto(SOC, 'b', 'https://example.com')]));
+      await assertFails(raise([`https://bhromon.fun/media/${SOC}/media/not-a-hash.jpg`]));
+      await assertFails(raise([societyPhoto(SOC), 42]));
+      await assertFails(raise(societyPhoto(SOC)));
     });
 
-    test('the author adds, replaces or removes the photo while the request is open', async () => {
+    test('the author adds, replaces or removes the photos while the request is open', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
         await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r3'), serviceRequest(people.member.email));
       });
       const ref = doc(db('member'), 'tours', SOC, 'service_requests', 'r3');
-      const edit = (photoUrl) => updateDoc(ref, { photoUrl, updatedAt: serverTimestamp(), updatedByEmail: people.member.email });
-      await assertSucceeds(edit(`https://bhromon.fun/media/${SOC}/media/0123456789abcdef0123456789abcdef.png`));
-      await assertSucceeds(edit(`https://bhromon.fun/media/${SOC}/media/fedcba9876543210fedcba9876543210.jpg`));
+      const edit = (photoUrls) => updateDoc(ref, { photoUrls, updatedAt: serverTimestamp(), updatedByEmail: people.member.email });
+      await assertSucceeds(edit([societyPhoto(SOC, 'a')]));
+      await assertSucceeds(edit([societyPhoto(SOC, 'a'), societyPhoto(SOC, 'b'), societyPhoto(SOC, 'c')]));
+      await assertFails(edit([societyPhoto(SOC, 'a'), societyPhoto(SOC, 'b'), societyPhoto(SOC, 'c'), societyPhoto(SOC, 'd')]));
       await assertSucceeds(edit(deleteField()));
-      await assertFails(edit(`https://bhromon.fun/media/${FAM}/media/0123456789abcdef0123456789abcdef.jpg`));
+      await assertFails(edit([societyPhoto(FAM)]));
+    });
+
+    test('the author moves a request kept with the older single photo onto the photo list', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r7'), serviceRequest(people.member.email, { photoUrl: societyPhoto(SOC) }));
+      });
+      const ref = doc(db('member'), 'tours', SOC, 'service_requests', 'r7');
+      await assertSucceeds(updateDoc(ref, { photoUrl: deleteField(), photoUrls: [societyPhoto(SOC), societyPhoto(SOC, 'b')], updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+    });
+
+    test('the owner and admins cannot change the photos on a request', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r8'), serviceRequest(people.member.email, { photoUrls: [societyPhoto(SOC)] }));
+      });
+      const ref = (who) => doc(db(who), 'tours', SOC, 'service_requests', 'r8');
+      await assertFails(updateDoc(ref('admin'), { photoUrls: [], updatedAt: serverTimestamp(), updatedByEmail: people.admin.email }));
+      await assertFails(updateDoc(ref('owner'), { photoUrls: deleteField(), updatedAt: serverTimestamp(), updatedByEmail: people.owner.email }));
     });
 
     test('the words are fixed once the committee has moved the request on', async () => {

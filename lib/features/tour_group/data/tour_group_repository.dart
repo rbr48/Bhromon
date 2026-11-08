@@ -2155,16 +2155,20 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
-    String? photoUrl,
+    List<String> photoUrls = const [],
   }) async {
     final email = _requireEmail();
+    final photos = photoUrls
+        .where((url) => url.isNotEmpty)
+        .take(kServiceRequestPhotosMax)
+        .toList();
     await _sub(tourId, 'service_requests').add({
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
       'status': ServiceRequestStatus.open.stored,
       'adminNote': '',
-      if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
+      if (photos.isNotEmpty) 'photoUrls': photos,
       'createdByEmail': email,
       'createdByName': currentDisplayName,
       'createdAt': FieldValue.serverTimestamp(),
@@ -2181,17 +2185,21 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
-    String? photoUrl,
+    List<String> photoUrls = const [],
   }) async {
     final email = _requireEmail();
+    final photos = photoUrls
+        .where((url) => url.isNotEmpty)
+        .take(kServiceRequestPhotosMax)
+        .toList();
     await _sub(tourId, 'service_requests').doc(requestId).update({
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
-      // A null or empty photo removes the field, so a photo can be taken off a request.
-      'photoUrl': (photoUrl == null || photoUrl.isEmpty)
-          ? FieldValue.delete()
-          : photoUrl,
+      // An empty list removes the field, so every photo can be taken off a request. The
+      // single photo that requests kept before the list is dropped here too.
+      'photoUrls': photos.isEmpty ? FieldValue.delete() : photos,
+      'photoUrl': FieldValue.delete(),
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
     });
