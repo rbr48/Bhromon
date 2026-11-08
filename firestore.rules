@@ -921,7 +921,7 @@ service cloud.firestore {
         }
 
         function validRequest(d) {
-          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail', 'photoUrls', 'photoUrl']) &&
+          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail', 'photoUrls', 'photoUrl', 'inProgressAt', 'resolvedAt', 'resolvedByName']) &&
                  d.title is string && d.title.size() >= 3 && d.title.size() <= 120 &&
                  d.details is string && d.details.size() <= 1000 &&
                  d.category in ['lift', 'water', 'power', 'security', 'cleaning', 'other'] &&
@@ -937,7 +937,12 @@ service cloud.firestore {
                   (d.photoUrls is list && d.photoUrls.size() <= 3 &&
                    (d.photoUrls.size() < 1 || validPhoto(d.photoUrls[0])) &&
                    (d.photoUrls.size() < 2 || validPhoto(d.photoUrls[1])) &&
-                   (d.photoUrls.size() < 3 || validPhoto(d.photoUrls[2]))));
+                   (d.photoUrls.size() < 3 || validPhoto(d.photoUrls[2])))) &&
+                 // The timeline stamps that the committee's status save writes, and who resolved
+                 // the request. Only an owner or admin can write these (see the admin rule below).
+                 (!('inProgressAt' in d) || d.inProgressAt is timestamp) &&
+                 (!('resolvedAt' in d) || d.resolvedAt is timestamp) &&
+                 (!('resolvedByName' in d) || (d.resolvedByName is string && d.resolvedByName.size() <= 200));
         }
         allow read: if isActiveMember(tourId);
         allow create: if isSocietyTour(tourId) && isActiveMember(tourId) &&
@@ -946,6 +951,7 @@ service cloud.firestore {
                          request.resource.data.updatedAt == request.time &&
                          request.resource.data.status == 'open' &&
                          request.resource.data.adminNote == '' &&
+                         !request.resource.data.keys().hasAny(['inProgressAt', 'resolvedAt', 'resolvedByName']) &&
                          validRequest(request.resource.data);
         allow update: if isSocietyTour(tourId) && isActiveMember(tourId) &&
                          resource.data.createdByEmail == tourUserEmail() &&
@@ -960,7 +966,7 @@ service cloud.firestore {
                          validRequest(request.resource.data);
         allow update: if isSocietyTour(tourId) && isActiveMember(tourId) && isTourAdmin(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['status', 'adminNote', 'updatedAt', 'updatedByEmail']) &&
+                           .hasOnly(['status', 'adminNote', 'updatedAt', 'updatedByEmail', 'inProgressAt', 'resolvedAt', 'resolvedByName']) &&
                          request.resource.data.updatedAt == request.time &&
                          validRequest(request.resource.data);
         allow delete: if isSocietyTour(tourId) && isActiveMember(tourId) &&
