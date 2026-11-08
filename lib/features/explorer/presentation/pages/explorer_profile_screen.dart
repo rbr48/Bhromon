@@ -3474,9 +3474,29 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                             );
 
                                             if (!context.mounted) return;
-                                            await context
+                                            final saved = await context
                                                 .read<AuthCubit>()
                                                 .updateProfile(updated);
+                                            if (!saved) {
+                                              // The server refused the save, so nothing changed.
+                                              // The sheet stays open to try again, and the bio and
+                                              // photos below are not written on their own either.
+                                              setDialogState(
+                                                  () => isSaving = false);
+                                              if (bottomSheetContext.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(_isBn
+                                                        ? 'প্রোফাইল সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।'
+                                                        : "Couldn't save your profile. Try again."),
+                                                    backgroundColor:
+                                                        Colors.redAccent,
+                                                  ),
+                                                );
+                                              }
+                                              return;
+                                            }
 
                                             await FirebaseFirestore.instance
                                                 .collection('explorer_profiles')

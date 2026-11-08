@@ -125,14 +125,26 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
 
-  Future<void> updateProfile(ExplorerProfile profile) async {
+  /// Saves the profile and returns whether the server accepted it. When the server
+  /// refuses the save, the signed-in state goes back to the profile from before the
+  /// edit, so the rest of the app keeps the signed-in person's uid.
+  Future<bool> updateProfile(ExplorerProfile profile) async {
+    final before = state;
     emit(const AuthLoading());
     final result = await _updateProfile(profile);
-    result.fold(
-      (failure) => emit(_failedState(failure)),
+    return result.fold(
+      (failure) {
+        if (before is Authenticated) {
+          emit(Authenticated(before.profile));
+        } else {
+          emit(_failedState(failure));
+        }
+        return false;
+      },
       (updatedProfile) {
         _syncGroupMembership();
         emit(Authenticated(updatedProfile));
+        return true;
       },
     );
   }

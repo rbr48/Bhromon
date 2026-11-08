@@ -97,6 +97,38 @@ describe('Firestore Security Rules', () => {
         })
       );
     });
+
+    test('a profile save that leaves out the server-owned fields is accepted', async () => {
+      await seedDocument('explorer_profiles', userUid, {
+        ...profileData,
+        tier: 'community',
+        explorerScore: { value: 120, tier: 'community' },
+      });
+      const client = getAuthenticatedContext(userUid).firestore();
+      // The app's save: the editable fields only, merged into the stored profile.
+      await assertSucceeds(
+        client.collection('explorer_profiles').doc(userUid).set(
+          { displayName: 'Jane Smith', division: 'Sylhet' },
+          { merge: true }
+        )
+      );
+    });
+
+    test('a profile save that echoes a server-owned field the server has since changed is refused', async () => {
+      await seedDocument('explorer_profiles', userUid, {
+        ...profileData,
+        tier: 'community',
+        explorerScore: { value: 120, tier: 'community' },
+      });
+      const client = getAuthenticatedContext(userUid).firestore();
+      // A copy loaded before the server moved the owner to 'community'. The whole save is refused.
+      await assertFails(
+        client.collection('explorer_profiles').doc(userUid).set(
+          { ...profileData, displayName: 'Jane Smith' },
+          { merge: true }
+        )
+      );
+    });
   });
 
   // ───────────────────────────────────────────────────────────────────────────
