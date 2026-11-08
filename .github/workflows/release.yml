@@ -7,7 +7,10 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────
-  # Job 1: Deploy Firebase (Rules, Indexes, Storage, Functions)
+  # Job 1: Deploy Firebase
+  # Rules, indexes and storage deploy first. Functions come last, in their own
+  # steps, so a functions failure (for example BILLING_DISABLED on the Spark plan)
+  # cannot stop the rules from deploying.
   # ─────────────────────────────────────────────
   deploy_firebase:
     name: Deploy Firebase
@@ -34,6 +37,15 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
+      - name: Deploy Firestore rules, indexes and storage
+        run: |
+          npx firebase-tools deploy \
+            --only firestore:rules,firestore:indexes,storage \
+            --token "$FIREBASE_TOKEN" \
+            --non-interactive
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
       - name: Install Functions dependencies
         working-directory: functions
         run: npm ci
@@ -42,10 +54,10 @@ jobs:
         working-directory: functions
         run: npm run build
 
-      - name: Deploy to Firebase (rules, indexes, storage, functions)
+      - name: Deploy Cloud Functions
         run: |
           npx firebase-tools deploy \
-            --only firestore:rules,firestore:indexes,storage,functions \
+            --only functions \
             --token "$FIREBASE_TOKEN" \
             --non-interactive
         env:
