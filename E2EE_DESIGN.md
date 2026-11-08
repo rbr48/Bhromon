@@ -70,7 +70,18 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 
 **Recommendation:** Olm through the Apache-2.0 `vodozemac` crate, with our own bindings for Android and iOS, and no web build in the first slice. The bindings are the main new work. They need a Rust build in CI and a measured binary-size cost. The audit history of `vodozemac` must be checked before adoption. The external review (M6) covers our integration either way.
 
-**M1 host spike (Linux, done):** `vodozemac` 0.11.2 built here and passed a session round trip. It covered the pre-key message, a reply, ten messages across five round trips, a rejected replay of the pre-key message, and an encrypted account pickle that restores and rejects a wrong key. It took about 77 µs per message in release mode on this host. The stripped binary was 806 KB, which includes the Rust standard library. That is a host figure, not the Android or iOS cost. The spike is kept outside the repository until M1's CI job is in place.
+**M1 host spike (Linux, done):** `vodozemac` 0.11.2 built here and passed a session round trip. It covered the pre-key message, a reply, ten messages across five round trips, a rejected replay of the pre-key message, and an encrypted account pickle that restores and rejects a wrong key. It took about 77 µs per message in release mode on this host. The stripped binary was 806 KB, which includes the Rust standard library. That is a host figure, not the Android or iOS cost. The spike itself stays outside the repository, and the crate below replaces it.
+
+**M1 crate (`native/e2ee_olm`, in the repository):** a thin C interface over `vodozemac` 0.11.2 with session version 2. It is ABI version 1 with 23 functions, declared in `native/e2ee_olm/include/e2ee_olm.h`. It covers accounts, one-time and fallback keys, Ed25519 signing and verification, sessions, and encrypted pickles for accounts and sessions. The Linux checks pass:
+
+- Nine Rust unit tests. They cover a session round trip with replay refusal, a pickle with a wrong-key refusal, signatures, fallback keys, a tampered message that is refused while the session keeps working, a pre-key message refused under another identity key, a version 1 session refused so the MAC cannot be truncated, and null and bad arguments.
+- `clippy -D warnings`, `rustfmt`, and a C smoke test compiled with `-Wall -Wextra -Werror` against the static library.
+- A check that the 23 exported symbols match the header.
+- Licences of the 79 locked crates. All are permissive: MIT, Apache-2.0, BSD-3-Clause, Unlicense, Unicode-3.0, or a dual licence with a permissive option. None is GPL or AGPL.
+- Size. The stripped x86_64 shared library is 931,728 bytes. The static archive is 30 MB because it holds every object file, so it is not the app figure. The Android and iOS figures come from CI.
+- Determinism. A rebuild on the same machine gives an identical SHA-256. Bit-identical output across machines needs path remapping, which is still open.
+
+`vodozemac`'s published crate contains no test vectors. The vectors the gate needs must come from another source, such as libolm's test suite, which has not been chosen yet (section 11, M1).
 
 ## 6. Keys and their lifecycle
 
@@ -108,7 +119,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 
 ## 10. Testing
 
-- Test vectors from the chosen library, plus our own envelope and payload tests.
+- Test vectors. `vodozemac` ships none, so independent vectors (for example from libolm's test suite) must be sourced for M1 and M2. Plus our own envelope and payload tests.
 - Property tests for ratchet sequences: out-of-order delivery, skipped keys and replays.
 - Fuzzing of envelope parsing.
 - Rules tests on the emulator: encrypted chats refuse `text` and malformed envelopes.
@@ -119,7 +130,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 ## 11. Milestones and gates
 
 - **M0 Design and threat model** (this document). Gate: the owner decides D1 to D9.
-- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the host spike is done (section 5). The Android and iOS builds in CI, the official test vectors and the mobile binary-size measurement remain.
+- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the crate, the C interface, the tests, the licence check and the CI workflow (`.github/workflows/e2ee_native.yml`) are in place (section 5). Open: a green CI run for Android and iOS, the mobile sizes, independent test vectors, and bit-identical builds across machines.
 - **M2 Crypto module behind the flag.** Local only: account, sessions, envelope, verification. Unit tests and vectors. No server changes yet.
 - **M3 Server support.** Envelope storage, generic push, rules and tests. Still behind the flag.
 - **M4 Client send and receive** for internal test accounts, with the verification screen.
