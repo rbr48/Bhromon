@@ -8,10 +8,12 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/media/media_access.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
+import '../../../../core/utils/doc_future_cache.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../data/active_group.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/date_codec.dart';
 import '../../domain/models/tour_group.dart';
 import 'tour_group_dialogs.dart';
 
@@ -40,7 +42,7 @@ class DesktopRightDock extends StatelessWidget {
     final repo = repository ?? TourGroupRepository();
     String currentUid = '';
     try {
-      final authState = context.watch<AuthCubit?>()?.state;
+      final authState = context.watch<AuthCubit>().state;
       if (authState is Authenticated) {
         currentUid = authState.profile.uid;
       }
@@ -497,8 +499,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
       return FirebaseFirestore.instance
           .collection('chats')
           .where('participants', arrayContains: currentUid)
-          .snapshots()
-          .handleError((_) {});
+          .snapshots();
     } catch (_) {
       return null;
     }
@@ -590,6 +591,15 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                             strokeWidth: 2,
                             color: AppColors.mintGreen,
                           ),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          isBn ? 'চ্যাট লোড করা যায়নি' : 'Failed to load chats',
+                          style: TextStyle(color: context.forest.text38, fontSize: 11),
                         ),
                       );
                     }
@@ -727,7 +737,9 @@ class _DesktopDirectChatItem extends StatelessWidget {
     final profiles = data['participantProfiles'] as Map<String, dynamic>?;
     final cached = profiles?[otherUid] as Map?;
     final cachedName = (cached?['displayName'] as String?)?.trim();
-    final cachedAvatar = cached?['avatarUrl'] as String?;
+    final cachedAvatar = (cached?['avatarUrl'] as String?) ??
+        (cached?['photoUrl'] as String?) ??
+        (cached?['photoURL'] as String?);
     final lastMsg = (data['lastMessage'] as String?)?.trim() ?? '';
     final unreadCounts = data['unreadCounts'] as Map<String, dynamic>? ?? {};
     final unread = (unreadCounts[currentUid] as num?)?.toInt() ?? 0;
@@ -752,7 +764,8 @@ class _DesktopDirectChatItem extends StatelessWidget {
         final pName = (pData?['displayName'] as String?)?.trim() ??
             (pData?['name'] as String?)?.trim();
         final pAvatar = (pData?['avatarUrl'] as String?)?.trim() ??
-            (pData?['photoUrl'] as String?)?.trim();
+            (pData?['photoUrl'] as String?)?.trim() ??
+            (pData?['photoURL'] as String?)?.trim();
         final isOnline = (pData?['isOnline'] as bool?) ??
             (cached?['isOnline'] as bool? ?? false);
 
@@ -764,6 +777,52 @@ class _DesktopDirectChatItem extends StatelessWidget {
 
         final avatarUrl =
             (pAvatar != null && pAvatar.isNotEmpty) ? pAvatar : cachedAvatar;
+        final sharedTourId = data['sharedTourId'] as String?;
+        final otherEmail = (data['memberEmails'] as Map?)?[otherUid] as String?;
+
+        Widget buildAvatarImage(String? url) {
+          final hasUrl = url != null && url.isNotEmpty;
+          return Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: context.forest.surfaceFor(const Color(0xFF1D3B2A)),
+              shape: BoxShape.circle,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasUrl
+                ? Image.network(
+                    signedMediaUrl(url),
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        _avatarFallback(context, displayName),
+                  )
+                : _avatarFallback(context, displayName),
+          );
+        }
+
+        Widget avatarDisplay;
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          avatarDisplay = buildAvatarImage(avatarUrl);
+        } else if (sharedTourId != null &&
+            sharedTourId.isNotEmpty &&
+            otherEmail != null &&
+            otherEmail.isNotEmpty) {
+          final memId = '${sharedTourId}__${normalizeEmail(otherEmail)}';
+          avatarDisplay = FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            future: DocFutureCache.instance.get(
+              FirebaseFirestore.instance.collection('memberships').doc(memId),
+            ),
+            builder: (context, memSnap) {
+              final memPhoto = memSnap.data?.data()?['photoUrl'] as String?;
+              return buildAvatarImage(memPhoto);
+            },
+          );
+        } else {
+          avatarDisplay = buildAvatarImage(null);
+        }
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -788,26 +847,7 @@ class _DesktopDirectChatItem extends StatelessWidget {
                   // User Avatar with Online Dot
                   Stack(
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: context.forest
-                              .surfaceFor(const Color(0xFF1D3B2A)),
-                          shape: BoxShape.circle,
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                            ? Image.network(
-                                signedMediaUrl(avatarUrl),
-                                width: 32,
-                                height: 32,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    _avatarFallback(context, displayName),
-                              )
-                            : _avatarFallback(context, displayName),
-                      ),
+                      avatarDisplay,
                       Positioned(
                         bottom: 0,
                         right: 0,

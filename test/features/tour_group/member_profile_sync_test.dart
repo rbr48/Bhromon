@@ -32,6 +32,14 @@ void main() {
           row: {'uid': ''}, uid: 'u1', displayName: 'Rahim', photoUrl: null),
       {'uid': 'u1', 'displayName': 'Rahim'},
     );
+    expect(
+      memberRowUpdates(
+          row: {'uid': 'old_uid'},
+          uid: 'new_uid',
+          displayName: 'Rahim',
+          photoUrl: null),
+      {'uid': 'new_uid', 'displayName': 'Rahim'},
+    );
   });
 
   test('the placeholder name is never written', () {

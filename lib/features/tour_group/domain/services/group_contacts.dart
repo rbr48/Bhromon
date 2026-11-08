@@ -79,11 +79,15 @@ List<GroupContact> groupContacts({
   return contacts;
 }
 
-/// Whether a chat or call document was opened inside one of the user's tours.
-/// Documents from before tours decided who can talk have no tour, and are left out.
+/// Whether a chat or call document belongs to one of the user's tours.
+/// If sharedTourId is present, it must be in [myTourIds]. If absent (legacy chats),
+/// it remains accessible rather than being discarded.
 bool isInMyTours(Map<String, dynamic>? data, Set<String> myTourIds) {
   final tourId = data?['sharedTourId'];
-  return tourId is String && myTourIds.contains(tourId);
+  if (tourId is String && tourId.isNotEmpty) {
+    return myTourIds.contains(tourId);
+  }
+  return true;
 }
 
 class _Draft {
