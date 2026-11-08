@@ -54,18 +54,21 @@ jobs:
       - name: Drop the Windows-only JDK path for this job
         run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
 
-      # Pre-download the Gradle wrapper zip with curl retries to guard against
-      # transient 504 Gateway Timeouts from services.gradle.org / GitHub releases CDN.
+      # Pre-download the Gradle wrapper zip with retries and mirror fallback to guard
+      # against GitHub releases CDN 504 Gateway Timeouts from services.gradle.org.
       - name: Ensure Gradle wrapper distribution is cached
         run: |
           WRAPPER_DIR="$HOME/.gradle/wrapper/dists/gradle-8.14.3-bin/cv11ve7ro1n3o1j4so8xd9n66"
           if [ ! -f "$WRAPPER_DIR/gradle-8.14.3-bin.zip.ok" ] && [ ! -f "$WRAPPER_DIR/gradle-8.14.3-bin.zip" ]; then
             echo "Pre-fetching Gradle 8.14.3 wrapper distribution..."
             mkdir -p "$WRAPPER_DIR"
-            curl -fL --retry 5 --retry-delay 2 --retry-all-errors \
+            curl -fL --retry 2 --retry-delay 1 \
               -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
               -o "$WRAPPER_DIR/gradle-8.14.3-bin.zip" \
-              "https://services.gradle.org/distributions/gradle-8.14.3-bin.zip"
+              "https://services.gradle.org/distributions/gradle-8.14.3-bin.zip" || \
+            curl -fL --retry 3 --retry-delay 2 \
+              -o "$WRAPPER_DIR/gradle-8.14.3-bin.zip" \
+              "https://mirrors.cloud.tencent.com/gradle/gradle-8.14.3-bin.zip"
           fi
 
       - name: Build debug APK
