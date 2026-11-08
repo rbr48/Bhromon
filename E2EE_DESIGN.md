@@ -92,7 +92,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 - **Verification:** a safety number is a fingerprint of both identity keys, computed in a canonical order. It is shown as digits and as a QR code. The exact encoding is fixed in M2 with test vectors.
 - **Key change:** if a contact's identity key changes, the chat shows a warning and marks the contact unverified. The chat is not blocked.
 - **Device loss:** the new device gets a new identity, and old history is not readable there. The app says so.
-- **Account deletion:** `gdprDeleteUser` removes the prekey bundle and its one-time keys (`UID_DOCUMENTS` in `functions/src/lib/accountErasure.ts`). The client does not yet clear its own sessions when an account closes.
+- **Account deletion:** `gdprDeleteUser` removes the prekey bundle and its one-time keys (`UID_DOCUMENTS` in `functions/src/lib/accountErasure.ts`). The app then erases this device's encryption state for that account: its keys, sessions, pinned contacts and kept text (`HiveE2eeLocalStore.erase`). Sign-out keeps that state, so the next sign-in on this device continues the same chats; it only releases the native account from memory, and waits at most a few seconds for encryption work already running. Another device of the same account keeps its own copy until the app is removed there.
 
 ## 7. Server and storage changes
 

@@ -63,12 +63,51 @@ class E2eeChatController {
     return _service;
   }
 
-  /// Frees the native account of the current user. Call when a different account
-  /// signs in, or when encryption is no longer needed.
-  void release() {
-    _service?.dispose();
+  /// The longest a release waits for encryption work that is already running. Sign-out
+  /// must not wait on a network call; the native account is freed once that work ends.
+  static const Duration _releaseWait = Duration(seconds: 3);
+
+  /// Releases the native account of the current user from memory. The keys stay on
+  /// the device, so the next sign-in continues the same encrypted chats.
+  Future<void> release() async {
+    final service = _service;
     _service = null;
     _uid = null;
     _unavailable = false;
+    if (service == null) return;
+    try {
+      await service.close().timeout(_releaseWait);
+    } catch (error, stackTrace) {
+      logWarning('Could not release the encryption account', error, stackTrace);
+    }
+  }
+
+  /// Test seam: makes [service] the account's service, as [serviceFor] does when the
+  /// build turns encryption on, which a test build does not.
+  @visibleForTesting
+  void useServiceForTest(E2eeService service, String uid) {
+    _service = service;
+    _uid = uid;
+    _unavailable = false;
+  }
+
+  /// Deletes the encryption state of a closed account from this device: its service,
+  /// keys, sessions, pinned contacts and the text it kept. A failure is logged, and
+  /// does not stop the account from closing.
+  Future<void> deleteAccountState(String uid) async {
+    if (uid.isEmpty) return;
+    if (_uid == uid) await release();
+    try {
+      await HiveE2eeLocalStore(
+        getIt<HiveEncryptionService>(),
+        userId: uid,
+      ).erase();
+    } catch (error, stackTrace) {
+      logWarning(
+        'Could not delete the encryption state of a closed account',
+        error,
+        stackTrace,
+      );
+    }
   }
 }

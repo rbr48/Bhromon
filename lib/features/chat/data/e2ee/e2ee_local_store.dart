@@ -26,6 +26,13 @@ class HiveE2eeLocalStore implements E2eeLocalStore {
   Future<Box<dynamic>> _open() =>
       _box ??= _encryption.openEncryptedBox<dynamic>(_boxName);
 
+  /// Deletes this account's state from the device: its keys, its sessions, the contacts
+  /// it pinned and the text it kept. Used when the account is deleted.
+  Future<void> erase() async {
+    _box = null;
+    await _encryption.deleteEncryptedBox(_boxName);
+  }
+
   @override
   Future<String?> readDeviceId() async {
     final value = (await _open()).get('deviceId');

@@ -331,6 +331,22 @@ class HiveEncryptionService {
     }
   }
 
+  /// Closes [boxName] and deletes it from disk, with everything in it. Used when that
+  /// data must go, such as the keys of a closed account. A later open starts empty.
+  Future<void> deleteEncryptedBox(String boxName) async {
+    final opened = _boxes.remove(boxName);
+    if (opened != null) {
+      try {
+        final box = await opened;
+        if (box.isOpen) await box.close();
+      } catch (error) {
+        // The box never opened, so there is nothing to close.
+        logInfo('[HiveEncryption] $boxName was not open: $error');
+      }
+    }
+    await _deleteBox(boxName);
+  }
+
   /// Deletes [name] from disk. A failed open is closed by Hive in the background,
   /// and that close deletes the box's lock file: a delete that runs in the same
   /// moment finds the file gone. The delete is then run again once that close has
