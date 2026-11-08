@@ -79,8 +79,8 @@ jobs:
             echo "### Linux (x86_64)"
             echo "| file | bytes |"
             echo "| --- | ---: |"
-            echo "| libe2ee_olm.so, stripped | $(stat -c %s target/release/libe2ee_olm.so) |"
-            echo "| libe2ee_olm.a, all objects (not the app figure) | $(stat -c %s target/release/libe2ee_olm.a) |"
+            echo "| libe2ee_olm.so, stripped | $(wc -c < target/release/libe2ee_olm.so | tr -d " ") |"
+            echo "| libe2ee_olm.a, all objects (not the app figure) | $(wc -c < target/release/libe2ee_olm.a | tr -d " ") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   android:
@@ -127,7 +127,7 @@ jobs:
             echo "| --- | ---: | --- |"
             for abi in arm64-v8a armeabi-v7a x86_64; do
               f="dist/android/$abi/libe2ee_olm.so"
-              echo "| $abi | $(stat -c %s "$f") | \`$(sha256sum "$f" | cut -c1-16)…\` |"
+              echo "| $abi | $(wc -c < "$f" | tr -d " ") | \`$(sha256sum "$f" | cut -c1-16)…\` |"
             done
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -177,9 +177,9 @@ jobs:
             echo "### iOS"
             echo "| file | bytes |"
             echo "| --- | ---: |"
-            echo "| libe2ee_olm.a, device (arm64), all objects (not the app figure) | $(stat -c %s target/aarch64-apple-ios/release/libe2ee_olm.a) |"
-            echo "| libe2ee_olm.a, simulator (arm64), all objects (not the app figure) | $(stat -c %s target/aarch64-apple-ios-sim/release/libe2ee_olm.a) |"
-            echo "| smoke test linked for the simulator, stripped | $(stat -c %s target/smoke-sim) |"
+            echo "| libe2ee_olm.a, device (arm64), all objects (not the app figure) | $(wc -c < target/aarch64-apple-ios/release/libe2ee_olm.a | tr -d " ") |"
+            echo "| libe2ee_olm.a, simulator (arm64), all objects (not the app figure) | $(wc -c < target/aarch64-apple-ios-sim/release/libe2ee_olm.a | tr -d " ") |"
+            echo "| smoke test linked for the simulator, stripped | $(wc -c < target/smoke-sim | tr -d " ") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the iOS libraries

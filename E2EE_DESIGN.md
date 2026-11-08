@@ -78,7 +78,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 - `clippy -D warnings`, `rustfmt`, and a C smoke test compiled with `-Wall -Wextra -Werror` against the static library.
 - A check that the 23 exported symbols match the header.
 - Licences of the 79 locked crates. All are permissive: MIT, Apache-2.0, BSD-3-Clause, Unlicense, Unicode-3.0, or a dual licence with a permissive option. None is GPL or AGPL.
-- Size. The stripped x86_64 shared library is 931,728 bytes. The static archive is 30 MB because it holds every object file, so it is not the app figure. The Android and iOS figures come from CI.
+- Size. The stripped x86_64 shared library on Linux is 931,728 bytes. On Android, the stripped shared libraries are 804,968 bytes (arm64-v8a), 612,004 bytes (armeabi-v7a) and 951,480 bytes (x86_64), from the CI run [42475757425](https://github.com/rbr48/Bhromon/actions/runs/42475757425). The iOS static archives are about 24 MB each because they hold every object file, so they are not the app figure. The C smoke test linked for the iOS simulator at 15.5 is 1,913,112 bytes stripped. It references every export, so it is an upper bound for what the library adds to an app; the real figure comes once the library is linked into the app (M2).
 - Determinism. A rebuild on the same machine gives an identical SHA-256. Bit-identical output across machines needs path remapping, which is still open.
 
 `vodozemac`'s published crate contains no test vectors. The vectors the gate needs must come from another source, such as libolm's test suite, which has not been chosen yet (section 11, M1).
@@ -130,7 +130,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 ## 11. Milestones and gates
 
 - **M0 Design and threat model** (this document). Gate: the owner decides D1 to D9.
-- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the crate, the C interface, the tests, the licence check and the CI workflow (`.github/workflows/e2ee_native.yml`) are in place (section 5). Open: a green CI run for Android and iOS, the mobile sizes, independent test vectors, and bit-identical builds across machines.
+- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the crate, the C interface, the tests, the licence check and the CI workflow (`.github/workflows/e2ee_native.yml`) are in place (section 5). The workflow passed on Linux, Android and iOS in run [42475757425](https://github.com/rbr48/Bhromon/actions/runs/42475757425). Open: the owner's acceptance of the binary-size cost, independent test vectors, and bit-identical builds across machines.
 - **M2 Crypto module behind the flag.** Local only: account, sessions, envelope, verification. Unit tests and vectors. No server changes yet.
 - **M3 Server support.** Envelope storage, generic push, rules and tests. Still behind the flag.
 - **M4 Client send and receive** for internal test accounts, with the verification screen.
