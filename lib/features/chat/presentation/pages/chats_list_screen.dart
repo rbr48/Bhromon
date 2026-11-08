@@ -30,6 +30,7 @@ import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import '../../../tour_group/presentation/widgets/trip_shell.dart';
+import '../../../tour_group/domain/models/date_codec.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -594,6 +595,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     final cachedProfile =
                                         participantProfiles?[otherUserUid]
                                             as Map<String, dynamic>?;
+                                    final cachedAvatar =
+                                        (cachedProfile?['avatarUrl']
+                                                as String?) ??
+                                            (cachedProfile?['photoUrl']
+                                                as String?) ??
+                                            (cachedProfile?['photoURL']
+                                                as String?);
+                                    final sharedTourId =
+                                        data['sharedTourId'] as String?;
+                                    final otherEmail = (data['memberEmails']
+                                        as Map?)?[otherUserUid] as String?;
 
                                     return ChatTile(
                                       chatId: chatId,
@@ -605,13 +617,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       lastMessageSenderId: lastSenderId,
                                       unreadCount: unreadCount,
                                       cachedOtherProfile: cachedProfile,
+                                      sharedTourId: sharedTourId,
+                                      otherEmail: otherEmail,
                                       activeTabFilter: _activeTab,
                                       onTap: () =>
                                           context.push('/chat/$chatId', extra: {
                                         'otherUid': otherUserUid,
-                                        'sharedTourId': data['sharedTourId'],
-                                        'otherEmail': (data['memberEmails']
-                                            as Map?)?[otherUserUid]
+                                        'sharedTourId': sharedTourId,
+                                        'otherEmail': otherEmail,
+                                        'otherAvatarUrl': cachedAvatar,
                                       }),
                                       onLongPress: () => _showChatTileOptions(
                                           context, chatId, otherUserUid),
@@ -715,6 +729,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ? DateTime.fromMillisecondsSinceEpoch(lastTimeRaw)
             : (lastTimeRaw is Timestamp ? lastTimeRaw.toDate() : null);
 
+        final cachedAvatar = (cachedProfile?['avatarUrl'] as String?) ??
+            (cachedProfile?['photoUrl'] as String?) ??
+            (cachedProfile?['photoURL'] as String?);
+        final sharedTourId = data['sharedTourId'] as String?;
+        final otherEmail =
+            (data['memberEmails'] as Map?)?[otherUserUid] as String?;
+
         return ChatTile(
           chatId: chatId,
           otherUserUid: otherUserUid,
@@ -726,11 +747,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               (data['lastSenderId'] ?? data['lastMessageSenderId']) as String?,
           unreadCount: unreadCount,
           cachedOtherProfile: cachedProfile,
+          sharedTourId: sharedTourId,
+          otherEmail: otherEmail,
           activeTabFilter: _activeTab,
           onTap: () => context.push('/chat/$chatId', extra: {
             'otherUid': otherUserUid,
-            'sharedTourId': data['sharedTourId'],
-            'otherEmail': (data['memberEmails'] as Map?)?[otherUserUid]
+            'sharedTourId': sharedTourId,
+            'otherEmail': otherEmail,
+            'otherAvatarUrl': cachedAvatar,
           }),
           onLongPress: () =>
               _showChatTileOptions(context, chatId, otherUserUid),
@@ -1373,6 +1397,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     'otherUid': contact.uid,
                                     'sharedTourId': contact.sharedTourId,
                                     'otherEmail': contact.email,
+                                    'otherAvatarUrl': contact.photoUrl,
                                   },
                                 );
                               },
@@ -1656,10 +1681,13 @@ class _LockedChatTile extends StatelessWidget {
     final profiles = data['participantProfiles'] as Map<String, dynamic>?;
     final cached = profiles?[otherUid] as Map<String, dynamic>?;
     if (cached != null) {
+      final avatar = (cached['avatarUrl'] as String?) ??
+          (cached['photoUrl'] as String?) ??
+          (cached['photoURL'] as String?);
       return _row(context,
           name: (cached['displayName'] as String?) ??
               context.l10n.translate('chats_member'),
-          avatarUrl: cached['avatarUrl'] as String?);
+          avatarUrl: avatar);
     }
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       future: DocFutureCache.instance.get(
@@ -1669,10 +1697,13 @@ class _LockedChatTile extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         final profile = snapshot.data?.data();
+        final avatar = (profile?['avatarUrl'] as String?) ??
+            (profile?['photoUrl'] as String?) ??
+            (profile?['photoURL'] as String?);
         return _row(context,
             name: (profile?['displayName'] as String?) ??
                 context.l10n.translate('chats_member'),
-            avatarUrl: profile?['avatarUrl'] as String?);
+            avatarUrl: avatar);
       },
     );
   }
@@ -1708,10 +1739,11 @@ class _LockedChatTile extends StatelessWidget {
 }
 
 /// The photo for a chat row: the chat's own copy when it has one, else the person's
-/// live profile. Null when neither has a photo, so the row shows initials.
-String? chatAvatarUrl(String? fromChat, String? fromProfile) {
+/// live profile, or a fallback (e.g. tour membership or Google photo). Null when none has a photo, so the row shows initials.
+String? chatAvatarUrl(String? fromChat, String? fromProfile, {String? fallback}) {
   if (fromChat != null && fromChat.isNotEmpty) return fromChat;
   if (fromProfile != null && fromProfile.isNotEmpty) return fromProfile;
+  if (fallback != null && fallback.isNotEmpty) return fallback;
   return null;
 }
 
@@ -1725,6 +1757,8 @@ class ChatTile extends StatelessWidget {
   final String? lastMessageSenderId;
   final int unreadCount;
   final Map<String, dynamic>? cachedOtherProfile;
+  final String? sharedTourId;
+  final String? otherEmail;
   final String activeTabFilter;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -1740,6 +1774,8 @@ class ChatTile extends StatelessWidget {
     this.lastMessageSenderId,
     required this.unreadCount,
     this.cachedOtherProfile,
+    this.sharedTourId,
+    this.otherEmail,
     required this.activeTabFilter,
     required this.onTap,
     this.onLongPress,
@@ -1753,9 +1789,11 @@ class ChatTile extends StatelessWidget {
     }
 
     // The chat keeps its own copy of the other person's name and photo. A copy made
-    // before they had a photo has none, so the photo then comes from their live profile.
+    // before they had a photo has none, so the photo then comes from their live profile or fallback.
     final chatName = cachedOtherProfile?['displayName'] as String?;
-    final chatAvatar = cachedOtherProfile?['avatarUrl'] as String?;
+    final chatAvatar = (cachedOtherProfile?['avatarUrl'] as String?) ??
+        (cachedOtherProfile?['photoUrl'] as String?) ??
+        (cachedOtherProfile?['photoURL'] as String?);
     if (chatName != null && chatAvatar != null && chatAvatar.isNotEmpty) {
       return _buildTile(context,
           displayName: chatName,
@@ -1764,23 +1802,63 @@ class ChatTile extends StatelessWidget {
     }
 
     // Cached one-time fetch using DocFutureCache (zero long-lived stream overhead)
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: DocFutureCache.instance.get(
-        FirebaseFirestore.instance
-            .collection('explorer_profiles')
-            .doc(otherUserUid),
-      ),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _resolveOtherUser(otherUserUid, sharedTourId, otherEmail),
       builder: (context, snapshot) {
-        final data = snapshot.data?.data();
+        final data = snapshot.data;
         final name = chatName ??
             (data?['displayName'] as String?) ??
             context.l10n.translate('chats_member');
-        final avatar = chatAvatarUrl(chatAvatar, data?['avatarUrl'] as String?);
+        final profileAvatar = (data?['avatarUrl'] as String?) ??
+            (data?['photoUrl'] as String?) ??
+            (data?['photoURL'] as String?);
+        final avatar = chatAvatarUrl(chatAvatar, profileAvatar);
         final inits = _initialsOf(name);
         return _buildTile(context,
             displayName: name, avatarUrl: avatar, initials: inits);
       },
     );
+  }
+
+  static Future<Map<String, dynamic>?> _resolveOtherUser(
+    String uid,
+    String? tourId,
+    String? email,
+  ) async {
+    try {
+      final snap = await DocFutureCache.instance.get(
+        FirebaseFirestore.instance.collection('explorer_profiles').doc(uid),
+      );
+      final data = snap.data();
+      final hasAvatar = (data?['avatarUrl'] as String?)?.isNotEmpty == true ||
+          (data?['photoUrl'] as String?)?.isNotEmpty == true ||
+          (data?['photoURL'] as String?)?.isNotEmpty == true;
+      if (hasAvatar ||
+          tourId == null ||
+          tourId.isEmpty ||
+          email == null ||
+          email.isEmpty) {
+        return data;
+      }
+      final memId = '${tourId}__${normalizeEmail(email)}';
+      final memSnap = await DocFutureCache.instance.get(
+        FirebaseFirestore.instance.collection('memberships').doc(memId),
+      );
+      final memData = memSnap.data();
+      final memPhoto = memData?['photoUrl'] as String?;
+      if (memPhoto != null && memPhoto.isNotEmpty) {
+        return {
+          ...?data,
+          if (data?['avatarUrl'] == null) 'avatarUrl': memPhoto,
+          if (data?['displayName'] == null ||
+              (data?['displayName'] as String).isEmpty)
+            'displayName': memData?['displayName'],
+        };
+      }
+      return data;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Color _avatarColor(String name) {
