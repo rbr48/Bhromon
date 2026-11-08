@@ -2188,7 +2188,10 @@ class TourGroupRepository {
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
-      if (photoUrl != null) 'photoUrl': photoUrl,
+      // A null or empty photo removes the field, so a photo can be taken off a request.
+      'photoUrl': (photoUrl == null || photoUrl.isEmpty)
+          ? FieldValue.delete()
+          : photoUrl,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
     });

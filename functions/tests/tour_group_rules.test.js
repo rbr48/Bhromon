@@ -7,7 +7,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath, arrayUnion, arrayRemove } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath, arrayUnion, arrayRemove, deleteField } = require('firebase/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
 const TOUR = 't1';
@@ -682,6 +682,28 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(updateDoc(ref, { title: 'Lift stops at floor 4 and 5', details: 'Since Monday morning', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
       await assertFails(updateDoc(ref, { status: 'resolved', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
       await assertFails(updateDoc(ref, { adminNote: 'fixed', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+    });
+
+    test('a request carries one photo from its own tour; another tour or host is refused', async () => {
+      const photo = (tour, host = 'https://bhromon.fun') => `${host}/media/${tour}/media/0123456789abcdef0123456789abcdef.jpg`;
+      const raise = (extra) => addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, extra));
+      await assertSucceeds(raise({ photoUrl: photo(SOC) }));
+      await assertFails(raise({ photoUrl: photo(FAM) }));
+      await assertFails(raise({ photoUrl: photo(SOC, 'https://example.com') }));
+      await assertFails(raise({ photoUrl: `https://bhromon.fun/media/${SOC}/media/not-a-hash.jpg` }));
+      await assertFails(raise({ photoUrl: 42 }));
+    });
+
+    test('the author adds, replaces or removes the photo while the request is open', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r3'), serviceRequest(people.member.email));
+      });
+      const ref = doc(db('member'), 'tours', SOC, 'service_requests', 'r3');
+      const edit = (photoUrl) => updateDoc(ref, { photoUrl, updatedAt: serverTimestamp(), updatedByEmail: people.member.email });
+      await assertSucceeds(edit(`https://bhromon.fun/media/${SOC}/media/0123456789abcdef0123456789abcdef.png`));
+      await assertSucceeds(edit(`https://bhromon.fun/media/${SOC}/media/fedcba9876543210fedcba9876543210.jpg`));
+      await assertSucceeds(edit(deleteField()));
+      await assertFails(edit(`https://bhromon.fun/media/${FAM}/media/0123456789abcdef0123456789abcdef.jpg`));
     });
 
     test('the words are fixed once the committee has moved the request on', async () => {

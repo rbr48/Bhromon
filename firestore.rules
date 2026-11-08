@@ -915,7 +915,7 @@ service cloud.firestore {
       // removes it.
       match /service_requests/{requestId} {
         function validRequest(d) {
-          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail']) &&
+          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail', 'photoUrl']) &&
                  d.title is string && d.title.size() >= 3 && d.title.size() <= 120 &&
                  d.details is string && d.details.size() <= 1000 &&
                  d.category in ['lift', 'water', 'power', 'security', 'cleaning', 'other'] &&
@@ -923,7 +923,11 @@ service cloud.firestore {
                  d.adminNote is string && d.adminNote.size() <= 500 &&
                  d.createdByEmail is string &&
                  d.createdByName is string && d.createdByName.size() <= 200 &&
-                 d.updatedByEmail == tourUserEmail();
+                 d.updatedByEmail == tourUserEmail() &&
+                 // At most one photo, and only from this tour's own media space.
+                 (!('photoUrl' in d) || d.photoUrl == null ||
+                  (d.photoUrl is string &&
+                   d.photoUrl.matches('https://bhromon\\.fun/media/' + tourId + '/media/[0-9a-f]{32}\\.(jpg|jpeg|png|webp|gif|heic|heif)')));
         }
         allow read: if isActiveMember(tourId);
         allow create: if isSocietyTour(tourId) && isActiveMember(tourId) &&
@@ -942,7 +946,7 @@ service cloud.firestore {
                          request.resource.data.createdAt == resource.data.createdAt &&
                          request.resource.data.updatedAt == request.time &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['title', 'details', 'category', 'updatedAt', 'updatedByEmail']) &&
+                           .hasOnly(['title', 'details', 'category', 'photoUrl', 'updatedAt', 'updatedByEmail']) &&
                          validRequest(request.resource.data);
         allow update: if isSocietyTour(tourId) && isActiveMember(tourId) && isTourAdmin(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()

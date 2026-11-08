@@ -9,6 +9,7 @@ import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
 import '../../domain/models/service_request_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -410,6 +411,9 @@ class _RequestSheetState extends State<_RequestSheet> {
           contentType: cType,
           extension: ext,
           maxBytes: kMaxImageBytes,
+          // A request keeps its photo for as long as the request lives. The journal's
+          // orphan sweep would otherwise delete it, since no post refers to it.
+          journal: TourMediaJournal.untracked,
         );
         finalPhotoUrl = await upload.finish();
       }
