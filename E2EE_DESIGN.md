@@ -1,6 +1,6 @@
 # End-to-end encryption for one-to-one chat
 
-**Status: proposal (milestone M0).** Nothing in this document is implemented or enabled. Until milestone M7, no screen, store listing or app text may say that a chat is end-to-end encrypted.
+**Status: M0 decisions recorded; M1 in progress.** Nothing in this document is implemented or enabled. Until milestone M7, no screen, store listing or app text may say that a chat is end-to-end encrypted.
 
 **Scope:** one-to-one chats between two people who share a tour. Group chats, channels, calls, multiple devices and web are out of scope for the first slice (section 9).
 
@@ -49,7 +49,7 @@ This is the design and threat model that `ROADMAP.md` (Track E) requires before 
 
 ## 4. Protocol
 
-- **Session establishment:** Olm, the one-to-one protocol: a triple Diffie-Hellman key agreement (3DH) followed by the Double Ratchet. Identity keys are Curve25519 with Ed25519 signing keys. Each device publishes a batch of signed one-time keys and a fallback key.
+- **Session establishment:** Olm, the one-to-one protocol: a triple Diffie-Hellman key agreement (3DH) followed by the Double Ratchet. Identity keys are Curve25519 with Ed25519 signing keys. Each device publishes a batch of signed one-time keys and a fallback key. **Implementation choice:** use vodozemac session version 2, which keeps the full MAC. Version 1 truncates the MAC and exists for libolm compatibility. Version 2 sits behind the crate's `experimental-session-config` feature, which the M6 review must cover.
 - **Message body:** the encrypted payload is JSON. It carries the chat id, the sender and recipient user ids, the message id and the send time. Olm does not bind these identifiers, so the receiver must check that they match the outer envelope and the chat where the message was stored. Otherwise a server could move a ciphertext into another chat.
 - **Envelope:** version, algorithm id, sender and recipient device ids, message type (pre-key or ratchet message), and ciphertext.
 - **Idempotency:** the client's message id is the key. The VPS already saves a retry once (`media-server/chat.py:1160`, `save_message_once` at line 480), and receivers de-duplicate on the same id.
@@ -69,6 +69,8 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 | A ratchet we write ourselves | Not applicable | Not acceptable without independent review. |
 
 **Recommendation:** Olm through the Apache-2.0 `vodozemac` crate, with our own bindings for Android and iOS, and no web build in the first slice. The bindings are the main new work. They need a Rust build in CI and a measured binary-size cost. The audit history of `vodozemac` must be checked before adoption. The external review (M6) covers our integration either way.
+
+**M1 host spike (Linux, done):** `vodozemac` 0.11.2 built here and passed a session round trip. It covered the pre-key message, a reply, ten messages across five round trips, a rejected replay of the pre-key message, and an encrypted account pickle that restores and rejects a wrong key. It took about 77 µs per message in release mode on this host. The stripped binary was 806 KB, which includes the Rust standard library. That is a host figure, not the Android or iOS cost. The spike is kept outside the repository until M1's CI job is in place.
 
 ## 6. Keys and their lifecycle
 
@@ -117,7 +119,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 ## 11. Milestones and gates
 
 - **M0 Design and threat model** (this document). Gate: the owner decides D1 to D9.
-- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this.
+- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the host spike is done (section 5). The Android and iOS builds in CI, the official test vectors and the mobile binary-size measurement remain.
 - **M2 Crypto module behind the flag.** Local only: account, sessions, envelope, verification. Unit tests and vectors. No server changes yet.
 - **M3 Server support.** Envelope storage, generic push, rules and tests. Still behind the flag.
 - **M4 Client send and receive** for internal test accounts, with the verification screen.
@@ -127,15 +129,17 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 
 ## 12. Decisions for the owner
 
-- **D1 Library:** Olm through the Apache-2.0 `vodozemac` crate with our own bindings (recommended), or another option from section 5. Signal's own `libsignal` license must be checked first.
-- **D2 Lost device:** accept lost history in the first slice (recommended), or design an encrypted key backup with a recovery passphrase. The second is a separate design.
-- **D3 Web:** excluded from the first slice (recommended).
-- **D4 Existing history:** keep it plaintext with a label (recommended), or delete it.
-- **D5 Verification:** safety numbers as described (recommended), with QR as the second path.
-- **D6 Client integrity:** signed and reproducible builds for the encrypted features, or accept that a malicious client update is inside the threat model.
-- **D7 Key collection:** `e2ee_keys/{uid}` (recommended), or a subcollection of `users/{uid}`.
-- **D8 Calls copy:** change the "End-to-end encrypted" label for calls now, since signalling is not yet authenticated (recommended), or keep it and accept the risk.
-- **D9 Budget and reviewer** for M6.
+Decided on 2026-11-08 with the recommendations, except D6 and D9. Those were not covered by a recommendation, so they stay open.
+
+- **D1 Library: decided.** Olm through the Apache-2.0 `vodozemac` crate, with our own bindings. Signal's own `libsignal` was not checked, and the chosen option does not depend on it.
+- **D2 Lost device: decided.** Lost history is accepted in the first slice. An encrypted key backup is a separate design.
+- **D3 Web: decided.** Excluded from the first slice.
+- **D4 Existing history: decided.** Kept as plaintext and labelled.
+- **D5 Verification: decided.** Safety numbers, with QR as the second path.
+- **D6 Client integrity: open.** Signed and reproducible builds, or accept that a malicious client update is inside the threat model. Needed before M6.
+- **D7 Key collection: decided.** `e2ee_keys/{uid}`.
+- **D8 Calls copy: done.** The call label now reads "Encrypted call" in English and "এনক্রিপ্টেড কল" in Bengali. It no longer says "end-to-end".
+- **D9 Budget and reviewer for M6: open.**
 
 ## 13. What this document does not claim
 
