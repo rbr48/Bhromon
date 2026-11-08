@@ -12,11 +12,16 @@ class SwipeToReply extends StatefulWidget {
   final VoidCallback onReply;
   final bool isMe;
 
+  /// Whether the swipe replies. A chat that does not offer replies turns it off, and a
+  /// drag then does nothing.
+  final bool enabled;
+
   const SwipeToReply({
     super.key,
     required this.child,
     required this.onReply,
     this.isMe = false,
+    this.enabled = true,
   });
 
   @override
@@ -140,8 +145,9 @@ class _SwipeToReplyState extends State<SwipeToReply>
 
         // The message bubble transformed by drag
         GestureDetector(
-          onHorizontalDragUpdate: _onHorizontalDragUpdate,
-          onHorizontalDragEnd: _onHorizontalDragEnd,
+          onHorizontalDragUpdate:
+              widget.enabled ? _onHorizontalDragUpdate : null,
+          onHorizontalDragEnd: widget.enabled ? _onHorizontalDragEnd : null,
           child: Transform.translate(
             offset: Offset(_dragOffset, 0),
             child: widget.child,
