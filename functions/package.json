@@ -21,7 +21,7 @@
     "firebase-functions": "^7.4.0",
     "googleapis": "^189.0.0",
     "sharp": "^0.35.5",
-    "@google-cloud/storage": "^7.14.0"
+    "@google-cloud/storage": "^8.4.0"
   },
   "overrides": {
     "protobufjs": "^7.4.0",
