@@ -17,6 +17,7 @@ import { secureRandom } from '../gameTable/random';
 import {
   DocData,
   DocRef,
+  DocUpdateData,
   HttpsError,
   PlayerRow,
   Transaction,
@@ -96,7 +97,7 @@ function writeBoard(
   nowMs: number,
   step: number,
 ): void {
-  const update: FirebaseFirestore.UpdateData<DocData> = {
+  const update: DocUpdateData = {
     state: publicState(board, step, turnDeadlineFor(board, players, nowMs)),
     currentTurn: board.currentPlayer,
     updatedAt: nowIso(nowMs),
@@ -118,7 +119,7 @@ export const carromStart = functions
     await assertMember(tourId, email);
     const ref = gameRef(tourId, gameId);
 
-    await db().runTransaction(async (tx) => {
+    await db().runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(ref);
       if (!snap.exists) throw new HttpsError('not-found', 'This table no longer exists.');
       const table = snap.data() as DocData;
@@ -160,7 +161,7 @@ export const carromShoot = functions
     await assertMember(tourId, email);
     const ref = gameRef(tourId, gameId);
 
-    const step = await db().runTransaction(async (tx) => {
+    const step = await db().runTransaction(async (tx: Transaction) => {
       const table = await readRunning(tx, ref);
       const current = stepOf(table.state);
       if (expectedStep !== null && expectedStep !== current) {
@@ -196,7 +197,7 @@ export const carromAdvance = functions
     await assertMember(tourId, email);
     const ref = gameRef(tourId, gameId);
 
-    return db().runTransaction(async (tx) => {
+    return db().runTransaction(async (tx: Transaction) => {
       const table = await readRunning(tx, ref);
       const current = stepOf(table.state);
       if (expectedStep !== null && expectedStep !== current) {
@@ -234,7 +235,7 @@ export async function leaveCarromTable(
 ): Promise<void> {
   const ref = gameRef(tourId, gameId);
 
-  await db().runTransaction(async (tx) => {
+  await db().runTransaction(async (tx: Transaction) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return;
     const table = snap.data() as DocData;

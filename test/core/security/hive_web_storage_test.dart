@@ -41,8 +41,14 @@ void main() {
   });
 
   tearDown(() async {
-    await Hive.close();
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    try {
+      await Hive.close();
+    } catch (_) {}
+    if (dir.existsSync()) {
+      try {
+        dir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
   });
 
   File boxFile(String name) => File('${dir.path}/$name.hive');
@@ -240,5 +246,6 @@ void main() {
     final recreated = await second.openEncryptedBox<dynamic>('notes');
 
     expect(recreated.isEmpty, isTrue);
+    await recreated.close();
   });
 }

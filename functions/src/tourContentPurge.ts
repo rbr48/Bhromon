@@ -1,5 +1,15 @@
 import { getAuth } from 'firebase-admin/auth';
-import { BulkWriter, DocumentReference, FieldPath, FieldValue, Firestore, Query, QueryDocumentSnapshot, getFirestore } from 'firebase-admin/firestore';
+import {
+  BulkWriter,
+  DocumentReference,
+  FieldPath,
+  FieldValue,
+  Firestore,
+  Query,
+  QueryDocumentSnapshot,
+  Transaction,
+  getFirestore,
+} from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import * as functions from 'firebase-functions/v1';
 import * as crypto from 'crypto';
@@ -143,7 +153,7 @@ class Writes {
   constructor(db: Db) {
     this.writer = db.bulkWriter();
     this.writer.onWriteError(
-      (error) => error.code !== NOT_FOUND && error.failedAttempts < 5,
+      (error: any) => error.code !== NOT_FOUND && error.failedAttempts < 5,
     );
   }
 
@@ -241,7 +251,7 @@ async function applyToDocs(
   decide: Decide,
 ): Promise<void> {
   for (const ref of refs) {
-    const recursive = await db.runTransaction(async (tx) => {
+    const recursive = await db.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(ref);
       if (!snap.exists) return false;
       const decision = decide(snap.data() ?? {}, snap.id);
@@ -262,7 +272,7 @@ async function applyToQuery(db: Db, query: Query, decide: Decide): Promise<void>
   const snapshot = await query.get();
   await applyToDocs(
     db,
-    snapshot.docs.map((doc) => doc.ref),
+    snapshot.docs.map((doc: QueryDocumentSnapshot) => doc.ref),
     decide,
   );
 }
@@ -324,7 +334,7 @@ async function forgetSeats(db: Db, table: DocRef, email: string): Promise<void> 
   const seats = await table.collection('private').get();
   await applyToDocs(
     db,
-    seats.docs.map((seat) => seat.ref),
+    seats.docs.map((seat: QueryDocumentSnapshot) => seat.ref),
     deleteWhen((data) => normalizeEmail(data.owner) === email),
   );
 }
@@ -463,7 +473,7 @@ export async function purgeMemberContent(
   const channels = await tour.collection('channels').get();
   await applyToDocs(
     db,
-    channels.docs.map((channel) => channel.ref),
+    channels.docs.map((channel: QueryDocumentSnapshot) => channel.ref),
     anonymize(CHANNEL, email, standIn),
   );
   for (const channel of channels.docs) {

@@ -165,89 +165,125 @@ class _ChannelComposerState extends State<ChannelComposer> {
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  IconButton(
-                    tooltip: l10n.translate('chan_attach_tooltip'),
-                    icon: Icon(Icons.attach_file, color: context.forest.text70),
-                    onPressed: widget.sending ? null : widget.onAttach,
-                  ),
-                  IconButton(
-                    tooltip: l10n.translate('format_toolbar_toggle'),
-                    padding: EdgeInsets.zero,
-                    icon: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _showFormatting
-                              ? AppColors.mintGreen
-                              : context.forest.text70,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                        color: _showFormatting
-                            ? AppColors.mintGreen.withValues(alpha: 0.15)
-                            : Colors.transparent,
-                      ),
-                      child: Text(
-                        'Aa',
-                        style: TextStyle(
-                          color: _showFormatting
-                              ? AppColors.mintGreen
-                              : context.forest.text70,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                    onPressed: widget.sending
-                        ? null
-                        : () =>
-                            setState(() => _showFormatting = !_showFormatting),
-                  ),
                   Expanded(
-                    child: TextField(
-                      controller: widget.controller,
-                      focusNode: widget.focusNode,
-                      minLines: 1,
-                      maxLines: 6,
-                      textInputAction: TextInputAction.send,
-                      onChanged: widget.onChanged,
-                      onSubmitted: (_) => widget.onSend(),
-                      style: TextStyle(
-                        color: context.forest.text,
-                        fontSize: 15.5,
-                        height: 1.38,
-                        letterSpacing: 0.05,
-                        fontFamily: 'NotoSansBengali',
-                        fontFamilyFallback: const [
-                          'HindSiliguri',
-                          'Roboto',
-                          'sans-serif'
-                        ],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.forest.inset26,
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      decoration: InputDecoration(
-                        counterText: '',
-                        hintText: widget.hint,
-                        hintStyle: TextStyle(
-                          color: context.forest.text54,
-                          fontSize: 15.0,
-                          fontFamily: 'NotoSansBengali',
-                          fontFamilyFallback: const [
-                            'HindSiliguri',
-                            'Roboto',
-                            'sans-serif'
-                          ],
-                        ),
-                        filled: true,
-                        fillColor: context.forest.inset26,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: TextField(
+                                controller: widget.controller,
+                                focusNode: widget.focusNode,
+                                minLines: 1,
+                                maxLines: 6,
+                                textInputAction: TextInputAction.send,
+                                onChanged: widget.onChanged,
+                                onSubmitted: (_) => widget.onSend(),
+                                style: TextStyle(
+                                  color: context.forest.text,
+                                  fontSize: 15.5,
+                                  height: 1.38,
+                                  letterSpacing: 0.05,
+                                  fontFamily: 'NotoSansBengali',
+                                  fontFamilyFallback: const [
+                                    'HindSiliguri',
+                                    'Roboto',
+                                    'sans-serif'
+                                  ],
+                                ),
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  hintText: widget.hint,
+                                  hintStyle: TextStyle(
+                                    color: context.forest.text54,
+                                    fontSize: 15.0,
+                                    fontFamily: 'NotoSansBengali',
+                                    fontFamilyFallback: const [
+                                      'HindSiliguri',
+                                      'Roboto',
+                                      'sans-serif'
+                                    ],
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding:
+                                      const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Semantics(
+                            label: l10n.translate('format_toolbar_toggle'),
+                            button: true,
+                            child: SizedBox(
+                              width: 32,
+                              height: 48,
+                              child: IconButton(
+                                tooltip:
+                                    l10n.translate('format_toolbar_toggle'),
+                                padding: EdgeInsets.zero,
+                                icon: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: _showFormatting
+                                          ? AppColors.mintGreen
+                                          : context.forest.text70,
+                                      width: 1.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: _showFormatting
+                                        ? AppColors.mintGreen
+                                            .withValues(alpha: 0.15)
+                                        : Colors.transparent,
+                                  ),
+                                  child: Text(
+                                    'Aa',
+                                    style: TextStyle(
+                                      color: _showFormatting
+                                          ? AppColors.mintGreen
+                                          : context.forest.text70,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12.0,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                ),
+                                onPressed: widget.sending
+                                    ? null
+                                    : () => setState(() =>
+                                        _showFormatting = !_showFormatting),
+                              ),
+                            ),
+                          ),
+                          Semantics(
+                            label: l10n.translate('chan_attach_tooltip'),
+                            button: true,
+                            child: SizedBox(
+                              width: 34,
+                              height: 48,
+                              child: IconButton(
+                                tooltip: l10n.translate('chan_attach_tooltip'),
+                                padding: EdgeInsets.zero,
+                                icon: Icon(Icons.attach_file,
+                                    color: context.forest.text70, size: 22),
+                                onPressed:
+                                    widget.sending ? null : widget.onAttach,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

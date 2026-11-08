@@ -19,7 +19,7 @@ Future<void> showLocalFareGuideSheet(
   );
 }
 
-/// Interactive sheet providing verified transit fare estimates and calculation.
+/// Interactive sheet showing transit fare estimates and a calculator.
 class LocalFareGuideSheet extends StatefulWidget {
   const LocalFareGuideSheet({
     super.key,
@@ -377,7 +377,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
           Row(
             children: [
               Icon(_iconForVehicle(calc.route.vehicleType),
-                  color: AppColors.mintGreen, size: 22),
+                  color: context.forest.accentText, size: 22),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -397,8 +397,8 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                 ),
                 child: Text(
                   calc.route.divisionBn,
-                  style: const TextStyle(
-                    color: AppColors.mintGreen,
+                  style: TextStyle(
+                    color: context.forest.accentText,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -465,8 +465,8 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                       const SizedBox(height: 2),
                       Text(
                         '৳${calc.perPersonMinFare} – ৳${calc.perPersonMaxFare}',
-                        style: const TextStyle(
-                          color: AppColors.mintGreen,
+                        style: TextStyle(
+                          color: context.forest.accentText,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),

@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions/v1';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, QueryDocumentSnapshot, getFirestore } from 'firebase-admin/firestore';
 
 const db = getFirestore();
 
@@ -23,7 +23,7 @@ export const computeExplorerScore = functions
 
     let score = 0;
 
-    snap.forEach(doc => {
+    snap.forEach((doc: QueryDocumentSnapshot) => {
       const eventData = doc.data();
       const weight = eventData.weight || 0;
       score += weight;

@@ -38,8 +38,14 @@ void main() {
   });
 
   tearDown(() async {
-    await Hive.close();
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    try {
+      await Hive.close();
+    } catch (_) {}
+    if (dir.existsSync()) {
+      try {
+        dir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
   });
 
   Future<void> writeBox(String name, HiveAesCipher? cipher, int n) async {

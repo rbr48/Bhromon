@@ -2,6 +2,7 @@ import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
@@ -41,10 +42,20 @@ class DesktopTourSidebar extends StatelessWidget {
         stream: repository.watchGroup(tourId),
         builder: (context, snapshot) {
           final group = snapshot.data;
-          final tourTitle = group?.name ?? 'গ্রুপ';
-          final origin = group?.originCity ?? 'ঢাকা';
-          final destination = group?.destination ?? 'কক্সবাজার';
-          final routeSubtitle = '$origin ➔ $destination';
+          final l10n = context.l10n;
+          final tourTitle = group?.name ??
+              (tourId.isEmpty
+                  ? l10n.translate('desktop_sidebar_universal_engine')
+                  : l10n.translate('desktop_sidebar_group'));
+          final origin = group?.originCity ?? '';
+          final destination = group?.destination ?? '';
+          final routeSubtitle = (origin.isNotEmpty && destination.isNotEmpty)
+              ? '$origin ➔ $destination'
+              : (group != null
+                  ? group.kind.name
+                  : (tourId.isEmpty
+                      ? l10n.translate('desktop_sidebar_select_group')
+                      : l10n.translate('desktop_sidebar_loading')));
 
           return Column(
             children: [
@@ -61,22 +72,26 @@ class DesktopTourSidebar extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          width: 34,
-                          height: 34,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00BFA5), Color(0xFF1B4332)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: const Color(0xFF1B4332),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                                color:
-                                    AppColors.mintGreen.withValues(alpha: 0.5)),
+                              color: AppColors.mintGreen.withValues(alpha: 0.4),
+                              width: 1,
+                            ),
                           ),
-                          child: const Center(
-                            child: Icon(Icons.explore_rounded,
-                                color: Colors.white, size: 20),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(9),
+                            child: Image.asset(
+                              'assets/logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.explore_rounded,
+                                    color: Colors.white, size: 20),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -85,16 +100,18 @@ class DesktopTourSidebar extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Bhromon OS',
+                                'Bhromon',
                                 style: TextStyle(
                                   color: context.forest.accentText,
-                                  fontSize: 13.5,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
                                 ),
                               ),
                               Text(
-                                'Universal Group Engine',
+                                l10n.locale.languageCode == 'bn'
+                                    ? 'জীবনের সাথে ভ্রমণ'
+                                    : 'Travel with life',
                                 style: TextStyle(
                                     color: context.forest.text54, fontSize: 10),
                               ),
@@ -159,9 +176,7 @@ class DesktopTourSidebar extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            context.l10n.locale.languageCode == 'bn'
-                                ? 'অনুসন্ধান ও নেভিগেশন'
-                                : 'Search & Navigate',
+                            l10n.translate('desktop_sidebar_search'),
                             style: TextStyle(
                                 color: context.forest.text70,
                                 fontSize: 11.5,
@@ -196,10 +211,11 @@ class DesktopTourSidebar extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   children: [
-                    _buildSectionHeader(context, 'প্রধান মডিউলসমূহ'),
+                    _buildSectionHeader(context,
+                        l10n.translate('desktop_sidebar_core_modules')),
                     _buildNavItem(
                       context,
-                      title: 'গ্রুপ হাব',
+                      title: l10n.translate('desktop_sidebar_group_hub'),
                       icon: Icons.dashboard_outlined,
                       activeIcon: Icons.dashboard_rounded,
                       route: tourHubPath(tourId),
@@ -207,7 +223,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'ভ্রমণ সূচি ও ট্র্যাকার',
+                      title: l10n.translate('desktop_sidebar_journey'),
                       icon: Icons.calendar_month_outlined,
                       activeIcon: Icons.calendar_month_rounded,
                       route: '/group/$tourId/journey',
@@ -215,7 +231,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'ইন্সটাফিড ও রিলস',
+                      title: l10n.translate('desktop_sidebar_feed'),
                       icon: Icons.photo_library_outlined,
                       activeIcon: Icons.photo_library_rounded,
                       route: '/group/$tourId/feed',
@@ -223,7 +239,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'ডিসকর্ড চ্যাট ও ভয়েস',
+                      title: l10n.translate('desktop_sidebar_channels'),
                       icon: Icons.forum_outlined,
                       activeIcon: Icons.forum_rounded,
                       route: '/group/$tourId/channels',
@@ -231,7 +247,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'গেম জোন',
+                      title: l10n.translate('desktop_sidebar_game_zone'),
                       icon: Icons.sports_esports_outlined,
                       activeIcon: Icons.sports_esports_rounded,
                       route: '/game-zone',
@@ -239,7 +255,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'হিসাব ও স্প্লিট',
+                      title: l10n.translate('desktop_sidebar_ledger'),
                       icon: Icons.account_balance_wallet_outlined,
                       activeIcon: Icons.account_balance_wallet_rounded,
                       route: '/group/$tourId/ledger',
@@ -247,7 +263,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'সিট ও রুম প্ল্যান',
+                      title: l10n.translate('desktop_sidebar_logistics'),
                       icon: Icons.airline_seat_recline_extra_outlined,
                       activeIcon: Icons.airline_seat_recline_extra_rounded,
                       route: '/group/$tourId/logistics',
@@ -255,7 +271,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'নোটিশ ও মিটিং',
+                      title: l10n.translate('desktop_sidebar_notices'),
                       icon: Icons.campaign_outlined,
                       activeIcon: Icons.campaign_rounded,
                       route: '/group/$tourId/notices',
@@ -263,7 +279,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'চেকলিস্ট',
+                      title: l10n.translate('desktop_sidebar_checklist'),
                       icon: Icons.checklist_outlined,
                       activeIcon: Icons.checklist_rounded,
                       route: '/group/$tourId/checklist',
@@ -271,10 +287,10 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _buildSectionHeader(
-                        context, 'গ্রুপ সুপারপাওয়ার ও বিশেষ টুলস'),
+                        context, l10n.translate('desktop_sidebar_superpowers')),
                     _buildToolItem(
                       context,
-                      title: 'সুরক্ষা ও বিচ কম্পাস',
+                      title: l10n.translate('desktop_sidebar_safety'),
                       badge: 'GPS',
                       icon: Icons.fmd_good_rounded,
                       route: '/group/$tourId/safety',
@@ -283,8 +299,8 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildToolItem(
                       context,
-                      title: 'সৈকত ও খাবার গাইড',
-                      badge: 'সৈকত',
+                      title: l10n.translate('desktop_sidebar_tide'),
+                      badge: l10n.translate('desktop_sidebar_badge_beach'),
                       icon: Icons.tsunami_rounded,
                       route: '/group/$tourId/tide',
                       badgeColor: Colors.cyanAccent,
@@ -292,7 +308,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildToolItem(
                       context,
-                      title: 'ডিজিটাল স্ক্র্যাপবুক',
+                      title: l10n.translate('desktop_sidebar_scrapbook'),
                       badge: 'PDF',
                       icon: Icons.menu_book_rounded,
                       route: '/group/$tourId/scrapbook',
@@ -301,8 +317,8 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildToolItem(
                       context,
-                      title: 'ফ্যামিলি কুইজ',
-                      badge: 'কুইজ',
+                      title: l10n.translate('desktop_sidebar_quiz'),
+                      badge: l10n.translate('desktop_sidebar_badge_quiz'),
                       icon: Icons.quiz_rounded,
                       route: '/group/$tourId/quiz',
                       badgeColor: Colors.greenAccent,
@@ -346,6 +362,10 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
+        if (route.contains('/group//')) {
+          context.go('/group-hub');
+          return;
+        }
         context.go(route);
       },
       borderRadius: BorderRadius.circular(8),
@@ -404,6 +424,10 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
+        if (route.contains('/group//')) {
+          context.go('/group-hub');
+          return;
+        }
         context.go(route);
       },
       borderRadius: BorderRadius.circular(8),
@@ -468,7 +492,7 @@ class DesktopTourSidebar extends StatelessWidget {
   }
 
   Widget _buildFooter(BuildContext context) {
-    String displayName = 'এক্সপ্লোরার';
+    String displayName = context.l10n.translate('desktop_sidebar_explorer');
     String email = '';
     String? photoUrl;
     try {
@@ -538,7 +562,8 @@ class DesktopTourSidebar extends StatelessWidget {
               IconButton(
                 icon: Icon(Icons.settings_outlined,
                     size: 16, color: context.forest.text54),
-                tooltip: 'প্রোফাইল সেটিংস',
+                tooltip:
+                    context.l10n.translate('desktop_sidebar_profile_settings'),
                 onPressed: () {
                   final uid = repository.currentUid.isNotEmpty
                       ? repository.currentUid
@@ -548,29 +573,69 @@ class DesktopTourSidebar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          // Connection status
-          Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppColors.mintGreen,
-                  shape: BoxShape.circle,
+          const SizedBox(height: 10),
+          // Google Play Download Link
+          InkWell(
+            onTap: () async {
+              final uri = Uri.parse(
+                  'https://play.google.com/store/apps/details?id=com.bhromon.app&pli=1');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.mintGreen.withValues(alpha: 0.35),
+                  width: 0.8,
                 ),
               ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  context.l10n.locale.languageCode == 'bn'
-                      ? 'সার্ভার সংযোগ সক্রিয়'
-                      : 'Live sync active',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.forest.text54, fontSize: 9.5),
-                ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppColors.mintGreen,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.locale.languageCode == 'bn'
+                              ? 'গেট ইট অন'
+                              : 'GET IT ON',
+                          style: TextStyle(
+                            color: context.forest.text38,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          'Google Play',
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.open_in_new_rounded,
+                    color: context.forest.text54,
+                    size: 14,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),

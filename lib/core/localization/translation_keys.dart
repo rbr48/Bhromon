@@ -28,6 +28,14 @@ class TranslationKeys {
       'chat_share_location_failed': 'Failed to share location: {error}',
       'chat_send_expense_failed': 'Failed to send expense: {error}',
       'chat_pinned_label': 'Pinned: {text}',
+      'chat_pinned_full_title': 'Pinned Message',
+      'chat_pinned_jump': 'Go to message',
+      'chat_pinned_view_full': 'View in full',
+      'chat_pinned_copy': 'Copy text',
+      'chat_pinned_unpin': 'Unpin message',
+      'chat_pinned_copied': 'Message text copied to clipboard',
+      'chat_pinned_not_found':
+          'Pinned message could not be found in loaded history',
       'chat_disappearing_banner':
           'Messages disappear after {duration}. Tap to change.',
       'chat_start_conversation': 'Start the conversation with {name}!',
@@ -160,6 +168,8 @@ class TranslationKeys {
       'chat_attach_audio': 'Audio',
       'chat_attach_location': 'Location',
       'chat_media_rotate': 'Rotate',
+      'chat_add_more_photos': 'Add more photos',
+      'chat_remove_photo': 'Remove photo',
       'chat_media_caption_hint': 'Add a caption...',
       'chat_view_once_on': 'Photo set to view once',
       'chat_view_once_off': 'View once turned off',
@@ -444,6 +454,13 @@ class TranslationKeys {
       'exploring_suffix': '',
       'back_from_prefix': 'Back from ',
       'back_from_suffix': ' (Ready for next excursion)',
+      'unsynced_warning_title': 'Unsynced Changes Pending',
+      'unsynced_warning_body':
+          'You have {count} unsynced offline change(s) stored on this device. Logging out now may permanently discard them.\n\nPlease connect to the internet to finish syncing before logging out.',
+      'unsynced_action_wait_sync': 'Cancel & Sync',
+      'unsynced_action_force_logout': 'Log Out Anyway',
+      'unsynced_safe_logout_body':
+          'Your offline data and tours are safely backed up to the cloud. You can sign back in anytime.',
     },
     'bn': {
       // ── Chat list ──────────────────────────────────────────────────────────
@@ -473,6 +490,13 @@ class TranslationKeys {
       'chat_share_location_failed': 'অবস্থান শেয়ার করা যায়নি: {error}',
       'chat_send_expense_failed': 'খরচ পাঠানো যায়নি: {error}',
       'chat_pinned_label': 'পিন করা: {text}',
+      'chat_pinned_full_title': 'পিন করা বার্তা',
+      'chat_pinned_jump': 'বার্তাটিতে যান',
+      'chat_pinned_view_full': 'সম্পূর্ণ দেখুন',
+      'chat_pinned_copy': 'টেক্সট কপি করুন',
+      'chat_pinned_unpin': 'আনপিন করুন',
+      'chat_pinned_copied': 'বার্তাটি ক্লিপবোর্ডে কপি করা হয়েছে',
+      'chat_pinned_not_found': 'পিন করা বার্তাটি ইতিহাসে পাওয়া যায়নি',
       'chat_disappearing_banner':
           '{duration} পর বার্তা মুছে যাবে। বদলাতে ট্যাপ করুন।',
       'chat_start_conversation': '{name}-এর সঙ্গে কথোপকথন শুরু করুন!',
@@ -604,6 +628,8 @@ class TranslationKeys {
       'chat_attach_audio': 'অডিও',
       'chat_attach_location': 'অবস্থান',
       'chat_media_rotate': 'ঘোরান',
+      'chat_add_more_photos': 'আরও ছবি যোগ করুন',
+      'chat_remove_photo': 'ছবি মুছুন',
       'chat_media_caption_hint': 'একটি ক্যাপশন লিখুন...',
       'chat_view_once_on': 'ছবিটি একবার দেখার জন্য সেট করা হয়েছে',
       'chat_view_once_off': 'একবার দেখার সেটিং বন্ধ করা হয়েছে',
@@ -888,6 +914,13 @@ class TranslationKeys {
       'exploring_suffix': ' এ অভিযান চলছে',
       'back_from_prefix': '',
       'back_from_suffix': ' থেকে ফিরেছেন (পরবর্তী অভিযানের জন্য প্রস্তুত)',
+      'unsynced_warning_title': 'লগআউট করার আগে সিঙ্ক করুন',
+      'unsynced_warning_body':
+          'আপনার {count}টি অফলাইন পরিবর্তন এখনো সার্ভারে সিঙ্ক হয়নি। এখন লগআউট করলে এই পরিবর্তনগুলো হারিয়ে যেতে পারে।\n\nঅনুগ্রহ করে ইন্টারনেটে সংযুক্ত হয়ে সিঙ্ক সম্পন্ন করার পর লগআউট করুন।',
+      'unsynced_action_wait_sync': 'বাতিল ও সিঙ্ক করুন',
+      'unsynced_action_force_logout': 'তবুও লগআউট করুন',
+      'unsynced_safe_logout_body':
+          'আপনার সমস্ত ডেটা ক্লাউডে সুরক্ষিত রয়েছে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।',
     },
   };
 }

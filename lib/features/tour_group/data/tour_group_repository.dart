@@ -674,6 +674,7 @@ class TourGroupRepository {
 
   /// Live view of one tour. Null when the tour no longer exists.
   Stream<TourGroup?> watchGroup(String tourId) {
+    if (tourId.trim().isEmpty) return Stream.value(null);
     return _tour(tourId).snapshots().map((doc) {
       final data = doc.data();
       if (!doc.exists || data == null) return null;
@@ -791,6 +792,12 @@ class TourGroupRepository {
       batch.set(_invites.doc(inviteCode), {
         'tourId': tourId,
         'code': inviteCode,
+        'tourName': group.name,
+        'groupName': group.name,
+        'photoUrl': group.photoUrl,
+        'preset': group.preset,
+        'tourType': group.tourType.name,
+        'destination': group.destination,
         'createdAt': writeDate(now),
       });
       return batch.commit();
@@ -911,6 +918,110 @@ class TourGroupRepository {
     ]).then<void>((_) {}).catchError((Object _) {}));
 
     return group;
+  }
+
+  /// Synchronizes group metadata (name, photo, preset) to the invite document
+  /// so that prospective members can preview the group before joining.
+  Future<void> syncInviteMetadata(TourGroup group) async {
+    final code = group.inviteCode.trim().toUpperCase();
+    if (code.isEmpty || !isValidInviteCode(code)) return;
+    try {
+      await _invites.doc(code).set({
+        'tourId': group.id,
+        'code': code,
+        'tourName': group.name,
+        'groupName': group.name,
+        'photoUrl': group.photoUrl,
+        'preset': group.preset,
+        'tourType': group.tourType.name,
+        'destination': group.destination,
+        'updatedAt': writeDate(DateTime.now()),
+      }, SetOptions(merge: true));
+    } catch (e, st) {
+      logSkipped(e, st);
+    }
+  }
+
+  /// Fetches preview metadata for a group by its invite code.
+  /// Works for prospective members and existing members.
+  Future<TourGroupPreview?> fetchInvitePreview(String inviteCode) async {
+    final code = inviteCode.trim().toUpperCase();
+    if (!isValidInviteCode(code)) return null;
+
+    String? tourId;
+    String? name;
+    String? photoUrl;
+    String? preset;
+    TourType? tourType;
+    String? destination;
+    bool isAlreadyMember = false;
+
+    try {
+      final invite = await _invites.doc(code).get();
+      if (invite.exists) {
+        final data = invite.data();
+        tourId = data?['tourId'] as String?;
+        name = (data?['tourName'] ?? data?['groupName'] ?? data?['name'])
+            as String?;
+        photoUrl = data?['photoUrl'] as String?;
+        preset = data?['preset'] as String?;
+        destination = data?['destination'] as String?;
+        final tTypeStr = data?['tourType'] as String?;
+        if (tTypeStr != null && tTypeStr.isNotEmpty) {
+          tourType = TourType.values.firstWhere(
+            (t) => t.name == tTypeStr,
+            orElse: () => TourType.nature,
+          );
+        }
+      }
+    } catch (e, st) {
+      logSkipped(e, st);
+    }
+
+    if (tourId == null || tourId.isEmpty) {
+      tourId = code;
+    }
+
+    // If caller is authenticated, try fetching the tour document directly
+    if (currentEmail.isNotEmpty) {
+      try {
+        final directGroup = await getGroup(tourId);
+        if (directGroup != null) {
+          name = directGroup.name;
+          photoUrl = directGroup.photoUrl;
+          preset = directGroup.preset;
+          tourType = directGroup.tourType;
+          destination = directGroup.destination;
+
+          final role = await myRole(tourId);
+          if (role != null) {
+            isAlreadyMember = true;
+          }
+
+          // If the caller is the owner and the invite was missing metadata, backfill it
+          if (directGroup.ownerEmail == currentEmail &&
+              directGroup.inviteCode.isNotEmpty) {
+            unawaited(syncInviteMetadata(directGroup));
+          }
+        }
+      } catch (e, st) {
+        logSkipped(e, st);
+      }
+    }
+
+    if (name != null && name.isNotEmpty) {
+      return TourGroupPreview(
+        tourId: tourId,
+        name: name,
+        photoUrl: photoUrl,
+        preset: preset,
+        tourType: tourType,
+        destination: destination,
+        isAlreadyMember: isAlreadyMember,
+      );
+    }
+
+    return null;
   }
 
   /// Directly adds a new member by email address (for owners and admins).
@@ -1153,11 +1264,20 @@ class TourGroupRepository {
   Future<String> rotateInviteCode(String tourId, String oldCode) async {
     _requireEmail();
     final newCode = generateInviteCode();
+    final group = await getGroup(tourId);
     final batch = _firestore.batch();
     batch.update(_tour(tourId), {'inviteCode': newCode});
     batch.set(_invites.doc(newCode), {
       'tourId': tourId,
       'code': newCode,
+      if (group != null) ...{
+        'tourName': group.name,
+        'groupName': group.name,
+        'photoUrl': group.photoUrl,
+        'preset': group.preset,
+        'tourType': group.tourType.name,
+        'destination': group.destination,
+      },
       'createdAt': writeDate(DateTime.now()),
     });
     if (oldCode.isNotEmpty) batch.delete(_invites.doc(oldCode));
@@ -1600,6 +1720,15 @@ class TourGroupRepository {
       });
     }
     await batch.commit();
+    unawaited(VpsNotificationService().notifyLedger(
+      tourId: tourId,
+      expenseId: expense.id,
+      payerName: (expense.paidByName != null && expense.paidByName!.isNotEmpty)
+          ? expense.paidByName!
+          : currentDisplayName,
+      title: expense.title,
+      amountPaisa: expense.amountPaisa,
+    ));
     return expense.id;
   }
 
@@ -1801,13 +1930,20 @@ class TourGroupRepository {
   /// [notice] supplies everything else.
   Future<void> postNotice(String tourId, TourNotice notice) async {
     final email = _requireEmail();
-    await _sub(tourId, 'notices').add({
+    final docRef = await _sub(tourId, 'notices').add({
       ...notice.toEditableMap(),
       'author': currentDisplayName,
       'authorEmail': email,
       'ackBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
+    unawaited(VpsNotificationService().notifyNotice(
+      tourId: tourId,
+      noticeId: docRef.id,
+      title: notice.title,
+      body: notice.content,
+      priority: notice.urgent ? 'high' : 'normal',
+    ));
   }
 
   /// Saves an edited notice. The author, original time and answers stay as
@@ -2019,16 +2155,20 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
-    String? photoUrl,
+    List<String> photoUrls = const [],
   }) async {
     final email = _requireEmail();
+    final photos = photoUrls
+        .where((url) => url.isNotEmpty)
+        .take(kServiceRequestPhotosMax)
+        .toList();
     await _sub(tourId, 'service_requests').add({
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
       'status': ServiceRequestStatus.open.stored,
       'adminNote': '',
-      if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
+      if (photos.isNotEmpty) 'photoUrls': photos,
       'createdByEmail': email,
       'createdByName': currentDisplayName,
       'createdAt': FieldValue.serverTimestamp(),
@@ -2045,14 +2185,21 @@ class TourGroupRepository {
     required String title,
     required String details,
     required ServiceRequestCategory category,
-    String? photoUrl,
+    List<String> photoUrls = const [],
   }) async {
     final email = _requireEmail();
+    final photos = photoUrls
+        .where((url) => url.isNotEmpty)
+        .take(kServiceRequestPhotosMax)
+        .toList();
     await _sub(tourId, 'service_requests').doc(requestId).update({
       'title': title.trim(),
       'details': details.trim(),
       'category': category.name,
-      if (photoUrl != null) 'photoUrl': photoUrl,
+      // An empty list removes the field, so every photo can be taken off a request. The
+      // single photo that requests kept before the list is dropped here too.
+      'photoUrls': photos.isEmpty ? FieldValue.delete() : photos,
+      'photoUrl': FieldValue.delete(),
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByEmail': email,
     });
@@ -2359,11 +2506,26 @@ class TourGroupRepository {
   /// Marks an alert resolved. Only the sender or an admin may do this.
   Future<bool> resolveSafetyAlert(String tourId, String alertId) async {
     final email = _requireEmail();
-    return _awaitServer(_sub(tourId, 'sos').doc(alertId).update({
-      'resolved': true,
-      'resolvedByEmail': email,
-      'resolvedAt': FieldValue.serverTimestamp(),
-    }));
+    final docRef = _sub(tourId, 'sos').doc(alertId);
+    try {
+      final docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return true;
+      }
+      final data = docSnap.data();
+      if (data?['resolved'] == true) {
+        return true;
+      }
+      return await _awaitServer(docRef.update({
+        'resolved': true,
+        'resolvedByEmail': email,
+        'resolvedAt': FieldValue.serverTimestamp(),
+      }));
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] resolveSafetyAlert failed for $alertId',
+          e, st);
+      rethrow;
+    }
   }
 
   /// The most recent alerts, newest first. Callers pick out the open ones.
@@ -2835,6 +2997,10 @@ class TourGroupRepository {
     double? expenseAmount,
     String? expenseCategory,
     String? coverUrl,
+    String? resharedFromTourId,
+    String? resharedFromTourName,
+    String? resharedFromAuthorName,
+    String? resharedPostId,
   }) async {
     final email = _requireEmail();
     final mediaUrls = [...images, if (videoUrl != null) videoUrl];
@@ -2872,9 +3038,21 @@ class TourGroupRepository {
       expenseAmount: expenseAmount,
       expenseCategory: expenseCategory,
       coverUrl: coverUrl,
+      resharedFromTourId: resharedFromTourId,
+      resharedFromTourName: resharedFromTourName,
+      resharedFromAuthorName: resharedFromAuthorName,
+      resharedPostId: resharedPostId,
     );
     final map = post.toMap()..['createdAt'] = FieldValue.serverTimestamp();
     await _sub(tourId, 'posts').doc(id).set(map);
+    unawaited(VpsNotificationService().notifyPost(
+      tourId: tourId,
+      postId: id,
+      authorName: currentDisplayName,
+      caption: caption,
+      isReel: videoUrl != null && videoUrl.isNotEmpty,
+      imageUrl: coverUrl ?? (images.isNotEmpty ? images.first : null),
+    ));
   }
 
   Future<void> updatePostCaption(
@@ -2914,14 +3092,27 @@ class TourGroupRepository {
 
   /// Likes or unlikes a post. arrayUnion/arrayRemove mean two people liking at
   /// the same moment both count.
-  Future<void> setPostLiked(String tourId, String postId,
-      {required bool liked}) async {
+  Future<void> setPostLiked(
+    String tourId,
+    String postId, {
+    required bool liked,
+    String? postAuthorEmail,
+  }) async {
     final email = _requireEmail();
     await _sub(tourId, 'posts').doc(postId).update({
       'likes': liked
           ? FieldValue.arrayUnion([email])
           : FieldValue.arrayRemove([email]),
     });
+    if (liked) {
+      unawaited(VpsNotificationService().notifyReaction(
+        tourId: tourId,
+        postId: postId,
+        reactorName: currentDisplayName,
+        reaction: 'like',
+        postAuthorEmail: postAuthorEmail,
+      ));
+    }
   }
 
   /// Records a member's view on a post. A member counts once: the count moves
@@ -3143,6 +3334,7 @@ class TourGroupRepository {
     required String text,
     String? reaction,
     String? parentId,
+    String? postAuthorEmail,
   }) async {
     final email = _requireEmail();
     final trimmed = text.trim();
@@ -3167,6 +3359,14 @@ class TourGroupRepository {
     batch.set(postRef.collection('comments').doc(commentId), map);
     batch.update(postRef, {'commentCount': FieldValue.increment(1)});
     await batch.commit();
+    unawaited(VpsNotificationService().notifyComment(
+      tourId: tourId,
+      postId: postId,
+      commentId: commentId,
+      commenterName: currentDisplayName,
+      text: trimmed,
+      postAuthorEmail: postAuthorEmail,
+    ));
   }
 
   Future<void> deleteComment(

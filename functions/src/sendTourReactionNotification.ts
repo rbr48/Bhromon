@@ -33,7 +33,7 @@ export const sendTourReactionNotification = functions
 
     // Find new likers who are not the author
     const newLikers = afterLikes.filter(
-      (email) =>
+      (email: string) =>
         !beforeLikes.has(email) && email.toLowerCase() !== postAuthorEmail,
     );
     if (newLikers.length === 0) return;

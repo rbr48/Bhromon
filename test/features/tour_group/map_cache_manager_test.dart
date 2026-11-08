@@ -62,9 +62,10 @@ void main() {
           isFalse);
     });
 
-    test('exposes default style URL pointing to demo vector tiles', () {
+    test('exposes default style URL pointing to bundled vector tiles style',
+        () {
       expect(MapCacheManager.defaultStyleUrl,
-          contains('https://demotiles.maplibre.org/style.json'));
+          equals('assets/map/liberty_style.json'));
     });
   });
 }

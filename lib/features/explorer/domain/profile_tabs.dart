@@ -4,8 +4,8 @@
 /// tab, and it opens on Games (P4.1).
 List<String> profileTabKeys({required bool groupsV2}) {
   return groupsV2
-      ? const ['games', 'vault', 'settings']
-      : const ['tours', 'games', 'vault', 'settings'];
+      ? const ['games', 'settings']
+      : const ['tours', 'games', 'settings'];
 }
 
 /// The tab a profile opens on.

@@ -4,7 +4,14 @@
  * keeps its own rules and its own seat documents.
  */
 
-import { getFirestore } from 'firebase-admin/firestore';
+import {
+  DocumentData,
+  DocumentReference,
+  Firestore,
+  Transaction,
+  UpdateData,
+  getFirestore,
+} from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 
 export const SEATS = 4;
@@ -20,13 +27,14 @@ export interface PlayerRow {
   isBot: boolean;
 }
 
-export type DocData = FirebaseFirestore.DocumentData;
-export type Transaction = FirebaseFirestore.Transaction;
-export type DocRef = FirebaseFirestore.DocumentReference;
+export type DocData = DocumentData;
+export type { Transaction };
+export type DocRef = DocumentReference;
+export type DocUpdateData<T = DocumentData> = UpdateData<T>;
 
 export const HttpsError = functions.https.HttpsError;
 
-export const db = (): FirebaseFirestore.Firestore => getFirestore();
+export const db = (): Firestore => getFirestore();
 
 export function botEmail(seat: number): string {
   return `bot_seat_${seat}@bhromon.fun`;

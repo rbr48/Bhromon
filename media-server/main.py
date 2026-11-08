@@ -97,7 +97,7 @@ FILENAME_PATTERN = re.compile(
     r"([0-9a-f]{32})\.(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv|m4a|mp3|aac|wav|ogg|opus|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)"
 )
 
-notification_engine = NotificationEngine()
+notification_engine = NotificationEngine(chat_db=chat_db)
 notification_watcher = FirestoreNotificationWatcher(notification_engine)
 family_date_scheduler = FamilyDateReminderScheduler(notification_engine)
 ack_reminder_scheduler = AckReminderScheduler(
@@ -609,6 +609,8 @@ async def health():
         "service": "bhromon-media-server",
         "notifications": {
             "watcher_running": notification_watcher._is_running,
+            "active_listeners": len(notification_watcher.active_listeners),
+            "device_tokens": chat_db.count_device_tokens(),
             "stats": notification_engine.stats,
         },
     }
@@ -1220,6 +1222,167 @@ async def trigger_chat_notification(
         sender_id=sender_id,
         text=text,
         message_type=message_type,
+    )
+    return res
+
+
+@app.post("/notify/post")
+async def trigger_post_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+):
+    caller = await run_in_threadpool(authenticate, authorization)
+    tour_id = payload.get("tourId", "")
+    post_id = payload.get("postId", "")
+    author_name = payload.get("authorName", "A member")
+    caption = payload.get("caption", "")
+    is_reel = bool(payload.get("isReel", False))
+    image_url = payload.get("imageUrl")
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_post_notification,
+        tour_id=tour_id,
+        post_id=post_id,
+        author_email=caller.email,
+        author_name=author_name,
+        caption=caption,
+        is_reel=is_reel,
+        image_url=image_url,
+    )
+    return res
+
+
+@app.post("/notify/comment")
+async def trigger_comment_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+):
+    caller = await run_in_threadpool(authenticate, authorization)
+    tour_id = payload.get("tourId", "")
+    post_id = payload.get("postId", "")
+    comment_id = payload.get("commentId", "")
+    commenter_name = payload.get("commenterName", "A member")
+    text = payload.get("text", "")
+    post_author_email = payload.get("postAuthorEmail")
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_comment_notification,
+        tour_id=tour_id,
+        post_id=post_id,
+        comment_id=comment_id,
+        commenter_email=caller.email,
+        commenter_name=commenter_name,
+        text=text,
+        post_author_email=post_author_email,
+    )
+    return res
+
+
+@app.post("/notify/reaction")
+async def trigger_reaction_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+):
+    caller = await run_in_threadpool(authenticate, authorization)
+    tour_id = payload.get("tourId", "")
+    post_id = payload.get("postId", "")
+    reactor_name = payload.get("reactorName", "A member")
+    reaction = payload.get("reaction", "like")
+    post_author_email = payload.get("postAuthorEmail")
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_reaction_notification,
+        tour_id=tour_id,
+        post_id=post_id,
+        reactor_email=caller.email,
+        reactor_name=reactor_name,
+        reaction=reaction,
+        post_author_email=post_author_email,
+    )
+    return res
+
+
+@app.post("/notify/notice")
+async def trigger_notice_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+):
+    caller = await run_in_threadpool(authenticate, authorization)
+    tour_id = payload.get("tourId", "")
+    notice_id = payload.get("noticeId", "")
+    title = payload.get("title", "")
+    body = payload.get("body", "")
+    priority = payload.get("priority", "normal")
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_notice_notification,
+        tour_id=tour_id,
+        notice_id=notice_id,
+        author_email=caller.email,
+        title=title,
+        body=body,
+        priority=priority,
+    )
+    return res
+
+
+@app.post("/notify/ledger")
+async def trigger_ledger_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+):
+    caller = await run_in_threadpool(authenticate, authorization)
+    tour_id = payload.get("tourId", "")
+    expense_id = payload.get("expenseId", "")
+    payer_name = payload.get("payerName", "A member")
+    title = payload.get("title", "trip expense")
+    amount_paisa = int(payload.get("amountPaisa", 0))
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_ledger_notification,
+        tour_id=tour_id,
+        expense_id=expense_id,
+        added_by_email=caller.email,
+        payer_name=payer_name,
+        title=title,
+        amount_paisa=amount_paisa,
+    )
+    return res
+
+
+@app.post("/admin/broadcast")
+async def trigger_broadcast_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+):
+    caller = await run_in_threadpool(authenticate, authorization)
+    await run_in_threadpool(require_platform_admin, caller)
+    title = payload.get("title", "")
+    body = payload.get("body", "")
+    data = payload.get("data")
+    image_url = payload.get("imageUrl")
+    if not title or not body:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Title and body are required.",
+        )
+
+    res = await run_in_threadpool(
+        notification_engine.send_broadcast_notification,
+        title=title,
+        body=body,
+        data=data,
+        image_url=image_url,
     )
     return res
 

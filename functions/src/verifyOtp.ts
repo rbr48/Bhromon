@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions/v1';
 import { App, cert, getApp, initializeApp } from 'firebase-admin/app';
 import { UserRecord, getAuth } from 'firebase-admin/auth';
-import { Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { Timestamp, Transaction, getFirestore } from 'firebase-admin/firestore';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomBytes } from 'crypto';
@@ -40,7 +40,7 @@ type UseOutcome = 'ok' | 'missing' | 'expired' | 'locked' | 'wrong' | 'wrong-loc
 async function useCode(email: string, code: string): Promise<void> {
   const ref = db.collection('otps').doc(email);
   const nowMs = Date.now();
-  const outcome = await db.runTransaction<UseOutcome>(async (tx) => {
+  const outcome = await db.runTransaction<UseOutcome>(async (tx: Transaction) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return 'missing';
     const data = snap.data() ?? {};

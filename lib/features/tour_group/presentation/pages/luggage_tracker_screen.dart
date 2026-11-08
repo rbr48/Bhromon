@@ -192,7 +192,13 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
       appBar: AppBar(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
         foregroundColor: context.forest.text,
-        title: Text(l10n.translate('luggage_title')),
+        title: Text(
+          l10n.translate('luggage_title'),
+          style: TextStyle(
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 16),
+        ),
       ),
       body: content,
     );

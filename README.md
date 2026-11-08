@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/badge/Web_App-app.bhromon.fun-10B981?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Web App">
   </a>
   <a href="https://github.com/rbr48/Bhromon/releases/latest">
-    <img src="https://img.shields.io/badge/Latest_Release-v1.8.73_(Build_127)-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release">
+    <img src="https://img.shields.io/badge/Latest_Release-v1.8.125_(Build_179)-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-Apache_2.0-64748B?style=for-the-badge" alt="License">
@@ -59,7 +59,9 @@ Bhromon is structured around modular, layered architecture principles separating
 - **Clean Architecture**: Domain, Data, and Presentation layers with injectable dependency injection.
 - **Firebase Region Gating**: Enforces `asia-south1` routing for low-latency Firestore, Storage, and Cloud Functions.
 - **Security Hardening**: Strict Firestore Security Rules, zero broad storage permissions, sandboxed local stores.
-- **Offline Maps**: Public OSM tiles with client-side caching.
+- **Offline Maps**: OpenFreeMap Liberty vector tiles with local bundled style, coalesce-guarded numeric filters, and offline region caching for remote Bangladesh destinations.
+- **Push Notification Architecture**: Consolidated onto Hostinger VPS notification daemon, decommissioning cloud functions to guarantee 100% zero-cost operation on the Firebase Spark tier.
+- **Offline Outbox Protection**: Drift outbox and draft queries preventing accidental data loss on sign-out before cloud sync completes.
 
 ---
 

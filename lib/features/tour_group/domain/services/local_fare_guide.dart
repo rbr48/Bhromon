@@ -1,8 +1,11 @@
 /// Comprehensive Local Transport Fare Guide and Calculator for Bangladesh Tourism.
 ///
-/// Provides verified transit route fare estimates for popular Bangladeshi travel
+/// Provides transit route fare estimates for popular Bangladeshi travel
 /// hubs including Sajek Valley, Tanguar Haor, Sreemangal, Jaflong, Bandarban,
 /// Cox's Bazar, Sundarbans, and Kuakata.
+///
+/// No entry has a source or an as-of date yet, so every fare here is an
+/// estimate, not a verified fare.
 library;
 
 /// Represents a specific local transit route in Bangladesh.

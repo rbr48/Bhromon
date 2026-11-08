@@ -245,6 +245,36 @@ class AppDatabase extends _$AppDatabase {
     ));
   }
 
+  /// Returns count of outbox entries that are not yet committed remotely
+  /// (status is 'pending', 'processing', or 'failed').
+  Future<int> getPendingOutboxCount() async {
+    final countExpr = syncOutboxTable.id.count();
+    final row = await (selectOnly(syncOutboxTable)
+          ..addColumns([countExpr])
+          ..where(syncOutboxTable.status.equals('pending') |
+              syncOutboxTable.status.equals('failed') |
+              syncOutboxTable.status.equals('processing')))
+        .getSingle();
+    return row.read(countExpr) ?? 0;
+  }
+
+  /// Returns count of unpublished trip log drafts on this device.
+  Future<int> getDraftTripLogsCount() async {
+    final countExpr = tripLogsTable.tripId.count();
+    final row = await (selectOnly(tripLogsTable)
+          ..addColumns([countExpr])
+          ..where(tripLogsTable.isDraft.equals(1)))
+        .getSingle();
+    return row.read(countExpr) ?? 0;
+  }
+
+  /// Total unsynced device-only changes (outbox queue + un-published drafts).
+  Future<int> getTotalUnsyncedChangesCount() async {
+    final outboxCount = await getPendingOutboxCount();
+    final draftCount = await getDraftTripLogsCount();
+    return outboxCount + draftCount;
+  }
+
   // Points of Interest Operations (Fuzzy Local Search)
   Future<void> savePointOfInterest(
     String id,

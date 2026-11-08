@@ -3,7 +3,7 @@ import 'package:bhromon/features/tour_group/domain/models/service_request_models
 
 void main() {
   group('ServiceRequest Model & Timeline Attributes', () {
-    test('creates ServiceRequest with photoUrl and timeline timestamps', () {
+    test('creates ServiceRequest with photos and timeline timestamps', () {
       final now = DateTime(2026, 11, 4, 10, 0);
       final inProg = DateTime(2026, 11, 4, 14, 0);
       final resolved = DateTime(2026, 11, 4, 18, 0);
@@ -20,14 +20,14 @@ void main() {
         inProgressAt: inProg,
         resolvedAt: resolved,
         resolvedByName: 'Admin Rafiq',
-        photoUrl: 'https://media.bhromon.fun/lift_defect.jpg',
+        photoUrls: ['https://media.bhromon.fun/lift_defect.jpg'],
       );
 
       expect(req.id, 'req_1');
       expect(req.title, 'Elevator 2 stuck');
       expect(req.isResolved, isTrue);
       expect(req.isOpen, isFalse);
-      expect(req.photoUrl, 'https://media.bhromon.fun/lift_defect.jpg');
+      expect(req.photoUrls, ['https://media.bhromon.fun/lift_defect.jpg']);
       expect(req.resolvedByName, 'Admin Rafiq');
       expect(req.inProgressAt, inProg);
       expect(req.resolvedAt, resolved);
@@ -54,13 +54,13 @@ void main() {
       expect(req.category, ServiceRequestCategory.water);
       expect(req.status, ServiceRequestStatus.inProgress);
       expect(req.isInProgress, isTrue);
-      expect(req.photoUrl, 'https://media.bhromon.fun/leak.jpg');
+      expect(req.photoUrls, ['https://media.bhromon.fun/leak.jpg']);
       expect(req.inProgressAt, isNotNull);
 
       final fields = req.toTextFields();
       expect(fields['title'], 'Water leakage on 4th floor');
       expect(fields['category'], 'water');
-      expect(fields['photoUrl'], 'https://media.bhromon.fun/leak.jpg');
+      expect(fields['photoUrls'], ['https://media.bhromon.fun/leak.jpg']);
     });
 
     test('copyWith updates status and timestamps immutably', () {
@@ -86,6 +86,63 @@ void main() {
       );
       expect(resolved.isResolved, isTrue);
       expect(resolved.resolvedByName, 'Caretaker');
+    });
+
+    test(
+        'reads photos in order, drops blanks and repeats, and keeps at most three',
+        () {
+      final req = ServiceRequest.fromMap('req_photos', {
+        'title': 'Lobby light flickering',
+        'photoUrls': [
+          'https://media.bhromon.fun/a.jpg',
+          '   ',
+          'https://media.bhromon.fun/b.jpg',
+          'https://media.bhromon.fun/a.jpg',
+          'https://media.bhromon.fun/c.jpg',
+          'https://media.bhromon.fun/d.jpg',
+        ],
+      });
+      expect(req, isNotNull);
+      expect(req!.photoUrls, [
+        'https://media.bhromon.fun/a.jpg',
+        'https://media.bhromon.fun/b.jpg',
+        'https://media.bhromon.fun/c.jpg',
+      ]);
+    });
+
+    test('a request without photos has none and writes no photo field', () {
+      final req =
+          ServiceRequest.fromMap('req_none', {'title': 'Water pressure low'});
+      expect(req, isNotNull);
+      expect(req!.photoUrls, isEmpty);
+      expect(req.toTextFields().containsKey('photoUrls'), isFalse);
+    });
+
+    test(
+        'a request saved with the single photo field reads that photo as its list',
+        () {
+      final req = ServiceRequest.fromMap('req_legacy', {
+        'title': 'Water pressure low',
+        'photoUrl': 'https://media.bhromon.fun/old.jpg',
+      });
+      expect(req, isNotNull);
+      expect(req!.photoUrls, ['https://media.bhromon.fun/old.jpg']);
+    });
+
+    test('copyWith replaces the photos and keeps the rest', () {
+      const original = ServiceRequest(
+        id: 'req_3',
+        title: 'Gate lock broken',
+        photoUrls: ['https://media.bhromon.fun/a.jpg'],
+      );
+      final more = original.copyWith(photoUrls: [
+        'https://media.bhromon.fun/a.jpg',
+        'https://media.bhromon.fun/b.jpg',
+      ]);
+      expect(more.photoUrls, hasLength(2));
+      expect(more.title, 'Gate lock broken');
+      expect(more.id, 'req_3');
+      expect(original.photoUrls, hasLength(1));
     });
   });
 }
