@@ -15,7 +15,7 @@ Map<String, Object> memberRowUpdates({
 }) {
   final updates = <String, Object>{};
   final rowUid = row['uid'];
-  if (uid.isNotEmpty && (rowUid is! String || rowUid.isEmpty)) {
+  if (uid.isNotEmpty && rowUid != uid) {
     updates['uid'] = uid;
   }
   if (displayName != 'Explorer' && row['displayName'] != displayName) {

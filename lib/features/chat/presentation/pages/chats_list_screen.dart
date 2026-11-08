@@ -426,7 +426,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               stream: _chatsStream,
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
+                                        ConnectionState.waiting ||
+                                    !_toursLoaded) {
                                   if (_offlineConversations.isNotEmpty) {
                                     return _buildOfflineConversationsList(
                                         blockedUids, currentUid);

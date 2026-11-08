@@ -173,5 +173,21 @@ void main() {
       expect(blocks[1], isA<ChatDividerBlock>());
       expect(blocks[2], isA<ChatParagraphBlock>());
     });
+
+    test('parseChatBlocks parses Bengali comparison table with leading paragraphs', () {
+      const input = '''
+হোয়াটসঅ্যাপের চ্যাটে নোটিশ আর হিসাব হারিয়ে যায়? বেছে নিন ‘ভ্রমণ (Bhromon)’! 🇧🇩✨
+⚖️ হোয়াটসঅ্যাপ বনাম ভ্রমণ (Bhromon): পার্থক্য কোথায়?
+| বিষয় / ফিচার | ❌ হোয়াটসঅ্যাপ (WhatsApp) | ✅ ভ্রমণ (Bhromon) |
+|---|---|---|
+| ১. খরচের হিসাব (Ledger) | কোনো বিল্ট-ইন হিসাব নেই; আলাদা লাগে। | স্মার্ট লেজার: অটোমেটিক সেটেলমেন্ট। |
+| ২. মেস ও শেয়ার্ড ফ্ল্যাট | সুযোগ নেই। | ডেইলি মিল ট্র্যাকার। |
+''';
+      final blocks = parseChatBlocks(input.trim());
+      expect(blocks.any((b) => b is ChatTableBlock), isTrue);
+      final table = blocks.firstWhere((b) => b is ChatTableBlock) as ChatTableBlock;
+      expect(table.headers, hasLength(3));
+      expect(table.rows, hasLength(2));
+    });
   });
 }
