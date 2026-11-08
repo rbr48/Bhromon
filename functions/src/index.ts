@@ -5,23 +5,16 @@ initializeApp();
 // ── Core scoring & content lifecycle ──────────────────────────────────────────
 export { computeExplorerScore } from './computeExplorerScore';
 
-// ── Chat: notifications, rate-limiting, media thumbnails ─────────────────────
-export { sendChatNotification } from './sendChatNotification';
+// ── Chat: rate-limiting & media thumbnails (Notifications handled by VPS) ─────
 export { chatRateLimiter } from './chatRateLimiter';
 export { generateChatThumbnail } from './generateChatThumbnail';
 
-// ── Push Notifications ────────────────────────────────────────────────────────
-export { sendGeneralNotification } from './sendGeneralNotification';
-export { sendBroadcastNotification } from './sendBroadcastNotification';
-export { sendSosAlert } from './sendSosAlert';
-export { sendChannelNotification } from './sendChannelNotification';
-export { sendTourPostNotification } from './sendTourPostNotification';
-export { sendTourCommentNotification } from './sendTourCommentNotification';
-export { sendTourReactionNotification } from './sendTourReactionNotification';
-export { sendTourNoticeNotification } from './sendTourNoticeNotification';
-export { sendTourNoticeReminders } from './sendTourNoticeReminders';
-export { sendTourLedgerNotification } from './sendTourLedgerNotification';
-export { sendCallPushNotification } from './sendCallPushNotification';
+// ── Push Notifications Note: ──────────────────────────────────────────────────
+// All push notifications (Direct Chat, SOS alerts, Calls, Channels, Moments,
+// Comments, Notices, Reminders, and Ledger) have been migrated to the Hostinger
+// VPS Notification Engine (media-server:8210 / notifications.py).
+// This eliminates duplicate ghost dispatches and keeps Bhromon 100% free on the
+// Firebase Spark plan without incurring Cloud Functions compute billing.
 
 // ── Online 29 table (server-run game) ─────────────────────────────────────────
 export { card29Start, card29Act, card29Advance, card29Leave } from './card29/callables';

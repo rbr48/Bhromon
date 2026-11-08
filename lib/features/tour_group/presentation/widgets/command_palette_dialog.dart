@@ -380,7 +380,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                         style: TextStyle(
                             color: context.forest.text38, fontSize: 11)),
                     const Spacer(),
-                    Text('ভ্রমণ অপারেটিং সিস্টেম • Bhromon OS',
+                    Text('ভ্রমণ • Bhromon',
                         style: TextStyle(
                             color: context.forest.accentText, fontSize: 10.5)),
                   ],

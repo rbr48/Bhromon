@@ -1,4 +1,4 @@
-import { Firestore, Timestamp } from 'firebase-admin/firestore';
+import { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { normalizeEmail } from './tourContentPlan';
 
 /** A member row of a tour, as closing an account reads it. */
@@ -48,8 +48,8 @@ export async function leaveAllTours(db: Firestore, rawEmail: string): Promise<vo
     db.collection('tours').where('ownerEmail', '==', email).get(),
   ]);
   const tourIds = new Set<string>([
-    ...rows.docs.map((doc) => String(doc.get('tourId') ?? '')),
-    ...owned.docs.map((doc) => doc.id),
+    ...rows.docs.map((doc: QueryDocumentSnapshot) => String(doc.get('tourId') ?? '')),
+    ...owned.docs.map((doc: QueryDocumentSnapshot) => doc.id),
   ]);
   tourIds.delete('');
 
@@ -69,7 +69,7 @@ async function leaveTour(db: Firestore, tourId: string, email: string): Promise<
   }
 
   const memberRows = await db.collection('memberships').where('tourId', '==', tourId).get();
-  const members: MemberRow[] = memberRows.docs.map((doc) => ({
+  const members: MemberRow[] = memberRows.docs.map((doc: QueryDocumentSnapshot) => ({
     email: normalizeEmail(doc.get('email')),
     status: String(doc.get('status') ?? ''),
     role: String(doc.get('role') ?? ''),
@@ -89,8 +89,8 @@ async function leaveTour(db: Firestore, tourId: string, email: string): Promise<
   await ownRowRef.delete();
 }
 
-function toMillis(value: unknown): number {
-  if (value instanceof Timestamp) return value.toMillis();
+function toMillis(value: any): number {
+  if (value && typeof value.toMillis === 'function') return value.toMillis();
   if (value instanceof Date) return value.getTime();
   return Number.MAX_SAFE_INTEGER;
 }

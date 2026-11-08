@@ -131,6 +131,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
           message,
           style: const TextStyle(
             fontFamily: 'NotoSansBengali',
+            fontFamilyFallback: ['HindSiliguri', 'Roboto', 'sans-serif'],
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -299,38 +300,54 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color:
+                        context.forest.isDark ? Colors.white24 : Colors.black26,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'টেবিল এক্সপোর্ট ও শেয়ার',
                   style: TextStyle(
-                    fontFamily: 'NotoSansBengali',
+                    fontFamily: 'HindSiliguri',
+                    fontFamilyFallback: const [
+                      'NotoSansBengali',
+                      'Roboto',
+                      'sans-serif'
+                    ],
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: context.forest.text,
                   ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
-                  leading: const Icon(Icons.table_chart_outlined,
-                      color: AppColors.mintGreen),
-                  title: const Text(
+                  leading: Icon(Icons.table_chart_outlined,
+                      color: context.forest.accentText),
+                  title: Text(
                     'এক্সেল / গুগল শিটসের জন্য কপি (TSV)',
                     style: TextStyle(
-                      fontFamily: 'NotoSansBengali',
-                      color: Colors.white,
+                      fontFamily: 'HindSiliguri',
+                      fontFamilyFallback: const [
+                        'NotoSansBengali',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      color: context.forest.text,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'পেস্ট করলে স্বয়ংক্রিয়ভাবে আলাদা কলাম ও সারিতে বসে যাবে',
                     style: TextStyle(
-                      fontFamily: 'NotoSansBengali',
-                      color: Colors.white70,
+                      fontFamily: 'HindSiliguri',
+                      fontFamilyFallback: const [
+                        'NotoSansBengali',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      color: context.forest.text70,
                       fontSize: 12,
                     ),
                   ),
@@ -341,22 +358,32 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.format_list_bulleted_rounded,
-                      color: AppColors.gold),
-                  title: const Text(
+                  leading: Icon(Icons.format_list_bulleted_rounded,
+                      color: context.forest.readable(AppColors.gold)),
+                  title: Text(
                     'লিস্ট আকারে কপি করুন (Clean List)',
                     style: TextStyle(
-                      fontFamily: 'NotoSansBengali',
-                      color: Colors.white,
+                      fontFamily: 'HindSiliguri',
+                      fontFamilyFallback: const [
+                        'NotoSansBengali',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      color: context.forest.text,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'হোয়াটসঅ্যাপ বা মেসেঞ্জারে স্পষ্ট বুলেট পয়েন্টে শেয়ারের জন্য',
                     style: TextStyle(
-                      fontFamily: 'NotoSansBengali',
-                      color: Colors.white70,
+                      fontFamily: 'HindSiliguri',
+                      fontFamilyFallback: const [
+                        'NotoSansBengali',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      color: context.forest.text70,
                       fontSize: 12,
                     ),
                   ),
@@ -367,22 +394,32 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                   },
                 ),
                 ListTile(
-                  leading:
-                      const Icon(Icons.code_rounded, color: Colors.cyanAccent),
-                  title: const Text(
+                  leading: Icon(Icons.code_rounded,
+                      color: context.forest.readable(const Color(0xFF0284C7))),
+                  title: Text(
                     'মার্কডাউন ফরম্যাটে কপি করুন',
                     style: TextStyle(
                       fontFamily: 'NotoSansBengali',
-                      color: Colors.white,
+                      fontFamilyFallback: const [
+                        'HindSiliguri',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      color: context.forest.text,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'আসল পাইপলাইন (| Col 1 | Col 2 |) কোড কপি হবে',
                     style: TextStyle(
                       fontFamily: 'NotoSansBengali',
-                      color: Colors.white70,
+                      fontFamilyFallback: const [
+                        'HindSiliguri',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      color: context.forest.text70,
                       fontSize: 12,
                     ),
                   ),
@@ -427,12 +464,14 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
 
     final headerStyle = widget.baseStyle.copyWith(
       fontFamily: 'NotoSansBengali',
+      fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
       fontWeight: FontWeight.bold,
       fontSize: 14.0,
       height: 1.35,
     );
     final cellStyle = widget.baseStyle.copyWith(
       fontFamily: 'NotoSansBengali',
+      fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
       fontSize: 13.5,
       height: 1.35,
     );
@@ -627,6 +666,11 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                       '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
                       style: TextStyle(
                         fontFamily: 'NotoSansBengali',
+                        fontFamilyFallback: const [
+                          'HindSiliguri',
+                          'Roboto',
+                          'sans-serif'
+                        ],
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color:
@@ -657,6 +701,11 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                             'লেজারে যুক্ত',
                             style: TextStyle(
                               fontFamily: 'NotoSansBengali',
+                              fontFamilyFallback: [
+                                'HindSiliguri',
+                                'Roboto',
+                                'sans-serif'
+                              ],
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: AppColors.mintGreen,
@@ -689,6 +738,11 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                             'নোটিশে পিন',
                             style: TextStyle(
                               fontFamily: 'NotoSansBengali',
+                              fontFamilyFallback: [
+                                'HindSiliguri',
+                                'Roboto',
+                                'sans-serif'
+                              ],
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: AppColors.mintGreen,

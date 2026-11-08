@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/logger.dart';
@@ -29,6 +30,7 @@ import '../../domain/models/logistics_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../../chat/data/chat_draft_store.dart';
+import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../domain/services/channel_draft_rules.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
@@ -71,6 +73,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   // The channel swipe. The pager and the chip strip follow one selection.
   final PageController _channelPager = PageController();
   final ScrollController _stripController = ScrollController();
+  final ScrollController _messagesController = ScrollController();
+  final Map<String, GlobalKey> _channelMessageKeys = {};
+  String? _highlightedChannelMessageId;
   final Map<String, GlobalKey> _chipKeys = {};
   // Per channel: the newest messages waiting to be written to this device's cache,
   // and the timer that writes them once the list has been still for a moment.
@@ -238,6 +243,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
     _channelPager.dispose();
     _stripController.dispose();
+    _messagesController.dispose();
     _draftStore.dispose();
     _searchCtrl.dispose();
     for (final c in _drafts.values) {
@@ -1581,98 +1587,114 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   Widget _buildMessages(TourChannel channel) {
     final l10n = context.l10n;
-    return CachedChannelMessages(
-      tourId: widget.tourId,
-      channelId: channel.id,
-      builder: (context, cached) => ChannelMessageListener(
-        stream: _messagesOf(channel.id),
-        builder: (context, snapshot) {
-          if (snapshot.hasError && !snapshot.hasData && cached == null) {
-            return Center(
-              child: Text(l10n.translate('tour_messages_load_failed'),
-                  style: TextStyle(color: context.forest.text54)),
-            );
-          }
-          // The live query wins. Until it answers, the messages this device cached
-          // show, so the channel opens with its messages in place.
-          final live = snapshot.data;
-          final all = live ?? cached;
-          if (all == null || (live == null && all.isEmpty)) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.midGreen));
-          }
-          if (live != null) {
-            _scheduleCacheWrite(channel.id, live);
-            // Only the settled channel's messages count as read, and only ones the
-            // live query has confirmed.
-            if (live.isNotEmpty && channel.id == _selectedId) {
-              _markReadSoon(channel.id, live.first.timestamp);
-            }
-          }
+    return Column(
+      children: [
+        _buildPinnedHeaderBanner(channel),
+        Expanded(
+          child: CachedChannelMessages(
+            tourId: widget.tourId,
+            channelId: channel.id,
+            builder: (context, cached) => ChannelMessageListener(
+              stream: _messagesOf(channel.id),
+              builder: (context, snapshot) {
+                if (snapshot.hasError && !snapshot.hasData && cached == null) {
+                  return Center(
+                    child: Text(l10n.translate('tour_messages_load_failed'),
+                        style: TextStyle(color: context.forest.text54)),
+                  );
+                }
+                // The live query wins. Until it answers, the messages this device cached
+                // show, so the channel opens with its messages in place.
+                final live = snapshot.data;
+                final all = live ?? cached;
+                if (all == null || (live == null && all.isEmpty)) {
+                  return const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.midGreen));
+                }
+                if (live != null) {
+                  _scheduleCacheWrite(channel.id, live);
+                  // Only the settled channel's messages count as read, and only ones the
+                  // live query has confirmed.
+                  if (live.isNotEmpty && channel.id == _selectedId) {
+                    _markReadSoon(channel.id, live.first.timestamp);
+                  }
+                }
 
-          final query = _searchText.trim().toLowerCase();
-          final messages = query.isEmpty
-              ? all
-              : all
-                  .where((m) =>
-                      m.text.toLowerCase().contains(query) ||
-                      m.senderName.toLowerCase().contains(query))
-                  .toList();
-          if (messages.isEmpty) {
-            return Center(
-              child: Text(
-                l10n.translate(query.isEmpty
-                    ? 'tour_no_messages'
-                    : 'chan_no_search_results'),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.forest.text54),
-              ),
-            );
-          }
+                final query = _searchText.trim().toLowerCase();
+                final messages = query.isEmpty
+                    ? all
+                    : all
+                        .where((m) =>
+                            m.text.toLowerCase().contains(query) ||
+                            m.senderName.toLowerCase().contains(query))
+                        .toList();
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Text(
+                      l10n.translate(query.isEmpty
+                          ? 'tour_no_messages'
+                          : 'chan_no_search_results'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.forest.text54),
+                    ),
+                  );
+                }
 
-          final divider = _divider[channel.id];
-          return ListView.builder(
-            key: PageStorageKey<String>('channel-messages-${channel.id}'),
-            reverse: true,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            itemCount: messages.length,
-            itemBuilder: (context, i) {
-              final m = messages[i];
-              final bubble = ChannelMessageBubble(
-                key: ValueKey(m.id),
-                message: m,
-                isMine: m.isSentBy(_me),
-                mentionsMe: m.mentionsEmail(_me),
-                myEmail: _me,
-                badge: _badgeFor(m.senderEmail),
-                senderPhotoUrl: _photoFor(m.senderEmail),
-                onLongPress: () => _onMessageLongPress(channel, m),
-                onReact: (emoji) => _react(channel, m, emoji),
-                onVote: (option) => _vote(channel, m, option),
-                onOpenMedia: (index) =>
-                    showChannelMediaViewer(context, m.visualAttachments[index]),
-                onOpenLedger: () =>
-                    context.push('/group/${widget.tourId}/ledger'),
-              );
-              // The divider sits under the last message read before this visit,
-              // when newer messages have arrived since.
-              final endsRead = divider != null &&
-                  i > 0 &&
-                  !m.timestamp.isAfter(divider) &&
-                  messages[i - 1].timestamp.isAfter(divider);
-              if (!endsRead) return bubble;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  bubble,
-                  _NewMessagesDivider(
-                      label: l10n.translate('chan_new_messages'))
-                ],
-              );
-            },
-          );
-        },
-      ),
+                final divider = _divider[channel.id];
+                return ListView.builder(
+                  key: PageStorageKey<String>('channel-messages-${channel.id}'),
+                  controller: _messagesController,
+                  reverse: true,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  itemCount: messages.length,
+                  itemBuilder: (context, i) {
+                    final m = messages[i];
+                    final bubble = ChannelMessageBubble(
+                      key: ValueKey(m.id),
+                      message: m,
+                      isMine: m.isSentBy(_me),
+                      mentionsMe: m.mentionsEmail(_me),
+                      myEmail: _me,
+                      badge: _badgeFor(m.senderEmail),
+                      senderPhotoUrl: _photoFor(m.senderEmail),
+                      isHighlighted: m.id == _highlightedChannelMessageId,
+                      onLongPress: () => _onMessageLongPress(channel, m),
+                      onReact: (emoji) => _react(channel, m, emoji),
+                      onVote: (option) => _vote(channel, m, option),
+                      onOpenMedia: (index) => showChannelMediaViewer(
+                          context, m.visualAttachments[index]),
+                      onOpenLedger: () =>
+                          context.push('/group/${widget.tourId}/ledger'),
+                    );
+                    final wrappedBubble = KeyedSubtree(
+                      key: _channelMessageKeys.putIfAbsent(
+                          m.id, () => GlobalKey()),
+                      child: bubble,
+                    );
+                    // The divider sits under the last message read before this visit,
+                    // when newer messages have arrived since.
+                    final endsRead = divider != null &&
+                        i > 0 &&
+                        !m.timestamp.isAfter(divider) &&
+                        messages[i - 1].timestamp.isAfter(divider);
+                    if (!endsRead) return wrappedBubble;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        wrappedBubble,
+                        _NewMessagesDivider(
+                            label: l10n.translate('chan_new_messages'))
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1773,6 +1795,336 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     });
   }
 
+  Future<void> _jumpToChannelMessage(String messageId) async {
+    if (messageId.isEmpty) return;
+    final key = _channelMessageKeys[messageId];
+    if (key?.currentContext != null && key!.currentContext!.mounted) {
+      await Scrollable.ensureVisible(
+        key.currentContext!,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else if (_messagesController.hasClients) {
+      final position = _messagesController.position;
+      await _messagesController.animateTo(
+        (position.maxScrollExtent * 0.4).clamp(0.0, position.maxScrollExtent),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+      if (!mounted) return;
+      await WidgetsBinding.instance.endOfFrame;
+      final fineKey = _channelMessageKeys[messageId];
+      if (fineKey?.currentContext != null && fineKey!.currentContext!.mounted) {
+        await Scrollable.ensureVisible(
+          fineKey.currentContext!,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _highlightedChannelMessageId = messageId);
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && _highlightedChannelMessageId == messageId) {
+          setState(() => _highlightedChannelMessageId = null);
+        }
+      });
+    }
+  }
+
+  Future<void> _showPinnedChannelMessageFull(ChannelMessage message) async {
+    final l10n = context.l10n;
+    final isExpense = message.kind == ChannelMessageKind.expense;
+    final text = isExpense
+        ? '${message.expenseTitle} • ৳${(message.expenseAmountPaisa / 100).toStringAsFixed(message.expenseAmountPaisa % 100 == 0 ? 0 : 2)}'
+        : message.text;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.push_pin_rounded,
+                          color: context.forest.readable(AppColors.gold),
+                          size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.translate('chan_pins_full_title'),
+                            style: TextStyle(
+                              color: context.forest.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '${message.senderName} • ${localizedDateFormat('MMM d, h:mm a').format(message.timestamp)}',
+                            style: TextStyle(
+                              color: context.forest.text54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: context.forest.text70),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: context.forest.divider12),
+                const SizedBox(height: 14),
+                if (message.visualAttachments.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (int idx = 0;
+                                idx < message.visualAttachments.length;
+                                idx++)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: GestureDetector(
+                                  onTap: () => showChannelMediaViewer(
+                                      context, message.visualAttachments[idx]),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      message.visualAttachments[idx].url,
+                                      height: 140,
+                                      width: 140,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        height: 140,
+                                        width: 140,
+                                        color: Colors.black26,
+                                        child: const Icon(Icons.broken_image),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (text.isNotEmpty)
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: SelectionArea(
+                        child: ChatRichText(
+                          text: text,
+                          baseStyle: TextStyle(
+                            color: context.forest.text,
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                          isMine: normalizeEmail(message.senderEmail) ==
+                              normalizeEmail(_me),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                          _jumpToChannelMessage(message.id);
+                        },
+                        icon:
+                            const Icon(Icons.arrow_downward_rounded, size: 18),
+                        label: Text(l10n.translate('chan_pins_jump')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.midGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (text.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: text));
+                          if (mounted) {
+                            _snack(l10n.translate('chan_copied'));
+                          }
+                        },
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        label: Text(l10n.translate('chan_action_copy')),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.forest.text,
+                          side: BorderSide(color: context.forest.divider12),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPinnedHeaderBanner(TourChannel channel) {
+    final l10n = context.l10n;
+    return StreamBuilder<List<ChannelMessage>>(
+      stream: _repo.watchPinned(widget.tourId, channel.id),
+      builder: (context, pinSnap) {
+        final pins = pinSnap.data ?? const <ChannelMessage>[];
+        if (pins.isEmpty) return const SizedBox.shrink();
+        final firstPin = pins.first;
+        final pinCount = pins.length;
+        final pinText = firstPin.kind == ChannelMessageKind.expense
+            ? firstPin.expenseTitle
+            : firstPin.text;
+        return Container(
+          decoration: BoxDecoration(
+            color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+            border: Border(
+              bottom: BorderSide(color: context.forest.divider12),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Row(
+            children: [
+              Icon(Icons.push_pin_rounded,
+                  size: 16, color: context.forest.readable(AppColors.gold)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _jumpToChannelMessage(firstPin.id),
+                  onLongPress: () => _showPinnedChannelMessageFull(firstPin),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              firstPin.senderName,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.forest.readable(AppColors.gold),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          if (pinCount > 1) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$pinCount',
+                                style: TextStyle(
+                                  color:
+                                      context.forest.readable(AppColors.gold),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        pinText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.forest.text,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.translate('chan_pins_view_full'),
+                icon: Icon(Icons.open_in_full_rounded,
+                    size: 16, color: context.forest.text70),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () => _showPinnedChannelMessageFull(firstPin),
+              ),
+              IconButton(
+                tooltip: l10n.translate('chan_pins_tooltip'),
+                icon: Icon(Icons.list_rounded,
+                    size: 18, color: context.forest.text70),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () => _showPins(channel),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showPins(TourChannel channel) {
     final l10n = context.l10n;
     final stream = _repo.watchPinned(widget.tourId, channel.id);
@@ -1831,16 +2183,31 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                           style: TextStyle(
                               color: context.forest.readable(AppColors.gold),
                               fontSize: 11)),
-                      trailing: _isAdmin
-                          ? IconButton(
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        _jumpToChannelMessage(p.id);
+                      },
+                      onLongPress: () => _showPinnedChannelMessageFull(p),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: l10n.translate('chan_pins_view_full'),
+                            icon: Icon(Icons.open_in_full_rounded,
+                                color: context.forest.text54, size: 16),
+                            onPressed: () => _showPinnedChannelMessageFull(p),
+                          ),
+                          if (_isAdmin)
+                            IconButton(
                               tooltip: l10n.translate('chan_action_unpin'),
                               icon: Icon(Icons.close,
                                   color: context.forest.text54, size: 18),
                               onPressed: () => unawaited(_guard(() =>
                                   _repo.setPinned(
                                       widget.tourId, channel.id, p.id, false))),
-                            )
-                          : null,
+                            ),
+                        ],
+                      ),
                     ),
                 ],
               );

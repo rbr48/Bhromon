@@ -6,6 +6,7 @@ import '../../data/tour_group_repository.dart';
 import '../tour_routes.dart';
 import 'bhromon_bottom_nav.dart';
 import 'command_palette_dialog.dart';
+import 'desktop_right_dock.dart';
 import 'desktop_tour_sidebar.dart';
 import 'tour_membership_guard.dart';
 
@@ -21,6 +22,8 @@ class TripShell extends StatelessWidget {
     required this.location,
     required this.child,
     this.repository,
+    this.guardMembership = true,
+    this.ownMobileScaffold = false,
   });
 
   /// The width from which the tabs move to a side rail.
@@ -40,6 +43,13 @@ class TripShell extends StatelessWidget {
   /// leaves this null and gets a default [TourGroupRepository].
   final TourGroupRepository? repository;
 
+  /// Whether to verify tour membership. False for public or top-level screens.
+  final bool guardMembership;
+
+  /// Whether the child screen already provides its own mobile Scaffold and navigation bar.
+  /// When true, below [railBreakpoint] the child is rendered as-is without an outer Scaffold.
+  final bool ownMobileScaffold;
+
   @override
   Widget build(BuildContext context) {
     final index = tripTabFor(location);
@@ -48,22 +58,30 @@ class TripShell extends StatelessWidget {
       BhromonBottomNav.handleSelect(
         context,
         i,
-        tourId: tourId,
+        tourId: tourId.isNotEmpty ? tourId : null,
         currentIndex: index,
       );
     }
+
+    final Widget guardedChild = (guardMembership && tourId.isNotEmpty)
+        ? TourMembershipGuard(
+            tourId: tourId,
+            repository: repository,
+            child: child,
+          )
+        : child;
 
     final wrappedChild = PopScope(
       canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go(tourHubPath(tourId));
+        if (tourId.isNotEmpty) {
+          context.go(tourHubPath(tourId));
+        } else {
+          context.go('/group-hub');
+        }
       },
-      child: TourMembershipGuard(
-        tourId: tourId,
-        repository: repository,
-        child: child,
-      ),
+      child: guardedChild,
     );
 
     final shortcuts = <ShortcutActivator, VoidCallback>{
@@ -83,14 +101,19 @@ class TripShell extends StatelessWidget {
           CommandPaletteDialog.show(context, tourId),
     };
 
-    final Widget scaffold = MediaQuery.sizeOf(context).width < railBreakpoint
-        ? Scaffold(
-            body: wrappedChild,
-            bottomNavigationBar: BhromonBottomNav(
-              selectedIndex: index,
-              tourId: tourId,
-            ),
-          )
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final double rightDockWidth = screenWidth >= 1200 ? 320 : 280;
+
+    final Widget scaffold = screenWidth < railBreakpoint
+        ? (ownMobileScaffold
+            ? wrappedChild
+            : Scaffold(
+                body: wrappedChild,
+                bottomNavigationBar: BhromonBottomNav(
+                  selectedIndex: index,
+                  tourId: tourId.isNotEmpty ? tourId : null,
+                ),
+              ))
         : Scaffold(
             body: Row(
               children: [
@@ -107,6 +130,12 @@ class TripShell extends StatelessWidget {
                       child: wrappedChild,
                     ),
                   ),
+                ),
+                DesktopRightDock(
+                  activeTourId: tourId.isNotEmpty ? tourId : null,
+                  repository: repository ?? TourGroupRepository(),
+                  width: rightDockWidth,
+                  currentLocation: location,
                 ),
               ],
             ),
@@ -131,7 +160,7 @@ class TripShell extends StatelessWidget {
 int tripTabFor(String location) {
   if (location.contains('/channels')) return 1;
   if (location.contains('/feed')) return 2;
-  if (location.contains('/chats')) return 3;
+  if (location.contains('/chats') || location.startsWith('/chat/')) return 3;
   if (location.contains('/profile')) return 4;
   return 0;
 }

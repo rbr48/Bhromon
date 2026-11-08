@@ -259,6 +259,12 @@ class TourPostItem {
   final List<String> viewers;
   final int viewCount;
 
+  // Cross-group reshare attribution metadata
+  final String? resharedFromTourId;
+  final String? resharedFromTourName;
+  final String? resharedFromAuthorName;
+  final String? resharedPostId;
+
   const TourPostItem({
     required this.id,
     required this.tourId,
@@ -290,6 +296,10 @@ class TourPostItem {
     this.isArchived = false,
     this.viewers = const [],
     this.viewCount = 0,
+    this.resharedFromTourId,
+    this.resharedFromTourName,
+    this.resharedFromAuthorName,
+    this.resharedPostId,
   });
 
   int get effectiveViewCount => viewers.isNotEmpty ? viewers.length : viewCount;
@@ -332,6 +342,10 @@ class TourPostItem {
     bool? isEdited,
     DateTime? editedAt,
     bool? isArchived,
+    String? resharedFromTourId,
+    String? resharedFromTourName,
+    String? resharedFromAuthorName,
+    String? resharedPostId,
   }) {
     return TourPostItem(
       id: id ?? this.id,
@@ -362,6 +376,13 @@ class TourPostItem {
       isEdited: isEdited ?? this.isEdited,
       editedAt: editedAt ?? this.editedAt,
       isArchived: isArchived ?? this.isArchived,
+      viewers: viewers,
+      viewCount: viewCount,
+      resharedFromTourId: resharedFromTourId ?? this.resharedFromTourId,
+      resharedFromTourName: resharedFromTourName ?? this.resharedFromTourName,
+      resharedFromAuthorName:
+          resharedFromAuthorName ?? this.resharedFromAuthorName,
+      resharedPostId: resharedPostId ?? this.resharedPostId,
     );
   }
 
@@ -396,6 +417,12 @@ class TourPostItem {
       if (isArchived) 'isArchived': true,
       'viewCount': effectiveViewCount,
       if (viewers.isNotEmpty) 'viewers': viewers,
+      if (resharedFromTourId != null) 'resharedFromTourId': resharedFromTourId,
+      if (resharedFromTourName != null)
+        'resharedFromTourName': resharedFromTourName,
+      if (resharedFromAuthorName != null)
+        'resharedFromAuthorName': resharedFromAuthorName,
+      if (resharedPostId != null) 'resharedPostId': resharedPostId,
     };
   }
 
@@ -451,6 +478,10 @@ class TourPostItem {
       isArchived: map['isArchived'] as bool? ?? false,
       viewers: viewersList,
       viewCount: count,
+      resharedFromTourId: map['resharedFromTourId']?.toString(),
+      resharedFromTourName: map['resharedFromTourName']?.toString(),
+      resharedFromAuthorName: map['resharedFromAuthorName']?.toString(),
+      resharedPostId: map['resharedPostId']?.toString(),
     );
   }
 }

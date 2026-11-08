@@ -98,7 +98,10 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
       backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('fd_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
         elevation: 0,

@@ -5,6 +5,7 @@ import 'package:bhromon/features/chat/data/call_signaling_service.dart';
 import 'package:bhromon/features/chat/data/call_notification_service.dart';
 import 'package:bhromon/features/chat/data/chat_local_cache.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_media_picker.dart';
+import 'package:bhromon/features/chat/presentation/widgets/chat_media_bubble.dart';
 import 'package:bhromon/features/chat/presentation/widgets/voice_message_bubble.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_reply_preview.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_reaction_bar.dart';
@@ -38,6 +39,21 @@ void main() {
 
       expect(result.xFile.path, 'test/path/video.mp4');
       expect(result.type, 'video');
+    });
+
+    test('MediaPickResult supports multi-image xFiles list', () {
+      final f1 = XFile('test/path/img1.jpg');
+      final f2 = XFile('test/path/img2.jpg');
+      final result = MediaPickResult(
+        xFile: f1,
+        type: 'image',
+        xFiles: [f1, f2],
+      );
+
+      expect(result.xFiles?.length, 2);
+      expect(result.allFiles.length, 2);
+      expect(result.allFiles.first.path, 'test/path/img1.jpg');
+      expect(result.allFiles.last.path, 'test/path/img2.jpg');
     });
 
     testWidgets('VoiceMessageBubble renders correctly with duration',
@@ -289,6 +305,23 @@ void main() {
       expect(result.isViewOnce, isTrue);
     });
 
+    test(
+        'MediaCaptionResult stores multiple files and preserves backward-compatible file getter',
+        () {
+      final f1 = XFile('test/photo1.jpg');
+      final f2 = XFile('test/photo2.jpg');
+      final result = MediaCaptionResult(
+        files: [f1, f2],
+        caption: 'Group photos at Sajek',
+        isViewOnce: false,
+      );
+
+      expect(result.files.length, 2);
+      expect(result.file.path, 'test/photo1.jpg');
+      expect(result.caption, 'Group photos at Sajek');
+      expect(result.isViewOnce, isFalse);
+    });
+
     test('ChatLocalCache biometric locked chats interface', () {
       final cache = ChatLocalCache();
       expect(cache, isNotNull);
@@ -361,6 +394,51 @@ void main() {
       final epoch = DateTime(2026, 10, 26, 12, 30).millisecondsSinceEpoch;
       final parsedFromNum = DateTime.fromMillisecondsSinceEpoch(epoch);
       expect(parsedFromNum.year, 2026);
+    });
+
+    testWidgets('ChatMediaBubble renders multi-image collage for 2 photos',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatMediaBubble(
+              mediaUrls: [
+                'https://example.com/photo1.jpg',
+                'https://example.com/photo2.jpg',
+              ],
+              type: 'image',
+              isMe: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ChatMediaBubble), findsOneWidget);
+    });
+
+    testWidgets('ChatMediaBubble renders 5+ photos with remaining count badge',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatMediaBubble(
+              mediaUrls: [
+                'https://example.com/p1.jpg',
+                'https://example.com/p2.jpg',
+                'https://example.com/p3.jpg',
+                'https://example.com/p4.jpg',
+                'https://example.com/p5.jpg',
+                'https://example.com/p6.jpg',
+              ],
+              type: 'image',
+              isMe: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ChatMediaBubble), findsOneWidget);
+      expect(find.text('+3'), findsOneWidget);
     });
   });
 }

@@ -28,21 +28,24 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
-import '../../../tour_group/domain/services/tour_choice.dart';
 import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+import '../../../tour_group/presentation/widgets/trip_shell.dart';
 import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 import '../widgets/server_patron_card.dart';
+import '../widgets/bangla_qr_profile_sheet.dart';
+import '../../../tour_group/domain/services/payment_profile_service.dart';
 import 'package:bhromon/core/config/feature_flags.dart';
+import 'package:bhromon/core/database/app_database.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/explorer/presentation/widgets/games_link_card.dart';
 import 'package:bhromon/features/explorer/domain/profile_tabs.dart';
 
 /// The modern, Tour Group-Centric Profile Screen for Bhromon Travelers.
 /// Replaces the legacy public social/YouTube architecture with live
-/// tour groups, digital scrapbooks, offline vault, and personal settings.
+/// tour groups, gaming, and personal settings.
 class ExplorerProfileScreen extends StatefulWidget {
   final String uid;
 
@@ -95,7 +98,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   String? _statusNote;
   String _activeCategory = 'all';
 
-  // Active tab: 'tours' | 'vault' | 'settings' | 'games'. Set in initState, once the
+  // Active tab: 'tours' | 'settings' | 'games'. Set in initState, once the
   // layout is known.
   late String _activeTab;
 
@@ -541,10 +544,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: BhromonBottomNav(
-          selectedIndex: 4,
-          tourId: _tourId,
-        ),
+        bottomNavigationBar:
+            MediaQuery.sizeOf(context).width < TripShell.railBreakpoint
+                ? BhromonBottomNav(
+                    selectedIndex: 4,
+                    tourId: _tourId,
+                  )
+                : null,
       ),
     );
   }
@@ -646,7 +652,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _buildAchievementsShowcase(groups, isOwnProfile),
               const SizedBox(height: 20),
 
-              // 7. Segmented Navigation Tabs: games, vault and settings are
+              // 7. Segmented Navigation Tabs: games and settings are
               // your own, so someone else's profile shows only shared groups.
               if (isOwnProfile) ...[
                 _buildSegmentedTabs(),
@@ -1219,23 +1225,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   color: context.forest.text70, size: 20),
             ),
           ),
-          const SizedBox(width: 8),
-
-          // Settings Button
-          Container(
-            decoration: BoxDecoration(
-              color: context.forest.text.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: context.forest.text.withValues(alpha: 0.08)),
-            ),
-            child: IconButton(
-              onPressed: () => context.push('/settings'),
-              tooltip: _isBn ? 'সেটিংস' : 'Settings',
-              icon:
-                  Icon(Icons.settings, color: context.forest.text70, size: 20),
-            ),
-          ),
         ],
       ),
     );
@@ -1484,11 +1473,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             _isBn ? 'গেমিং' : 'Games',
           ),
           _buildTabItem(
-            'vault',
-            Icons.folder_shared_rounded,
-            _isBn ? 'স্মৃতি' : 'Vault',
-          ),
-          _buildTabItem(
             'settings',
             Icons.tune_rounded,
             _isBn ? 'সেটিংস' : 'Settings',
@@ -1549,8 +1533,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   ) {
     if (!isOwnProfile) return _buildMyToursTab(groups, false);
     switch (_activeTab) {
-      case 'vault':
-        return _buildKeepsakesTab(groups);
       case 'games':
         return _useGroupsV2 ? _buildGamesTabV2() : _gameAnalyticsSection();
       case 'settings':
@@ -1965,152 +1947,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 2: Keepsakes & Vault
-  // ---------------------------------------------------------------------------
-
-  Widget _buildKeepsakesTab(List<TourGroup> groups) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _isBn
-              ? 'ট্যুর স্মৃতি ও অফলাইন ভল্ট'
-              : 'Trip Keepsakes & Offline Vault',
-          style: TextStyle(
-            color: context.forest.text,
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // 1. Digital Scrapbooks Card
-        _buildKeepsakeCard(
-          title: _isBn
-              ? 'ট্যুর ম্যাগাজিন ও স্ক্র্যাপবুক'
-              : 'Trip Scrapbook Magazines',
-          subtitle: _isBn
-              ? 'আপনার প্রতিটি ট্যুরের স্বয়ংক্রিয় ফটো অ্যালবাম, খরচ পরিসংখ্যান ও মেমোরি বই।'
-              : 'Auto-curated photo stories, awards, and numbers from your travels.',
-          icon: Icons.auto_stories_rounded,
-          color: AppColors.mintGreen,
-          onTap: () {
-            final tour = pickTour(groups, [_tourId]);
-            if (tour != null) {
-              context.push('/group/${tour.id}/scrapbook');
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_isBn
-                      ? 'স্ক্র্যাপবুক দেখতে আগে একটি ট্যুরে যোগ দিন।'
-                      : 'Join a tour to view trip scrapbooks.'),
-                  backgroundColor: AppColors.midGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
-        ),
-        const SizedBox(height: 12),
-
-        // 3. Family Safety & Emergency Card
-        _buildKeepsakeCard(
-          title:
-              _isBn ? 'ফ্যামিলি সেফটি হাব ও এসওএস' : 'Family Safety Hub & SOS',
-          subtitle: _isBn
-              ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও গ্রুপ সদস্যদের লোকেশন নোটিশ।'
-              : 'Emergency siren alerts, coastal tide advisories, and member safety.',
-          icon: Icons.shield_rounded,
-          color: Colors.redAccent,
-          onTap: () {
-            final tour = pickTour(groups, [_tourId]);
-            if (tour != null) {
-              context.push('/group/${tour.id}/safety');
-            } else {
-              context.go('/group-hub');
-            }
-          },
-        ),
-        const SizedBox(height: 12),
-
-        // 4. Game Zone Card
-        _buildKeepsakeCard(
-          title: _isBn ? 'গেম জোন' : 'Game Zone',
-          subtitle: _isBn
-              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
-              : 'Play Card 29, Carrom, Chess AI, Ludo, and Teen Patti on the bus or train.',
-          icon: Icons.sports_esports_rounded,
-          color: Colors.lightBlueAccent,
-          onTap: () => context.push('/game-zone'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKeepsakeCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.forest.card,
-          borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: context.forest.text.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  Icon(icon, color: context.forest.readable(color), size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: context.forest.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: context.forest.text54,
-                      fontSize: 11,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded,
-                color: context.forest.text38, size: 22),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tab 3: Preferences & Settings
+  // Tab 2: Preferences & Settings
   // ---------------------------------------------------------------------------
 
   Widget _buildPreferencesTab(ExplorerProfile profile) {
@@ -2263,6 +2100,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         const SizedBox(height: 12),
 
+        // Bangla QR & Payment Profile
+        _buildPaymentQrCard(profile),
+        const SizedBox(height: 12),
+
         // Community Support / Keep Bhromon Alive Card
         const ServerPatronCard(),
         const SizedBox(height: 12),
@@ -2388,6 +2229,214 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildPaymentQrCard(ExplorerProfile profile) {
+    final raw = _rawProfileData;
+    final qrUrl =
+        raw?['banglaQrUrl'] as String? ?? raw?['paymentQrUrl'] as String?;
+    final accountNumber = raw?['paymentAccountNumber'] as String? ??
+        raw?['mfsNumber'] as String? ??
+        raw?['phone'] as String?;
+    final provider = raw?['paymentProvider'] as String? ??
+        raw?['mfsProvider'] as String? ??
+        'bKash';
+    final accountType = raw?['paymentAccountType'] as String? ?? 'personal';
+    final hasQr = qrUrl != null && qrUrl.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.forest.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.forest.text.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.qr_code_2_rounded,
+                  color: context.forest.accentText, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _isBn
+                      ? 'বাংলা কিউআর ও পেমেন্ট প্রোফাইল'
+                      : 'Bangla QR & Payment Profile',
+                  style: TextStyle(
+                    fontFamily: 'NotoSansBengali',
+                    color: context.forest.text,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (hasQr)
+                TextButton.icon(
+                  icon: const Icon(Icons.edit, size: 14),
+                  label: Text(_isBn ? 'পরিবর্তন' : 'Edit'),
+                  onPressed: () => _openPaymentQrSheet(profile),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _isBn
+                ? 'আপনার বিকাশ, নগদ বা ব্যাংক কিউআর একবার সেভ করে রাখুন। গ্রুপের খরচের হিসাব মেলানোর সময় মেম্বাররা সরাসরি আপনার কিউআর দেখে টাকা পরিশোধ করতে পারবেন।'
+                : 'Save your bKash, Nagad, or Bank QR code once. Group members can scan your QR directly to settle up expenses without repeatedly asking.',
+            style: TextStyle(
+              fontFamily: 'NotoSansBengali',
+              color: context.forest.text70,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (hasQr) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.forest.surfaceFor(const Color(0xFF142428)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.forest.divider12),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      color: Colors.white,
+                      child: Image.network(
+                        qrUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.qr_code,
+                          size: 32,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                provider.toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.mintGreen,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              accountType == 'personal'
+                                  ? (_isBn
+                                      ? 'ব্যক্তিগত (Send Money)'
+                                      : 'Personal')
+                                  : (_isBn
+                                      ? 'মার্চেন্ট (Bangla QR)'
+                                      : 'Merchant'),
+                              style: TextStyle(
+                                fontFamily: 'NotoSansBengali',
+                                color: context.forest.text60,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (accountNumber != null &&
+                            accountNumber.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            accountNumber,
+                            style: TextStyle(
+                              fontFamily: 'NotoSansBengali',
+                              color: context.forest.text,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.mintGreen,
+                foregroundColor: AppColors.darkGreen,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              ),
+              icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+              label: Text(
+                _isBn ? 'বাংলা কিউআর যোগ করুন' : 'Add Bangla QR',
+                style: const TextStyle(
+                  fontFamily: 'NotoSansBengali',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              onPressed: () => _openPaymentQrSheet(profile),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPaymentQrSheet(ExplorerProfile profile) async {
+    final raw = _rawProfileData;
+    final initial = PaymentProfileInfo.fromMap(raw);
+    final updated = await showBanglaQrProfileSheet(
+      context,
+      uid: profile.uid,
+      initialProfile: initial,
+    );
+    if (updated != null && mounted) {
+      setState(() {
+        final current = Map<String, dynamic>.from(_rawProfileData ?? {});
+        if (updated.banglaQrUrl != null) {
+          current['banglaQrUrl'] = updated.banglaQrUrl;
+        } else {
+          current.remove('banglaQrUrl');
+        }
+        if (updated.accountNumber != null) {
+          current['paymentAccountNumber'] = updated.accountNumber;
+        }
+        if (updated.provider != null) {
+          current['paymentProvider'] = updated.provider;
+        }
+        if (updated.accountType != null) {
+          current['paymentAccountType'] = updated.accountType;
+        }
+        _rawProfileData = current;
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -3594,32 +3643,84 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
+    int unsyncedCount = 0;
+    try {
+      if (getIt.isRegistered<AppDatabase>()) {
+        final db = getIt<AppDatabase>();
+        unsyncedCount = await db.getTotalUnsyncedChangesCount();
+      }
+    } catch (e) {
+      debugPrint('Failed to query unsynced changes count: $e');
+    }
+
+    if (!context.mounted) return;
+
+    final hasUnsynced = unsyncedCount > 0;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: dialogContext.surfacePanel,
-        title: Text(
-          _isBn ? 'লগআউট করতে চান?' : 'Log out?',
-          style: TextStyle(color: context.forest.text),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            if (hasUnsynced) ...[
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.amber, size: 24),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                hasUnsynced
+                    ? context.l10n.translate('unsynced_warning_title')
+                    : (_isBn ? 'লগআউট করতে চান?' : 'Log out?'),
+                style: TextStyle(
+                  color: hasUnsynced ? Colors.amber : context.forest.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
         ),
         content: Text(
-          _isBn
-              ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
-              : 'Your offline data stays safely on this device. You can sign back in anytime.',
-          style: TextStyle(color: context.forest.text70, fontSize: 13),
+          hasUnsynced
+              ? context.l10n.translate(
+                  'unsynced_warning_body',
+                  args: {'count': unsyncedCount.toString()},
+                )
+              : context.l10n.translate('unsynced_safe_logout_body'),
+          style: TextStyle(
+            color: context.forest.text70,
+            fontSize: 13,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
-              _isBn ? 'বাতিল' : 'Cancel',
-              style: TextStyle(color: context.forest.text54),
+              hasUnsynced
+                  ? context.l10n.translate('unsynced_action_wait_sync')
+                  : (_isBn ? 'বাতিল' : 'Cancel'),
+              style: TextStyle(
+                color:
+                    hasUnsynced ? AppColors.mintGreen : context.forest.text54,
+                fontWeight: hasUnsynced ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  hasUnsynced ? Colors.red.shade700 : Colors.redAccent,
+            ),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(_isBn ? 'লগআউট' : 'Log Out'),
+            child: Text(
+              hasUnsynced
+                  ? context.l10n.translate('unsynced_action_force_logout')
+                  : (_isBn ? 'লগআউট' : 'Log Out'),
+            ),
           ),
         ],
       ),

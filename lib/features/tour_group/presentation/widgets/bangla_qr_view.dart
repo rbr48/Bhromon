@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../domain/services/bangla_qr_engine.dart';
+import '../../domain/services/payment_profile_service.dart';
+import '../../domain/services/smart_qr_enhancer.dart';
 
 /// Supported account classification for MFS payments.
 enum MfsAccountType {
@@ -169,6 +172,10 @@ class _QrPainter extends CustomPainter {
 Future<void> showBanglaQrSheet(
   BuildContext context, {
   required BanglaQrPayload payload,
+  String? savedQrUrl,
+  bool isOwnQr = false,
+  String? payeeUid,
+  VoidCallback? onQrSavedToProfile,
 }) {
   final f = context.forest;
 
@@ -180,7 +187,13 @@ Future<void> showBanglaQrSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => BanglaQrSheetModal(initialPayload: payload),
+    builder: (ctx) => BanglaQrSheetModal(
+      initialPayload: payload,
+      savedQrUrl: savedQrUrl,
+      isOwnQr: isOwnQr,
+      payeeUid: payeeUid,
+      onQrSavedToProfile: onQrSavedToProfile,
+    ),
   );
 }
 
@@ -189,26 +202,43 @@ class BanglaQrSheetModal extends StatefulWidget {
   const BanglaQrSheetModal({
     super.key,
     required this.initialPayload,
+    this.savedQrUrl,
+    this.isOwnQr = false,
+    this.payeeUid,
+    this.onQrSavedToProfile,
   });
 
   final BanglaQrPayload initialPayload;
+  final String? savedQrUrl;
+  final bool isOwnQr;
+  final String? payeeUid;
+  final VoidCallback? onQrSavedToProfile;
 
   @override
   State<BanglaQrSheetModal> createState() => _BanglaQrSheetModalState();
 }
 
 class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
-  int _activeTab = 0; // 0: Dynamic QR, 1: My QR Image
+  late int _activeTab; // 0: Dynamic QR, 1: My QR Image
   MfsAccountType _accountType = MfsAccountType.personal;
   late BanglaQrPayload _payload;
   late final TextEditingController _phoneController;
   late final TextEditingController _amountController;
   Uint8List? _customQrBytes;
+  bool _wasAutoCropped = false;
   bool _isUploading = false;
+  bool _isSavingToProfile = false;
+  bool _isSavedToProfile = false;
+  String? _effectiveSavedQrUrl;
 
   @override
   void initState() {
     super.initState();
+    _effectiveSavedQrUrl = widget.savedQrUrl;
+    _activeTab =
+        (_effectiveSavedQrUrl != null && _effectiveSavedQrUrl!.isNotEmpty)
+            ? 1
+            : 0;
     _payload = widget.initialPayload;
     final initialPhone = widget.initialPayload.isPhoneAccount
         ? BanglaQrPayload.normalizePhone(widget.initialPayload.accountNumber)
@@ -235,14 +265,31 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
       final picker = ImagePicker();
       final picked = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1600,
-        imageQuality: 90,
+        maxWidth: 2000,
+        imageQuality: 95,
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
+        final enhanced = SmartQrEnhancer.process(bytes);
         if (mounted) {
           setState(() {
-            _customQrBytes = bytes;
+            if (enhanced != null) {
+              _customQrBytes = enhanced.bytes;
+              _wasAutoCropped = enhanced.isAutoCropped;
+              if (enhanced.detectedProvider != null) {
+                for (final p in BanglaQrProvider.values) {
+                  if (p.name.toLowerCase() ==
+                      enhanced.detectedProvider!.toLowerCase()) {
+                    _payload = _payload.copyWith(provider: p);
+                    break;
+                  }
+                }
+              }
+            } else {
+              _customQrBytes = bytes;
+              _wasAutoCropped = false;
+            }
+            _isSavedToProfile = false;
           });
         }
       }
@@ -256,6 +303,51 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
       if (mounted) {
         setState(() => _isUploading = false);
       }
+    }
+  }
+
+  Future<void> _saveToProfile() async {
+    if (_customQrBytes == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSavingToProfile = true);
+    try {
+      final saved = await PaymentProfileService.savePaymentQr(
+        uid: user.uid,
+        imageBytes: _customQrBytes!,
+        accountNumber: _phoneController.text.trim(),
+        provider: _payload.provider.name,
+        accountType: _accountType.name,
+      );
+
+      if (saved != null && mounted) {
+        setState(() {
+          _isSavedToProfile = true;
+          _effectiveSavedQrUrl = saved.banglaQrUrl;
+        });
+        widget.onQrSavedToProfile?.call();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '✅ বাংলা কিউআর আপনার প্রোফাইলে স্থায়ীভাবে সংরক্ষিত হয়েছে!',
+              style: TextStyle(
+                fontFamily: 'NotoSansBengali',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: AppColors.mintGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('প্রোফাইলে সেভ ব্যর্থ হয়েছে: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingToProfile = false);
     }
   }
 
@@ -543,59 +635,58 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
   }
 
   Widget _buildProviderSelector(ForestPalette f) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: BanglaQrProvider.values.map((p) {
-          final isSelected = _payload.provider == p;
-          Color color;
-          switch (p) {
-            case BanglaQrProvider.bkash:
-              color = const Color(0xFFE2136E);
-              break;
-            case BanglaQrProvider.nagad:
-              color = const Color(0xFFF7931E);
-              break;
-            case BanglaQrProvider.rocket:
-              color = const Color(0xFF8C3494);
-              break;
-            case BanglaQrProvider.upay:
-              color = const Color(0xFF005696);
-              break;
-            case BanglaQrProvider.cellfin:
-              color = const Color(0xFF00875A);
-              break;
-            case BanglaQrProvider.bank:
-              color = const Color(0xFF00695C);
-              break;
-          }
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: BanglaQrProvider.values.map((p) {
+        final isSelected = _payload.provider == p;
+        Color color;
+        switch (p) {
+          case BanglaQrProvider.bkash:
+            color = const Color(0xFFE2136E);
+            break;
+          case BanglaQrProvider.nagad:
+            color = const Color(0xFFF7931E);
+            break;
+          case BanglaQrProvider.rocket:
+            color = const Color(0xFF8C3494);
+            break;
+          case BanglaQrProvider.upay:
+            color = const Color(0xFF005696);
+            break;
+          case BanglaQrProvider.cellfin:
+            color = const Color(0xFF00875A);
+            break;
+          case BanglaQrProvider.bank:
+            color = const Color(0xFF00695C);
+            break;
+        }
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              selected: isSelected,
-              label: Text(p.displayName),
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : f.text,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              selectedColor: color,
-              backgroundColor: f.card,
-              side: BorderSide(
-                color: isSelected ? color : f.divider12,
-              ),
-              onSelected: (val) {
-                if (val) {
-                  setState(() {
-                    _payload = _payload.copyWith(provider: p);
-                  });
+        return ChoiceChip(
+          selected: isSelected,
+          label: Text(p.displayName),
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : f.text,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          selectedColor: color,
+          backgroundColor: f.card,
+          side: BorderSide(
+            color: isSelected ? color : f.divider12,
+          ),
+          onSelected: (val) {
+            if (val) {
+              setState(() {
+                _payload = _payload.copyWith(provider: p);
+                if (p == BanglaQrProvider.bank) {
+                  _accountType = MfsAccountType.merchant;
                 }
-              },
-            ),
-          );
-        }).toList(),
-      ),
+              });
+            }
+          },
+        );
+      }).toList(),
     );
   }
 
@@ -692,60 +783,86 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                 children: [
                   Expanded(
                     flex: 3,
-                    child: TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(11),
-                      ],
-                      style: TextStyle(
-                          color: f.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        labelText: 'প্রাপকের মোবাইল নম্বর (১১ ডিজিট)',
-                        labelStyle: TextStyle(color: f.text70, fontSize: 11.5),
-                        hintText: '01XXXXXXXXX',
-                        hintStyle: TextStyle(color: f.text24, fontSize: 12),
-                        prefixIcon: Icon(Icons.phone_android,
-                            size: 18, color: f.accentText),
-                        suffixIcon: _payload.isPhoneAccount
-                            ? const Icon(Icons.check_circle,
-                                color: Colors.green, size: 18)
-                            : null,
-                        filled: true,
-                        fillColor: f.card,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: f.divider12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: _payload.isPhoneAccount
-                                ? Colors.green.withValues(alpha: 0.6)
-                                : f.divider12,
+                    child: Builder(
+                      builder: (context) {
+                        final isBankOrMerchant =
+                            _accountType == MfsAccountType.merchant ||
+                                _payload.provider == BanglaQrProvider.bank;
+                        return TextField(
+                          controller: _phoneController,
+                          keyboardType: isBankOrMerchant
+                              ? TextInputType.text
+                              : TextInputType.phone,
+                          inputFormatters: isBankOrMerchant
+                              ? [
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'[a-zA-Z0-9\-\s]')),
+                                  LengthLimitingTextInputFormatter(24),
+                                ]
+                              : [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(11),
+                                ],
+                          style: TextStyle(
+                              color: f.text,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            labelText: isBankOrMerchant
+                                ? 'প্রাপকের অ্যাকাউন্ট / আইডি'
+                                : 'প্রাপকের মোবাইল নম্বর (১১ ডিজিট)',
+                            labelStyle:
+                                TextStyle(color: f.text70, fontSize: 11.5),
+                            hintText: isBankOrMerchant
+                                ? 'অ্যাকাউন্ট বা মার্চেন্ট আইডি'
+                                : '01XXXXXXXXX',
+                            hintStyle: TextStyle(color: f.text24, fontSize: 12),
+                            prefixIcon: Icon(
+                                isBankOrMerchant
+                                    ? Icons.account_balance
+                                    : Icons.phone_android,
+                                size: 18,
+                                color: f.accentText),
+                            suffixIcon: _payload.isPhoneAccount
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.green, size: 18)
+                                : null,
+                            filled: true,
+                            fillColor: f.card,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: f.divider12),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: _payload.isPhoneAccount
+                                    ? Colors.green.withValues(alpha: 0.6)
+                                    : f.divider12,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: f.accentText, width: 1.5),
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              BorderSide(color: f.accentText, width: 1.5),
-                        ),
-                      ),
-                      onChanged: (val) {
-                        final normalized = BanglaQrPayload.normalizePhone(val);
-                        setState(() {
-                          _payload = _payload.copyWith(
-                            accountNumber: normalized.isNotEmpty
-                                ? normalized
-                                : widget.initialPayload.accountNumber,
-                          );
-                        });
+                          onChanged: (val) {
+                            final cleaned = isBankOrMerchant
+                                ? val.trim()
+                                : BanglaQrPayload.normalizePhone(val);
+                            setState(() {
+                              _payload = _payload.copyWith(
+                                accountNumber: cleaned.isNotEmpty
+                                    ? cleaned
+                                    : widget.initialPayload.accountNumber,
+                              );
+                            });
+                          },
+                        );
                       },
                     ),
                   ),
@@ -796,8 +913,10 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                 ],
               ),
             ] else ...[
-              // Tab 1: Custom "My QR" image upload
-              if (_customQrBytes == null) ...[
+              // Tab 1: Custom "My QR" image upload or saved profile QR
+              if (_customQrBytes == null &&
+                  (_effectiveSavedQrUrl == null ||
+                      _effectiveSavedQrUrl!.isEmpty)) ...[
                 Container(
                   width: double.infinity,
                   padding:
@@ -815,6 +934,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                       Text(
                         'bKash বা Nagad-এর "My QR" ছবি যোগ করুন',
                         style: TextStyle(
+                          fontFamily: 'NotoSansBengali',
                           color: f.text,
                           fontSize: 14.5,
                           fontWeight: FontWeight.bold,
@@ -823,8 +943,11 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'অ্যাপ থেকে ডাউনলোড করা বা স্ক্রিনশট নেওয়া অফিশিয়াল কিউআর গ্যালারি থেকে নির্বাচন করুন।',
-                        style: TextStyle(color: f.text60, fontSize: 11.5),
+                        'অ্যাপ থেকে স্ক্রিনশট বা ছবি দিলে আমাদের স্মার্ট এডিটর স্বয়ংক্রিয়ভাবে ক্রপ ও পরিষ্কার করে নেবে।',
+                        style: TextStyle(
+                            fontFamily: 'NotoSansBengali',
+                            color: f.text60,
+                            fontSize: 12),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -841,7 +964,9 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                         icon: const Icon(Icons.photo_library, size: 18),
                         label: const Text(
                           'গ্যালারি থেকে ছবি বাছাই করুন',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontFamily: 'NotoSansBengali',
+                              fontWeight: FontWeight.bold),
                         ),
                         onPressed: _isUploading ? null : _pickQrImage,
                       ),
@@ -866,13 +991,55 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.memory(
-                          _customQrBytes!,
-                          height: 220,
-                          width: 220,
-                          fit: BoxFit.contain,
-                        ),
+                        child: _customQrBytes != null
+                            ? Image.memory(
+                                _customQrBytes!,
+                                height: 220,
+                                width: 220,
+                                fit: BoxFit.contain,
+                              )
+                            : Image.network(
+                                _effectiveSavedQrUrl!,
+                                height: 220,
+                                width: 220,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const SizedBox(
+                                  height: 160,
+                                  child: Center(
+                                    child: Icon(Icons.broken_image,
+                                        size: 40, color: Colors.grey),
+                                  ),
+                                ),
+                              ),
                       ),
+                      if (_wasAutoCropped) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.mintGreen.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.auto_fix_high_rounded,
+                                  size: 14, color: AppColors.mintGreen),
+                              SizedBox(width: 5),
+                              Text(
+                                'স্মার্ট এডিটিং: স্বয়ংক্রিয়ভাবে ক্রপ ও পরিষ্কার করা হয়েছে',
+                                style: TextStyle(
+                                  fontFamily: 'NotoSansBengali',
+                                  color: AppColors.mintGreen,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -897,8 +1064,9 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                           Text(
                             _payload.payeeName,
                             style: const TextStyle(
+                              fontFamily: 'NotoSansBengali',
                               color: Color(0xFF111827),
-                              fontSize: 11,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -907,13 +1075,77 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                     ],
                   ),
                 ),
+                if (_customQrBytes != null &&
+                    (widget.isOwnQr ||
+                        FirebaseAuth.instance.currentUser?.uid ==
+                            widget.payeeUid)) ...[
+                  const SizedBox(height: 10),
+                  if (_isSavedToProfile)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.mintGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded,
+                              size: 16, color: AppColors.mintGreen),
+                          SizedBox(width: 6),
+                          Text(
+                            'প্রোফাইলে স্থায়ীভাবে সংরক্ষিত আছে',
+                            style: TextStyle(
+                              fontFamily: 'NotoSansBengali',
+                              color: AppColors.mintGreen,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.mintGreen,
+                        foregroundColor: AppColors.darkGreen,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: _isSavingToProfile
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: AppColors.darkGreen),
+                            )
+                          : const Icon(Icons.bookmark_add_rounded, size: 16),
+                      label: Text(
+                        _isSavingToProfile
+                            ? 'সংরক্ষণ হচ্ছে...'
+                            : 'আমার প্রোফাইলেও স্থায়ীভাবে সেভ করুন',
+                        style: const TextStyle(
+                            fontFamily: 'NotoSansBengali',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12),
+                      ),
+                      onPressed: _isSavingToProfile ? null : _saveToProfile,
+                    ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton.icon(
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('ছবি পরিবর্তন'),
+                      label: const Text(
+                        'ছবি পরিবর্তন',
+                        style: TextStyle(fontFamily: 'NotoSansBengali'),
+                      ),
                       onPressed: _pickQrImage,
                     ),
                     const SizedBox(width: 12),
@@ -921,8 +1153,15 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                       style: TextButton.styleFrom(
                           foregroundColor: Colors.redAccent),
                       icon: const Icon(Icons.delete_outline, size: 16),
-                      label: const Text('মুছে ফেলুন'),
-                      onPressed: () => setState(() => _customQrBytes = null),
+                      label: const Text(
+                        'মুছে ফেলুন',
+                        style: TextStyle(fontFamily: 'NotoSansBengali'),
+                      ),
+                      onPressed: () => setState(() {
+                        _customQrBytes = null;
+                        _effectiveSavedQrUrl = null;
+                        _wasAutoCropped = false;
+                      }),
                     ),
                   ],
                 ),

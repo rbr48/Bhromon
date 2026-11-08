@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -101,8 +102,87 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
     _mapController = controller;
   }
 
+  static final Uint8List _kTransparentPixel = Uint8List.fromList(const [
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A,
+    0x00,
+    0x00,
+    0x00,
+    0x0D,
+    0x49,
+    0x48,
+    0x44,
+    0x52,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x08,
+    0x06,
+    0x00,
+    0x00,
+    0x00,
+    0x1F,
+    0x15,
+    0xC4,
+    0x89,
+    0x00,
+    0x00,
+    0x00,
+    0x0A,
+    0x49,
+    0x44,
+    0x41,
+    0x54,
+    0x78,
+    0x9C,
+    0x63,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x05,
+    0x00,
+    0x01,
+    0x0D,
+    0x0A,
+    0x2D,
+    0xB4,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x49,
+    0x45,
+    0x4E,
+    0x44,
+    0xAE,
+    0x42,
+    0x60,
+    0x82,
+  ]);
+
   void _onStyleLoaded() {
+    _registerFallbackIcons();
     _addWaypointMarkers();
+  }
+
+  void _registerFallbackIcons() {
+    final controller = _mapController;
+    if (controller == null) return;
+    for (final icon in const ['ferry_terminal', 'swimming_pool']) {
+      controller.addImage(icon, _kTransparentPixel);
+    }
   }
 
   void _addWaypointMarkers() {
@@ -117,6 +197,9 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
           circleColor: '#52B788',
           circleStrokeWidth: 2.0,
           circleStrokeColor: '#FFFFFF',
+          circleBlur: 0.0,
+          circleOpacity: 1.0,
+          circleStrokeOpacity: 1.0,
         ),
       );
     }
@@ -286,7 +369,10 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
           children: [
             Text(
               regionTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             Text(
               '${widget.region.division} · ~${widget.region.estimatedMb} MB · ${isBn ? "অফলাইন ম্যাপ" : "Offline Map"}',
