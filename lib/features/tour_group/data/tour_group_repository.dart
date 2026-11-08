@@ -21,6 +21,7 @@ import '../domain/models/tour_activity_models.dart';
 import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
+import '../domain/models/study_models.dart';
 import '../domain/models/meal_log.dart';
 import '../domain/models/samity_models.dart';
 import '../domain/models/service_request_models.dart';
@@ -2313,6 +2314,139 @@ class TourGroupRepository {
   Future<void> deleteFamilyTask(String tourId, String taskId) async {
     _requireEmail();
     await _sub(tourId, 'family_tasks').doc(taskId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Study groups: the shared book list and the reading plan (study_models.dart).
+  // The rules in firestore.rules say who may write each of these.
+  // ---------------------------------------------------------------------------
+
+  Stream<List<StudyBook>> watchStudyBooks(String tourId) {
+    return _sub(tourId, 'study_books').limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (StudyBook.fromMap(d.id, d.data()) case final book?) book,
+        ]);
+  }
+
+  /// Adds a book to the list. The signed-in member is recorded as its creator and as
+  /// the one who set its status.
+  Future<void> addStudyBook(
+    String tourId, {
+    required String title,
+    String author = '',
+    String notes = '',
+    StudyBookStatus status = StudyBookStatus.toRead,
+  }) async {
+    final email = _requireEmail();
+    final book = StudyBook(
+      id: '',
+      title: title.trim(),
+      author: author.trim(),
+      notes: notes.trim(),
+      status: status,
+      createdByEmail: email,
+      statusByEmail: email,
+    );
+    await _sub(tourId, 'study_books').add(book.toFields());
+  }
+
+  /// Moves a book to another status. Any member may do this, and the change is recorded
+  /// under the signed-in member's name.
+  Future<void> setStudyBookStatus(
+    String tourId,
+    String bookId,
+    StudyBookStatus status,
+  ) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_books').doc(bookId).update({
+      'status': status.name,
+      'statusByEmail': email,
+    });
+  }
+
+  /// Changes a book's details. Its creator or an admin does this. A new status is
+  /// recorded under the signed-in member's name, and the old name stays otherwise.
+  Future<void> editStudyBook(
+    String tourId,
+    StudyBook original, {
+    required String title,
+    required String author,
+    required String notes,
+    required StudyBookStatus status,
+  }) async {
+    final email = _requireEmail();
+    final cleanAuthor = author.trim();
+    final cleanNotes = notes.trim();
+    await _sub(tourId, 'study_books').doc(original.id).update({
+      'title': title.trim(),
+      'author': cleanAuthor.isEmpty ? null : cleanAuthor,
+      'notes': cleanNotes.isEmpty ? null : cleanNotes,
+      'status': status.name,
+      'statusByEmail':
+          status == original.status ? original.statusByEmail : email,
+    });
+  }
+
+  Future<void> deleteStudyBook(String tourId, String bookId) async {
+    _requireEmail();
+    await _sub(tourId, 'study_books').doc(bookId).delete();
+  }
+
+  Stream<List<ReadingSession>> watchReadingSessions(String tourId) {
+    return _sub(tourId, 'reading_sessions').limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (ReadingSession.fromMap(d.id, _sessionFields(d.data()))
+                case final session?)
+              session,
+        ]);
+  }
+
+  /// The stored fields of a session with its start read as a [DateTime], which is what
+  /// the model expects.
+  Map<String, dynamic> _sessionFields(Map<String, dynamic> data) => {
+        ...data,
+        'startsAt': (data['startsAt'] as Timestamp?)?.toDate(),
+      };
+
+  /// Plans a session. The signed-in member is recorded as its creator.
+  Future<void> addReadingSession(
+    String tourId, {
+    required String title,
+    required DateTime startsAt,
+    String? bookId,
+    String place = '',
+    String notes = '',
+  }) async {
+    final email = _requireEmail();
+    final session = ReadingSession(
+      id: '',
+      title: title.trim(),
+      startsAt: startsAt,
+      bookId: bookId,
+      place: place.trim(),
+      notes: notes.trim(),
+      createdByEmail: email,
+    );
+    await _sub(tourId, 'reading_sessions').add(session.toFields());
+  }
+
+  /// Changes a session. Its creator or an admin does this. Its creator is not changed.
+  Future<void> editReadingSession(String tourId, ReadingSession session) async {
+    _requireEmail();
+    final place = session.place.trim();
+    final notes = session.notes.trim();
+    await _sub(tourId, 'reading_sessions').doc(session.id).update({
+      'title': session.title.trim(),
+      'startsAt': session.startsAt,
+      'bookId': session.bookId,
+      'place': place.isEmpty ? null : place,
+      'notes': notes.isEmpty ? null : notes,
+    });
+  }
+
+  Future<void> deleteReadingSession(String tourId, String sessionId) async {
+    _requireEmail();
+    await _sub(tourId, 'reading_sessions').doc(sessionId).delete();
   }
 
   // ---------------------------------------------------------------------------
