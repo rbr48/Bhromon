@@ -50,6 +50,7 @@ import 'e2ee_verification_screen.dart';
 import '../../data/chat_draft_store.dart';
 import '../../data/chat_deletion_service.dart';
 import '../../domain/chat_deletion.dart';
+import '../../domain/chat_search.dart';
 import '../widgets/chat_delete_dialogs.dart';
 import '../widgets/chat_formatting_toolbar.dart';
 import '../widgets/chat_rich_text.dart';
@@ -822,7 +823,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           envelope: Map<String, dynamic>.from(envelope),
         );
         if (!mounted) return;
-        setState(() => _e2eeTexts[doc.id] = text);
+        setState(() {
+          _e2eeTexts[doc.id] = text;
+          if (_isSearchingInChat) _computeSearchMatches(_searchController.text);
+        });
       } catch (error, stackTrace) {
         logWarning('An encrypted message could not be read', error, stackTrace);
         if (!mounted) return;
@@ -3166,24 +3170,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _onSearchQueryChanged(String query) {
-    final q = query.trim().toLowerCase();
-    _matchingIndices.clear();
-    if (q.isNotEmpty) {
-      final docs = _visibleMessages;
-      for (int i = 0; i < docs.length; i++) {
-        final data = docs[i].data() as Map<String, dynamic>;
-        final text = (data['text'] as String?)?.toLowerCase() ?? '';
-        if (text.contains(q)) {
-          _matchingIndices.add(i);
-        }
-      }
-    }
+    _computeSearchMatches(query);
     setState(() {
       _searchMatchIndex = 0;
     });
     if (_matchingIndices.isNotEmpty) {
       _scrollToSearchMatch();
     }
+  }
+
+  /// Finds the loaded messages whose text matches [query]. An encrypted message matches
+  /// by the text this device has read, so one read later is found once it is.
+  void _computeSearchMatches(String query) {
+    _matchingIndices.clear();
+    final docs = _visibleMessages;
+    for (int i = 0; i < docs.length; i++) {
+      if (chatTextMatchesQuery(_plainTextOf(docs[i]), query)) {
+        _matchingIndices.add(i);
+      }
+    }
+    if (_searchMatchIndex >= _matchingIndices.length) _searchMatchIndex = 0;
   }
 
   void _navigateSearchMatch(bool next) {
