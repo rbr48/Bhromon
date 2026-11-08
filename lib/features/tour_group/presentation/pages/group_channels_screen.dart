@@ -1989,7 +1989,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                         }
                       },
                       icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: Text(l10n.translate('chat_pinned_copy')),
+                      label: Text(l10n.translate('chan_action_copy')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: context.forest.text,
                         side: BorderSide(color: context.forest.divider12),
