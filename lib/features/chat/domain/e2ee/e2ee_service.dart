@@ -284,7 +284,11 @@ class E2eeService {
         );
       });
 
-  /// Frees the native account and sessions. The service must not be used after.
+  /// Frees the native account once the operations already queued have finished. The
+  /// keys stay in the store, so a later operation reads them again.
+  Future<void> close() => _serial(() async => dispose());
+
+  /// Frees the native account and sessions at once. The service must not be used after.
   void dispose() {
     _device?.dispose();
     _device = null;

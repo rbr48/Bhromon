@@ -1,3 +1,4 @@
+import 'package:bhromon/features/chat/data/e2ee/e2ee_chat_controller.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,12 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
       await callable.call<void>(<String, dynamic>{});
 
       // Sign out the now-deleted account
+      // The account is gone on the server. Its encryption keys, and the text this device
+      // kept for its encrypted chats, go too (E2EE_DESIGN.md, section 6).
+      final deletedUid = FirebaseAuth.instance.currentUser?.uid;
+      if (deletedUid != null) {
+        await E2eeChatController.instance.deleteAccountState(deletedUid);
+      }
       await FirebaseAuth.instance.signOut();
 
       if (mounted) {

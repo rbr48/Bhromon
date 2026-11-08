@@ -66,6 +66,46 @@ void main() {
       service.dispose();
     });
 
+    test('closing waits for the operations already queued', () async {
+      final (alice, _) = await setUpUser('uid-a');
+      final (bob, _) = await setUpUser('uid-b');
+      final sending = alice.encryptText(
+        chatId: 'chat-1',
+        messageId: 'msg-1',
+        recipientUid: 'uid-b',
+        text: 'sent while closing',
+        sentAtMillis: 1,
+      );
+
+      await alice.close();
+
+      final envelope = await sending;
+      expect(
+        await bob.decryptMessage(
+          chatId: 'chat-1',
+          messageId: 'msg-1',
+          senderUid: 'uid-a',
+          envelope: envelope,
+        ),
+        'sent while closing',
+      );
+      bob.dispose();
+    });
+
+    test(
+        'closing keeps the keys on the device, so the same device is ready again',
+        () async {
+      final (alice, aliceLocal) = await setUpUser('uid-a');
+      final deviceId = aliceLocal.deviceId;
+
+      await alice.close();
+
+      final again = serviceFor('uid-a', aliceLocal);
+      expect(await again.status(), E2eeSetupStatus.ready);
+      expect(aliceLocal.deviceId, deviceId);
+      again.dispose();
+    });
+
     test('a second device sees that the keys belong to another device',
         () async {
       final (alice, _) = await setUpUser('uid-a');

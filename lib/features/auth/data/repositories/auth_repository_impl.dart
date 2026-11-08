@@ -15,6 +15,7 @@ import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
+import '../../../chat/data/e2ee/e2ee_chat_controller.dart';
 import '../../../tour_group/data/channel_message_cache.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 import '../google_sign_in_failure.dart';
@@ -237,6 +238,8 @@ class AuthRepositoryImpl implements IAuthRepository {
       _cachedProfile = null;
       await MediaAccess.instance.clear();
       // Clear local Hive cache immediately for instant logout
+      // The encryption account leaves memory, and its keys stay on the device.
+      await E2eeChatController.instance.release();
       await _clearLocalCache();
 
       // Perform remote Firebase and Google sign-out and wait for it
