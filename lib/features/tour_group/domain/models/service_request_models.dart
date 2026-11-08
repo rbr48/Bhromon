@@ -15,6 +15,10 @@ const int kServiceRequestDetailsMax = 1000;
 /// The longest note the committee can leave on a request.
 const int kServiceRequestNoteMax = 500;
 
+/// The ledger category a repair cost is booked under. It is one of the society's upkeep
+/// categories, so a booked repair counts in the ledger's upkeep totals.
+const String kRepairCostCategory = 'Repairs';
+
 /// What a request is about. Stored by name; the labels are translated in the app.
 enum ServiceRequestCategory {
   lift,

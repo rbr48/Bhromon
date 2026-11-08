@@ -9,11 +9,13 @@ import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
 import '../../domain/models/service_request_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/media_rules.dart';
 import '../../domain/services/service_request_rules.dart';
+import '../widgets/fund/expense_editor.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -666,6 +668,76 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
     }
   }
 
+  /// Opens the expense editor with this repair as its title and the Repairs
+  /// category, so the committee can book its cost to the society ledger.
+  Future<void> _bookToLedger() async {
+    final l10n = context.l10n;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final members =
+          await widget.repository.fetchMembersFromServer(widget.tourId);
+      final group = await widget.repository.getGroup(widget.tourId);
+      if (!mounted) return;
+      final draft = await showExpenseEditor(
+        context,
+        members: members,
+        group: group,
+        me: widget.repository.currentEmail,
+        initialTitle: widget.request.title,
+        initialCategory: kRepairCostCategory,
+      );
+      if (draft == null || !mounted) return;
+      String? receiptUrl = draft.receiptUrl;
+      final receipt = draft.newReceiptFile;
+      if (receipt != null) {
+        final upload = await TourMediaUploader.start(
+          tourId: widget.tourId,
+          folder: 'media',
+          file: receipt,
+          contentType: imageContentType(receipt.name) ?? 'image/jpeg',
+          extension: storedExtension(receipt.name, 'jpg'),
+          maxBytes: kMaxImageBytes,
+          journal: TourMediaJournal.untracked,
+        );
+        receiptUrl = await upload.finish();
+      }
+      await widget.repository.addExpense(
+        tourId: widget.tourId,
+        title: draft.title,
+        amountPaisa: draft.amountPaisa,
+        paidById: draft.paidById,
+        paidByName: draft.paidByName,
+        category: draft.category,
+        date: draft.date,
+        notes: draft.notes,
+        participantIds: draft.participantIds,
+        splitMode: draft.splitMode,
+        splitShares: draft.splitShares,
+        stopId: draft.stopId,
+        currency: draft.currency,
+        originalMinor: draft.originalMinor,
+        fxRate: draft.fxRate,
+        receiptUrl: receiptUrl,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.translate('society_request_booked'))),
+      );
+      Navigator.pop(context, 'booked');
+    } catch (err) {
+      logError('Service request booking failed: $err');
+      if (!mounted) return;
+      setState(() {
+        _error = l10n.translate('society_save_failed', args: {'error': err});
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _remove() async {
     final l10n = context.l10n;
     final sure = await showDialog<bool>(
@@ -982,6 +1054,16 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                       onPressed: _busy ? null : _saveStatus,
                       child:
                           Text(l10n.translate('society_request_save_status')),
+                    ),
+                  ],
+                  if (widget.isAdmin && request.isResolved) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : _bookToLedger,
+                      icon: Icon(Icons.receipt_long_rounded,
+                          color: context.forest.accentText),
+                      label: Text(l10n.translate('society_request_book_cost'),
+                          style: TextStyle(color: context.forest.accentText)),
                     ),
                   ],
                   if (_error != null) ...[
