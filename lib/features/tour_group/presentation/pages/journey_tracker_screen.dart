@@ -26,6 +26,7 @@ import '../../domain/services/route_suggestions.dart';
 import '../../domain/services/prayer_calculator.dart';
 import '../../domain/services/journey_audio_guide_service.dart';
 import '../journey_access_flow.dart';
+import '../itinerary_pdf_export.dart';
 import '../live_journey_runtime.dart';
 import '../tour_routes.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
@@ -553,6 +554,18 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 fontWeight: FontWeight.bold,
                 fontSize: 16)),
         actions: [
+          if (g != null)
+            IconButton(
+              tooltip: l10n.locale.languageCode == 'bn'
+                  ? 'পরিকল্পনা PDF ডাউনলোড'
+                  : 'Export Itinerary PDF',
+              icon: const Icon(Icons.picture_as_pdf_rounded),
+              onPressed: () => exportItineraryPdf(
+                context,
+                group: g,
+                checkpoints: _checkpoints,
+              ),
+            ),
           if (_isAdmin && g != null)
             IconButton(
               tooltip: l10n.translate('route_edit_itinerary'),
@@ -643,6 +656,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       builder: (_) => OfflineMapViewerScreen(
                         region: matchingRegion,
                         initialPosition: pos,
+                        checkpoints: _checkpoints,
+                        routePlan: plan,
                       ),
                     ),
                   );

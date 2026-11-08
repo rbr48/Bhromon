@@ -581,11 +581,75 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   : null,
             ),
             if (hasBudget) ...[
+              if (r.alertLevel.isCritical)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 18, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.translate('fund_alert_critical'),
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (r.alertLevel.isCaution)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          size: 18, color: AppColors.gold),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.translate('fund_alert_caution'),
+                          style: TextStyle(
+                            color: context.forest.readable(AppColors.gold),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               _bar(
                 label: l10n.translate('fund_budget_total'),
                 value: r.spentPaisa,
                 max: r.budgetPaisa,
-                color: over ? Colors.redAccent : AppColors.mintGreen,
+                color: over
+                    ? Colors.redAccent
+                    : (r.alertLevel.isCaution
+                        ? AppColors.gold
+                        : AppColors.mintGreen),
                 trailing: '${_money(r.spentPaisa)} / ${_money(r.budgetPaisa)}',
               ),
               Text(
@@ -648,7 +712,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     : (r.spentPaisa == 0 ? 1 : r.spentPaisa),
                 color: line.isOver
                     ? Colors.redAccent
-                    : (line.budgetPaisa > 0 && line.ratio > 0.85
+                    : (line.alertLevel.isCaution
                         ? AppColors.gold
                         : AppColors.mintGreen),
                 trailing: line.budgetPaisa > 0

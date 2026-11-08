@@ -1,59 +1,56 @@
-# Implementation Plan: Everyday Specializations, Voice Lounge Ergonomics & FinOps Polish
+# Implementation Plan: Itinerary Printable PDF, Burn-Rate Budget Alerts & Route Checkpoint Overlay
 
 ## Objective
-Implement Options 2, 3, and 4 from the Bhromon roadmap:
-- **Sprint 7 (Everyday Group Specializations)**: Mess monthly settlement transfers & 31-day printable meal sheet PDF; Samity payout receipts and verification.
-- **Sprint 8 (Voice Lounge & WebRTC)**: Participant speaking indicator with animated avatar rings; Connection quality HUD.
-- **Sprint 10 (Ledger & FinOps)**: Duplicate TrxID validation & localized user feedback; Custom date-range & MFS badges in monthly statement PDF.
+Implement Roadmap Sprints 9 & 10 items:
+- **Sprint 9 (Travel and Live Journey)**:
+  - Task 9.4: Multi-stop Itinerary Printable PDF using `bangla_pdf` with custom Bangla typography and day-by-day itinerary tables.
+  - Task 9.3: Route checkpoints & waypoints overlay on Offline Map (`offline_map_viewer_screen.dart`).
+- **Sprint 10 (Ledger and FinOps)**:
+  - Task 10.3: Burn-rate threshold alerts (`normal`, `caution` at ≥80% or projected overage, `critical` at ≥100%) in `fund_analytics.dart` and `expense_ledger_screen.dart`.
+- **Release**: Monotonic version bump to `1.8.149+203`, unit test suite verification, GitHub PR with 100% green CI gate, and production deployments.
 
 ---
 
 ## Atomic Tasks
 
-### Phase 1: Sprint 7 — Everyday Group Specializations
-- [x] **Task 1.1: Mess Monthly Settlement Transfers**
-  - In `mess_balance_sheet.dart`: Add admin action to record settlement transfer into `tours/{tourId}/transfers`.
-  - Update UI so settled members show "পরিশোধিত" with settlement date.
-  - Verification: Unit test verifying settlement balance updates (`test/features/tour_group/meal_engine_test.dart`).
+### Phase 1: Sprint 10 — Burn-Rate Alerts & Budget Thresholds
+- [ ] **Task 1.1: BurnRateAlert Model & Logic in `fund_analytics.dart`**
+  - Add `BurnRateAlert` enum (`normal`, `caution`, `critical`) to `fund_analytics.dart`.
+  - Add `alertLevel` getter to `FundReport` and `BudgetLine`.
+  - Trigger `caution` if spent ratio ≥ 0.80 or if projected spend exceeds budget.
+  - Trigger `critical` if spent ratio ≥ 1.00 (`isOverBudget`).
+  - Unit test in `test/features/tour_group/fund_burn_rate_test.dart`.
 
-- [x] **Task 1.2: Mess 31-Day Printable Meal Sheet PDF**
-  - Create `lib/features/tour_group/data/mess_meal_sheet_pdf.dart` using `bangla_pdf`.
-  - Render monthly calendar matrix (daily breakfast/lunch/dinner per member), bazar totals, meal rate, deposits, and net balances.
-  - Wire PDF export in `MessBalanceSheet` and `meals_screen.dart`.
-  - Verification: Unit test in `test/features/tour_group/mess_meal_sheet_pdf_test.dart`.
+- [ ] **Task 1.2: UI Warnings in `expense_ledger_screen.dart`**
+  - Display caution/critical banner badge in the Budget vs Spent section.
+  - Show warning accent colors (amber for caution, red for critical).
+  - Add localized strings in `app_localizations.dart` / translation keys.
 
-- [x] **Task 1.3: Samity Payout Receipts & Beneficiary Verification**
-  - In `samity_models.dart`: Add `receiptUrl`, `isVerified`, and `verifiedAt` to `SamityPayout`.
-  - In samity payout UI: Allow admin to attach transfer receipt image and beneficiary to verify handover.
-  - Verification: Unit test for payout model serialization and verification states (`test/features/tour_group/samity_payout_test.dart`).
+### Phase 2: Sprint 9 — Multi-Stop Itinerary PDF
+- [ ] **Task 2.1: Itinerary PDF Generator (`itinerary_pdf.dart`)**
+  - Create `lib/features/tour_group/data/itinerary_pdf.dart` using `bangla_pdf`.
+  - Render tour header (destination summary, dates, duration, style, total members).
+  - Render stops breakdown table (order, destination, arrival, departure, nights, notes).
+  - Render transport legs and route checkpoints (modes, distance estimates, checkpoint stops).
+  - Render packing checklist summary if available.
+  - Unit test in `test/features/tour_group/itinerary_pdf_test.dart`.
 
-### Phase 2: Sprint 8 — Voice Lounge & WebRTC Ergonomics
-- [x] **Task 2.1: Participant Speaking Indicator**
-  - In `voice_room_service.dart`: Implement audio-level monitoring for local microphone and remote peer tracks via `getStats()`.
-  - Expose `speakingEmails` set and notify listeners on speech start/stop (> 0.035 threshold).
-  - In Voice Lounge avatars and docked mini-bar: Render pulsing animated green glow ring around active speakers.
-  - Verification: Unit test verifying speaking state calculation (`test/features/tour_group/voice_room_service_test.dart`).
+- [ ] **Task 2.2: Itinerary PDF Export Wire-up (`itinerary_pdf_export.dart`)**
+  - Create `lib/features/tour_group/presentation/itinerary_pdf_export.dart`.
+  - Add "Export Itinerary PDF" button in `journey_tracker_screen.dart` and `itinerary_editor.dart`.
+  - Support cross-platform downloading on Web (`kIsWeb`) and share sheet on Mobile (`share_plus`).
 
-- [x] **Task 2.2: Connection Quality HUD**
-  - In `call_quality.dart` / `voice_room_service.dart` / call screen: Ensure WebRTC telemetry (RTT, packet loss, bitrate) displays in a compact, tap-to-inspect network HUD.
-  - Verification: Unit test verifying packet loss and latency rating thresholds.
+### Phase 3: Sprint 9 — Route Checkpoint Overlay on Offline Map
+- [ ] **Task 3.1: Route & Checkpoint Markers in `offline_map_viewer_screen.dart`**
+  - Read `RoutePlan.of(group)` when viewing a tour.
+  - Display route checkpoints and stops as map markers with icons and names.
+  - Tap marker to view checkpoint details (type, leg, notes).
 
-### Phase 3: Sprint 10 — Ledger & FinOps Enhancements
-- [x] **Task 3.1: Duplicate TrxID Validation & Feedback**
-  - In `tour_group_repository.dart` & `expense_editor.dart`: Check `tours/{tourId}/mfs_trx_registry/{trxId}` before expense/settlement submission.
-  - Display localized warning when a duplicate TrxID is detected.
-  - Verification: Unit test for TrxID registry check.
-
-- [x] **Task 3.2: Monthly Statement PDF Custom Date Range & MFS Badges**
-  - In `monthly_ledger_pdf.dart`: Add support for custom date-range intervals and render MFS verification badges (`[ভেরিফাইড]` / `[অপেক্ষমান]`).
-  - Add date-range selection in `monthly_ledger_pdf_export.dart` and `expense_ledger_screen.dart`.
-  - Verification: Unit test verifying custom date filtering and PDF output (`test/features/tour_group/mfs_monthly_ledger_test.dart`).
-
-### Phase 4: Release & Deployment
-- [x] **Task 4.1: Monotonic Version Bump to `1.8.148+202`**
-  - Increment version in `pubspec.yaml`.
-  - Verify with `dart format`, `flutter analyze`, and `flutter test`.
-- [ ] **Task 4.2: Pull Request, CI Green Gate & Deployments**
-  - Push feature branch, open PR via `gh pr create --base main`.
-  - Wait for CI checks to pass green, squash and merge into `main`.
-  - Deploy Flutter Web to Firebase Hosting and release APK to Hostinger VPS.
+### Phase 4: Automated Testing, Release & CI Green Gate
+- [ ] **Task 4.1: Automated Verification & Monotonic Version Bump**
+  - Run `flutter analyze` and all unit tests.
+  - Monotonically increment version in `pubspec.yaml` to `1.8.149+203`.
+- [ ] **Task 4.2: PR Creation & Merge**
+  - Push branch, open PR via `gh pr create --base main`.
+  - Wait for all GitHub Actions CI checks to pass green.
+  - Merge PR, deploy web to Firebase Hosting and release APK to Hostinger VPS.
