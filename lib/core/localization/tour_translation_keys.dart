@@ -2071,6 +2071,8 @@ class TourTranslationKeys {
       'society_request_submit': 'Send request',
       'society_request_save': 'Save changes',
       'society_request_save_status': 'Save update',
+      'society_request_book_cost': 'Book repair cost to ledger',
+      'society_request_booked': 'Repair cost added to the maintenance ledger',
       'society_request_saved':
           'Your request is in. The committee will update it here.',
       'society_request_updated': 'Request updated.',
@@ -4710,6 +4712,8 @@ class TourTranslationKeys {
       'society_request_submit': 'অনুরোধ পাঠান',
       'society_request_save': 'পরিবর্তন সংরক্ষণ',
       'society_request_save_status': 'হালনাগাদ সংরক্ষণ',
+      'society_request_book_cost': 'মেরামতের খরচ খাতায় যোগ করুন',
+      'society_request_booked': 'মেরামতের খরচ রক্ষণাবেক্ষণ খাতায় যোগ হয়েছে',
       'society_request_saved':
           'আপনার অনুরোধ জমা হয়েছে। কমিটি এখানে হালনাগাদ করবে।',
       'society_request_updated': 'অনুরোধ হালনাগাদ হয়েছে।',
