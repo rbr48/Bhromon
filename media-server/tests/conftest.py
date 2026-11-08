@@ -76,6 +76,16 @@ def no_cdn_settings_in_tests(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def chats_are_plaintext_unless_a_test_says_otherwise(monkeypatch):
+    """Tests never read a chat's encryption flag from Firebase. A chat is plaintext unless a
+    test makes it encrypted (test_e2ee_chat.py does)."""
+    import chat as chat_module
+    from e2ee_chat import EncryptedChats
+
+    monkeypatch.setattr(chat_module, "encrypted_chats", EncryptedChats(lambda chat_id: False))
+
+
+@pytest.fixture(autouse=True)
 def generous_media_limits(monkeypatch):
     """Tests start with room to spare; the limit tests lower these one at a time."""
     import limits

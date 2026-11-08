@@ -29,6 +29,14 @@ from voip_push import VOIP_PLATFORM, voip_sender
 
 from push_strings import call_alert, chat_preview, normalize_language, push_text
 
+from e2ee_chat import (
+    EncryptedChats,
+    EncryptionStatusUnknown,
+    EnvelopeError,
+    firestore_chat_flag,
+    validate_envelope,
+)
+
 logger = logging.getLogger("bhromon.chat")
 
 DEAD_TOKEN_CODES = {
@@ -149,6 +157,10 @@ class ChatDatabase:
         if "client_id" not in message_columns:
             with conn:
                 conn.execute("ALTER TABLE messages ADD COLUMN client_id TEXT")
+        if "envelope" not in message_columns:
+            # The envelope of a message in an encrypted chat (E2EE_DESIGN.md, section 7).
+            with conn:
+                conn.execute("ALTER TABLE messages ADD COLUMN envelope TEXT")
         with conn:
             conn.execute(
                 "CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_client_id "
@@ -415,8 +427,8 @@ class ChatDatabase:
                     id, chat_id, sender_id, sender_name, sender_avatar,
                     text, type, media_url, media_path, thumbnail_url,
                     reply_to, reactions, read_by, status, metadata,
-                    created_at, deleted_for, client_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    created_at, deleted_for, client_id, envelope
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     msg_id,
@@ -437,6 +449,7 @@ class ChatDatabase:
                     created_at,
                     json.dumps(msg.get("deletedFor") or []),
                     msg.get("clientMessageId"),
+                    json.dumps(msg.get("envelope")) if msg.get("envelope") else None,
                 ),
             )
 
@@ -659,6 +672,10 @@ class ChatDatabase:
             deleted_for = json.loads(row["deleted_for"]) if row["deleted_for"] else []
         except Exception:
             deleted_for = []
+        try:
+            envelope = json.loads(row["envelope"]) if "envelope" in row.keys() and row["envelope"] else None
+        except Exception:
+            envelope = None
 
         return {
             "id": row["id"],
@@ -678,6 +695,7 @@ class ChatDatabase:
             "metadata": metadata,
             "createdAt": row["created_at"],
             "deletedFor": deleted_for,
+            "envelope": envelope,
             **({"clientMessageId": row["client_id"]} if "client_id" in row.keys() and row["client_id"] else {}),
         }
 
@@ -962,6 +980,8 @@ DATA_DIR = Path(os.getenv("MEDIA_META_ROOT", "/data/media-meta"))
 chat_db = ChatDatabase(DATA_DIR / "bhromon_chat.db")
 ws_manager = ChatWebSocketManager()
 push_dispatcher = PushNotificationDispatcher(chat_db)
+# Which chats are encrypted, read from their Firestore documents (media-server/e2ee_chat.py).
+encrypted_chats = EncryptedChats(firestore_chat_flag)
 
 # Confirmation waits still running. Held here so the tasks are not dropped early.
 _confirmation_waits: Set[asyncio.Task] = set()
@@ -1034,6 +1054,15 @@ class TokenRegistrationRequest(BaseModel):
     language: Optional[str] = None
 
 
+async def chat_is_encrypted(chat_id: str) -> bool:
+    """Whether the chat is end-to-end encrypted. A chat whose flag cannot be read is refused."""
+    try:
+        return await run_in_threadpool(encrypted_chats.is_encrypted, chat_id)
+    except EncryptionStatusUnknown as exc:
+        logger.warning("Could not read the encryption flag of chat %s: %s", chat_id, exc)
+        raise HTTPException(status_code=503, detail="The chat could not be checked. Try again.")
+
+
 class SendMessageRequest(BaseModel):
     chatId: str
     recipientId: str
@@ -1048,6 +1077,8 @@ class SendMessageRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     # The phone's id for the message. A retry sends the same id.
     clientMessageId: Optional[str] = None
+    # The encrypted form of the message, for an encrypted chat (E2EE_DESIGN.md, section 7).
+    envelope: Optional[Dict[str, Any]] = None
 
 
 class MarkReadRequest(BaseModel):
@@ -1132,6 +1163,25 @@ async def send_message(
     """Sends a message, delivers via WebSocket if recipient is online, or via FCM push."""
     if not await run_in_threadpool(shares_group, uid, req.recipientId):
         raise HTTPException(status_code=403, detail="You can only message people in a tour you share.")
+    # An encrypted chat carries an envelope and nothing else. A plaintext chat carries no envelope.
+    encrypted = await chat_is_encrypted(req.chatId)
+    envelope = None
+    if encrypted:
+        if (
+            req.envelope is None
+            or req.text
+            or (req.type or "text") != "text"
+            or req.mediaUrl
+            or req.mediaPath
+            or req.thumbnailUrl
+        ):
+            raise HTTPException(status_code=400, detail="An encrypted chat takes an envelope and no text or media.")
+        try:
+            envelope = validate_envelope(req.envelope)
+        except EnvelopeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+    elif req.envelope is not None:
+        raise HTTPException(status_code=400, detail="Only an encrypted chat takes an envelope.")
     participants = sorted([uid, req.recipientId])
     await run_in_threadpool(
         chat_db.get_or_create_conversation,
@@ -1145,7 +1195,7 @@ async def send_message(
         "senderId": uid,
         "senderName": req.senderName or "Explorer",
         "senderAvatar": req.senderAvatar,
-        "text": req.text or "",
+        "text": "" if encrypted else (req.text or ""),
         "type": req.type or "text",
         "mediaUrl": req.mediaUrl,
         "mediaPath": req.mediaPath,
@@ -1155,6 +1205,7 @@ async def send_message(
         "status": "sent",
         "createdAt": _now_ms(),
         "clientMessageId": client_id,
+        "envelope": envelope,
     }
 
     saved, created = await run_in_threadpool(chat_db.save_message_once, msg_dict)
@@ -1174,14 +1225,23 @@ async def send_message(
     ws_payload = {"type": "new_message", "message": saved}
     delivered = await ws_manager.send_to_user(req.recipientId, ws_payload)
 
-    preview = req.text or (f"Sent a {req.type}" if req.type != "text" else "New message")
+    def push_body(lang: str) -> str:
+        # An encrypted message's text never reaches the server, so the push says only that
+        # a message came in (E2EE_DESIGN.md, section 7).
+        if encrypted:
+            return push_text(lang, "preview.text")
+        return chat_preview(lang, req.text, req.type)
+
+    preview = push_text(None, "preview.text") if encrypted else (
+        req.text or (f"Sent a {req.type}" if req.type != "text" else "New message")
+    )
     push_args = {
         "recipient_uid": req.recipientId,
         "title": req.senderName or "New Message",
         "body": preview,
         "localize": lambda lang: (
             req.senderName or push_text(lang, "vps.title"),
-            chat_preview(lang, req.text, req.type),
+            push_body(lang),
         ),
         "data": {
             "action": "chat",
