@@ -9,14 +9,10 @@ name: E2EE native library
 # Linux minutes, so it runs on a manual start or when the repository variable
 # IOS_BUILD_ENABLED is 'true', as native_build.yml does.
 
+# Pull requests only, as the other workflows are. A push to a branch that has an
+# open pull request would otherwise run every job twice.
 on:
   pull_request:
-    paths:
-      - 'native/e2ee_olm/**'
-      - '.github/workflows/e2ee_native.yml'
-  push:
-    branches:
-      - claude/stoic-hawking-ewtbyi
     paths:
       - 'native/e2ee_olm/**'
       - '.github/workflows/e2ee_native.yml'
@@ -123,6 +119,8 @@ jobs:
           build aarch64-linux-android aarch64-linux-android21-clang arm64-v8a
           build armv7-linux-androideabi armv7a-linux-androideabi21-clang armeabi-v7a
           build x86_64-linux-android x86_64-linux-android21-clang x86_64
+          # The sizes also go to the log, so they can be read without the job summary.
+          ls -l dist/android/*/libe2ee_olm.so
           {
             echo "### Android (stripped shared library per ABI)"
             echo "| ABI | bytes | sha256 |"
@@ -174,6 +172,7 @@ jobs:
             -std=c11 -Wall -Wextra -Werror -I include tests/c/smoke.c \
             target/aarch64-apple-ios-sim/release/libe2ee_olm.a -o target/smoke-sim
           strip target/smoke-sim
+          ls -l target/aarch64-apple-ios/release/libe2ee_olm.a target/aarch64-apple-ios-sim/release/libe2ee_olm.a target/smoke-sim
           {
             echo "### iOS"
             echo "| file | bytes |"
