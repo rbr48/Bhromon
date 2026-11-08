@@ -154,7 +154,8 @@ class ItineraryPdfGenerator {
           pw.SizedBox(height: 6),
           _buildStopsTable(stops),
           pw.SizedBox(height: 18),
-          _buildSectionTitle('২. যাত্রা ও রুট রোডম্যাপ (Route & Transport Legs)'),
+          _buildSectionTitle(
+              '২. যাত্রা ও রুট রোডম্যাপ (Route & Transport Legs)'),
           pw.SizedBox(height: 6),
           _buildLegsTable(routePlan),
           if (checkpoints.isNotEmpty) ...[

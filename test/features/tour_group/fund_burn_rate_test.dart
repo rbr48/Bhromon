@@ -57,7 +57,8 @@ void main() {
           equals(BurnRateAlert.normal));
     });
 
-    test('BudgetLine and FundReport return caution when spent >= 80% and < 100%',
+    test(
+        'BudgetLine and FundReport return caution when spent >= 80% and < 100%',
         () {
       final expenses = <ExpenseItem>[
         ExpenseItem(
