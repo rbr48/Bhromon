@@ -5,6 +5,7 @@ import 'package:bhromon/features/chat/presentation/widgets/chat_rich_text.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_table_widget.dart';
 import 'package:bhromon/features/chat/presentation/widgets/table_builder_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _wrap(Widget child) {
@@ -402,6 +403,40 @@ void main() {
       // Fullscreen modal should now be open
       expect(find.byType(InteractiveViewer), findsOneWidget);
       expect(find.byIcon(Icons.screen_lock_landscape_rounded), findsOneWidget);
+
+      // Close modal
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+        'ChatTableWidget and FullscreenModal render LaTeX formulas in table cells',
+        (tester) async {
+      const tableWithLatex = '''
+| Method Name | Formula |
+| --- | --- |
+| SLM | \\text{Annual Depr.} = \\frac{\\text{Cost} - \\text{Salvage}}{\\text{Life}} |
+''';
+
+      await tester.pumpWidget(
+        _wrap(
+          const ChatRichText(
+            text: tableWithLatex,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify table cell renders Math widget inside the inline table
+      expect(find.byType(Math), findsWidgets);
+
+      // Tap fullscreen modal button
+      await tester.tap(find.byIcon(Icons.fullscreen_rounded));
+      await tester.pumpAndSettle();
+
+      // Verify Math widget renders inside fullscreen modal as well
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(find.byType(Math), findsWidgets);
 
       // Close modal
       await tester.tap(find.byIcon(Icons.close_rounded));
