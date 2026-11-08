@@ -747,6 +747,22 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(updateDoc(doc(db('member'), 'tours', SOC, 'service_requests', 'r3'), { status: 'open', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
     });
 
+    test('the status save the app makes, with its timeline stamps, is accepted', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r9'), serviceRequest(people.member.email));
+      });
+
+      // A resident cannot open a request already marked as moved on.
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { resolvedAt: serverTimestamp() })));
+      // The payloads setServiceRequestStatus writes for each status.
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', SOC, 'service_requests', 'r9'), { status: 'in_progress', adminNote: 'Technician booked', updatedAt: serverTimestamp(), updatedByEmail: people.admin.email, inProgressAt: serverTimestamp() }));
+      await assertSucceeds(updateDoc(doc(db('owner'), 'tours', SOC, 'service_requests', 'r9'), { status: 'resolved', adminNote: 'Fixed', updatedAt: serverTimestamp(), updatedByEmail: people.owner.email, resolvedAt: serverTimestamp(), resolvedByName: 'Owner' }));
+      // A note saved after resolving leaves the stamps as they are.
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', SOC, 'service_requests', 'r9'), { adminNote: 'Fixed and checked', updatedAt: serverTimestamp(), updatedByEmail: people.admin.email }));
+      // A stamp that is not a time is refused.
+      await assertFails(updateDoc(doc(db('admin'), 'tours', SOC, 'service_requests', 'r9'), { resolvedAt: 'yesterday', updatedAt: serverTimestamp(), updatedByEmail: people.admin.email }));
+    });
+
     test('a request is removed by its author or an admin, not by another resident', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
         const f = ctx.firestore();
