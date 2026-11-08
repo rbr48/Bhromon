@@ -42,6 +42,7 @@ class ChannelMessageBubble extends StatefulWidget {
   final ValueChanged<int> onVote;
   final ValueChanged<int> onOpenMedia;
   final VoidCallback onOpenLedger;
+  final ValueChanged<ChannelMessage>? onOpenFull;
 
   const ChannelMessageBubble({
     super.key,
@@ -57,6 +58,7 @@ class ChannelMessageBubble extends StatefulWidget {
     required this.onVote,
     required this.onOpenMedia,
     required this.onOpenLedger,
+    this.onOpenFull,
   });
 
   @override
@@ -153,6 +155,10 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                   onSpoiler: _toggleSpoiler,
                   isMine: own,
                   onImportLedger: widget.onOpenLedger,
+                  collapsible: true,
+                  onExpandFullScreen: widget.onOpenFull != null
+                      ? () => widget.onOpenFull!(m)
+                      : null,
                   baseStyle: TextStyle(
                     color: own
                         ? (context.forest.isDark
@@ -586,6 +592,8 @@ class ChannelRichText extends StatelessWidget {
   final TextStyle? baseStyle;
   final bool isMine;
   final VoidCallback? onImportLedger;
+  final bool collapsible;
+  final VoidCallback? onExpandFullScreen;
 
   const ChannelRichText({
     super.key,
@@ -595,6 +603,8 @@ class ChannelRichText extends StatelessWidget {
     this.baseStyle,
     this.isMine = false,
     this.onImportLedger,
+    this.collapsible = false,
+    this.onExpandFullScreen,
   });
 
   @override
@@ -606,6 +616,8 @@ class ChannelRichText extends StatelessWidget {
       onSpoiler: onSpoiler,
       isMine: isMine,
       onImportLedger: onImportLedger,
+      collapsible: collapsible,
+      onExpandFullScreen: onExpandFullScreen,
     );
   }
 }

@@ -192,5 +192,44 @@ void main() {
       expect(table.headers, hasLength(3));
       expect(table.rows, hasLength(2));
     });
+
+    test('parseChatBlocks parses LaTeX display math block', () {
+      const text = r'''
+Under the expanded accounting equation:
+$$\text{Assets (A)} + \text{Expenses (E)} = \text{Liabilities (L)} + \text{Revenues (R)}$$
+And the next paragraph follows.
+''';
+      final blocks = parseChatBlocks(text.trim());
+      expect(blocks, hasLength(3));
+      expect(blocks[0], isA<ChatParagraphBlock>());
+      expect(blocks[1], isA<ChatMathBlock>());
+      final math = blocks[1] as ChatMathBlock;
+      expect(math.latex, contains(r'\text{Assets (A)}'));
+      expect(blocks[2], isA<ChatParagraphBlock>());
+    });
+
+    test('parseChatBlocks parses inline LaTeX math and preserves plain prices',
+        () {
+      const text =
+          r'Price is $100 and formula is $\text{Rate} = \frac{2}{\text{Useful Life}}$ for asset.';
+      final blocks = parseChatBlocks(text);
+      expect(blocks, hasLength(1));
+      final para = blocks[0] as ChatParagraphBlock;
+      final spans = para.lines[0].spans;
+      // Should have math span for formula
+      expect(spans.any((s) => s.math && s.text.contains(r'\frac')), isTrue);
+      // Should have normal text containing $100
+      expect(spans.any((s) => !s.math && s.text.contains(r'$100')), isTrue);
+    });
+
+    test('parseChatBlocks restores line breaks for dense collapsed pasted text',
+        () {
+      // 300+ chars with 0 newlines
+      const denseText =
+          'Source documents (invoices, receipts, bank memos).Step 2: Journalize transactions chronologically in the Journal.Step 3: Post journal entries to respective accounts.Phase II — Summarizing & Adjusting (At Period-End):Step 4: Prepare an Unadjusted Trial Balance.Step 5: Journalize and post Adjusting Entries.Step 6: Prepare an Adjusted Trial Balance.10(viii) Methods of Depreciation [4 Marks]Under IAS 16 rules.1. Straight-Line Method (SLM) is great.2. Declining-Balance Method (DBM) is also great.';
+      final blocks = parseChatBlocks(denseText);
+      // Because line breaks were restored, there should be multiple distinct blocks/paragraphs
+      expect(blocks.length, greaterThanOrEqualTo(5));
+    });
   });
 }
