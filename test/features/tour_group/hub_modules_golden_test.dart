@@ -134,6 +134,8 @@ final _bases = <String, TourGroup Function(Map<String, bool>)>{
       _group('school', f, family: true, preset: TourGroup.schoolPreset),
   'sports': (f) =>
       _group('sports', f, family: true, preset: TourGroup.sportsPreset),
+  'friends': (f) =>
+      _group('friends', f, family: true, preset: TourGroup.friendsPreset),
   'trip-beach': (f) => _group('trip-beach', f, type: TourType.beach),
   'trip-hill': (f) => _group('trip-hill', f, type: TourType.hill),
 };

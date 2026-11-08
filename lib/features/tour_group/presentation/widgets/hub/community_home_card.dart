@@ -111,12 +111,12 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
     } else if (g.isStudy) {
       title = l10n.translate('study_home_title');
       icon = Icons.menu_book_rounded;
-      action1Label = l10n.translate('community_home_tasks_btn');
-      action1Icon = Icons.checklist_rounded;
-      action1Route = '$base/family-tasks';
-      action2Label = l10n.translate('community_home_notices_btn');
-      action2Icon = Icons.forum_outlined;
-      action2Route = '$base/notices';
+      action1Label = l10n.translate('study_home_reading_btn');
+      action1Icon = Icons.event_note_rounded;
+      action1Route = '$base/study-reading';
+      action2Label = l10n.translate('study_home_books_btn');
+      action2Icon = Icons.library_books_rounded;
+      action2Route = '$base/study-books';
     } else if (g.isFriends) {
       title = l10n.translate('friends_home_title');
       icon = Icons.people_alt_rounded;

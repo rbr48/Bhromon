@@ -23,6 +23,8 @@ const List<String> tripModuleOrder = [
 const List<String> familyModuleOrder = [
   'channels',
   'notices',
+  'study_reading',
+  'study_books',
   'requests',
   'samity',
   'family_tasks',
@@ -63,6 +65,8 @@ List<String> hubModulesFor(TourGroup group, {bool? momentsOpen}) {
     if (group.isHousehold) 'album',
     if (isTrip && group.modules.tideSafety) 'tide',
     'notices',
+    if (group.isStudy) 'study_reading',
+    if (group.isStudy) 'study_books',
     if (isTrip) 'journey',
     if (!group.isManaged) 'safety',
     if (group.modules.games) 'games',

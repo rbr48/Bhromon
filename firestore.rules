@@ -739,6 +739,13 @@ service cloud.firestore {
       return isFamilyTour(tId) && !isManagedTour(tId);
     }
 
+    // A study or book club: a family circle with the study preset. Its book list and
+    // reading plan are open to every member to add to.
+    function isStudyTour(tId) {
+      return isFamilyTour(tId) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'study';
+    }
+
     // A family date: a birthday, bill, school or medicine time. Days are YYYY-MM-DD
     // strings, and the reminder days are 0 to 30 (the app offers a few of them).
     function isDayKey(v) {
@@ -764,6 +771,27 @@ service cloud.firestore {
              (d.get('assigneeEmail', null) == null || (d.assigneeEmail is string && d.assigneeEmail.size() <= 254)) &&
              (d.get('doneByEmail', null) == null || (d.doneByEmail is string && d.doneByEmail.size() <= 254)) &&
              d.createdByEmail is string;
+    }
+    // A book on a study group's list: a title, an optional author and note, and one of
+    // three statuses.
+    function validStudyBook(d) {
+      return d.keys().hasOnly(['title', 'author', 'notes', 'status', 'statusByEmail', 'createdByEmail']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             (d.get('author', null) == null || (d.author is string && d.author.size() <= 120)) &&
+             (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
+             d.status in ['toRead', 'reading', 'finished'] &&
+             (d.get('statusByEmail', null) == null || (d.statusByEmail is string && d.statusByEmail.size() <= 254)) &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254;
+    }
+    // A reading session: what to read, when it starts, and where it meets.
+    function validStudySession(d) {
+      return d.keys().hasOnly(['title', 'bookId', 'startsAt', 'place', 'notes', 'createdByEmail']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             (d.get('bookId', null) == null || (d.bookId is string && d.bookId.size() <= 100)) &&
+             d.startsAt is timestamp &&
+             (d.get('place', null) == null || (d.place is string && d.place.size() <= 120)) &&
+             (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254;
     }
     // A person without an account, listed under the member who added them.
     function validDependent(d) {
@@ -953,6 +981,43 @@ service cloud.firestore {
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
                          validFamilyTask(request.resource.data);
         allow delete: if isSharedListTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+      }
+
+      // A study or book club's book list. Any member adds a book and moves it along its
+      // statuses under their own name. Its creator or an admin changes the details or
+      // removes it.
+      match /study_books/{bookId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail() &&
+                         (request.resource.data.get('statusByEmail', null) == null ||
+                          request.resource.data.statusByEmail == tourUserEmail()) &&
+                         validStudyBook(request.resource.data);
+        allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         validStudyBook(request.resource.data) &&
+                         ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusByEmail']) &&
+                           request.resource.data.get('statusByEmail', null) == tourUserEmail()) ||
+                          ((isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
+                           (request.resource.data.status == resource.data.status ||
+                            request.resource.data.get('statusByEmail', null) == tourUserEmail())));
+        allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+      }
+
+      // A study or book club's reading plan. Any member plans a session; its creator or an
+      // admin changes or removes it.
+      match /reading_sessions/{sessionId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail() &&
+                         validStudySession(request.resource.data);
+        allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
+                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         validStudySession(request.resource.data);
+        allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 

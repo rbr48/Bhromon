@@ -2534,7 +2534,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             color: const Color(0xFF6366F1),
             onTap: () => context.push('/group/${group.id}/logistics'),
           ),
-      'calendar': () => group.isFamily
+      // Family dates belong to the household alone. Other family-style circles, such as
+      // a study group or a friends circle, keep the ordinary calendar.
+      'calendar': () => group.isHousehold
           ? _ModuleItem(
               title: l10n.translate('hub_module_family_dates'),
               subtitle: l10n.translate('hub_module_family_dates_sub'),
@@ -2549,6 +2551,20 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               color: const Color(0xFF84CC16),
               onTap: () => context.push('/group/${group.id}/calendar'),
             ),
+      'study_reading': () => _ModuleItem(
+            title: l10n.translate('hub_module_study_reading'),
+            subtitle: l10n.translate('hub_module_study_reading_sub'),
+            icon: Icons.event_note_rounded,
+            color: const Color(0xFF0EA5E9),
+            onTap: () => context.push('/group/${group.id}/study-reading'),
+          ),
+      'study_books': () => _ModuleItem(
+            title: l10n.translate('hub_module_study_books'),
+            subtitle: l10n.translate('hub_module_study_books_sub'),
+            icon: Icons.menu_book_rounded,
+            color: const Color(0xFFA855F7),
+            onTap: () => context.push('/group/${group.id}/study-books'),
+          ),
       'family_tasks': () => _ModuleItem(
             title: l10n.translate('hub_module_family_tasks'),
             subtitle: l10n.translate('hub_module_family_tasks_sub'),

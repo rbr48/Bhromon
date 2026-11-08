@@ -24,6 +24,8 @@ import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
 import '../features/tour_group/presentation/pages/tour_logistics_hub_screen.dart';
 import '../features/tour_group/presentation/pages/holiday_calendar_screen.dart';
 import '../features/tour_group/presentation/pages/family_dates_screen.dart';
+import '../features/tour_group/presentation/pages/study_books_screen.dart';
+import '../features/tour_group/presentation/pages/study_reading_screen.dart';
 import '../features/tour_group/presentation/pages/family_album_screen.dart';
 import '../features/tour_group/presentation/pages/family_dependents_screen.dart';
 import '../features/tour_group/presentation/pages/family_tasks_screen.dart';
@@ -257,6 +259,20 @@ class AppRouter {
         pageBuilder: (context, state) => _tripPage(
           state,
           FamilyDatesScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/study-books',
+        pageBuilder: (context, state) => _tripPage(
+          state,
+          StudyBooksScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/study-reading',
+        pageBuilder: (context, state) => _tripPage(
+          state,
+          StudyReadingScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
