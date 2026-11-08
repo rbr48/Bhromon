@@ -385,7 +385,7 @@ List<ChatBlock> parseChatBlocks(String text) {
 
     // 3. Section Headings (# H1, ## H2, ### H3)
     if (trimmed.startsWith('#')) {
-      final match = RegExp(r'^(#{1,3})\s+(.*)$').firstMatch(trimmed);
+      final match = RegExp(r'^(#{1,6})\s+(.*)$').firstMatch(trimmed);
       if (match != null) {
         final level = match.group(1)!.length;
         final body = match.group(2)!;
@@ -501,7 +501,7 @@ List<ChatBlock> parseChatBlocks(String text) {
           (nextTrimmed.contains('|') &&
               i + 1 < rawLines.length &&
               isTableDelimiter(rawLines[i + 1])) ||
-          RegExp(r'^(#{1,3})\s+').hasMatch(nextTrimmed) ||
+          RegExp(r'^(#{1,6})\s+').hasMatch(nextTrimmed) ||
           (_dividerPattern.hasMatch(nextTrimmed) && nextTrimmed.length >= 3) ||
           nextTrimmed.startsWith('> ') ||
           _taskPattern.hasMatch(nextTrimmed) ||
