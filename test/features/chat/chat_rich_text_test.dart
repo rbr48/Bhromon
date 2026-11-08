@@ -150,6 +150,67 @@ void main() {
       expect(find.text('Val 2'), findsOneWidget);
       expect(find.text('Val 3'), findsOneWidget);
     });
+
+    testWidgets('renders LaTeX display equations and inline math',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const ChatRichText(
+            text: r'The formula is $E = mc^2$ and block: $$\frac{a}{b}$$',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChatRichText), findsOneWidget);
+    });
+
+    testWidgets('collapses long messages and expands on tap', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final longText = 'A' * 2000;
+      bool fullScreenOpened = false;
+
+      await tester.pumpWidget(
+        _wrap(
+          SingleChildScrollView(
+            child: ChatRichText(
+              text: longText,
+              collapsible: true,
+              collapseThreshold: 500,
+              onExpandFullScreen: () => fullScreenOpened = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Read more should be visible
+      expect(find.byIcon(Icons.expand_more_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.open_in_full_rounded), findsOneWidget);
+
+      // Tap fullscreen
+      await tester.tap(find.byIcon(Icons.open_in_full_rounded));
+      await tester.pumpAndSettle();
+      expect(fullScreenOpened, isTrue);
+
+      // Tap read more to expand
+      await tester.tap(find.byIcon(Icons.expand_more_rounded));
+      await tester.pumpAndSettle();
+
+      // Now "Show less" should be visible
+      expect(find.byIcon(Icons.expand_less_rounded), findsOneWidget);
+
+      // Tap "Show less" to collapse back
+      await tester.tap(find.byIcon(Icons.expand_less_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.expand_more_rounded), findsOneWidget);
+    });
   });
 
   group('ChatFormattingToolbar Widget', () {

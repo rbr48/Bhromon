@@ -20,6 +20,7 @@ class ChatSpan {
   final bool underline;
   final bool highlight;
   final bool code;
+  final bool math;
 
   /// Set for text hidden behind a spoiler. Spans of the same spoiler share an id.
   final int? spoilerId;
@@ -35,6 +36,7 @@ class ChatSpan {
     this.underline = false,
     this.highlight = false,
     this.code = false,
+    this.math = false,
     this.spoilerId,
     this.link,
   });
@@ -145,6 +147,13 @@ class ChatDividerBlock extends ChatBlock {
   const ChatDividerBlock();
 }
 
+/// A block-level LaTeX display equation ($$...$$).
+class ChatMathBlock extends ChatBlock {
+  final String latex;
+
+  const ChatMathBlock(this.latex);
+}
+
 /// Splits [text] into lines, each with its styled runs.
 List<ChatLine> parseChatMarkdown(String text) {
   final counter = _Counter();
@@ -165,12 +174,69 @@ final RegExp _taskPattern = RegExp(r'^(?:[-*+]|\d+\.)\s+\[([ xX])\]\s+(.*)$');
 final RegExp _unorderedPattern = RegExp(r'^[-*+]\s+(.*)$');
 final RegExp _orderedPattern = RegExp(r'^(\d+)\.\s+(.*)$');
 
+/// Heuristically restores paragraph and list item line breaks when long text
+/// was pasted without newlines.
+String _restoreCollapsedStructure(String s) {
+  if (s.length >= 250) {
+    final nlCount = s.split('\n').length - 1;
+    final density = s.length / (nlCount + 1);
+    if (density > 180) {
+      // 1. Break before Step X:
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):])\s*(Step\s+\d+:)'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 2. Break before Phase X
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):])\s*(Phase\s+[IVXLCDM\d]+(?:\s*[—-]\s*|\s*:))'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 3. Break before numbered question sub-items
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):\]])\s*(\d+\([a-z\d]+\))'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 4. Break after [X Marks] or [Marks: ...]
+      s = s.replaceAllMapped(
+        RegExp(
+            r'(\[\s*(?:\d+(?:\s*[+xX*]\s*\d+)*\s*Marks|Marks:[^\]]+)\s*\])\s*([A-Z\d])'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 5. Break before numbered list items
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):]|(?<=[a-z]))\s*(\d+\.\s+[A-Z])'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 6. Break before Roman numeral headings
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):])\s*([IVXLCDM]+\.\s+[A-Z])'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+      // 7. Break before Question X
+      s = s.replaceAllMapped(
+        RegExp(r'([.!?\):])\s*(Question\s+\d+)'),
+        (m) => '${m.group(1)}\n\n${m.group(2)}',
+      );
+    }
+  }
+  return s;
+}
+
 /// Parses [text] into block-level elements (tables, code blocks, lists, headings, dividers, paragraphs).
 List<ChatBlock> parseChatBlocks(String text) {
   final counter = _Counter();
 
   // Normalize line endings
   var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+  // Wrap display math $$...$$ with line breaks so it forms its own block
+  normalized = normalized.replaceAllMapped(
+    RegExp(r'(?<!\$)\$\$(.+?)\$\$(?!\$)', dotAll: true),
+    (m) => '\n\n\$\$${m.group(1)}\$\$\n\n',
+  );
+
+  // Restore line breaks for collapsed/run-on pasted texts
+  normalized = _restoreCollapsedStructure(normalized);
 
   // If newlines were collapsed into a single line, expand collapsed table rows
   if (!normalized.contains('\n') && normalized.contains('|')) {
@@ -222,6 +288,33 @@ List<ChatBlock> parseChatBlocks(String text) {
   while (i < rawLines.length) {
     final line = rawLines[i];
     final trimmed = line.trim();
+
+    // 0. Display Math Block ($$...$$)
+    if (trimmed.startsWith(r'$$')) {
+      if (trimmed.length > 2 && trimmed.endsWith(r'$$')) {
+        final mathContent = trimmed.substring(2, trimmed.length - 2).trim();
+        blocks.add(ChatMathBlock(mathContent));
+        i++;
+        continue;
+      }
+      final mathLines = <String>[];
+      final firstLineBody = trimmed.substring(2).trim();
+      if (firstLineBody.isNotEmpty) mathLines.add(firstLineBody);
+      i++;
+      while (i < rawLines.length && !rawLines[i].trim().endsWith(r'$$')) {
+        mathLines.add(rawLines[i]);
+        i++;
+      }
+      if (i < rawLines.length) {
+        final lastTrimmed = rawLines[i].trim();
+        final lastBody =
+            lastTrimmed.substring(0, lastTrimmed.length - 2).trim();
+        if (lastBody.isNotEmpty) mathLines.add(lastBody);
+        i++;
+      }
+      blocks.add(ChatMathBlock(mathLines.join('\n')));
+      continue;
+    }
 
     // 1. Fenced Code Block
     if (trimmed.startsWith('```')) {
@@ -404,6 +497,7 @@ List<ChatBlock> parseChatBlocks(String text) {
 
       // Check if next starts another block
       final isBlockStart = nextTrimmed.startsWith('```') ||
+          nextTrimmed.startsWith(r'$$') ||
           (nextTrimmed.contains('|') &&
               i + 1 < rawLines.length &&
               isTableDelimiter(rawLines[i + 1])) ||
@@ -487,6 +581,30 @@ List<ChatSpan> _inline(String s, _Style style, _Counter counter) {
 
   var i = 0;
   while (i < s.length) {
+    // 0. Inline Math: $...$
+    if (s[i] == r'$' && !s.startsWith(r'$$', i)) {
+      final end = s.indexOf(r'$', i + 1);
+      if (end > i + 1 && !s.startsWith(r'$$', end)) {
+        final mathContent = s.substring(i + 1, end);
+        final startsWithDigitOrSpace =
+            mathContent.startsWith(' ') || RegExp(r'^\d').hasMatch(mathContent);
+        final endsWithSpace = mathContent.endsWith(' ');
+        if (!startsWithDigitOrSpace &&
+            !endsWithSpace &&
+            !mathContent.contains('\n') &&
+            mathContent.isNotEmpty) {
+          flush();
+          out.add(ChatSpan(
+            mathContent.trim(),
+            math: true,
+            spoilerId: style.spoilerId,
+          ));
+          i = end + 1;
+          continue;
+        }
+      }
+    }
+
     // 1. Inline Code `code`
     if (s[i] == '`') {
       final end = s.indexOf('`', i + 1);

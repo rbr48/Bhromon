@@ -1667,6 +1667,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                           context, m.visualAttachments[index]),
                       onOpenLedger: () =>
                           context.push('/group/${widget.tourId}/ledger'),
+                      onOpenFull: (msg) => _showPinnedChannelMessageFull(msg),
                     );
                     final wrappedBubble = KeyedSubtree(
                       key: _channelMessageKeys.putIfAbsent(
@@ -1956,6 +1957,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       child: SelectionArea(
                         child: ChatRichText(
                           text: text,
+                          collapsible: false,
                           baseStyle: TextStyle(
                             color: context.forest.text,
                             fontSize: 15,
