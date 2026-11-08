@@ -1,0 +1,5 @@
+# One compiler for every job and every developer, so the builds can be compared.
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

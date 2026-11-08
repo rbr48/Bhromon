@@ -1,0 +1,209 @@
+name: E2EE native library
+
+# Builds and tests the vodozemac-based library for the end-to-end encrypted
+# one-to-one chat (native/e2ee_olm; E2EE_DESIGN.md, milestone M1).
+#
+# The Linux job runs the Rust checks, the C smoke test, the export check and the
+# libolm interoperability test. The Android job builds the shared library for three
+# ABIs with the NDK. The iOS job
+# builds device and simulator libraries on macOS, which costs several times the
+# Linux minutes, so it runs on a manual start or when the repository variable
+# IOS_BUILD_ENABLED is 'true', as native_build.yml does.
+
+# Pull requests only, as the other workflows are. A push to a branch that has an
+# open pull request would otherwise run every job twice.
+on:
+  pull_request:
+    paths:
+      - 'native/e2ee_olm/**'
+      - '.github/workflows/e2ee_native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2ee-native-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: native/e2ee_olm
+
+jobs:
+  linux:
+    name: Linux checks, tests and C smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # rust-toolchain.toml pins the compiler; rustup installs it on first use.
+      - name: Show the pinned toolchain
+        run: rustup show
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint (warnings are errors)
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Unit tests
+        run: cargo test --locked
+
+      - name: Release build
+        run: cargo build --release --locked
+
+      - name: Exported functions match the header
+        run: bash tests/check_exports.sh
+
+      - name: C smoke test against the static library
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -I include tests/c/smoke.c \
+            target/release/libe2ee_olm.a -lpthread -ldl -lm -o target/smoke
+          target/smoke
+
+      # libolm is the reference Olm implementation. The test runs both directions
+      # with fresh keys and checks that the session ids match on both ends.
+      - name: Install libolm (reference Olm implementation)
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y libolm-dev
+
+      - name: libolm interoperability (session version 1, both directions)
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -I include tests/interop/libolm_interop.c \
+            target/release/libe2ee_olm.a -lolm -lpthread -ldl -lm -o target/libolm_interop
+          target/libolm_interop
+
+      # The same runner rebuilds the crate from the same inputs. Identical
+      # checksums show the build is deterministic here. Bit-identical output
+      # across machines needs path remapping, which is still open (E2EE_DESIGN.md).
+      - name: Rebuild and compare checksums
+        run: |
+          sha256sum target/release/libe2ee_olm.so > target/first.sha256
+          cargo clean -p e2ee_olm --release
+          cargo build --release --locked
+          sha256sum -c target/first.sha256
+
+      - name: Record sizes
+        run: |
+          {
+            echo "### Linux (x86_64)"
+            echo "| file | bytes |"
+            echo "| --- | ---: |"
+            echo "| libe2ee_olm.so, stripped | $(wc -c < target/release/libe2ee_olm.so | tr -d " ") |"
+            echo "| libe2ee_olm.a, all objects (not the app figure) | $(wc -c < target/release/libe2ee_olm.a | tr -d " ") |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  android:
+    name: Android shared libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Add the Android targets
+        run: |
+          rustup show
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+
+      # Uses the NDK that GitHub's Ubuntu image provides. API 21 is the lowest
+      # level the NDK supports for 64-bit ABIs, so the library loads on every
+      # device the app supports.
+      - name: Build the shared library for each ABI
+        run: |
+          set -euo pipefail
+          ndk="${ANDROID_NDK_LATEST_HOME:?the runner has no Android NDK}"
+          bin="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          build() {
+            local triple="$1" clang="$2" abi="$3"
+            local var lower
+            var="$(echo "$triple" | tr '[:lower:]-' '[:upper:]_')"
+            lower="${triple//-/_}"
+            env "CARGO_TARGET_${var}_LINKER=$bin/$clang" \
+                "CC_${lower}=$bin/$clang" \
+                "AR_${lower}=$bin/llvm-ar" \
+              cargo build --release --locked --target "$triple"
+            mkdir -p "dist/android/$abi"
+            cp "target/$triple/release/libe2ee_olm.so" "dist/android/$abi/"
+          }
+          build aarch64-linux-android aarch64-linux-android21-clang arm64-v8a
+          build armv7-linux-androideabi armv7a-linux-androideabi21-clang armeabi-v7a
+          build x86_64-linux-android x86_64-linux-android21-clang x86_64
+          # The sizes also go to the log, so they can be read without the job summary.
+          ls -l dist/android/*/libe2ee_olm.so
+          {
+            echo "### Android (stripped shared library per ABI)"
+            echo "| ABI | bytes | sha256 |"
+            echo "| --- | ---: | --- |"
+            for abi in arm64-v8a armeabi-v7a x86_64; do
+              f="dist/android/$abi/libe2ee_olm.so"
+              echo "| $abi | $(wc -c < "$f" | tr -d " ") | \`$(sha256sum "$f" | cut -c1-16)…\` |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the Android libraries
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2ee-olm-android
+          path: native/e2ee_olm/dist/android
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS static libraries
+    if: github.event_name == 'workflow_dispatch' || vars.IOS_BUILD_ENABLED == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      # The app's minimum (#393). Rust would otherwise use its own default.
+      IPHONEOS_DEPLOYMENT_TARGET: '15.5'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Add the iOS targets
+        run: |
+          rustup show
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+
+      - name: Build the device and simulator libraries
+        run: |
+          set -euo pipefail
+          for target in aarch64-apple-ios aarch64-apple-ios-sim; do
+            cargo build --release --locked --target "$target"
+          done
+
+      # Compiles and links the C smoke test against the simulator library, so
+      # the header and the library agree on Apple's toolchain too.
+      - name: Link the C smoke test for the simulator
+        run: |
+          set -euo pipefail
+          xcrun --sdk iphonesimulator clang -target arm64-apple-ios15.5-simulator \
+            -std=c11 -Wall -Wextra -Werror -I include tests/c/smoke.c \
+            target/aarch64-apple-ios-sim/release/libe2ee_olm.a -o target/smoke-sim
+          strip target/smoke-sim
+          ls -l target/aarch64-apple-ios/release/libe2ee_olm.a target/aarch64-apple-ios-sim/release/libe2ee_olm.a target/smoke-sim
+          {
+            echo "### iOS"
+            echo "| file | bytes |"
+            echo "| --- | ---: |"
+            echo "| libe2ee_olm.a, device (arm64), all objects (not the app figure) | $(wc -c < target/aarch64-apple-ios/release/libe2ee_olm.a | tr -d " ") |"
+            echo "| libe2ee_olm.a, simulator (arm64), all objects (not the app figure) | $(wc -c < target/aarch64-apple-ios-sim/release/libe2ee_olm.a | tr -d " ") |"
+            echo "| smoke test linked for the simulator, stripped | $(wc -c < target/smoke-sim | tr -d " ") |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the iOS libraries
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2ee-olm-ios
+          path: |
+            native/e2ee_olm/target/aarch64-apple-ios/release/libe2ee_olm.a
+            native/e2ee_olm/target/aarch64-apple-ios-sim/release/libe2ee_olm.a
+          if-no-files-found: error
+          retention-days: 14

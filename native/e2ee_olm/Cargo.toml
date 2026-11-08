@@ -1,0 +1,29 @@
+[package]
+name = "e2ee_olm"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+description = "C interface over vodozemac's Olm, for the end-to-end encrypted one-to-one chat (ROADMAP Track E, M1)"
+
+# A standalone crate: it is not part of any parent workspace.
+[workspace]
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+# Apache-2.0. The Dart wrappers of vodozemac are AGPL-3.0 and are not used here.
+# Session version 1 needs no feature (E2EE_DESIGN.md, section 4, decision D10).
+vodozemac = "=0.11.2"
+
+# Tests also build version 2 sessions, to check that version 1 refuses them.
+# This feature stays out of the shipped library.
+[dev-dependencies]
+vodozemac = { version = "=0.11.2", features = ["experimental-session-config"] }
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+panic = "unwind"
+strip = "symbols"
