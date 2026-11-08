@@ -2575,6 +2575,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       child: SelectionArea(
                         child: ChatRichText(
                           text: text,
+                          collapsible: false,
                           baseStyle: TextStyle(
                             color: context.chat.text,
                             fontSize: 15,
@@ -4564,6 +4565,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             ),
                                           ChatRichText(
                                             text: text,
+                                            collapsible: true,
+                                            onExpandFullScreen: () =>
+                                                _showPinnedMessageFullView({
+                                              'id': doc.id,
+                                              'text': text,
+                                              'senderId': senderId,
+                                              'timestamp': timestamp,
+                                            }),
                                             baseStyle: TextStyle(
                                               color: context.chat.text,
                                               fontSize: 15.5,

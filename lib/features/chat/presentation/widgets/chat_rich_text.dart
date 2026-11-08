@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -29,6 +30,9 @@ class ChatRichText extends StatefulWidget {
   final String? tableTitle;
   final VoidCallback? onPinNotice;
   final VoidCallback? onImportLedger;
+  final bool collapsible;
+  final int collapseThreshold;
+  final VoidCallback? onExpandFullScreen;
 
   const ChatRichText({
     super.key,
@@ -40,6 +44,9 @@ class ChatRichText extends StatefulWidget {
     this.tableTitle,
     this.onPinNotice,
     this.onImportLedger,
+    this.collapsible = false,
+    this.collapseThreshold = 1400,
+    this.onExpandFullScreen,
   });
 
   @override
@@ -49,6 +56,7 @@ class ChatRichText extends StatefulWidget {
 class _ChatRichTextState extends State<ChatRichText> {
   final List<TapGestureRecognizer> _recognizers = [];
   late Set<int> _internalRevealed;
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -121,6 +129,23 @@ class _ChatRichTextState extends State<ChatRichText> {
       style = style.copyWith(
         color: Colors.transparent,
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0B1410)),
+      );
+    }
+
+    if (span.math) {
+      return WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Math.tex(
+            span.text,
+            textStyle: base,
+            onErrorFallback: (_) => Text(
+              '\$${span.text}\$',
+              style: base.copyWith(fontFamily: 'monospace'),
+            ),
+          ),
+        ),
       );
     }
 
@@ -280,7 +305,7 @@ class _ChatRichTextState extends State<ChatRichText> {
 
     final blocks = parseChatBlocks(widget.text);
 
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -309,6 +334,22 @@ class _ChatRichTextState extends State<ChatRichText> {
               code: block.code,
               language: block.language,
             )
+          else if (block is ChatMathBlock)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Math.tex(
+                  block.latex,
+                  mathStyle: MathStyle.display,
+                  textStyle: base,
+                  onErrorFallback: (_) => Text(
+                    r'$$' + block.latex + r'$$',
+                    style: base.copyWith(fontFamily: 'monospace'),
+                  ),
+                ),
+              ),
+            )
           else if (block is ChatDividerBlock)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -321,5 +362,144 @@ class _ChatRichTextState extends State<ChatRichText> {
         ],
       ],
     );
+
+    final isLong =
+        widget.collapsible && widget.text.length > widget.collapseThreshold;
+    if (!isLong) return content;
+
+    final isBn = Localizations.maybeLocaleOf(context)?.languageCode == 'bn';
+    final countLabel = _formatCharCount(widget.text.length);
+
+    if (!_expanded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 260),
+            child: ShaderMask(
+              shaderCallback: (Rect bounds) {
+                return const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black,
+                    Colors.black,
+                    Color(0x33000000),
+                    Colors.transparent,
+                  ],
+                  stops: [0.0, 0.65, 0.88, 1.0],
+                ).createShader(bounds);
+              },
+              blendMode: BlendMode.dstIn,
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: content,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              InkWell(
+                onTap: () => setState(() => _expanded = true),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.expand_more_rounded,
+                        size: 18,
+                        color: widget.isMine
+                            ? AppColors.mintGreen
+                            : AppColors.midGreen,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isBn
+                            ? 'পুরো বার্তাটি পড়ুন ($countLabel অক্ষর)'
+                            : 'Read more ($countLabel chars)',
+                        style: TextStyle(
+                          color: widget.isMine
+                              ? AppColors.mintGreen
+                              : AppColors.midGreen,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (widget.onExpandFullScreen != null)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 28, minHeight: 28),
+                  icon: Icon(
+                    Icons.open_in_full_rounded,
+                    size: 15,
+                    color: context.forest.text54,
+                  ),
+                  tooltip: isBn ? 'ফুলস্ক্রিন দেখুন' : 'Full screen',
+                  onPressed: widget.onExpandFullScreen,
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        content,
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: () => setState(() => _expanded = false),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.expand_less_rounded,
+                  size: 18,
+                  color:
+                      widget.isMine ? AppColors.mintGreen : AppColors.midGreen,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isBn ? 'সংক্ষেপ করুন' : 'Show less',
+                  style: TextStyle(
+                    color: widget.isMine
+                        ? AppColors.mintGreen
+                        : AppColors.midGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _formatCharCount(int len) {
+    if (len >= 1000) {
+      return '${(len / 1000).toStringAsFixed(1)}k';
+    }
+    return '$len';
   }
 }
