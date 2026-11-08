@@ -754,7 +754,9 @@ class VoiceRoomService {
             if (recv is num) totalRecv += recv.toInt();
           }
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     final avgRtt = rttCount > 0 ? totalRtt / rttCount : null;
