@@ -104,7 +104,8 @@ int32_t e2ee_account_from_pickle(const uint8_t *data, size_t len, const uint8_t 
 int32_t e2ee_verify_signature(const uint8_t *ed25519_key, const uint8_t *message, size_t message_len, const uint8_t *signature);
 
 /*
- * Sessions. Only version 2 sessions (full MAC) are made or accepted.
+ * Sessions. Only version 1 sessions are made or accepted. Version 1 truncates
+ * the MAC to 8 bytes, as libolm does (E2EE_DESIGN.md, decision D10).
  */
 
 /* Starts an outbound session from the peer's identity key and one of its one-time keys. */

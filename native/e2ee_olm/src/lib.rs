@@ -401,7 +401,8 @@ pub unsafe extern "C" fn e2ee_account_from_pickle(
 // ---------------------------------------------------------------------------
 
 /// Starts an outbound session from the peer's identity key and one of its
-/// one-time keys. Uses session version 2 (full MAC).
+/// one-time keys. Uses session version 1: the MAC is truncated to 8 bytes, as
+/// libolm does (E2EE_DESIGN.md, decision D10).
 ///
 /// # Safety
 /// `their_identity_key` and `their_one_time_key` must each be valid for 32
@@ -423,7 +424,7 @@ pub unsafe extern "C" fn e2ee_session_create_outbound(
             return E2EE_ERR_NULL;
         };
         let session = match (*account).inner.create_outbound_session(
-            SessionConfig::version_2(),
+            SessionConfig::version_1(),
             Curve25519PublicKey::from_bytes(*identity),
             Curve25519PublicKey::from_bytes(*one_time),
         ) {
@@ -469,7 +470,7 @@ pub unsafe extern "C" fn e2ee_session_create_inbound(
             _ => return E2EE_ERR_DECODE,
         };
         let result = match (*account).inner.create_inbound_session(
-            SessionConfig::version_2(),
+            SessionConfig::version_1(),
             Curve25519PublicKey::from_bytes(*identity),
             &message,
         ) {
@@ -1083,7 +1084,7 @@ mod tests {
     }
 
     #[test]
-    fn a_version_one_session_is_refused_so_the_mac_is_never_truncated() {
+    fn a_version_two_session_is_refused_so_one_format_is_accepted() {
         unsafe {
             let alice = e2ee_account_new();
             let bob = e2ee_account_new();
@@ -1105,17 +1106,18 @@ mod tests {
                 E2EE_OK
             );
 
-            // The C interface only makes version 2 sessions. This one is made with
-            // vodozemac directly, as a peer that still uses version 1 would make it.
-            let mut v1 = (*alice)
+            // The C interface only makes version 1 sessions. This one is made with
+            // vodozemac directly, as a peer that uses version 2 (full MAC) would make it.
+            // The dev-dependencies enable the feature that version 2 needs.
+            let mut v2 = (*alice)
                 .inner
                 .create_outbound_session(
-                    SessionConfig::version_1(),
+                    SessionConfig::version_2(),
                     Curve25519PublicKey::from_bytes(bob_identity),
                     Curve25519PublicKey::from_bytes(bob_one_time),
                 )
-                .expect("version 1 session");
-            let message = v1.encrypt(b"downgrade").expect("encrypt");
+                .expect("version 2 session");
+            let message = v2.encrypt(b"other format").expect("encrypt");
             let (kind, body) = message.to_parts();
             assert_eq!(kind, 0);
 

@@ -14,7 +14,12 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
 # Apache-2.0. The Dart wrappers of vodozemac are AGPL-3.0 and are not used here.
-# Version 2 sessions need the experimental feature (E2EE_DESIGN.md, section 4).
+# Session version 1 needs no feature (E2EE_DESIGN.md, section 4, decision D10).
+vodozemac = "=0.11.2"
+
+# Tests also build version 2 sessions, to check that version 1 refuses them.
+# This feature stays out of the shipped library.
+[dev-dependencies]
 vodozemac = { version = "=0.11.2", features = ["experimental-session-config"] }
 
 [profile.release]

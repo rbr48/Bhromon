@@ -49,7 +49,7 @@ This is the design and threat model that `ROADMAP.md` (Track E) requires before 
 
 ## 4. Protocol
 
-- **Session establishment:** Olm, the one-to-one protocol: a triple Diffie-Hellman key agreement (3DH) followed by the Double Ratchet. Identity keys are Curve25519 with Ed25519 signing keys. Each device publishes a batch of signed one-time keys and a fallback key. **Implementation choice:** use vodozemac session version 2, which keeps the full MAC. Version 1 truncates the MAC and exists for libolm compatibility. Version 2 sits behind the crate's `experimental-session-config` feature, which the M6 review must cover. Version 1 is the crate's default and the only version the libolm interop tests use, so the choice also decides which test vectors exist (section 12, D10).
+- **Session establishment:** Olm, the one-to-one protocol: a triple Diffie-Hellman key agreement (3DH) followed by the Double Ratchet. Identity keys are Curve25519 with Ed25519 signing keys. Each device publishes a batch of signed one-time keys and a fallback key. **Session version (D10, decided):** use vodozemac session version 1. It truncates the MAC to 8 bytes, as libolm does, and it is the crate's default. It needs no experimental feature, and it is the only version the libolm interoperability tests cover, so independent test vectors can check it. Version 2 (full MAC) is not used. Section 12 gives the reasons.
 - **Message body:** the encrypted payload is JSON. It carries the chat id, the sender and recipient user ids, the message id and the send time. Olm does not bind these identifiers, so the receiver must check that they match the outer envelope and the chat where the message was stored. Otherwise a server could move a ciphertext into another chat.
 - **Envelope:** version, algorithm id, sender and recipient device ids, message type (pre-key or ratchet message), and ciphertext.
 - **Idempotency:** the client's message id is the key. The VPS already saves a retry once (`media-server/chat.py:1160`, `save_message_once` at line 480), and receivers de-duplicate on the same id.
@@ -72,16 +72,16 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 
 **M1 host spike (Linux, done):** `vodozemac` 0.11.2 built here and passed a session round trip. It covered the pre-key message, a reply, ten messages across five round trips, a rejected replay of the pre-key message, and an encrypted account pickle that restores and rejects a wrong key. It took about 77 µs per message in release mode on this host. The stripped binary was 806 KB, which includes the Rust standard library. That is a host figure, not the Android or iOS cost. The spike itself stays outside the repository, and the crate below replaces it.
 
-**M1 crate (`native/e2ee_olm`, in the repository):** a thin C interface over `vodozemac` 0.11.2 with session version 2. It is ABI version 1 with 23 functions, declared in `native/e2ee_olm/include/e2ee_olm.h`. It covers accounts, one-time and fallback keys, Ed25519 signing and verification, sessions, and encrypted pickles for accounts and sessions. The Linux checks pass:
+**M1 crate (`native/e2ee_olm`, in the repository):** a thin C interface over `vodozemac` 0.11.2 with session version 1 (decision D10). It is ABI version 1 with 23 functions, declared in `native/e2ee_olm/include/e2ee_olm.h`. It covers accounts, one-time and fallback keys, Ed25519 signing and verification, sessions, and encrypted pickles for accounts and sessions. The Linux checks pass:
 
-- Nine Rust unit tests. They cover a session round trip with replay refusal, a pickle with a wrong-key refusal, signatures, fallback keys, a tampered message that is refused while the session keeps working, a pre-key message refused under another identity key, a version 1 session refused so the MAC cannot be truncated, and null and bad arguments.
+- Nine Rust unit tests. They cover a session round trip with replay refusal, a pickle with a wrong-key refusal, signatures, fallback keys, a tampered message that is refused while the session keeps working, a pre-key message refused under another identity key, a version 2 session refused, so only one session format is accepted, and null and bad arguments.
 - `clippy -D warnings`, `rustfmt`, and a C smoke test compiled with `-Wall -Wextra -Werror` against the static library.
 - A check that the 23 exported symbols match the header.
 - Licences of the 79 locked crates. All are permissive: MIT, Apache-2.0, BSD-3-Clause, Unlicense, Unicode-3.0, or a dual licence with a permissive option. None is GPL or AGPL.
 - Size. The stripped x86_64 shared library on Linux is 931,728 bytes. On Android, the stripped shared libraries are 804,968 bytes (arm64-v8a), 612,004 bytes (armeabi-v7a) and 951,480 bytes (x86_64), from the CI run [42475757425](https://github.com/rbr48/Bhromon/actions/runs/42475757425). The iOS static archives are about 24 MB each because they hold every object file, so they are not the app figure. The C smoke test linked for the iOS simulator at 15.5 is 1,913,112 bytes stripped. It references every export, so it is an upper bound for what the library adds to an app; the real figure comes once the library is linked into the app (M2).
 - Determinism. A rebuild on the same machine gives an identical SHA-256. Bit-identical output across machines needs path remapping, which is still open.
 
-`vodozemac`'s published crate has no complete test vectors. It has two libolm-format messages, used only by its parsing tests (`src/olm/messages/mod.rs`). Both carry version byte 3, the truncated-MAC format that session version 1 produces. The libolm interoperability tests in `vodozemac` use version 1 only. The configuration we ship is version 2, so no independent vectors cover it (section 12, D10).
+`vodozemac`'s published crate has no complete test vectors. It has two libolm-format messages, used only by its parsing tests (`src/olm/messages/mod.rs`). Both carry version byte 3, the truncated-MAC format of session version 1. The configuration we ship is also version 1, so the planned gate is interoperability with libolm itself. Generate Olm version 1 conversations with libolm, which is packaged as `libolm-dev` in the Ubuntu archive, and check both directions against the shipped library. That is not yet done (section 11, M1).
 
 ## 6. Keys and their lifecycle
 
@@ -119,7 +119,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 
 ## 10. Testing
 
-- Test vectors. Independent vectors exist only for version 1, which the libolm tests use. We ship version 2, so the gate needs the owner's decision on what counts as a vector (section 12, D10). Plus our own envelope and payload tests.
+- Test vectors. Libolm interoperability, both directions, for session version 1 (decision D10). Not yet generated. Plus our own envelope and payload tests.
 - Property tests for ratchet sequences: out-of-order delivery, skipped keys and replays.
 - Fuzzing of envelope parsing.
 - Rules tests on the emulator: encrypted chats refuse `text` and malformed envelopes.
@@ -130,7 +130,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 ## 11. Milestones and gates
 
 - **M0 Design and threat model** (this document). Gate: the owner decides D1 to D10.
-- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the crate, the C interface, the tests, the licence check and the CI workflow (`.github/workflows/e2ee_native.yml`) are in place (section 5). The workflow passed on Linux, Android and iOS in run [42475757425](https://github.com/rbr48/Bhromon/actions/runs/42475757425). Open: the owner's acceptance of the binary-size cost, the test-vector decision (D10), and bit-identical builds across machines.
+- **M1 Library spike.** Build the `vodozemac` bindings for Android and iOS in CI, check the license, pass the test vectors, and measure binary size. Gate: the build is reproducible in CI and the binary-size cost is accepted. Estimate the rest after this. Status: the crate, the C interface, the tests, the licence check and the CI workflow (`.github/workflows/e2ee_native.yml`) are in place (section 5). The workflow passed on Linux, Android and iOS in run [42475757425](https://github.com/rbr48/Bhromon/actions/runs/42475757425), on the version 2 code. Decision D10 changed the session version, so the workflow runs again on the pull request. Open: the owner's acceptance of the binary-size cost, the libolm interoperability vectors for session version 1 (not yet generated), and bit-identical builds across machines.
 - **M2 Crypto module behind the flag.** Local only: account, sessions, envelope, verification. Unit tests and vectors. No server changes yet.
 - **M3 Server support.** Envelope storage, generic push, rules and tests. Still behind the flag.
 - **M4 Client send and receive** for internal test accounts, with the verification screen.
@@ -140,7 +140,7 @@ The repository is Apache-2.0 (`LICENSE`). A library's license must allow the app
 
 ## 12. Decisions for the owner
 
-Decided on 2026-11-08 with the recommendations, except D6, D9 and D10. D6 and D9 were not covered by a recommendation. D10 has one, but it changes the test-vector gate, so the owner decides it.
+Decided on 2026-11-08 with the recommendations, except D6 and D9. Those were not covered by a recommendation, so they stay open. D10 was delegated to the implementer, and it is decided below.
 
 - **D1 Library: decided.** Olm through the Apache-2.0 `vodozemac` crate, with our own bindings. Signal's own `libsignal` was not checked, and the chosen option does not depend on it.
 - **D2 Lost device: decided.** Lost history is accepted in the first slice. An encrypted key backup is a separate design.
@@ -151,7 +151,7 @@ Decided on 2026-11-08 with the recommendations, except D6, D9 and D10. D6 and D9
 - **D7 Key collection: decided.** `e2ee_keys/{uid}`.
 - **D8 Calls copy: done.** The call label now reads "Encrypted call" in English and "এনক্রিপ্টেড কল" in Bengali. It no longer says "end-to-end".
 - **D9 Budget and reviewer for M6: open.**
-- **D10 Session version for the first slice: open.** Version 2 keeps the full MAC. Version 1 truncates it to 8 bytes, and it is the crate's default and the only version the libolm interop tests use. Version 2 is behind the crate's experimental feature. Version 2 has no independent test vectors, while version 1 has libolm's. Recommendation: keep version 2, because the threat model favours the full MAC. Count vodozemac's own version 2 tests, our tests and the M6 review as the vector gate. If you want independent vectors, choose version 1 and accept the 8-byte MAC.
+- **D10 Session version for the first slice: decided, version 1.** The owner asked the implementer to decide. Version 1 is the version libolm produces and checks, so independent interoperability tests can check it. It truncates the MAC to 8 bytes, the same truncation libolm uses. Version 2 keeps the full MAC, but no independent implementation checks it, and it sits behind the crate's experimental feature. The threat model does not need a full MAC. Forging a truncated MAC takes about 2^64 attempts, and that holds only if the app sends nothing to the server when decryption fails, which is a requirement for M2. The bigger risk is an implementation error, and independent vectors are the best check for it. Consequences: the library creates and accepts only version 1 sessions, the experimental feature stays out of the shipped build, and the M1 gate needs libolm interoperability vectors. Revisit only if a review rejects the 8-byte MAC, and do it before any release.
 
 ## 13. What this document does not claim
 
