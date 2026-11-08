@@ -228,7 +228,7 @@ class SamityPayout {
         'recordedByEmail': recordedBy,
         if (receiptUrl != null && receiptUrl!.isNotEmpty)
           'receiptUrl': receiptUrl,
-        'isVerified': isVerified,
+        if (isVerified) 'isVerified': true,
         if (verifiedAt != null) 'verifiedAt': writeDate(verifiedAt!),
       };
 

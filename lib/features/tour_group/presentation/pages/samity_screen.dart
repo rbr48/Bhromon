@@ -1271,7 +1271,7 @@ class _PayoutRecordDialogState extends State<_PayoutRecordDialog> {
               autofocus: true,
               decoration: InputDecoration(
                 labelText: l10n.translate('samity_payout_amount'),
-                suffixText: l10n.translate('unit_taka'),
+                suffixText: '৳',
                 errorText: _error,
               ),
               onSubmitted: (_) => _save(),
@@ -1293,11 +1293,11 @@ class _PayoutRecordDialogState extends State<_PayoutRecordDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(l10n.translate('btn_cancel')),
+          child: Text(l10n.translate('tour_cancel')),
         ),
         FilledButton(
           onPressed: _save,
-          child: Text(l10n.translate('btn_save')),
+          child: Text(l10n.translate('tour_save')),
         ),
       ],
     );

@@ -58,7 +58,7 @@ void main() {
 
       final fields = payout.toFields('admin@example.com');
       expect(fields.containsKey('receiptUrl'), isFalse);
-      expect(fields['isVerified'], isFalse);
+      expect(fields.containsKey('isVerified'), isFalse);
       expect(fields.containsKey('verifiedAt'), isFalse);
 
       final restored = SamityPayout.fromMap({
