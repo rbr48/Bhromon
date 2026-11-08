@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bhromon/features/chat/domain/e2ee/e2ee_exceptions.dart';
 import 'package:bhromon/features/chat/domain/e2ee/olm_engine.dart';
 import 'package:crypto/crypto.dart';
 
@@ -69,6 +70,33 @@ Map<String, dynamic> _decodeFields(Uint8List bytes, String operation) {
   }
 }
 
+/// A pickle is the state, its MAC under the key, so another key or an altered pickle
+/// is refused. It is not encryption: the fake is only for the device logic.
+Uint8List _pickle(Uint8List key, Map<String, Object?> state) {
+  final body = utf8.encode(jsonEncode(state));
+  return _encodeFields({
+    'body': base64.encode(body),
+    'mac': base64.encode(_hash([...key, ...body])),
+  });
+}
+
+Map<String, dynamic> _unpickle(
+    Uint8List pickle, Uint8List key, String operation) {
+  final fields = _decodeFields(pickle, operation);
+  final body = fields['body'];
+  final mac = fields['mac'];
+  if (body is! String || mac is! String) {
+    throw OlmEngineException(operation, -2);
+  }
+  final bytes = base64.decode(body);
+  if (base64.encode(_hash([...key, ...bytes])) != mac) {
+    throw OlmEngineException(operation, -4);
+  }
+  return jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+}
+
+Uint8List _bytesOf(Object? value) => base64.decode(value as String);
+
 Uint8List _open(
   Uint8List key,
   String sessionId,
@@ -101,7 +129,9 @@ class FakeOlmEngine implements OlmEngine {
 
   @override
   OlmAccount restoreAccount(Uint8List pickle, Uint8List key) {
-    throw UnsupportedError('the fake engine does not pickle');
+    FakeOlmEngine._checkKeyLength(key);
+    final state = _unpickle(pickle, key, 'account_from_pickle');
+    return _FakeAccount.fromState(this, state);
   }
 
   @override
@@ -153,7 +183,24 @@ class FakeOlmEngine implements OlmEngine {
 
   @override
   OlmSession restoreSession(Uint8List pickle, Uint8List key) {
-    throw UnsupportedError('the fake engine does not pickle');
+    FakeOlmEngine._checkKeyLength(key);
+    final state = _unpickle(pickle, key, 'session_from_pickle');
+    return _FakeSession.fromState(state);
+  }
+
+  @override
+  Uint8List oneTimeKeyOfPreKey(Uint8List prekeyMessage) {
+    final Map<String, dynamic> fields;
+    try {
+      fields = _decodeFields(prekeyMessage, 'one_time_key_of_pre_key');
+    } on OlmEngineException {
+      throw const E2eeFormatException('the message is not a pre-key message');
+    }
+    final oneTimeKey = fields['otk'];
+    if (oneTimeKey is! String) {
+      throw const E2eeFormatException('the message is not a pre-key message');
+    }
+    return base64.decode(oneTimeKey);
   }
 
   @override
@@ -189,6 +236,22 @@ class _FakeAccount implements OlmAccount {
         _ed = engine.freshKey('ed'),
         _engine = engine;
 
+  _FakeAccount.fromState(FakeOlmEngine engine, Map<String, dynamic> state)
+      : _engine = engine,
+        _curve = _bytesOf(state['curve']),
+        _ed = _bytesOf(state['ed']),
+        _fallback =
+            state['fallback'] == null ? null : _bytesOf(state['fallback']),
+        _previousFallback = state['previousFallback'] == null
+            ? null
+            : _bytesOf(state['previousFallback']),
+        _fallbackPublished = state['fallbackPublished'] as bool {
+    final oneTime = state['oneTime'] as Map<String, dynamic>;
+    _oneTime.addAll({
+      for (final entry in oneTime.entries) entry.key: entry.value as bool,
+    });
+  }
+
   final FakeOlmEngine _engine;
   final Uint8List _curve;
   final Uint8List _ed;
@@ -196,6 +259,7 @@ class _FakeAccount implements OlmAccount {
   /// One-time keys by their base64 value; true once published.
   final Map<String, bool> _oneTime = {};
   Uint8List? _fallback;
+  Uint8List? _previousFallback;
   bool _fallbackPublished = false;
 
   @override
@@ -235,8 +299,11 @@ class _FakeAccount implements OlmAccount {
     return Uint8List.fromList(fallback);
   }
 
+  /// As the native engine does, the fallback key being replaced stays valid for
+  /// messages already on their way.
   @override
   void generateFallbackKey() {
+    _previousFallback = _fallback;
     _fallback = _engine.freshKey('fallback');
     _fallbackPublished = false;
   }
@@ -246,7 +313,16 @@ class _FakeAccount implements OlmAccount {
 
   @override
   Uint8List pickle(Uint8List key) {
-    throw UnsupportedError('the fake engine does not pickle');
+    FakeOlmEngine._checkKeyLength(key);
+    return _pickle(key, {
+      'curve': base64.encode(_curve),
+      'ed': base64.encode(_ed),
+      'oneTime': _oneTime,
+      'fallback': _fallback == null ? null : base64.encode(_fallback!),
+      'previousFallback':
+          _previousFallback == null ? null : base64.encode(_previousFallback!),
+      'fallbackPublished': _fallbackPublished,
+    });
   }
 
   @override
@@ -255,8 +331,10 @@ class _FakeAccount implements OlmAccount {
   /// Whether this account holds [key] as a one-time or fallback key.
   bool holds(Uint8List key) {
     final fallback = _fallback;
+    final previous = _previousFallback;
     return _oneTime.containsKey(base64.encode(key)) ||
-        (fallback != null && _same(fallback, key));
+        (fallback != null && _same(fallback, key)) ||
+        (previous != null && _same(previous, key));
   }
 
   /// A one-time key is used up once a session is made from it. The fallback key is
@@ -274,6 +352,13 @@ class _FakeSession implements OlmSession {
         _key = key,
         _prekeyIdentity = prekeyIdentity,
         _prekeyOneTimeKey = prekeyOneTimeKey;
+
+  _FakeSession.fromState(Map<String, dynamic> state)
+      : _id = state['id'] as String,
+        _key = _bytesOf(state['key']),
+        _prekeyIdentity = state['ik'] == null ? null : _bytesOf(state['ik']),
+        _prekeyOneTimeKey =
+            state['otk'] == null ? null : _bytesOf(state['otk']);
 
   final String _id;
   final Uint8List _key;
@@ -318,7 +403,14 @@ class _FakeSession implements OlmSession {
 
   @override
   Uint8List pickle(Uint8List key) {
-    throw UnsupportedError('the fake engine does not pickle');
+    FakeOlmEngine._checkKeyLength(key);
+    return _pickle(key, {
+      'id': _id,
+      'key': base64.encode(_key),
+      'ik': _prekeyIdentity == null ? null : base64.encode(_prekeyIdentity!),
+      'otk':
+          _prekeyOneTimeKey == null ? null : base64.encode(_prekeyOneTimeKey!),
+    });
   }
 
   @override

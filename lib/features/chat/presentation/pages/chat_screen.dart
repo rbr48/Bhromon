@@ -43,6 +43,9 @@ import '../widgets/chat_media_caption_screen.dart';
 import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
+import '../../data/e2ee/e2ee_chat_controller.dart';
+import '../../domain/e2ee/e2ee_service.dart';
+import 'e2ee_verification_screen.dart';
 import '../../data/chat_draft_store.dart';
 import '../../data/chat_deletion_service.dart';
 import '../../domain/chat_deletion.dart';
@@ -123,6 +126,7 @@ class _PendingTextMessage {
   final ReplyMessageInfo? replyTo;
   final DateTime createdAt;
   bool isFailed;
+  Map<String, Object>? envelope;
 
   _PendingTextMessage({
     required this.id,
@@ -147,6 +151,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _isRecordingVoice = false;
   bool _showEmojiPicker = false;
   bool _showFormatting = false;
+  // End-to-end encryption (E2EE_DESIGN.md, section 9). A chat is encrypted only when
+  // it was created that way, in a build that turns encryption on.
+  bool _chatIsEncrypted = false;
+  bool _chatDocExists = false;
+  final Map<String, String> _e2eeTexts = {};
+  final Set<String> _e2eeUnreadable = {};
 
   void _updatePresence() {
     final authState = context.read<AuthCubit>().state;
@@ -309,6 +319,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _subscribeToLatestMessages();
       }
       final data = snap.data() as Map<String, dynamic>?;
+      final encrypted = data?['e2ee'] == true;
+      if (encrypted != _chatIsEncrypted || snap.exists != _chatDocExists) {
+        setState(() {
+          _chatIsEncrypted = encrypted;
+          _chatDocExists = snap.exists;
+        });
+      }
       final secs = (data?['disappearingTimerSeconds'] as num?)?.toInt() ?? 0;
       final authState = context.read<AuthCubit>().state;
       final uid = authState is Authenticated ? authState.profile.uid : '';
@@ -389,6 +406,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (incoming.length < _pageSize) _hasMoreMessages = false;
       });
 
+      unawaited(_resolveEncryptedMessages(incoming));
       // Automatically mark unread incoming messages as seen on snapshot receive
       try {
         final authState = context.read<AuthCubit>().state;
@@ -445,6 +463,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (snap.docs.length < _pageSize) _hasMoreMessages = false;
         _isLoadingMore = false;
       });
+      unawaited(_resolveEncryptedMessages(snap.docs));
     } catch (error, stackTrace) {
       logWarning('Could not load earlier messages', error, stackTrace);
       if (mounted) setState(() => _isLoadingMore = false);
@@ -681,6 +700,205 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }).catchError((Object e) {
       logWarning('Chat document write error: $e');
     });
+  }
+
+  /// The text a chat list shows for an encrypted message. No words leave the device.
+  static const String _encryptedPreview = '\u{1F512}';
+
+  /// Whether this chat is, or is about to be, encrypted. A chat that exists keeps
+  /// its choice. A new chat is encrypted when this device and the other person are
+  /// both set up for it. Nothing is encrypted retroactively (decision D4).
+  Future<bool> _chatIsOrWillBeEncrypted(String currentUid) async {
+    if (!E2eeChatController.enabledInBuild) return false;
+    final otherUid = _resolveOtherUid(currentUid);
+    if (otherUid == null || otherUid.isEmpty) return false;
+    if (_sharedTourId == null || _otherEmail == null) return false;
+    if (_chatDocExists) return _chatIsEncrypted;
+    // The chat stream may not have reported the chat yet, so ask the server once.
+    final snapshot = await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .get();
+    if (snapshot.exists) return snapshot.data()?['e2ee'] == true;
+    final service = E2eeChatController.instance.serviceFor(currentUid);
+    if (service == null) return false;
+    if (await service.status() != E2eeSetupStatus.ready) return false;
+    return service.recipientReady(otherUid);
+  }
+
+  /// Creates the chat of an encrypted chat before its first message. The rules read
+  /// the chat's flag when they check each message, so the flag must come first.
+  Future<void> _createEncryptedChatDocument(String currentUid) async {
+    final otherUid = _resolveOtherUid(currentUid);
+    if (otherUid == null || otherUid.isEmpty) return;
+    final authState = context.read<AuthCubit>().state;
+    final myProfile = authState is Authenticated ? authState.profile : null;
+    final myName = myProfile?.displayName ?? _myEmail;
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .set({
+      'participants': FieldValue.arrayUnion([currentUid, otherUid]),
+      'sharedTourId': _sharedTourId,
+      'memberEmails': {currentUid: _myEmail, otherUid: _otherEmail},
+      'participantProfiles': {
+        currentUid: {'displayName': myName},
+      },
+      'e2ee': true,
+    }, SetOptions(merge: true));
+    if (!mounted) return;
+    setState(() {
+      _chatDocExists = true;
+      _chatIsEncrypted = true;
+    });
+    if (_messagesListener.documentWriteConfirmed()) {
+      _subscribeToLatestMessages();
+    }
+  }
+
+  /// The envelope of an encrypted message. It is made once and kept on the bubble,
+  /// so a retry sends the same message. Null when it cannot be made, after telling
+  /// the user why.
+  Future<Map<String, Object>?> _envelopeFor(
+    _PendingTextMessage pending,
+    String currentUid,
+    String? recipientUid,
+  ) async {
+    final existing = pending.envelope;
+    if (existing != null) return existing;
+    final service = E2eeChatController.instance.serviceFor(currentUid);
+    if (service == null || recipientUid == null || recipientUid.isEmpty) {
+      _showEncryptionMessage('e2ee_not_set_up_here');
+      return null;
+    }
+    try {
+      final envelope = await service.encryptText(
+        chatId: widget.chatId,
+        messageId: pending.id,
+        recipientUid: recipientUid,
+        text: pending.text,
+        sentAtMillis: DateTime.now().millisecondsSinceEpoch,
+      );
+      pending.envelope = envelope;
+      return envelope;
+    } on E2eeNotReadyException catch (error, stackTrace) {
+      logWarning('Encrypted message not sent', error, stackTrace);
+      final status = await service.status();
+      _showEncryptionMessage(status == E2eeSetupStatus.ready
+          ? 'e2ee_recipient_not_ready'
+          : 'e2ee_not_set_up_here');
+      return null;
+    } catch (error, stackTrace) {
+      logWarning('Encrypted message not sent', error, stackTrace);
+      _showEncryptionMessage('e2ee_send_failed');
+      return null;
+    }
+  }
+
+  /// Reads the encrypted messages among [docs] that are not read yet. A message is
+  /// read once, and its text is kept on this device.
+  Future<void> _resolveEncryptedMessages(
+    Iterable<DocumentSnapshot> docs,
+  ) async {
+    if (!E2eeChatController.enabledInBuild) return;
+    final authState = context.read<AuthCubit>().state;
+    final currentUid = authState is Authenticated ? authState.profile.uid : '';
+    final service = E2eeChatController.instance.serviceFor(currentUid);
+    if (service == null) return;
+    for (final doc in docs) {
+      final data = doc.data() as Map<String, dynamic>?;
+      final envelope = data?['envelope'];
+      if (envelope is! Map ||
+          _e2eeTexts.containsKey(doc.id) ||
+          _e2eeUnreadable.contains(doc.id)) {
+        continue;
+      }
+      try {
+        final text = await service.decryptMessage(
+          chatId: widget.chatId,
+          messageId: doc.id,
+          senderUid: (data?['senderId'] as String?) ?? '',
+          envelope: Map<String, dynamic>.from(envelope),
+        );
+        if (!mounted) return;
+        setState(() => _e2eeTexts[doc.id] = text);
+      } catch (error, stackTrace) {
+        logWarning('An encrypted message could not be read', error, stackTrace);
+        if (!mounted) return;
+        setState(() => _e2eeUnreadable.add(doc.id));
+      }
+    }
+  }
+
+  /// The data of a message as the list shows it. An encrypted message shows its
+  /// text once it has been read on this device.
+  Map<String, dynamic> _messageData(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    if (data['envelope'] == null) return data;
+    final String shown;
+    final text = _e2eeTexts[doc.id];
+    if (text != null) {
+      shown = text;
+    } else if (_e2eeUnreadable.contains(doc.id)) {
+      shown = context.l10n.translate('e2ee_message_unreadable');
+    } else {
+      shown = context.l10n.translate('e2ee_decrypting');
+    }
+    return {...data, 'text': shown};
+  }
+
+  /// The encryption state of the chat, under the contact's name. A tap opens the
+  /// safety number of the contact.
+  Widget _encryptionBadge(String otherName, String? otherUid) {
+    final encrypted = _chatIsEncrypted;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: otherUid == null || otherUid.isEmpty
+          ? null
+          : () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => E2eeVerificationScreen(
+                    otherUid: otherUid,
+                    otherName: otherName,
+                  ),
+                ),
+              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            encrypted ? Icons.lock_outline : Icons.lock_open_outlined,
+            size: 12,
+            color: context.chat.text70,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              context.l10n.translate(
+                encrypted ? 'e2ee_badge_encrypted' : 'e2ee_badge_not_encrypted',
+              ),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.chat.text70, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Attachments are not sent in an encrypted chat yet. Tells the user and returns
+  /// true when the send must stop.
+  bool _refusedInEncryptedChat() {
+    if (!_chatIsEncrypted) return false;
+    _showEncryptionMessage('e2ee_attachments_unavailable');
+    return true;
+  }
+
+  void _showEncryptionMessage(String key) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.translate(key))),
+    );
   }
 
   String? _resolveOtherUid(String currentUid) {
@@ -1040,7 +1258,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
 
     // Handle /split command
-    if (text.toLowerCase().startsWith('/split ')) {
+    if (!_chatIsEncrypted && text.toLowerCase().startsWith('/split ')) {
       final parts = text.substring(7).trim().split(' ');
       final amount = double.tryParse(parts.first) ?? 0.0;
       final splitTitle =
@@ -1104,18 +1322,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     required String currentUid,
     required String currentName,
   }) async {
-    _ensureChatDocument(currentUid);
+    final newMessageLabel = context.l10n.translate('e2ee_new_message');
+    final encrypted = await _chatIsOrWillBeEncrypted(currentUid);
+    if (encrypted && !_chatDocExists) {
+      await _createEncryptedChatDocument(currentUid);
+    } else {
+      _ensureChatDocument(currentUid);
+    }
     final resolvedOtherUid = _resolveOtherUid(currentUid);
-    final replyPayload = pending.replyTo?.toMap();
     final hasRecipient =
         resolvedOtherUid != null && resolvedOtherUid.isNotEmpty;
+    // An encrypted message carries its envelope, not its text, quote or preview.
+    final Map<String, Object>? envelope = encrypted
+        ? await _envelopeFor(pending, currentUid, resolvedOtherUid)
+        : null;
+    if (encrypted && envelope == null) {
+      if (mounted) setState(() => pending.isFailed = true);
+      return;
+    }
+    final replyPayload = encrypted ? null : pending.replyTo?.toMap();
 
     // Direct VPS dispatch: reliable, and it uses no Firestore quota.
     final vpsSave = hasRecipient
         ? VpsChatService().sendMessage(
             chatId: widget.chatId,
             recipientId: resolvedOtherUid,
-            text: pending.text,
+            text: envelope == null ? pending.text : null,
+            envelope: envelope,
             type: 'text',
             senderName: currentName,
             replyTo: replyPayload,
@@ -1135,7 +1368,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       await msgRef.set(<String, dynamic>{
         'senderId': currentUid,
         'type': 'text',
-        'text': pending.text,
+        if (envelope != null) 'envelope': envelope else 'text': pending.text,
         if (replyPayload != null) 'replyTo': replyPayload,
         'seen': false,
         'status': 'sent', // delivery states: sent → delivered → read
@@ -1162,7 +1395,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     // Update chat metadata asynchronously without blocking
     final chatMeta = _buildChatMeta(
-      lastMessage: pending.text,
+      lastMessage: encrypted ? _encryptedPreview : pending.text,
       lastMessageType: 'text',
       currentUid: currentUid,
       currentName: currentName,
@@ -1181,7 +1414,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       recipientUid: resolvedOtherUid,
       currentUid: currentUid,
       currentName: currentName,
-      body: pending.text,
+      body: encrypted ? newMessageLabel : pending.text,
     );
   }
 
@@ -1193,6 +1426,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String? caption,
     bool isViewOnce = false,
   }) async {
+    if (_refusedInEncryptedChat()) return;
     final l10n = context.l10n;
     final uploadId = const Uuid().v4();
     final type = pickResult.type;
@@ -1383,6 +1617,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String? caption,
     bool isViewOnce = false,
   }) async {
+    if (_refusedInEncryptedChat()) return;
     if (xFiles.isEmpty) return;
 
     if (xFiles.length == 1) {
@@ -1608,6 +1843,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String currentUid,
     String currentName,
   ) async {
+    if (_refusedInEncryptedChat()) return;
     final l10n = context.l10n;
     final uploadId = const Uuid().v4();
     try {
@@ -1727,6 +1963,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String currentUid,
     String currentName,
   ) async {
+    if (_refusedInEncryptedChat()) return;
     final l10n = context.l10n;
     final uploadId = const Uuid().v4();
     try {
@@ -1858,6 +2095,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String currentUid,
     String currentName,
   ) async {
+    if (_refusedInEncryptedChat()) return;
     final l10n = context.l10n;
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
@@ -1948,6 +2186,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String currentUid,
     String currentName,
   ) async {
+    if (_refusedInEncryptedChat()) return;
     final l10n = context.l10n;
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
@@ -2035,6 +2274,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// one goes through the same path as a file picked here, so the chat's upload rules
   /// and failure handling apply. It runs once, after the first frame.
   Future<void> _sendSharedFiles() async {
+    if (_refusedInEncryptedChat()) return;
     final files = widget.sharedFiles;
     if (_sharedFilesSent || files == null || files.isEmpty) return;
     _sharedFilesSent = true;
@@ -2343,6 +2583,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _startEditingMessage(QueryDocumentSnapshot doc) {
+    if (_chatIsEncrypted) return;
     final data = doc.data() as Map<String, dynamic>;
     final text = (data['text'] as String?) ?? '';
     setState(() {
@@ -2648,6 +2889,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _toggleReaction(
       QueryDocumentSnapshot doc, String emoji, String currentUid) async {
     setState(() => _reactionTargetDoc = null);
+    if (_chatIsEncrypted) return;
     final data = doc.data() as Map<String, dynamic>?;
     final reactions = Map<String, dynamic>.from(
         (data?['reactions'] as Map<String, dynamic>?) ?? {});
@@ -2679,6 +2921,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _toggleStarSelectedMessages(String currentUid) async {
+    if (_chatIsEncrypted) return;
     for (final docId in _selectedMessageIds) {
       try {
         final doc = _allMessages.firstWhere((d) => d.id == docId);
@@ -3402,6 +3645,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       ],
                                     ),
                                     const SizedBox(height: 2),
+                                    if (E2eeChatController.enabledInBuild &&
+                                        _chatDocExists)
+                                      _encryptionBadge(
+                                          otherName, resolvedOtherUid),
                                     // Typing / Online / Last Seen status stream (WhatsApp parity)
                                     StreamBuilder<DocumentSnapshot>(
                                       stream: _chatDocStream,
@@ -3920,7 +4167,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 final realIndex =
                                     uploadIndex - _pendingUploads.length;
                                 final doc = docs[realIndex];
-                                final data = doc.data() as Map<String, dynamic>;
+                                final data = _messageData(doc);
                                 final String msgType =
                                     (data['type'] as String?) ?? 'text';
                                 // A call log is a record, not a message: it sits

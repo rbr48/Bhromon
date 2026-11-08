@@ -26,6 +26,7 @@ Map<String, dynamic> sendMessageBody({
   Map<String, dynamic>? replyTo,
   Map<String, dynamic>? metadata,
   String? clientMessageId,
+  Map<String, Object>? envelope,
 }) {
   return {
     'chatId': chatId,
@@ -40,6 +41,8 @@ Map<String, dynamic> sendMessageBody({
     'replyTo': replyTo,
     'metadata': metadata,
     if (clientMessageId != null) 'clientMessageId': clientMessageId,
+    // An encrypted message carries its envelope in place of the text.
+    if (envelope != null) 'envelope': envelope,
   };
 }
 
@@ -441,6 +444,7 @@ class VpsChatService {
     Map<String, dynamic>? replyTo,
     Map<String, dynamic>? metadata,
     String? clientMessageId,
+    Map<String, Object>? envelope,
   }) async {
     try {
       final idToken = await _getIdToken();
@@ -459,6 +463,7 @@ class VpsChatService {
         replyTo: replyTo,
         metadata: metadata,
         clientMessageId: clientMessageId,
+        envelope: envelope,
       );
 
       final res = await _dio.post<Map<String, dynamic>>(

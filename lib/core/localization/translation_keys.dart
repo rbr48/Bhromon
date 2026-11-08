@@ -199,6 +199,40 @@ class TranslationKeys {
       'chat_delete_for_me': 'DELETE FOR ME',
       'chat_delete_for_everyone': 'DELETE FOR EVERYONE',
       'chat_edit_failed': "Couldn't save your edit. Please try again.",
+      'e2ee_verify_title': 'Safety number',
+      'e2ee_verify_intro':
+          'Compare these digits with {name} in person or on a call. If they match, this chat is verified.',
+      'e2ee_verify_no_number':
+          'The safety number appears after you and {name} have exchanged a message.',
+      'e2ee_verified': 'Verified',
+      'e2ee_not_verified': 'Not verified yet',
+      'e2ee_mark_verified': 'Mark as verified',
+      'e2ee_key_changed_title': 'Security key changed',
+      'e2ee_key_changed_body':
+          "{name}'s security key has changed. This can happen when they set up encryption on a new device. Compare the new safety number before you trust it.",
+      'e2ee_trust_new_key': 'Trust new key',
+      'e2ee_setup_title': 'Set up encryption on this device',
+      'e2ee_setup_body':
+          "Your encryption keys are on another device. Setting up here makes this device the one that reads your encrypted chats. The other device stops reading them, and older encrypted messages can't be read here.",
+      'e2ee_setup_action': 'Set up on this device',
+      'e2ee_setup_confirm_title': 'Set up encryption here?',
+      'e2ee_setup_failed':
+          "Couldn't set up encryption. Check your connection and try again.",
+      'e2ee_unavailable':
+          "Encryption isn't available in this build or on this device.",
+      'e2ee_cancel': 'Cancel',
+      'e2ee_badge_encrypted': 'Encrypted',
+      'e2ee_badge_not_encrypted': 'Not encrypted',
+      'e2ee_new_message': 'New message',
+      'e2ee_message_unreadable': "This message can't be read on this device.",
+      'e2ee_decrypting': 'Decrypting…',
+      'e2ee_attachments_unavailable':
+          'Photos, files and other attachments are not available in encrypted chats yet.',
+      'e2ee_not_set_up_here': "Encryption isn't set up on this device yet.",
+      'e2ee_recipient_not_ready':
+          'They need to set up encryption before you can send them an encrypted message.',
+      'e2ee_send_failed':
+          "Couldn't send this encrypted message. Please try again.",
       'chat_delete_failed':
           "Couldn't delete. Check your connection and try again.",
       'chat_delete_chat_title': 'Delete chat?',
@@ -659,6 +693,39 @@ class TranslationKeys {
       'chat_delete_for_me': 'আমার জন্য মুছুন',
       'chat_delete_for_everyone': 'সবার জন্য মুছুন',
       'chat_edit_failed': 'বার্তা সম্পাদনা করা যায়নি। আবার চেষ্টা করুন।',
+      'e2ee_verify_title': 'নিরাপত্তা নম্বর',
+      'e2ee_verify_intro':
+          '{name}-এর সঙ্গে সামনাসামনি বা কলে এই সংখ্যাগুলো মিলিয়ে দেখুন। মিললে এই চ্যাট যাচাই করা হবে।',
+      'e2ee_verify_no_number':
+          'আপনি আর {name} একটি বার্তা বিনিময় করলে নিরাপত্তা নম্বর এখানে দেখা যাবে।',
+      'e2ee_verified': 'যাচাই করা হয়েছে',
+      'e2ee_not_verified': 'এখনো যাচাই করা হয়নি',
+      'e2ee_mark_verified': 'যাচাই হিসেবে চিহ্নিত করুন',
+      'e2ee_key_changed_title': 'নিরাপত্তা কী বদলেছে',
+      'e2ee_key_changed_body':
+          '{name}-এর নিরাপত্তা কী বদলেছে। নতুন ডিভাইসে এনক্রিপশন সেট আপ করলে এমন হতে পারে। বিশ্বাস করার আগে নতুন নিরাপত্তা নম্বর মিলিয়ে নিন।',
+      'e2ee_trust_new_key': 'নতুন কী বিশ্বাস করুন',
+      'e2ee_setup_title': 'এই ডিভাইসে এনক্রিপশন সেট আপ করুন',
+      'e2ee_setup_body':
+          'আপনার এনক্রিপশন কী অন্য একটি ডিভাইসে আছে। এখানে সেট আপ করলে এই ডিভাইস এনক্রিপ্টেড চ্যাট পড়বে। অন্য ডিভাইসে এনক্রিপ্টেড চ্যাট আর পড়া যাবে না, এবং আগের এনক্রিপ্টেড বার্তা এখানে পড়া যাবে না।',
+      'e2ee_setup_action': 'এই ডিভাইসে সেট আপ করুন',
+      'e2ee_setup_confirm_title': 'এখানে এনক্রিপশন সেট আপ করবেন?',
+      'e2ee_setup_failed':
+          'এনক্রিপশন সেট আপ করা যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।',
+      'e2ee_unavailable': 'এই বিল্ড বা এই ডিভাইসে এনক্রিপশন পাওয়া যায় না।',
+      'e2ee_cancel': 'বাতিল',
+      'e2ee_badge_encrypted': 'এনক্রিপ্টেড',
+      'e2ee_badge_not_encrypted': 'এনক্রিপ্টেড নয়',
+      'e2ee_new_message': 'নতুন বার্তা',
+      'e2ee_message_unreadable': 'এই বার্তাটি এই ডিভাইসে পড়া যাচ্ছে না।',
+      'e2ee_decrypting': 'পড়া হচ্ছে…',
+      'e2ee_attachments_unavailable':
+          'এনক্রিপ্টেড চ্যাটে ছবি, ফাইল ও অন্য সংযুক্তি এখনো পাঠানো যায় না।',
+      'e2ee_not_set_up_here': 'এই ডিভাইসে এনক্রিপশন এখনো সেট আপ হয়নি।',
+      'e2ee_recipient_not_ready':
+          'এনক্রিপ্টেড বার্তা পাঠানোর আগে তাদের এনক্রিপশন সেট আপ করতে হবে।',
+      'e2ee_send_failed':
+          'এই এনক্রিপ্টেড বার্তাটি পাঠানো যায়নি। আবার চেষ্টা করুন।',
       'chat_delete_failed':
           'মোছা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
       'chat_delete_chat_title': 'চ্যাট মুছবেন?',

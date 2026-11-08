@@ -82,6 +82,30 @@ void main() {
   });
 
   group('sendMessageBody', () {
+    test('an encrypted message carries its envelope and no text', () {
+      final body = sendMessageBody(
+        chatId: 'chat-1',
+        recipientId: 'uid-bob',
+        envelope: const {'v': 1, 'alg': 'olm.v1', 'type': 0, 'ct': 'AQID'},
+        clientMessageId: 'msg-42',
+      );
+
+      expect(
+          body['envelope'], {'v': 1, 'alg': 'olm.v1', 'type': 0, 'ct': 'AQID'});
+      expect(body['text'], '');
+      expect(body['clientMessageId'], 'msg-42');
+    });
+
+    test('a plain message carries no envelope', () {
+      final body = sendMessageBody(
+        chatId: 'chat-1',
+        recipientId: 'uid-bob',
+        text: 'hi',
+      );
+
+      expect(body.containsKey('envelope'), isFalse);
+    });
+
     test('carries the client message id when one is given', () {
       final body = sendMessageBody(
         chatId: 'chat-1',

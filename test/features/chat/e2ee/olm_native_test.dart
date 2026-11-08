@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:bhromon/features/chat/data/e2ee/olm_native.dart';
 import 'package:bhromon/features/chat/domain/e2ee/e2ee_device.dart';
+import 'package:bhromon/features/chat/domain/e2ee/e2ee_exceptions.dart';
 import 'package:bhromon/features/chat/domain/e2ee/e2ee_payload.dart';
 import 'package:bhromon/features/chat/domain/e2ee/olm_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -294,7 +295,7 @@ void main() {
         chatId: 'chat-1',
         messageId: 'msg-1',
       );
-      expect(received.text, 'নমস্কার');
+      expect(received.payload.text, 'নমস্কার');
 
       final reply = bob.encrypt(
         recipient: aliceBundle,
@@ -314,7 +315,210 @@ void main() {
         chatId: 'chat-1',
         messageId: 'msg-2',
       );
-      expect(answered.text, 'ok');
+      expect(answered.payload.text, 'ok');
+      alice.dispose();
+      bob.dispose();
+    });
+
+    test('a pre-key message names the one-time key it was made with', () {
+      final engine = nativeEngine();
+      final alice = E2eeDevice.create(
+        engine: engine,
+        userId: 'uid-a',
+        deviceId: 'device-a',
+        oneTimeKeyCount: 3,
+      );
+      final bob = E2eeDevice.create(
+        engine: engine,
+        userId: 'uid-b',
+        deviceId: 'device-b',
+        oneTimeKeyCount: 3,
+      );
+      final bobBundle = bob.buildBundle();
+      final key = alice.verifiedOneTimeKeys(bobBundle)[1];
+      final envelope = alice.encrypt(
+        recipient: bobBundle,
+        payload: const E2eePayload(
+          chatId: 'chat-1',
+          senderUid: 'uid-a',
+          recipientUid: 'uid-b',
+          messageId: 'msg-1',
+          sentAtMillis: 1700000000000,
+          text: 'hi',
+        ),
+        oneTimeKey: key,
+      );
+      expect(engine.oneTimeKeyOfPreKey(envelope.ciphertext), key.key);
+      alice.dispose();
+      bob.dispose();
+    });
+
+    test(
+        'two first messages sent at the same moment both read, and both sides '
+        'keep talking', () {
+      final engine = nativeEngine();
+      final alice = E2eeDevice.create(
+        engine: engine,
+        userId: 'uid-a',
+        deviceId: 'device-a',
+        oneTimeKeyCount: 3,
+      );
+      final bob = E2eeDevice.create(
+        engine: engine,
+        userId: 'uid-b',
+        deviceId: 'device-b',
+        oneTimeKeyCount: 3,
+      );
+      final aliceBundle = alice.buildBundle();
+      final bobBundle = bob.buildBundle();
+
+      E2eePayload payloadOf(String from, String to, String id, String text) {
+        return E2eePayload(
+          chatId: 'chat-1',
+          senderUid: from,
+          recipientUid: to,
+          messageId: id,
+          sentAtMillis: 1700000000000,
+          text: text,
+        );
+      }
+
+      final aliceToBob = alice.encrypt(
+        recipient: bobBundle,
+        payload: payloadOf('uid-a', 'uid-b', 'msg-1', 'hello'),
+        oneTimeKey: alice.verifiedOneTimeKeys(bobBundle).first,
+      );
+      final bobToAlice = bob.encrypt(
+        recipient: aliceBundle,
+        payload: payloadOf('uid-b', 'uid-a', 'msg-2', 'at once'),
+        oneTimeKey: bob.verifiedOneTimeKeys(aliceBundle).first,
+      );
+      expect(
+        bob
+            .decrypt(
+              sender: aliceBundle,
+              envelope: aliceToBob,
+              chatId: 'chat-1',
+              messageId: 'msg-1',
+            )
+            .payload
+            .text,
+        'hello',
+      );
+      expect(
+        alice
+            .decrypt(
+              sender: bobBundle,
+              envelope: bobToAlice,
+              chatId: 'chat-1',
+              messageId: 'msg-2',
+            )
+            .payload
+            .text,
+        'at once',
+      );
+
+      final three = alice.encrypt(
+        recipient: bobBundle,
+        payload: payloadOf('uid-a', 'uid-b', 'msg-3', 'three'),
+      );
+      expect(
+        bob
+            .decrypt(
+              sender: aliceBundle,
+              envelope: three,
+              chatId: 'chat-1',
+              messageId: 'msg-3',
+            )
+            .payload
+            .text,
+        'three',
+      );
+      final four = bob.encrypt(
+        recipient: aliceBundle,
+        payload: payloadOf('uid-b', 'uid-a', 'msg-4', 'four'),
+      );
+      expect(
+        alice
+            .decrypt(
+              sender: bobBundle,
+              envelope: four,
+              chatId: 'chat-1',
+              messageId: 'msg-4',
+            )
+            .payload
+            .text,
+        'four',
+      );
+      final five = alice.encrypt(
+        recipient: bobBundle,
+        payload: payloadOf('uid-a', 'uid-b', 'msg-5', 'five'),
+      );
+      expect(
+        bob
+            .decrypt(
+              sender: aliceBundle,
+              envelope: five,
+              chatId: 'chat-1',
+              messageId: 'msg-5',
+            )
+            .payload
+            .text,
+        'five',
+      );
+      alice.dispose();
+      bob.dispose();
+    });
+
+    test('a replayed pre-key message is refused', () {
+      final engine = nativeEngine();
+      final alice = E2eeDevice.create(
+        engine: engine,
+        userId: 'uid-a',
+        deviceId: 'device-a',
+        oneTimeKeyCount: 3,
+      );
+      final bob = E2eeDevice.create(
+        engine: engine,
+        userId: 'uid-b',
+        deviceId: 'device-b',
+        oneTimeKeyCount: 3,
+      );
+      final aliceBundle = alice.buildBundle();
+      final bobBundle = bob.buildBundle();
+      final envelope = alice.encrypt(
+        recipient: bobBundle,
+        payload: const E2eePayload(
+          chatId: 'chat-1',
+          senderUid: 'uid-a',
+          recipientUid: 'uid-b',
+          messageId: 'msg-1',
+          sentAtMillis: 1700000000000,
+          text: 'once',
+        ),
+        oneTimeKey: alice.verifiedOneTimeKeys(bobBundle).first,
+      );
+      expect(
+        bob
+            .decrypt(
+              sender: aliceBundle,
+              envelope: envelope,
+              chatId: 'chat-1',
+              messageId: 'msg-1',
+            )
+            .payload
+            .text,
+        'once',
+      );
+      expect(
+        () => bob.decrypt(
+          sender: aliceBundle,
+          envelope: envelope,
+          chatId: 'chat-1',
+          messageId: 'msg-1',
+        ),
+        throwsA(isA<E2eeSecurityException>()),
+      );
       alice.dispose();
       bob.dispose();
     });
