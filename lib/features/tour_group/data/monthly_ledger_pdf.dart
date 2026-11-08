@@ -184,10 +184,13 @@ class MonthlyLedgerPdfGenerator {
     MonthlyLedgerStatement statement,
     String generatedAtStr,
   ) {
-    final periodLabel = BanglaLedgerFormatter.formatMonthYearBangla(
-      statement.year,
-      statement.month,
-    );
+    final periodLabel = (statement.periodStart.day != 1 ||
+            statement.periodEnd.day < 28)
+        ? '${BanglaLedgerFormatter.formatShortDateBangla(statement.periodStart)} — ${BanglaLedgerFormatter.formatShortDateBangla(statement.periodEnd)}'
+        : BanglaLedgerFormatter.formatMonthYearBangla(
+            statement.year,
+            statement.month,
+          );
     final badgeText =
         BanglaLedgerFormatter.archetypeBanglaBadge(statement.groupArchetype);
 
@@ -507,10 +510,15 @@ class MonthlyLedgerPdfGenerator {
     ];
 
     final data = statement.monthExpenses.map((exp) {
-      final mfsBadge = exp.mfsInfo == null ||
-              exp.mfsInfo!.provider == MfsProvider.cash
-          ? 'নগদ ক্যাশ'
-          : '${exp.mfsInfo!.provider.shortLabel} (${exp.mfsInfo!.normalizedTrxId ?? "-"})';
+      final String mfsBadge;
+      if (exp.mfsInfo == null || exp.mfsInfo!.provider == MfsProvider.cash) {
+        mfsBadge = 'নগদ ক্যাশ';
+      } else {
+        final statusBadge =
+            exp.mfsInfo!.isVerified ? '[ভেরিফাইড]' : '[অপেক্ষমান]';
+        mfsBadge =
+            '${exp.mfsInfo!.provider.shortLabel} (${exp.mfsInfo!.normalizedTrxId ?? "-"}) $statusBadge';
+      }
       return [
         BanglaLedgerFormatter.formatShortDateBangla(exp.date),
         exp.title,

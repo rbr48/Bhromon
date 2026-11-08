@@ -407,9 +407,11 @@ class TripLedgerEngine {
     required List<LedgerMember> members,
     required List<ExpenseItem> allExpenses,
     required List<SettlementRecord> allSettlements,
+    DateTime? customStart,
+    DateTime? customEnd,
   }) {
-    final periodStart = DateTime(year, month, 1);
-    final periodEnd =
+    final periodStart = customStart ?? DateTime(year, month, 1);
+    final periodEnd = customEnd ??
         DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
 
     final memberMap = {for (final m in members) m.id: m};

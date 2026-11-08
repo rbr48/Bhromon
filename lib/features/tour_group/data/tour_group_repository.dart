@@ -1871,6 +1871,14 @@ class TourGroupRepository {
     await batch.commit();
   }
 
+  /// Checks whether an MFS transaction ID has already been recorded in the tour's registry.
+  Future<bool> isMfsTrxRegistered(String tourId, String trxId) async {
+    final clean = trxId.trim().toUpperCase();
+    if (clean.isEmpty) return false;
+    final doc = await _sub(tourId, 'mfs_trx_registry').doc(clean).get();
+    return doc.exists;
+  }
+
   /// Updates an MFS settlement's verification status (e.g., verified or disputed by admin).
   Future<void> updateSettlementStatus(
     String tourId,
@@ -2282,6 +2290,16 @@ class TourGroupRepository {
     final by = _requireEmail();
     await _sub(tourId, 'samity_payouts').doc(payout.cycleKey).set({
       ...payout.toFields(by),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Allows the recipient member or an admin to verify receipt of the pot handover.
+  Future<void> verifySamityPayout(String tourId, String cycleKey) async {
+    _requireEmail();
+    await _sub(tourId, 'samity_payouts').doc(cycleKey).update({
+      'isVerified': true,
+      'verifiedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

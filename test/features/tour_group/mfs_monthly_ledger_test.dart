@@ -240,5 +240,79 @@ void main() {
       expect(bytes.length, greaterThan(1000));
       expect(String.fromCharCodes(bytes.sublist(0, 4)), '%PDF');
     });
+
+    test(
+        'TripLedgerEngine filters by customStart and customEnd and PDF includes badges',
+        () async {
+      const engine = TripLedgerEngine();
+      final expenses = [
+        ExpenseItem(
+          id: 'exp_1',
+          tourId: 't1',
+          title: 'কাঁচাবাজার',
+          category: 'food',
+          amountPaisa: 50000,
+          date: DateTime(2026, 11, 2),
+          addedByEmail: 'u1@example.com',
+          mfsInfo: const MfsPaymentInfo(
+            provider: MfsProvider.bkash,
+            trxId: 'BKL001',
+            status: MfsVerificationStatus.verified,
+          ),
+        ),
+        ExpenseItem(
+          id: 'exp_2',
+          tourId: 't1',
+          title: 'মুরগি ও মাছ',
+          category: 'food',
+          amountPaisa: 75000,
+          date: DateTime(2026, 11, 10),
+          addedByEmail: 'u2@example.com',
+          mfsInfo: const MfsPaymentInfo(
+            provider: MfsProvider.nagad,
+            trxId: 'NGD002',
+            status: MfsVerificationStatus.verified,
+          ),
+        ),
+        ExpenseItem(
+          id: 'exp_3',
+          tourId: 't1',
+          title: 'মসলা ও তেল',
+          category: 'food',
+          amountPaisa: 30000,
+          date: DateTime(2026, 11, 25),
+          addedByEmail: 'u1@example.com',
+        ),
+      ];
+
+      // Custom window Nov 5 to Nov 15: only exp_2 should be inside the window
+      final statement = engine.computeMonthlyStatement(
+        tourId: 't1',
+        groupTitle: 'মেস টেস্ট',
+        groupArchetype: 'mess',
+        year: 2026,
+        month: 11,
+        members: const [
+          LedgerMember(id: 'u1@example.com', name: 'শোহাগ'),
+          LedgerMember(id: 'u2@example.com', name: 'তানভীর'),
+        ],
+        allExpenses: expenses,
+        allSettlements: const [],
+        customStart: DateTime(2026, 11, 5),
+        customEnd: DateTime(2026, 11, 15),
+      );
+
+      expect(statement.monthExpenses.length, 1);
+      expect(statement.monthExpenses.first.id, 'exp_2');
+      expect(statement.totalMonthExpensesPaisa, 75000);
+      expect(statement.periodStart, DateTime(2026, 11, 5));
+      expect(statement.periodEnd, DateTime(2026, 11, 15));
+
+      final pdfGenerator = MonthlyLedgerPdfGenerator();
+      final bytes =
+          await pdfGenerator.generate(statement, preparedByName: 'শোহাগ');
+      expect(bytes, isNotEmpty);
+      expect(String.fromCharCodes(bytes.sublist(0, 4)), '%PDF');
+    });
   });
 }

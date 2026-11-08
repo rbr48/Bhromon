@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -571,18 +572,33 @@ class _CycleSheetState extends State<_CycleSheet> {
     }
   }
 
+  Future<void> _verifyPayout(SamityCycle cycle) async {
+    final l10n = context.l10n;
+    try {
+      await widget.repository.verifySamityPayout(
+        widget.tourId,
+        samityCycleKey(cycle.index),
+      );
+      _toast('প্রাপ্তি নিশ্চিত করা হয়েছে');
+    } catch (err) {
+      logError('Samity payout verify failed: $err');
+      _toast(l10n.translate('samity_save_failed', args: {'error': err}),
+          error: true);
+    }
+  }
+
   Future<void> _recordPayout(SamityCycle cycle, int collected) async {
     final l10n = context.l10n;
-    final amount = await showDialog<int>(
+    final res = await showDialog<({int amount, String? receiptUrl})>(
       context: context,
-      builder: (_) => _AmountDialog(
+      builder: (_) => _PayoutRecordDialog(
         title: l10n.translate('samity_record_payout'),
         initial: collected,
         max: cycle.potTaka,
       ),
     );
-    if (amount == null || !mounted) return;
-    if (amount < 1) {
+    if (res == null || !mounted) return;
+    if (res.amount < 1) {
       _toast(
           l10n.translate('samity_amount_invalid', args: {
             'max': l10n.number(cycle.potTaka),
@@ -596,7 +612,8 @@ class _CycleSheetState extends State<_CycleSheet> {
         SamityPayout(
           cycle: cycle.index,
           recipientEmail: cycle.recipientEmail,
-          amountTaka: amount,
+          amountTaka: res.amount,
+          receiptUrl: res.receiptUrl,
         ),
       );
       _toast(l10n.translate('samity_payout_saved', args: {
@@ -695,39 +712,135 @@ class _CycleSheetState extends State<_CycleSheet> {
                             email, ledger.paidBy(email, cycle.index)),
                         l10n: l10n,
                       ),
-                    if (widget.isAdmin) ...[
+                    if (widget.isAdmin || payout != null) ...[
                       const SizedBox(height: 14),
                       if (payout == null)
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.mintGreen,
-                            foregroundColor: AppColors.darkGreen,
-                          ),
-                          onPressed: collected == 0
-                              ? null
-                              : () => _recordPayout(cycle, collected),
-                          icon: const Icon(Icons.payments_rounded),
-                          label: Text(l10n.translate('samity_record_payout')),
-                        )
+                        if (widget.isAdmin)
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.mintGreen,
+                              foregroundColor: AppColors.darkGreen,
+                            ),
+                            onPressed: collected == 0
+                                ? null
+                                : () => _recordPayout(cycle, collected),
+                            icon: const Icon(Icons.payments_rounded),
+                            label: Text(l10n.translate('samity_record_payout')),
+                          )
+                        else
+                          const SizedBox.shrink()
                       else
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                  '${l10n.translate('samity_payout_amount')}: '
-                                  '${_taka(payout.amountTaka)}',
-                                  style: TextStyle(
-                                      color: context.forest.accentText,
-                                      fontWeight: FontWeight.w600)),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: context.forest
+                                .surfaceFor(const Color(0xFF142C23)),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: payout.isVerified
+                                  ? AppColors.mintGreen.withValues(alpha: 0.4)
+                                  : Colors.amber.withValues(alpha: 0.3),
                             ),
-                            TextButton(
-                              onPressed: () => _removePayout(cycle),
-                              child: Text(l10n.translate('fd_delete'),
-                                  style: TextStyle(
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${l10n.translate('samity_payout_amount')}: ${_taka(payout.amountTaka)}',
+                                      style: TextStyle(
+                                        color: context.forest.accentText,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  if (widget.isAdmin)
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 20),
                                       color: context.forest
-                                          .readable(Colors.redAccent))),
-                            ),
-                          ],
+                                          .readable(Colors.redAccent),
+                                      tooltip: l10n.translate('fd_delete'),
+                                      onPressed: () => _removePayout(cycle),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    payout.isVerified
+                                        ? Icons.verified_rounded
+                                        : Icons.pending_actions_rounded,
+                                    size: 16,
+                                    color: payout.isVerified
+                                        ? AppColors.mintGreen
+                                        : Colors.amber,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      payout.isVerified
+                                          ? 'গ্রাহক দ্বারা প্রাপ্তি নিশ্চিতকৃত'
+                                          : 'প্রাপ্তি নিশ্চিতকরণ অপেক্ষমান',
+                                      style: TextStyle(
+                                        color: payout.isVerified
+                                            ? AppColors.mintGreen
+                                            : Colors.amber,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  if (!payout.isVerified &&
+                                      (me == cycle.recipientEmail ||
+                                          widget.isAdmin))
+                                    FilledButton.tonalIcon(
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                      onPressed: () => _verifyPayout(cycle),
+                                      icon: const Icon(Icons.check, size: 14),
+                                      label: const Text('নিশ্চিত করুন',
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                ],
+                              ),
+                              if (payout.receiptUrl != null &&
+                                  payout.receiptUrl!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () {
+                                    final uri =
+                                        Uri.tryParse(payout.receiptUrl!);
+                                    if (uri != null) {
+                                      launchUrl(uri,
+                                          mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.receipt_long_rounded,
+                                          size: 16, color: AppColors.mintGreen),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'ট্রান্সফার রশিদ / ভাউচার দেখুন',
+                                        style: TextStyle(
+                                          color: AppColors.mintGreen,
+                                          fontSize: 12,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                     ],
                   ],
@@ -1095,6 +1208,98 @@ class _SetupSheetState extends State<_SetupSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PayoutRecordDialog extends StatefulWidget {
+  const _PayoutRecordDialog({
+    required this.title,
+    required this.initial,
+    required this.max,
+  });
+
+  final String title;
+  final int initial;
+  final int max;
+
+  @override
+  State<_PayoutRecordDialog> createState() => _PayoutRecordDialogState();
+}
+
+class _PayoutRecordDialogState extends State<_PayoutRecordDialog> {
+  late final TextEditingController _amountController = TextEditingController(
+      text: widget.initial == 0 ? '' : widget.initial.toString());
+  final TextEditingController _receiptController = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _receiptController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final l10n = context.l10n;
+    final text = _amountController.text.trim();
+    final value = text.isEmpty ? 0 : int.tryParse(text);
+    if (value == null || value <= 0 || value > widget.max) {
+      setState(() => _error = l10n.translate('samity_amount_invalid', args: {
+            'max': l10n.number(widget.max),
+          }));
+      return;
+    }
+    final receipt = _receiptController.text.trim();
+    Navigator.pop(
+        context, (amount: value, receiptUrl: receipt.isEmpty ? null : receipt));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.translate('samity_payout_amount'),
+                suffixText: l10n.translate('unit_taka'),
+                errorText: _error,
+              ),
+              onSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _receiptController,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'রশিদ বা ট্রানজ্যাকশন লিংক (ঐচ্ছিক)',
+                hintText: 'https://...',
+                prefixIcon: Icon(Icons.link_rounded),
+              ),
+              onSubmitted: (_) => _save(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.translate('btn_cancel')),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: Text(l10n.translate('btn_save')),
+        ),
+      ],
     );
   }
 }

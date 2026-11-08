@@ -1183,18 +1183,31 @@ service cloud.firestore {
       }
 
       // Samity payouts: the pot for a cycle, handed to its recipient. Only an owner or admin
-      // records a handover, once per cycle, under the cycle's three-digit key.
+      // records a handover, once per cycle, under the cycle's three-digit key. Beneficiary recipient
+      // or an admin can verify receipt.
       match /samity_payouts/{cycleKey} {
         function validPayout(d) {
-          return d.keys().hasOnly(['cycleKey', 'recipientEmail', 'amountTaka', 'recordedByEmail', 'updatedAt']) &&
+          return d.keys().hasOnly(['cycleKey', 'recipientEmail', 'amountTaka', 'recordedByEmail', 'updatedAt', 'receiptUrl', 'isVerified', 'verifiedAt']) &&
                  d.cycleKey is string && d.cycleKey.matches('^[0-9]{3}$') && d.cycleKey == cycleKey &&
                  d.recipientEmail is string && d.recipientEmail.size() > 0 &&
                  d.amountTaka is int && d.amountTaka >= 1 &&
-                 d.recordedByEmail == tourUserEmail() &&
-                 d.updatedAt == request.time;
+                 (d.recordedByEmail == tourUserEmail() || (resource != null && d.recordedByEmail == resource.data.recordedByEmail)) &&
+                 (d.updatedAt == request.time || (resource != null && d.updatedAt == resource.data.updatedAt)) &&
+                 (!('receiptUrl' in d) || d.receiptUrl == null || (d.receiptUrl is string && d.receiptUrl.size() <= 2048 && (d.receiptUrl == '' || d.receiptUrl.matches('^https://.*')))) &&
+                 (!('isVerified' in d) || d.isVerified == null || d.isVerified is bool) &&
+                 (!('verifiedAt' in d) || d.verifiedAt == null || d.verifiedAt is timestamp);
         }
         allow read: if isActiveMember(tourId);
-        allow create, update: if isSamityTour(tourId) && isTourAdmin(tourId) && validPayout(request.resource.data);
+        allow create: if isSamityTour(tourId) && isTourAdmin(tourId) && validPayout(request.resource.data);
+        allow update: if isSamityTour(tourId) && isActiveMember(tourId) && validPayout(request.resource.data) &&
+                         (
+                           isTourAdmin(tourId) ||
+                           (
+                             resource.data.recipientEmail == tourUserEmail() &&
+                             request.resource.data.diff(resource.data).affectedKeys()
+                               .hasOnly(['isVerified', 'verifiedAt', 'updatedAt'])
+                           )
+                         );
         allow delete: if isSamityTour(tourId) && isTourAdmin(tourId);
       }
 

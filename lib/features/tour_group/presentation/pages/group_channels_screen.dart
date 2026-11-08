@@ -1,3 +1,4 @@
+import 'package:bhromon/features/chat/presentation/widgets/packet_loss_meter.dart';
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -1172,6 +1173,19 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
         return Column(
           children: [
+            if (isConnectedToThis)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    CallQualityHud(
+                      qualityNotifier: _voiceService.networkQuality,
+                      sampleNotifier: _voiceService.linkSample,
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: participants.isEmpty
                   ? Center(
@@ -1284,6 +1298,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   Widget _buildParticipantCard(VoiceParticipant p) {
     final isMe = p.email == _me;
+    final isSpeaking = _voiceService.isSpeaking(p.email);
     final isVideoActive = isMe
         ? (_voiceService.isVideoOn &&
             _voiceService.localRenderer.srcObject != null)
@@ -1296,10 +1311,12 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: !p.isAudioMuted
-              ? AppColors.mintGreen.withValues(alpha: 0.6)
-              : context.forest.divider10,
-          width: !p.isAudioMuted ? 2 : 1,
+          color: isSpeaking
+              ? AppColors.mintGreen
+              : (!p.isAudioMuted
+                  ? AppColors.mintGreen.withValues(alpha: 0.6)
+                  : context.forest.divider10),
+          width: isSpeaking ? 3 : (!p.isAudioMuted ? 2 : 1),
         ),
       ),
       clipBehavior: Clip.hardEdge,
@@ -1339,15 +1356,24 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.midGreen,
-                    boxShadow: !p.isAudioMuted
+                    boxShadow: isSpeaking
                         ? [
                             BoxShadow(
-                              color: AppColors.mintGreen.withValues(alpha: 0.4),
-                              blurRadius: 12,
-                              spreadRadius: 2,
+                              color: AppColors.mintGreen.withValues(alpha: 0.8),
+                              blurRadius: 18,
+                              spreadRadius: 4,
                             ),
                           ]
-                        : null,
+                        : (!p.isAudioMuted
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.mintGreen
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null),
                   ),
                   child: Center(
                     child: Text(

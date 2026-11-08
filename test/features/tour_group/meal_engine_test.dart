@@ -165,6 +165,79 @@ void main() {
       expect(report.contains('Fahim'), isTrue);
     });
 
+    test('transfers settle dues and refund balances correctly', () {
+      const logs = [
+        MealLog(
+            dateKey: '2026-11-01',
+            email: 'shakil@example.com',
+            breakfast: 10,
+            lunch: 0,
+            dinner: 0), // 10 meals
+      ];
+      final expenses = [
+        ExpenseItem(
+          id: 'e1',
+          tourId: 'mess_tour',
+          title: 'Morning Bazar',
+          amountPaisa: 60000, // ৳ 600 total bazar => meal rate = ৳ 60
+          paidById: 'fahim@example.com',
+          category: 'Groceries',
+          date: DateTime(2026, 11, 2),
+        ),
+      ];
+
+      // Shakil ate 10 meals = ৳ 600 meal cost. Contributed 0.
+      // Settle-up transfer: Shakil pays ৳ 600 into the fund
+      final transfers = [
+        TransferItem(
+          id: 't1',
+          tourId: 'mess_tour',
+          fromId: 'shakil@example.com',
+          fromName: 'Shakil',
+          toId: null, // to fund
+          toName: 'Mess Fund',
+          amountPaisa: 60000,
+          date: DateTime(2026, 11, 15),
+        ),
+        // Fund refunds Fahim ৳ 600
+        TransferItem(
+          id: 't2',
+          tourId: 'mess_tour',
+          fromId: null, // from fund
+          fromName: 'Mess Fund',
+          toId: 'fahim@example.com',
+          toName: 'Fahim',
+          amountPaisa: 60000,
+          date: DateTime(2026, 11, 16),
+        ),
+      ];
+
+      final balance = calculateMessMonthlyBalance(
+        month: month,
+        members: members,
+        logs: logs,
+        expenses: expenses,
+        deposits: [],
+        transfers: transfers,
+      );
+
+      final shakil = balance.memberBalances
+          .firstWhere((m) => m.email == 'shakil@example.com');
+      expect(shakil.mealCostPaisa, 60000);
+      expect(shakil.settledPaidPaisa, 60000);
+      expect(shakil.totalContributedPaisa, 60000);
+      expect(shakil.netBalancePaisa, 0);
+      expect(shakil.isSettled, isTrue);
+
+      final fahim = balance.memberBalances
+          .firstWhere((m) => m.email == 'fahim@example.com');
+      expect(fahim.bazarPaidPaisa, 60000);
+      expect(fahim.refundReceivedPaisa, 60000);
+      expect(fahim.totalContributedPaisa, 0);
+      expect(fahim.netBalancePaisa, 0);
+      expect(fahim.isSettled, isTrue);
+    });
+
     test('handles zero meals gracefully without division by zero', () {
       final balance = calculateMessMonthlyBalance(
         month: month,

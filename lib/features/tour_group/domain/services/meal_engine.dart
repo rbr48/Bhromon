@@ -48,6 +48,8 @@ class MemberMealBalance {
     required this.mealCostPaisa,
     required this.bazarPaidPaisa,
     required this.depositPaidPaisa,
+    this.settledPaidPaisa = 0,
+    this.refundReceivedPaisa = 0,
     required this.totalContributedPaisa,
     required this.netBalancePaisa,
   });
@@ -67,7 +69,13 @@ class MemberMealBalance {
   /// Advance deposits paid by this member into the mess fund.
   final int depositPaidPaisa;
 
-  /// Total funds contributed by this member (`bazarPaidPaisa + depositPaidPaisa`).
+  /// Settle-up payments paid into the mess fund by this member to clear past dues.
+  final int settledPaidPaisa;
+
+  /// Settle-up refunds paid out to this member from the mess fund.
+  final int refundReceivedPaisa;
+
+  /// Total funds contributed by this member (`bazarPaidPaisa + depositPaidPaisa + settledPaidPaisa - refundReceivedPaisa`).
   final int totalContributedPaisa;
 
   /// Net balance in paisa:
@@ -83,6 +91,8 @@ class MemberMealBalance {
   double get mealCostTaka => mealCostPaisa / 100.0;
   double get totalContributedTaka => totalContributedPaisa / 100.0;
   double get netBalanceTaka => netBalancePaisa.abs() / 100.0;
+  double get settledPaidTaka => settledPaidPaisa / 100.0;
+  double get refundReceivedTaka => refundReceivedPaisa / 100.0;
 }
 
 /// The entire mess's consolidated monthly balance sheet and meal rate report.
@@ -154,6 +164,7 @@ MessMonthlyBalance calculateMessMonthlyBalance({
   required Iterable<MealLog> logs,
   required Iterable<ExpenseItem> expenses,
   required Iterable<DepositItem> deposits,
+  Iterable<TransferItem> transfers = const [],
 }) {
   // 1. Filter expenses for the given month.
   final monthExpenses = expenses
@@ -186,9 +197,13 @@ MessMonthlyBalance calculateMessMonthlyBalance({
   final double mealRatePaisa =
       totalMeals > 0 ? (totalBazarPaisa / totalMeals) : 0.0;
 
-  // 4. Filter deposits for the given month.
+  // 4. Filter deposits and transfers for the given month.
   final monthDeposits = deposits
       .where((d) => d.date.year == month.year && d.date.month == month.month)
+      .toList();
+
+  final monthTransfers = transfers
+      .where((t) => t.date.year == month.year && t.date.month == month.month)
       .toList();
 
   // 5. Build member balances.
@@ -208,7 +223,19 @@ MessMonthlyBalance calculateMessMonthlyBalance({
         .where((d) => normalizeEmail(d.memberId) == email)
         .fold<int>(0, (sum, d) => sum + d.amountPaisa);
 
-    final totalContributed = bazarPaid + depositPaid;
+    // Transfers: Settle-up payments paid into fund by this member
+    final settledPaid = monthTransfers
+        .where((t) =>
+            !t.fromFund && t.toFund && normalizeEmail(t.fromId ?? '') == email)
+        .fold<int>(0, (sum, t) => sum + t.amountPaisa);
+
+    // Transfers: Refunds received by this member from fund
+    final refundReceived = monthTransfers
+        .where((t) => t.fromFund && normalizeEmail(t.toId ?? '') == email)
+        .fold<int>(0, (sum, t) => sum + t.amountPaisa);
+
+    final totalContributed =
+        bazarPaid + depositPaid + settledPaid - refundReceived;
     final netBalance = totalContributed - mealCost;
 
     memberBalances.add(MemberMealBalance(
@@ -218,6 +245,8 @@ MessMonthlyBalance calculateMessMonthlyBalance({
       mealCostPaisa: mealCost,
       bazarPaidPaisa: bazarPaid,
       depositPaidPaisa: depositPaid,
+      settledPaidPaisa: settledPaid,
+      refundReceivedPaisa: refundReceived,
       totalContributedPaisa: totalContributed,
       netBalancePaisa: netBalance,
     ));
