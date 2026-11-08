@@ -2437,6 +2437,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ? (pinned['mediaUrls'] as List).cast<String>()
             : null;
 
+    final senderId = (fullData?['senderId'] as String?) ??
+        (pinned['senderId'] as String?) ??
+        '';
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isMe = senderId.isNotEmpty && senderId == currentUid;
+
     DateTime? sentTime;
     final tsRaw = fullData?['timestamp'] ?? pinned['pinnedAt'];
     if (tsRaw is Timestamp) {
@@ -2455,153 +2461,162 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 16,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.midGreen.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.midGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.push_pin_rounded,
+                          color: AppColors.midGreen, size: 20),
                     ),
-                    child: const Icon(Icons.push_pin_rounded,
-                        color: AppColors.midGreen, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.translate('chat_pinned_full_title'),
-                          style: TextStyle(
-                            color: context.chat.text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        if (sentTime != null)
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            _formatTime(sentTime),
+                            l10n.translate('chat_pinned_full_title'),
                             style: TextStyle(
-                              color: context.chat.text54,
-                              fontSize: 12,
+                              color: context.chat.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: context.chat.text70),
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Divider(height: 1, color: context.chat.recessedDeep),
-              const SizedBox(height: 14),
-              if (mediaUrls != null && mediaUrls.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
-                    child: ChatMediaBubble(
-                      mediaUrls: mediaUrls,
-                      type: msgType,
-                      isMe: false,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ] else if (mediaUrl.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
-                    child: ChatMediaBubble(
-                      mediaUrl: mediaUrl,
-                      type: msgType,
-                      isMe: false,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (text.isNotEmpty && text != 'Media')
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: SelectableText(
-                      text,
-                      style: TextStyle(
-                        color: context.chat.text,
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        _scrollToMessage(messageId);
-                      },
-                      icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-                      label: Text(l10n.translate('chat_pinned_jump')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00A884),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (text.isNotEmpty && text != 'Media') ...[
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: text));
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.translate('chat_pinned_copied')),
-                              duration: const Duration(seconds: 2),
+                          if (sentTime != null)
+                            Text(
+                              _formatTime(sentTime),
+                              style: TextStyle(
+                                color: context.chat.text54,
+                                fontSize: 12,
+                              ),
                             ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: Text(l10n.translate('chat_pinned_copy')),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: context.chat.text,
-                        side: BorderSide(color: context.chat.text38),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        ],
                       ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: context.chat.text70),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: context.chat.recessedDeep),
+                const SizedBox(height: 14),
+                if (mediaUrls != null && mediaUrls.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: ChatMediaBubble(
+                        mediaUrls: mediaUrls,
+                        type: msgType,
+                        isMe: false,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (mediaUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: ChatMediaBubble(
+                        mediaUrl: mediaUrl,
+                        type: msgType,
+                        isMe: false,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ],
+                if (text.isNotEmpty && text != 'Media')
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: SelectionArea(
+                        child: ChatRichText(
+                          text: text,
+                          baseStyle: TextStyle(
+                            color: context.chat.text,
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                          isMine: isMe,
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                          _scrollToMessage(messageId);
+                        },
+                        icon:
+                            const Icon(Icons.arrow_downward_rounded, size: 18),
+                        label: Text(l10n.translate('chat_pinned_jump')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00A884),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (text.isNotEmpty && text != 'Media') ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: text));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text(l10n.translate('chat_pinned_copied')),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        label: Text(l10n.translate('chat_pinned_copy')),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.chat.text,
+                          side: BorderSide(color: context.chat.text38),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
