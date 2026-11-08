@@ -46,7 +46,7 @@ void main() {
     });
 
     test('defaults isVerified to false and handles omitted receiptUrl', () {
-      final payout = SamityPayout(
+      const payout = SamityPayout(
         cycle: 1,
         recipientEmail: 'bob@example.com',
         amountTaka: 15000,
