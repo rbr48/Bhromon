@@ -1,3 +1,4 @@
+import 'package:bhromon/features/chat/presentation/widgets/packet_loss_meter.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -143,14 +144,29 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
 
               // Title / Status
               Expanded(
-                child: Text(
-                  isConnected ? 'Game Voice Lounge' : 'Voice chat with group',
-                  style: TextStyle(
-                    color: isConnected ? Colors.white : Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isConnected
+                            ? 'Game Voice Lounge'
+                            : 'Voice chat with group',
+                        style: TextStyle(
+                          color: isConnected ? Colors.white : Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isConnected) ...[
+                      const SizedBox(width: 6),
+                      CallQualityHud(
+                        qualityNotifier: _voiceService.networkQuality,
+                        sampleNotifier: _voiceService.linkSample,
+                      ),
+                    ],
+                  ],
                 ),
               ),
 
@@ -263,6 +279,7 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
                   runSpacing: 4,
                   children: participants.map((p) {
                     final isMe = p.email == widget.myEmail;
+                    final isSpeaking = _voiceService.isSpeaking(p.email);
                     return Chip(
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -270,12 +287,20 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
                       avatar: CircleAvatar(
                         backgroundColor: p.isAudioMuted
                             ? Colors.red.shade900
-                            : AppColors.mintGreen.withValues(alpha: 0.3),
+                            : (isSpeaking
+                                ? AppColors.mintGreen
+                                : AppColors.mintGreen.withValues(alpha: 0.3)),
                         child: Icon(
-                          p.isAudioMuted ? Icons.mic_off : Icons.mic,
+                          p.isAudioMuted
+                              ? Icons.mic_off
+                              : (isSpeaking
+                                  ? Icons.graphic_eq_rounded
+                                  : Icons.mic),
                           color: p.isAudioMuted
                               ? Colors.white70
-                              : AppColors.mintGreen,
+                              : (isSpeaking
+                                  ? Colors.black87
+                                  : AppColors.mintGreen),
                           size: 11,
                         ),
                       ),
@@ -284,14 +309,18 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
                         style: TextStyle(
                           color: isMe ? AppColors.mintGreen : Colors.white70,
                           fontSize: 11,
+                          fontWeight:
+                              isSpeaking ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       backgroundColor: const Color(0xFF1E3526),
                       side: BorderSide(
-                        color: p.isAudioMuted
-                            ? Colors.redAccent.withValues(alpha: 0.4)
-                            : AppColors.mintGreen.withValues(alpha: 0.4),
-                        width: 0.8,
+                        color: isSpeaking
+                            ? AppColors.mintGreen
+                            : (p.isAudioMuted
+                                ? Colors.redAccent.withValues(alpha: 0.4)
+                                : AppColors.mintGreen.withValues(alpha: 0.4)),
+                        width: isSpeaking ? 1.8 : 0.8,
                       ),
                     );
                   }).toList(),

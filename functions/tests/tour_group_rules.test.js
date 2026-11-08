@@ -872,6 +872,61 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(deleteDoc(doc(db('member'), 'tours', SAM, 'samity_payouts', CYCLE0)));
     });
 
+    test('samity payout supports optional receiptUrl, isVerified, verifiedAt and beneficiary/admin verification', async () => {
+      const payoutRef = (user) => doc(db(user), 'tours', SAM, 'samity_payouts', CYCLE0);
+
+      // Admin records payout with receiptUrl and unverified status
+      await assertSucceeds(setDoc(payoutRef('admin'), {
+        ...payout(people.admin.email),
+        receiptUrl: 'https://bhromon.fun/media/sam1/receipts/rec1.jpg',
+        isVerified: false,
+      }));
+
+      // Insecure receiptUrl (non-https) is rejected
+      await assertFails(setDoc(doc(db('admin'), 'tours', SAM, 'samity_payouts', '001'), {
+        ...payout(people.admin.email, '001'),
+        receiptUrl: 'http://insecure.com/receipt.jpg',
+      }));
+
+      // Empty receiptUrl is accepted
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', SAM, 'samity_payouts', '001'), {
+        ...payout(people.admin.email, '001'),
+        receiptUrl: '',
+      }));
+
+      // Non-beneficiary member ('other') cannot verify
+      await assertFails(updateDoc(payoutRef('other'), {
+        isVerified: true,
+        verifiedAt: serverTimestamp(),
+      }));
+
+      // Beneficiary cannot tamper with amountTaka or recipientEmail
+      await assertFails(updateDoc(payoutRef('member'), {
+        amountTaka: 5000,
+        isVerified: true,
+        verifiedAt: serverTimestamp(),
+      }));
+      await assertFails(updateDoc(payoutRef('member'), {
+        recipientEmail: people.other.email,
+        isVerified: true,
+        verifiedAt: serverTimestamp(),
+      }));
+
+      // Beneficiary recipient ('member') verifies receipt
+      await assertSucceeds(updateDoc(payoutRef('member'), {
+        isVerified: true,
+        verifiedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }));
+
+      // Admin can also update verification state
+      await assertSucceeds(updateDoc(payoutRef('admin'), {
+        isVerified: false,
+        verifiedAt: null,
+        updatedAt: serverTimestamp(),
+      }));
+    });
+
     test('the schedule is set by an owner or admin, in a valid shape, and only on a samity', async () => {
       const ref = doc(db('admin'), 'tours', SAM);
 

@@ -192,6 +192,9 @@ class SamityPayout {
     required this.recipientEmail,
     required this.amountTaka,
     this.recordedByEmail = '',
+    this.receiptUrl,
+    this.isVerified = false,
+    this.verifiedAt,
   });
 
   /// The 0-based cycle the pot belongs to.
@@ -206,6 +209,15 @@ class SamityPayout {
   /// The admin who recorded the handover.
   final String recordedByEmail;
 
+  /// Attached image URL of signed receipt or transfer screenshot.
+  final String? receiptUrl;
+
+  /// Whether the beneficiary has confirmed receipt of the pot payout.
+  final bool isVerified;
+
+  /// When the beneficiary confirmed the payout receipt.
+  final DateTime? verifiedAt;
+
   String get cycleKey => samityCycleKey(cycle);
 
   /// The fields an admin writes. The repository adds the time it was written.
@@ -214,6 +226,10 @@ class SamityPayout {
         'recipientEmail': recipientEmail,
         'amountTaka': amountTaka,
         'recordedByEmail': recordedBy,
+        if (receiptUrl != null && receiptUrl!.isNotEmpty)
+          'receiptUrl': receiptUrl,
+        if (isVerified) 'isVerified': true,
+        if (verifiedAt != null) 'verifiedAt': writeDate(verifiedAt!),
       };
 
   /// Reads one stored payout, or null when it has no valid cycle, recipient or amount.
@@ -224,11 +240,32 @@ class SamityPayout {
     if (cycle == null || recipient is! String || recipient.isEmpty) return null;
     if (amount is! int || amount <= 0) return null;
     final by = data['recordedByEmail'];
+    final receipt = data['receiptUrl'] as String?;
+    final isVerified = data['isVerified'] == true;
+    final verifiedAt = readDate(data['verifiedAt']);
     return SamityPayout(
       cycle: cycle,
       recipientEmail: recipient,
       amountTaka: amount,
       recordedByEmail: by is String ? by : '',
+      receiptUrl: receipt,
+      isVerified: isVerified,
+      verifiedAt: verifiedAt,
     );
   }
+
+  SamityPayout copyWith({
+    String? receiptUrl,
+    bool? isVerified,
+    DateTime? verifiedAt,
+  }) =>
+      SamityPayout(
+        cycle: cycle,
+        recipientEmail: recipientEmail,
+        amountTaka: amountTaka,
+        recordedByEmail: recordedByEmail,
+        receiptUrl: receiptUrl ?? this.receiptUrl,
+        isVerified: isVerified ?? this.isVerified,
+        verifiedAt: verifiedAt ?? this.verifiedAt,
+      );
 }

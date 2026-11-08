@@ -2290,6 +2290,84 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           familyCount: m.familyCount,
         ),
     ];
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'লেজার স্টেটমেন্ট এক্সপোর্ট',
+                style: TextStyle(
+                  fontFamily: 'NotoSansBengali',
+                  fontFamilyFallback: const ['HindSiliguri', 'Roboto'],
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: context.forest.text,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_rounded,
+                    color: AppColors.mintGreen),
+                title: Text(
+                  'চলতি মাস (${BanglaLedgerFormatter.formatMonthYearBangla(_month.year, _month.month)})',
+                  style: TextStyle(
+                    fontFamily: 'NotoSansBengali',
+                    fontFamilyFallback: const ['HindSiliguri', 'Roboto'],
+                    color: context.forest.text,
+                  ),
+                ),
+                onTap: () => Navigator.of(sheetCtx).pop('month'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.date_range_rounded,
+                    color: AppColors.mintGreen),
+                title: Text(
+                  'কাস্টম তারিখ সীমা নির্বাচন...',
+                  style: TextStyle(
+                    fontFamily: 'NotoSansBengali',
+                    fontFamilyFallback: const ['HindSiliguri', 'Roboto'],
+                    color: context.forest.text,
+                  ),
+                ),
+                onTap: () => Navigator.of(sheetCtx).pop('custom'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (choice == null || !mounted) return;
+
+    DateTime? customStart;
+    DateTime? customEnd;
+
+    if (choice == 'custom') {
+      final now = DateTime.now();
+      final pickedRange = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(now.year - 5),
+        lastDate: DateTime(now.year + 2),
+        initialDateRange: DateTimeRange(
+          start: DateTime(_month.year, _month.month, 1),
+          end: DateTime(_month.year, _month.month + 1, 0),
+        ),
+      );
+      if (pickedRange == null || !mounted) return;
+      customStart = pickedRange.start;
+      customEnd = pickedRange.end;
+    }
+
     await exportMonthlyLedgerPdf(
       context,
       group: group,
@@ -2298,6 +2376,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       members: ledgerMembers,
       allExpenses: _expenses,
       allSettlements: _settlements,
+      customStart: customStart,
+      customEnd: customEnd,
       preparedByName: _repository.currentDisplayName,
     );
   }

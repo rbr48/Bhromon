@@ -22,6 +22,8 @@ Future<void> exportMonthlyLedgerPdf(
   required List<LedgerMember> members,
   required List<ExpenseItem> allExpenses,
   required List<SettlementRecord> allSettlements,
+  DateTime? customStart,
+  DateTime? customEnd,
   String? preparedByName,
 }) async {
   final l10n = context.l10n;
@@ -44,6 +46,8 @@ Future<void> exportMonthlyLedgerPdf(
       members: members,
       allExpenses: allExpenses,
       allSettlements: allSettlements,
+      customStart: customStart,
+      customEnd: customEnd,
     );
 
     final generator = MonthlyLedgerPdfGenerator();
@@ -58,8 +62,9 @@ Future<void> exportMonthlyLedgerPdf(
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
         .replaceAll(RegExp(r'_+'), '_');
     final monthStr = month.toString().padLeft(2, '0');
-    final filename =
-        '${safeName.isEmpty ? 'group' : safeName}_ledger_${year}_$monthStr.pdf';
+    final filename = customStart != null && customEnd != null
+        ? '${safeName.isEmpty ? 'group' : safeName}_statement_${customStart.year}${customStart.month.toString().padLeft(2, '0')}${customStart.day.toString().padLeft(2, '0')}.pdf'
+        : '${safeName.isEmpty ? 'group' : safeName}_ledger_${year}_$monthStr.pdf';
 
     if (kIsWeb) {
       await downloadWebFile(bytes, filename);
@@ -75,8 +80,9 @@ Future<void> exportMonthlyLedgerPdf(
       ShareParams(
         files: [file],
         fileNameOverrides: [filename],
-        text:
-            '${group.name} - ${BanglaLedgerFormatter.formatMonthYearBangla(year, month)} Statement',
+        text: customStart != null && customEnd != null
+            ? '${group.name} - ${BanglaLedgerFormatter.formatShortDateBangla(customStart)} — ${BanglaLedgerFormatter.formatShortDateBangla(customEnd)} Statement'
+            : '${group.name} - ${BanglaLedgerFormatter.formatMonthYearBangla(year, month)} Statement',
       ),
     );
   } catch (err, stack) {

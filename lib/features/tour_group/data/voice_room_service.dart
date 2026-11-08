@@ -1,3 +1,4 @@
+import '../../chat/domain/call_quality.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -142,6 +143,15 @@ class VoiceRoomService {
   QuerySnapshot<Map<String, dynamic>>? _lastSeats;
   Timer? _heartbeat;
   Timer? _retryTimer;
+  Timer? _statsTimer;
+  final Set<String> _speakingEmails = {};
+  Set<String> get speakingEmails => Set.unmodifiable(_speakingEmails);
+  bool isSpeaking(String email) =>
+      _speakingEmails.contains(normalizeEmail(email));
+
+  final ValueNotifier<CallNetworkQuality> networkQuality =
+      ValueNotifier(CallNetworkQuality.good);
+  final ValueNotifier<CallLinkSample?> linkSample = ValueNotifier(null);
 
   final StreamController<void> _changeNotifier =
       StreamController<void>.broadcast();
@@ -242,6 +252,7 @@ class VoiceRoomService {
           _seats(tourId, channelId).snapshots().listen(_onParticipantsChanged);
       _heartbeat =
           Timer.periodic(_heartbeatEvery, (_) => _updateSeat(const {}));
+      _startStatsMonitoring();
     } catch (e) {
       await leaveVoiceRoom();
       rethrow;
@@ -690,11 +701,96 @@ class VoiceRoomService {
   }
 
   /// Disconnects and leaves the voice channel, releasing all media and network resources.
+  void _startStatsMonitoring() {
+    _statsTimer?.cancel();
+    _statsTimer =
+        Timer.periodic(const Duration(milliseconds: 700), (_) => _pollStats());
+  }
+
+  Future<void> _pollStats() async {
+    if (!isConnected || _peerConnections.isEmpty) {
+      if (_speakingEmails.isNotEmpty) {
+        _speakingEmails.clear();
+        _notify();
+      }
+      return;
+    }
+
+    final newlySpeaking = <String>{};
+    double totalRtt = 0;
+    int rttCount = 0;
+    int totalLost = 0;
+    int totalRecv = 0;
+
+    for (final entry in _peerConnections.entries) {
+      final email = entry.key;
+      final pc = entry.value;
+      try {
+        final stats = await pc.getStats();
+        for (final report in stats) {
+          final values = report.values;
+          final kind = values['kind']?.toString();
+          final type = report.type;
+
+          if (kind == 'audio' || type == 'inbound-rtp' || type == 'track') {
+            final audioLevel = values['audioLevel'];
+            if (audioLevel != null && (audioLevel as num).toDouble() > 0.035) {
+              newlySpeaking.add(email);
+            }
+          }
+
+          if (type == 'candidate-pair' && values['state'] == 'succeeded') {
+            final rtt = values['currentRoundTripTime'];
+            if (rtt != null) {
+              totalRtt += (rtt as num).toDouble() * 1000;
+              rttCount++;
+            }
+          }
+
+          if (type == 'inbound-rtp') {
+            final lost = values['packetsLost'];
+            final recv = values['packetsReceived'];
+            if (lost is num) totalLost += lost.toInt();
+            if (recv is num) totalRecv += recv.toInt();
+          }
+        }
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+    }
+
+    final avgRtt = rttCount > 0 ? totalRtt / rttCount : null;
+    final totalPackets = totalLost + totalRecv;
+    final lossRatio = totalPackets > 0 ? (totalLost / totalPackets) : null;
+
+    final sample = CallLinkSample(
+      roundTripMs: avgRtt,
+      lossRatio: lossRatio,
+      packetsLost: totalLost,
+      packetsReceived: totalRecv,
+    );
+    linkSample.value = sample;
+    networkQuality.value = classifyCallLink(sample);
+
+    if (newlySpeaking.length != _speakingEmails.length ||
+        !newlySpeaking.containsAll(_speakingEmails)) {
+      _speakingEmails
+        ..clear()
+        ..addAll(newlySpeaking);
+      _notify();
+    }
+  }
+
   Future<void> leaveVoiceRoom() async {
     _heartbeat?.cancel();
     _heartbeat = null;
     _retryTimer?.cancel();
     _retryTimer = null;
+    _statsTimer?.cancel();
+    _statsTimer = null;
+    _speakingEmails.clear();
+    linkSample.value = null;
+    networkQuality.value = CallNetworkQuality.good;
 
     final tourId = _activeTourId;
     final channelId = _activeChannelId;
