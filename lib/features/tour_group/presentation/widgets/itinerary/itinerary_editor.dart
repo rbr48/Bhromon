@@ -11,6 +11,7 @@ import '../../../domain/services/destination_catalog.dart';
 import '../../../data/predefined_spots_repository.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../transport/local_fare_guide_sheet.dart';
+import '../../itinerary_pdf_export.dart';
 
 /// The result of editing an itinerary.
 class ItineraryEdit {
@@ -138,6 +139,14 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                 fontWeight: FontWeight.bold,
                 fontSize: 16)),
         actions: [
+          IconButton(
+            tooltip: 'পরিকল্পনা PDF ডাউনলোড',
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            onPressed: () => exportItineraryPdf(
+              context,
+              group: widget.group,
+            ),
+          ),
           IconButton(
             tooltip: 'লোকাল পরিবহন ভাড়া গাইড',
             icon: const Icon(Icons.calculate_outlined),

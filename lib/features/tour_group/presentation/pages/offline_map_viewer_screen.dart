@@ -13,16 +13,22 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/logger.dart';
 import '../../domain/services/map_cache_manager.dart';
 import '../../domain/services/offline_map_regions.dart';
+import '../../domain/models/tour_activity_models.dart';
+import '../../domain/services/route_engine.dart';
 
 /// Fullscreen offline vector map and waypoint explorer for remote Bangladesh travel zones.
 class OfflineMapViewerScreen extends StatefulWidget {
   final OfflineMapRegion region;
   final Position? initialPosition;
+  final List<RouteCheckpoint> checkpoints;
+  final RoutePlan? routePlan;
 
   const OfflineMapViewerScreen({
     super.key,
     required this.region,
     this.initialPosition,
+    this.checkpoints = const [],
+    this.routePlan,
   });
 
   @override
@@ -175,6 +181,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   void _onStyleLoaded() {
     _registerFallbackIcons();
     _addWaypointMarkers();
+    _addCheckpointAndRouteOverlays();
   }
 
   void _registerFallbackIcons() {
@@ -202,6 +209,52 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
           circleStrokeOpacity: 1.0,
         ),
       );
+    }
+  }
+
+  void _addCheckpointAndRouteOverlays() {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    // 1. Draw route line between consecutive points if available
+    final plan = widget.routePlan;
+    if (plan != null) {
+      final linePoints = <maplibre.LatLng>[];
+      for (final leg in plan.legs) {
+        if (leg.from.hasLocation) {
+          linePoints.add(maplibre.LatLng(leg.from.lat!, leg.from.lng!));
+        }
+        if (leg.to.hasLocation) {
+          linePoints.add(maplibre.LatLng(leg.to.lat!, leg.to.lng!));
+        }
+      }
+      if (linePoints.length >= 2) {
+        controller.addLine(
+          maplibre.LineOptions(
+            geometry: linePoints,
+            lineColor: '#2E6F5E',
+            lineWidth: 3.5,
+            lineOpacity: 0.85,
+          ),
+        );
+      }
+    }
+
+    // 2. Add checkpoint markers
+    for (final cp in widget.checkpoints) {
+      if (cp.hasLocation) {
+        controller.addCircle(
+          maplibre.CircleOptions(
+            geometry: maplibre.LatLng(cp.lat!, cp.lng!),
+            circleRadius: 8.5,
+            circleColor: '#FFB703',
+            circleStrokeWidth: 2.0,
+            circleStrokeColor: '#142428',
+            circleOpacity: 1.0,
+            circleStrokeOpacity: 1.0,
+          ),
+        );
+      }
     }
   }
 

@@ -1087,6 +1087,9 @@ class TourTranslationKeys {
       'fund_budget_help':
           'Leave a category empty for no limit. Amounts are in taka.',
       'fund_budget_total': 'Total budget',
+      'fund_alert_caution':
+          'Spending alert: Budget reached 80% or projected spend exceeds total limit',
+      'fund_alert_critical': 'Critical: Budget limit has been exceeded!',
       'fund_budget_per_head_day': '{head} per person · {day} per day',
       'fund_receipt_load_failed': 'Could not load the receipt photo',
       'fund_budget_per_head': '{head} per person',
@@ -3731,6 +3734,9 @@ class TourTranslationKeys {
           'পরিকল্পনার তুলনায় খাতভিত্তিক খরচ দেখুন, আর গ্রুপের মোট খরচ কোথায় যাচ্ছে বুঝুন।',
       'fund_budget_help': 'কোনো খাতে সীমা না চাইলে খালি রাখুন। পরিমাণ টাকায়।',
       'fund_budget_total': 'মোট বাজেট',
+      'fund_alert_caution':
+          'সতর্কতা: বাজেটের ৮০% খরচ হয়ে গেছে বা সম্ভাব্য মোট খরচ বাজেট ছাড়িয়ে যেতে পারে',
+      'fund_alert_critical': 'জরুরি সতর্কতা: মোট বাজেট সীমা অতিক্রম করেছে!',
       'fund_budget_per_head_day': 'মাথাপিছু {head} · দিনে {day}',
       'fund_receipt_load_failed': 'রসিদের ছবি লোড করা যায়নি',
       'fund_budget_per_head': 'মাথাপিছু {head}',

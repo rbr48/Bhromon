@@ -244,6 +244,20 @@ int? convertToPaisa(int originalMinor, double rate) {
   return (originalMinor * rate).round();
 }
 
+/// The burn-rate alert level for budget management.
+/// - [normal]: Spending is under 80% of budget and projected spend is on track.
+/// - [caution]: Spending has reached ≥ 80% of budget or projected spend exceeds budget.
+/// - [critical]: Spending has reached or exceeded 100% of budget.
+enum BurnRateAlert {
+  normal,
+  caution,
+  critical;
+
+  bool get isNormal => this == BurnRateAlert.normal;
+  bool get isCaution => this == BurnRateAlert.caution;
+  bool get isCritical => this == BurnRateAlert.critical;
+}
+
 /// One category's budget against what was spent.
 class BudgetLine {
   const BudgetLine({
@@ -261,6 +275,13 @@ class BudgetLine {
 
   /// Spent as a share of budget; 0 with no budget.
   double get ratio => budgetPaisa <= 0 ? 0 : spentPaisa / budgetPaisa;
+
+  BurnRateAlert get alertLevel {
+    if (budgetPaisa <= 0) return BurnRateAlert.normal;
+    if (spentPaisa >= budgetPaisa) return BurnRateAlert.critical;
+    if (ratio >= 0.80) return BurnRateAlert.caution;
+    return BurnRateAlert.normal;
+  }
 }
 
 /// What a member was asked to pay into the fund, and what they have paid.
@@ -322,6 +343,18 @@ class FundReport {
 
   int get leftPaisa => budgetPaisa - spentPaisa;
   bool get isOverBudget => budgetPaisa > 0 && spentPaisa > budgetPaisa;
+
+  /// Overall fund burn-rate alert level (normal, caution at ≥80% or projected
+  /// overage, critical at ≥100%).
+  BurnRateAlert get alertLevel {
+    if (budgetPaisa <= 0) return BurnRateAlert.normal;
+    if (spentPaisa >= budgetPaisa) return BurnRateAlert.critical;
+    if (spentPaisa / budgetPaisa >= 0.80 ||
+        (daysElapsed > 0 && projectedPaisa > budgetPaisa)) {
+      return BurnRateAlert.caution;
+    }
+    return BurnRateAlert.normal;
+  }
 
   /// Average spent per tour day so far, or 0 before the tour starts.
   int get perDayPaisa => daysElapsed == 0 ? 0 : spentPaisa ~/ daysElapsed;
