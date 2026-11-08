@@ -4,6 +4,7 @@ import 'package:bhromon/app/di/injection.dart';
 import 'package:bhromon/core/entities/explorer_profile.dart';
 import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/localization/locale_controller.dart';
 import 'package:bhromon/core/utils/shared_latest_stream.dart';
 import 'package:bhromon/core/value_objects/explorer_score.dart';
 import 'package:bhromon/core/value_objects/trust_tier.dart';
@@ -205,7 +206,10 @@ void main() {
     final baseline = (repo.watchCalls, repo.upstreamOpens);
     expect(baseline, (1, 1), reason: 'one stream for the screen, one upstream');
 
-    const tabs = ['গ্রুপসমূহ', 'গেমিং', 'স্মৃতি', 'সেটিংস'];
+    final isBn = LocaleController.instance.locale.languageCode == 'bn';
+    final tabs = isBn
+        ? const ['গ্রুপসমূহ', 'গেমিং', 'সেটিংস']
+        : const ['My Groups', 'Games', 'Settings'];
     for (var tap = 0; tap < 20; tap++) {
       final label = tabs[tap % tabs.length];
       await tester.tap(find.text(label).first);
@@ -226,10 +230,11 @@ void main() {
       (tester) async {
     final repo = await _pumpProfile(tester, groupsV2: true);
 
-    expect(find.text('গ্রুপসমূহ'), findsNothing,
+    final isBn = LocaleController.instance.locale.languageCode == 'bn';
+    expect(find.text(isBn ? 'গ্রুপসমূহ' : 'My Groups'), findsNothing,
         reason: 'the groups-V2 profile has no groups tab');
 
-    const tabs = ['গেমিং', 'স্মৃতি', 'সেটিংস'];
+    final tabs = isBn ? const ['গেমিং', 'সেটিংস'] : const ['Games', 'Settings'];
     // Each tab loads once first. The budget is what the taps add after that.
     for (final label in tabs) {
       await tester.tap(find.text(label).first);

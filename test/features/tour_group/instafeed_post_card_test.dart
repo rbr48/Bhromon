@@ -234,4 +234,37 @@ void main() {
     expect((darkContainer.decoration as BoxDecoration).color,
         const Color(0xFF1E1E1E));
   });
+
+  testWidgets('renders cross-group reshared attribution banner when present',
+      (tester) async {
+    final post = TourPostItem(
+      id: 'post_reshared',
+      tourId: 'tour_target',
+      authorEmail: 'author@bhromon.fun',
+      authorName: 'Rina',
+      caption: 'Look at this!',
+      images: const ['https://example.com/pic.jpg'],
+      createdAt: now,
+      resharedFromTourId: 'tour_source',
+      resharedFromTourName: 'Family Vacation',
+      resharedFromAuthorName: 'Uncle Bob',
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        InstafeedPostCard(
+          repository: repo,
+          tourId: 'tour_target',
+          post: post,
+          isBookmarked: false,
+          onBookmarkToggle: () {},
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byIcon(Icons.repeat_rounded), findsOneWidget);
+    expect(find.textContaining('Family Vacation'), findsOneWidget);
+  });
 }

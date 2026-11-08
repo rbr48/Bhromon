@@ -245,7 +245,10 @@ class HiveEncryptionService {
     logWarning(
         '[HiveEncryption] $boxName cannot be read with the device key or an '
         'older key; recreating it empty');
-    if (_webStorage) await _deleteBox(boxName);
+    if (_webStorage) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _deleteBox(boxName);
+    }
     return Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
   }
 

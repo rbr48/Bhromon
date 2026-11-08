@@ -49,7 +49,10 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
       backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('album_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
         elevation: 0,

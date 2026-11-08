@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions/v1';
-import { Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { Timestamp, Transaction, getFirestore } from 'firebase-admin/firestore';
 import * as https from 'https';
 import {
   OTP_CODES_PER_HOUR_OVERALL,
@@ -50,7 +50,7 @@ export const sendOtpEmail = functions
 
     const code = generateOtpCode();
     const nowMs = Date.now();
-    const outcome = await db.runTransaction<IssueOutcome>(async (tx) => {
+    const outcome = await db.runTransaction<IssueOutcome>(async (tx: Transaction) => {
       const otpRef = db.collection('otps').doc(email);
       const overallRef = db.collection('otp_limits').doc('overall');
       const [otpSnap, overallSnap] = await Promise.all([tx.get(otpRef), tx.get(overallRef)]);

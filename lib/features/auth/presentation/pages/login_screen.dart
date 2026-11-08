@@ -95,7 +95,13 @@ class _LoginScreenState extends State<LoginScreen>
         if (didPop) return;
         final authState = context.read<AuthCubit>().state;
         if (authState is Authenticated) {
-          context.go('/group-hub');
+          final redirect =
+              GoRouterState.of(context).uri.queryParameters['redirect'];
+          if (redirect != null && redirect.isNotEmpty) {
+            context.go(redirect);
+          } else {
+            context.go('/group-hub');
+          }
         }
       },
       child: Scaffold(
@@ -103,7 +109,13 @@ class _LoginScreenState extends State<LoginScreen>
         body: BlocConsumer<AuthCubit, AuthState>(
           listener: (ctx, state) {
             if (state is Authenticated) {
-              ctx.go('/group-hub');
+              final redirect =
+                  GoRouterState.of(ctx).uri.queryParameters['redirect'];
+              if (redirect != null && redirect.isNotEmpty) {
+                ctx.go(redirect);
+              } else {
+                ctx.go('/group-hub');
+              }
             }
             if (state is AuthError) {
               ScaffoldMessenger.of(ctx).showSnackBar(

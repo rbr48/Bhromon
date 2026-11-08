@@ -26,7 +26,6 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../widgets/chat_media_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -87,7 +86,9 @@ class ChatScreen extends StatefulWidget {
 class _PendingUpload {
   final String id;
   File? file;
+  List<File>? files;
   Uint8List? bytes;
+  List<Uint8List>? multiBytes;
   final String type;
   double progress = 0.0;
 
@@ -101,7 +102,9 @@ class _PendingUpload {
   _PendingUpload({
     required this.id,
     this.file,
+    this.files,
     this.bytes,
+    this.multiBytes,
     required this.type,
     this.fileName,
     this.fileSizeBytes,
@@ -203,6 +206,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   int _searchMatchIndex = 0;
   final List<int> _matchingIndices = [];
   String? _highlightedMessageId;
+  final Map<String, GlobalKey> _messageItemKeys = {};
   QueryDocumentSnapshot? _reactionTargetDoc;
 
   // Pending uploads shown optimistically before Firestore write completes.
@@ -1348,6 +1352,233 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Uploads multiple photos and bundles them into a single chat message document.
+
+  Future<void> _sendMultiImageMessage(
+    List<XFile> xFiles,
+    String currentUid,
+    String currentName, {
+    String? caption,
+    bool isViewOnce = false,
+  }) async {
+    if (xFiles.isEmpty) return;
+
+    if (xFiles.length == 1) {
+      await _sendMediaMessage(
+        MediaPickResult(
+          file: !kIsWeb ? File(xFiles.first.path) : null,
+          xFile: xFiles.first,
+          type: 'image',
+        ),
+        currentUid,
+        currentName,
+        caption: caption,
+        isViewOnce: isViewOnce,
+      );
+
+      return;
+    }
+
+    final l10n = context.l10n;
+
+    final uploadId = const Uuid().v4();
+
+    final List<File> localFiles = [];
+
+    final List<Uint8List> multiBytes = [];
+
+    for (final xf in xFiles) {
+      if (!kIsWeb) {
+        localFiles.add(File(xf.path));
+      }
+
+      try {
+        final b = await xf.readAsBytes();
+
+        multiBytes.add(b);
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+    }
+
+    final pending = _PendingUpload(
+      id: uploadId,
+      files: localFiles.isNotEmpty ? localFiles : null,
+      multiBytes: multiBytes.isNotEmpty ? multiBytes : null,
+      type: 'image',
+    );
+
+    if (mounted) setState(() => _pendingUploads.add(pending));
+
+    Trace? uploadTrace;
+
+    if (!kIsWeb) {
+      try {
+        uploadTrace =
+            FirebasePerformance.instance.newTrace('multi_image_upload');
+
+        await uploadTrace.start();
+
+        uploadTrace.putAttribute('imageCount', xFiles.length.toString());
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+    }
+
+    final total = xFiles.length;
+
+    final List<String> downloadUrls = [];
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null) {
+        try {
+          await currentUser.getIdToken();
+        } catch (e) {
+          logWarning('Auth token refresh error: $e');
+        }
+      }
+
+      for (int i = 0; i < total; i++) {
+        final xf = xFiles[i];
+
+        final downloadUrl = await MediaUploadService.uploadXFile(
+          file: xf,
+          tourOrChatId: widget.chatId,
+          folder: 'chat_media',
+          onProgress: (progress) {
+            if (mounted) {
+              final overall = (i + progress.clamp(0.0, 1.0)) / total;
+
+              setState(() => pending.progress = overall);
+            }
+          },
+        );
+
+        downloadUrls.add(downloadUrl);
+
+        if (mounted) {
+          setState(() => pending.progress = (i + 1) / total);
+        }
+      }
+
+      if (downloadUrls.isEmpty) return;
+
+      final resolvedOtherUid = _resolveOtherUid(currentUid);
+
+      _ensureChatDocument(currentUid);
+
+      final msgRef = FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .doc();
+
+      final replyPayload = _replyingMessage?.toMap();
+
+      setState(() => _replyingMessage = null);
+
+      final msgData = <String, dynamic>{
+        'senderId': currentUid,
+        'type': 'image',
+        'text': caption ?? '',
+        'mediaUrl': downloadUrls.first,
+        'mediaUrls': downloadUrls,
+        if (replyPayload != null) 'replyTo': replyPayload,
+        if (isViewOnce) 'isViewOnce': true,
+        if (isViewOnce) 'isOpened': false,
+        'seen': false,
+        'status': 'sent',
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+
+      final lastMsg = (caption != null && caption.isNotEmpty)
+          ? '📷 $caption'
+          : '📷 ${downloadUrls.length} Photos';
+
+      final chatRef =
+          FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+
+      final chatMeta = _buildChatMeta(
+        lastMessage: lastMsg,
+        lastMessageType: 'image',
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
+
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: caption ?? '',
+          type: 'image',
+          senderName: currentName,
+          mediaUrl: downloadUrls.first,
+          replyTo: replyPayload,
+        ));
+      }
+
+      try {
+        await msgRef.set(msgData);
+
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          logWarning('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: lastMsg,
+        );
+      } catch (e) {
+        logWarning('Firestore multi-image write skipped/quota: $e');
+      }
+
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } catch (e, st) {
+      logWarning('Failed to send multi-image message: $e\n$st');
+
+      final String msg;
+
+      if (e is FirebaseException &&
+          e.message != null &&
+          e.message!.isNotEmpty) {
+        msg = l10n.translate('chat_send_media_failed_detail',
+            args: {'error': e.message.toString()});
+      } else {
+        msg = l10n.translate('chat_send_media_failed_detail', args: {
+          'error': e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      try {
+        await uploadTrace?.stop();
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+
+      if (mounted) {
+        setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
+      }
+    }
+  }
+
   /// Uploads a recorded voice message to Firebase Storage and records it in Firestore.
   Future<void> _sendVoiceMessage(
     String filePath,
@@ -1825,56 +2056,62 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onDocumentPicked: (file) =>
             _sendDocumentMessage(file, currentUid, currentName),
         onMediaPicked: (file, isVideo) =>
-            _openMediaCaptionFlow(file, isVideo, currentUid, currentName),
+            _openMediaCaptionFlow([file], isVideo, currentUid, currentName),
+        onMultiMediaPicked: (files, isVideo) =>
+            _openMediaCaptionFlow(files, isVideo, currentUid, currentName),
         onAudioPicked: (audioFile) =>
             _sendDocumentMessage(audioFile, currentUid, currentName),
         onLocationPicked: (pos, title) =>
             _sendLocationMessage(pos, title, currentUid, currentName),
         onExpenseSplit: () => _showSplitBillDialog(currentUid, currentName),
+        onEmojiPicked: _toggleEmojiPicker,
       ),
     );
   }
 
   void _openMediaCaptionFlow(
-    XFile file,
+    List<XFile> files,
     bool isVideo,
     String currentUid,
     String currentName,
   ) async {
+    if (files.isEmpty) return;
     final result = await Navigator.of(context).push<MediaCaptionResult>(
       MaterialPageRoute(
         builder: (ctx) => ChatMediaCaptionScreen(
-          file: file,
+          files: files,
           isVideo: isVideo,
         ),
       ),
     );
 
-    if (result != null) {
-      _sendMediaMessage(
-        MediaPickResult(
-          file: !kIsWeb ? File(result.file.path) : null,
-          xFile: result.file,
-          type: isVideo ? 'video' : 'image',
-        ),
-        currentUid,
-        currentName,
-        caption: result.caption,
-        isViewOnce: result.isViewOnce,
-      );
-    }
-  }
-
-  Future<void> _openCameraDirect(String currentUid, String currentName) async {
-    try {
-      final picker = ImagePicker();
-      final photo =
-          await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-      if (photo != null) {
-        _openMediaCaptionFlow(photo, false, currentUid, currentName);
+    if (result != null && result.files.isNotEmpty) {
+      if (isVideo || result.files.length == 1) {
+        for (int i = 0; i < result.files.length; i++) {
+          final xf = result.files[i];
+          final caption =
+              (i == 0 && result.caption.isNotEmpty) ? result.caption : null;
+          await _sendMediaMessage(
+            MediaPickResult(
+              file: !kIsWeb ? File(xf.path) : null,
+              xFile: xf,
+              type: isVideo ? 'video' : 'image',
+            ),
+            currentUid,
+            currentName,
+            caption: caption,
+            isViewOnce: result.isViewOnce,
+          );
+        }
+      } else {
+        await _sendMultiImageMessage(
+          result.files,
+          currentUid,
+          currentName,
+          caption: result.caption.isNotEmpty ? result.caption : null,
+          isViewOnce: result.isViewOnce,
+        );
       }
-    } catch (e) {
-      logError('Error opening camera: $e');
     }
   }
 
@@ -2093,19 +2330,297 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _scrollToMessage(String messageId) {
-    final idx = _visibleMessages.indexWhere((d) => d.id == messageId);
-    if (idx != -1) {
-      _scrollController.animateTo(
-        idx * 60.0,
+  Future<void> _scrollToMessage(String messageId) async {
+    if (messageId.isEmpty) return;
+    int idx = _visibleMessages.indexWhere((d) => d.id == messageId);
+
+    if (idx == -1 && _hasMoreMessages) {
+      int attempts = 0;
+      while (idx == -1 && _hasMoreMessages && attempts < 5) {
+        attempts++;
+        await _loadEarlierMessages();
+        idx = _visibleMessages.indexWhere((d) => d.id == messageId);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (idx == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.translate('chat_pinned_not_found')),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final key = _messageItemKeys[messageId];
+    if (key?.currentContext != null && key!.currentContext!.mounted) {
+      await Scrollable.ensureVisible(
+        key.currentContext!,
+        alignment: 0.5,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    } else if (_scrollController.hasClients) {
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      final targetFraction = (idx + 0.5) / _visibleMessages.length;
+      final estimatedOffset =
+          (targetFraction * maxExtent).clamp(0.0, maxExtent);
+
+      await _scrollController.animateTo(
+        estimatedOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+
+      if (!mounted) return;
+      await WidgetsBinding.instance.endOfFrame;
+
+      final fineKey = _messageItemKeys[messageId];
+      if (fineKey?.currentContext != null && fineKey!.currentContext!.mounted) {
+        await Scrollable.ensureVisible(
+          fineKey.currentContext!,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+
+    if (mounted) {
       setState(() => _highlightedMessageId = messageId);
       Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _highlightedMessageId = null);
+        if (mounted && _highlightedMessageId == messageId) {
+          setState(() => _highlightedMessageId = null);
+        }
       });
     }
+  }
+
+  Future<void> _showPinnedMessageFullView(Map<String, dynamic> pinned) async {
+    final l10n = context.l10n;
+    final messageId = (pinned['id'] as String?) ?? '';
+    if (messageId.isEmpty) return;
+
+    Map<String, dynamic>? fullData;
+    final cached = _allMessages.where((d) => d.id == messageId).firstOrNull;
+    if (cached != null) {
+      fullData = cached.data() as Map<String, dynamic>?;
+    } else {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('chats')
+            .doc(widget.chatId)
+            .collection('messages')
+            .doc(messageId)
+            .get();
+        if (snap.exists) {
+          fullData = snap.data();
+        }
+      } catch (e) {
+        logWarning('Could not fetch pinned message details: $e');
+      }
+    }
+
+    final text =
+        (fullData?['text'] as String?) ?? (pinned['text'] as String?) ?? '';
+    final msgType =
+        (fullData?['type'] as String?) ?? (pinned['type'] as String?) ?? 'text';
+    final mediaUrl = (fullData?['mediaUrl'] as String?) ??
+        (pinned['mediaUrl'] as String?) ??
+        '';
+    final mediaUrls = (fullData?['mediaUrls'] is List)
+        ? (fullData!['mediaUrls'] as List).cast<String>()
+        : (pinned['mediaUrls'] is List)
+            ? (pinned['mediaUrls'] as List).cast<String>()
+            : null;
+
+    final senderId = (fullData?['senderId'] as String?) ??
+        (pinned['senderId'] as String?) ??
+        '';
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isMe = senderId.isNotEmpty && senderId == currentUid;
+
+    DateTime? sentTime;
+    final tsRaw = fullData?['timestamp'] ?? pinned['pinnedAt'];
+    if (tsRaw is Timestamp) {
+      sentTime = tsRaw.toDate();
+    } else if (tsRaw is DateTime) {
+      sentTime = tsRaw;
+    }
+
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.chat.bar,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.midGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.push_pin_rounded,
+                          color: AppColors.midGreen, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.translate('chat_pinned_full_title'),
+                            style: TextStyle(
+                              color: context.chat.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (sentTime != null)
+                            Text(
+                              _formatTime(sentTime),
+                              style: TextStyle(
+                                color: context.chat.text54,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: context.chat.text70),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: context.chat.recessedDeep),
+                const SizedBox(height: 14),
+                if (mediaUrls != null && mediaUrls.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: ChatMediaBubble(
+                        mediaUrls: mediaUrls,
+                        type: msgType,
+                        isMe: false,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (mediaUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: ChatMediaBubble(
+                        mediaUrl: mediaUrl,
+                        type: msgType,
+                        isMe: false,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (text.isNotEmpty && text != 'Media')
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: SelectionArea(
+                        child: ChatRichText(
+                          text: text,
+                          baseStyle: TextStyle(
+                            color: context.chat.text,
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                          isMine: isMe,
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                          _scrollToMessage(messageId);
+                        },
+                        icon:
+                            const Icon(Icons.arrow_downward_rounded, size: 18),
+                        label: Text(l10n.translate('chat_pinned_jump')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00A884),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (text.isNotEmpty && text != 'Media') ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: text));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text(l10n.translate('chat_pinned_copied')),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        label: Text(l10n.translate('chat_pinned_copy')),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.chat.text,
+                          side: BorderSide(color: context.chat.text38),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _toggleReaction(
@@ -2205,6 +2720,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'pinnedMessage': {
           'id': docId,
           'text': text,
+          'type': data?['type'] ?? 'text',
+          'mediaUrl': data?['mediaUrl'] ?? '',
+          if (data?['mediaUrls'] != null) 'mediaUrls': data!['mediaUrls'],
+          'senderId': data?['senderId'] ?? '',
           'pinnedAt': FieldValue.serverTimestamp(),
         },
       }, SetOptions(merge: true));
@@ -2231,6 +2750,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final text = (data['text'] as String?) ?? '';
     final type = (data['type'] as String?) ?? 'text';
     final mediaUrl = data['mediaUrl'] as String?;
+    final mediaUrls = (data['mediaUrls'] is List)
+        ? (data['mediaUrls'] as List).cast<String>()
+        : null;
 
     showDialog<void>(
       context: context,
@@ -2239,14 +2761,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         forwardText: text,
         forwardType: type,
         forwardMediaUrl: mediaUrl,
-        onForward: (targetChatId) =>
-            _forwardMessage(targetChatId, text, type, mediaUrl, currentUid),
+        onForward: (targetChatId) => _forwardMessage(
+            targetChatId, text, type, mediaUrl, currentUid,
+            mediaUrls: mediaUrls),
       ),
     );
   }
 
   void _forwardMessage(String targetChatId, String text, String type,
-      String? mediaUrl, String currentUid) async {
+      String? mediaUrl, String currentUid,
+      {List<String>? mediaUrls}) async {
     setState(() => _selectedMessageIds.clear());
     try {
       _ensureChatDocument(currentUid);
@@ -2261,6 +2785,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'type': type,
         'text': text,
         if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
+        if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
         'isForwarded': true,
         'seen': false,
         'status': 'sent',
@@ -2596,1517 +3121,1596 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           child: Scaffold(
             backgroundColor:
                 context.chat.wallpaper, // WhatsApp wallpaper base color
-            appBar: _selectedMessageIds.isNotEmpty
-                ? AppBar(
-                    backgroundColor: context.chat.bar,
-                    leading: IconButton(
-                      icon: Icon(Icons.arrow_back, color: context.chat.text),
-                      onPressed: () => setState(() {
-                        _selectedMessageIds.clear();
-                        _reactionTargetDoc = null;
-                      }),
-                    ),
-                    title: Text(
-                      '${_selectedMessageIds.length}',
-                      style: TextStyle(
-                        color: context.chat.text,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    actions: [
-                      if (_selectedMessageIds.length == 1) ...[
-                        IconButton(
-                          icon: Icon(Icons.reply, color: context.chat.text),
-                          tooltip: context.l10n.translate('chat_action_reply'),
-                          onPressed: () {
-                            final doc = _allMessages.firstWhere(
-                                (d) => d.id == _selectedMessageIds.first);
-                            _setReplyToMessage(doc);
-                            setState(() {
-                              _selectedMessageIds.clear();
-                              _reactionTargetDoc = null;
-                            });
-                          },
-                        ),
-                        Builder(builder: (context) {
-                          final doc = _allMessages.firstWhere(
-                              (d) => d.id == _selectedMessageIds.first);
-                          final data = doc.data() as Map<String, dynamic>;
-                          final isMe = data['senderId'] == currentUid;
-                          final isText = data['type'] == 'text';
-                          final ts = data['timestamp'] as Timestamp?;
-                          final isWithin15Min = ts != null &&
-                              DateTime.now()
-                                      .difference(ts.toDate())
-                                      .inMinutes <=
-                                  15;
-                          if (isMe && isText && isWithin15Min) {
-                            return IconButton(
-                              icon: Icon(Icons.edit, color: context.chat.text),
-                              tooltip:
-                                  context.l10n.translate('chat_action_edit'),
-                              onPressed: () => _startEditingMessage(doc),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        }),
-                        IconButton(
-                          icon: Icon(Icons.push_pin_outlined,
-                              color: context.chat.text),
-                          tooltip: context.l10n.translate('chat_action_pin'),
-                          onPressed: _pinSelectedMessage,
-                        ),
-                      ],
-                      IconButton(
-                        icon:
-                            Icon(Icons.star_outline, color: context.chat.text),
-                        tooltip: context.l10n.translate('chat_action_star'),
-                        onPressed: () =>
-                            _toggleStarSelectedMessages(currentUid),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: context.chat.text),
-                        tooltip: context.l10n.translate('chat_action_delete'),
-                        onPressed: () => _deleteSelectedMessages(currentUid),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.forward, color: context.chat.text),
-                        tooltip: context.l10n.translate('chat_action_forward'),
-                        onPressed: () => _openForwardDialog(currentUid),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.copy, color: context.chat.text),
-                        tooltip: context.l10n.translate('chat_action_copy'),
-                        onPressed: _copySelectedMessages,
-                      ),
-                    ],
-                  )
-                : _isSearchingInChat
-                    ? AppBar(
-                        backgroundColor: context.chat.bar,
-                        leading: IconButton(
-                          icon:
-                              Icon(Icons.arrow_back, color: context.chat.text),
-                          onPressed: () => setState(() {
-                            _isSearchingInChat = false;
-                            _searchController.clear();
-                            _matchingIndices.clear();
-                          }),
-                        ),
-                        title: TextField(
-                          controller: _searchController,
-                          autofocus: true,
-                          style:
-                              TextStyle(color: context.chat.text, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText:
-                                context.l10n.translate('chat_search_hint'),
-                            hintStyle: TextStyle(
-                                color: context.chat.text38, fontSize: 14),
-                            border: InputBorder.none,
-                          ),
-                          onChanged: _onSearchQueryChanged,
-                        ),
-                        actions: [
-                          if (_matchingIndices.isNotEmpty) ...[
-                            Center(
-                              child: Text(
-                                '${_searchMatchIndex + 1}/${_matchingIndices.length}',
-                                style: TextStyle(
-                                    color: context.chat.text70, fontSize: 12),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.keyboard_arrow_up,
-                                  color: context.chat.text),
-                              onPressed: () => _navigateSearchMatch(false),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.keyboard_arrow_down,
-                                  color: context.chat.text),
-                              onPressed: () => _navigateSearchMatch(true),
-                            ),
-                          ],
-                          IconButton(
-                            icon: Icon(Icons.close, color: context.chat.text),
-                            onPressed: () => setState(() {
-                              _isSearchingInChat = false;
-                              _searchController.clear();
-                              _matchingIndices.clear();
-                            }),
-                          ),
-                        ],
-                      )
-                    : AppBar(
-                        backgroundColor:
-                            context.chat.bar, // WhatsApp slate dark
-                        elevation: 1.5,
-                        leadingWidth: 90,
-                        leading: Row(
-                          children: [
-                            const SizedBox(width: 4),
-                            IconButton(
-                              padding: EdgeInsets.zero,
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(kToolbarHeight),
+              child: Container(
+                color: context.chat.bar,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 960),
+                    child: _selectedMessageIds.isNotEmpty
+                        ? AppBar(
+                            backgroundColor: context.chat.bar,
+                            leading: IconButton(
                               icon: Icon(Icons.arrow_back,
                                   color: context.chat.text),
-                              onPressed: () {
-                                if (context.canPop()) {
-                                  context.pop();
-                                } else {
-                                  context.go('/chats');
-                                }
-                              },
+                              onPressed: () => setState(() {
+                                _selectedMessageIds.clear();
+                                _reactionTargetDoc = null;
+                              }),
                             ),
-                            InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: openOtherProfile,
-                              child: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: context.chat.outgoing,
-                                backgroundImage: (avatarUrl != null &&
-                                        avatarUrl.isNotEmpty)
-                                    ? sizedImage(
-                                        NetworkImage(signedMediaUrl(avatarUrl)),
-                                        context.decodeWidth(36))
-                                    : null,
-                                child: (avatarUrl == null || avatarUrl.isEmpty)
-                                    ? Text(initials,
-                                        style: TextStyle(
-                                            color: context.chat.text,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11))
-                                    : null,
+                            title: Text(
+                              '${_selectedMessageIds.length}',
+                              style: TextStyle(
+                                color: context.chat.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ],
-                        ),
-                        titleSpacing: 8,
-                        title: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(6),
-                                    onTap: openOtherProfile,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2, horizontal: 2),
-                                      child: Text(
-                                        otherName,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: context.chat.text,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                            actions: [
+                              if (_selectedMessageIds.length == 1) ...[
+                                IconButton(
+                                  icon: Icon(Icons.reply,
+                                      color: context.chat.text),
+                                  tooltip: context.l10n
+                                      .translate('chat_action_reply'),
+                                  onPressed: () {
+                                    final doc = _allMessages.firstWhere((d) =>
+                                        d.id == _selectedMessageIds.first);
+                                    _setReplyToMessage(doc);
+                                    setState(() {
+                                      _selectedMessageIds.clear();
+                                      _reactionTargetDoc = null;
+                                    });
+                                  },
                                 ),
-                                if (_disappearingTimerSeconds > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: Icon(Icons.timer_outlined,
-                                        size: 13, color: context.chat.text70),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            // Typing / Online / Last Seen status stream (WhatsApp parity)
-                            StreamBuilder<DocumentSnapshot>(
-                              stream: _chatDocStream,
-                              builder: (context, chatSnap) {
-                                final data = chatSnap.data?.data()
-                                    as Map<String, dynamic>?;
-                                final bool isOtherTyping =
-                                    (data?['typing_$resolvedOtherUid']
-                                            as bool?) ??
-                                        false;
-
-                                if (isOtherTyping) {
-                                  return Text(
-                                    context.l10n
-                                        .translate('chat_status_typing'),
-                                    style: TextStyle(
-                                      color: context.chat.accentText,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'NotoSansBengali',
-                                    ),
-                                  );
-                                }
-
-                                if (_otherOnline) {
-                                  return Text(
-                                    context.l10n
-                                        .translate('chat_status_online'),
-                                    style: TextStyle(
-                                      color: context.chat.text54,
-                                      fontSize: 11,
-                                      fontFamily: 'NotoSansBengali',
-                                    ),
-                                  );
-                                }
-
-                                final rawLastSeen =
-                                    data?['lastSeen_$resolvedOtherUid'] ??
-                                        data?['last_seen_$resolvedOtherUid'];
-                                DateTime? lastSeen;
-                                if (rawLastSeen is Timestamp) {
-                                  lastSeen = rawLastSeen.toDate();
-                                } else if (rawLastSeen is DateTime) {
-                                  lastSeen = rawLastSeen;
-                                }
-
-                                if (lastSeen == null &&
-                                    _allMessages.isNotEmpty) {
-                                  for (final doc in _allMessages) {
-                                    final mData =
-                                        doc.data() as Map<String, dynamic>?;
-                                    if (mData?['senderId'] ==
-                                        resolvedOtherUid) {
-                                      final t = mData?['timestamp'];
-                                      if (t is Timestamp) {
-                                        lastSeen = t.toDate();
-                                        break;
-                                      }
-                                    }
+                                Builder(builder: (context) {
+                                  final doc = _allMessages.firstWhere(
+                                      (d) => d.id == _selectedMessageIds.first);
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final isMe = data['senderId'] == currentUid;
+                                  final isText = data['type'] == 'text';
+                                  final ts = data['timestamp'] as Timestamp?;
+                                  final isWithin15Min = ts != null &&
+                                      DateTime.now()
+                                              .difference(ts.toDate())
+                                              .inMinutes <=
+                                          15;
+                                  if (isMe && isText && isWithin15Min) {
+                                    return IconButton(
+                                      icon: Icon(Icons.edit,
+                                          color: context.chat.text),
+                                      tooltip: context.l10n
+                                          .translate('chat_action_edit'),
+                                      onPressed: () =>
+                                          _startEditingMessage(doc),
+                                    );
                                   }
-                                }
-
-                                final isBn = LocaleController
-                                        .instance.locale.languageCode ==
-                                    'bn';
-                                final statusText = lastSeen != null
-                                    ? _formatLastSeen(lastSeen, isBn)
-                                    : context.l10n
-                                        .translate('chat_status_offline');
-
-                                return Text(
-                                  statusText,
-                                  style: TextStyle(
-                                    color: context.chat.text54,
-                                    fontSize: 11,
-                                    fontFamily: 'NotoSansBengali',
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          IconButton(
-                            icon: Icon(Icons.call,
-                                color: context.chat.text, size: 21),
-                            tooltip: context.l10n.translate('chat_call_audio'),
-                            onPressed: () => _initiateCall(
-                              isVideo: false,
-                              currentUid: currentUid,
-                              otherUid: resolvedOtherUid,
-                              otherName: otherName,
-                              avatarUrl: avatarUrl,
-                              localUserName: currentName,
-                              localAvatarUrl: currentAvatarUrl,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.videocam,
-                                color: context.chat.text, size: 23),
-                            tooltip: context.l10n.translate('chat_call_video'),
-                            onPressed: () => _initiateCall(
-                              isVideo: true,
-                              currentUid: currentUid,
-                              otherUid: resolvedOtherUid,
-                              otherName: otherName,
-                              avatarUrl: avatarUrl,
-                              localUserName: currentName,
-                              localAvatarUrl: currentAvatarUrl,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.search,
-                                color: context.chat.text, size: 21),
-                            tooltip:
-                                context.l10n.translate('chat_search_tooltip'),
-                            onPressed: () =>
-                                setState(() => _isSearchingInChat = true),
-                          ),
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert,
-                                color: context.chat.text, size: 20),
-                            color: context.chat.bar,
-                            onSelected: (val) {
-                              if (val == 'search') {
-                                setState(() => _isSearchingInChat = true);
-                              } else if (val == 'split') {
-                                _showSplitBillDialog(currentUid, currentName);
-                              } else if (val == 'disappearing') {
-                                _showDisappearingMessagesSheet(context);
-                              } else if (val == 'delete_chat') {
-                                _confirmDeleteChat(currentUid, otherName);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'search',
-                                child: Text(
-                                    context.l10n.translate('chat_menu_search'),
-                                    style: TextStyle(color: context.chat.text)),
+                                  return const SizedBox.shrink();
+                                }),
+                                IconButton(
+                                  icon: Icon(Icons.push_pin_outlined,
+                                      color: context.chat.text),
+                                  tooltip:
+                                      context.l10n.translate('chat_action_pin'),
+                                  onPressed: _pinSelectedMessage,
+                                ),
+                              ],
+                              IconButton(
+                                icon: Icon(Icons.star_outline,
+                                    color: context.chat.text),
+                                tooltip:
+                                    context.l10n.translate('chat_action_star'),
+                                onPressed: () =>
+                                    _toggleStarSelectedMessages(currentUid),
                               ),
-                              PopupMenuItem(
-                                value: 'split',
-                                child: Text(
-                                    context.l10n.translate('chat_split_bill'),
-                                    style: TextStyle(color: context.chat.text)),
+                              IconButton(
+                                icon: Icon(Icons.delete_outline,
+                                    color: context.chat.text),
+                                tooltip: context.l10n
+                                    .translate('chat_action_delete'),
+                                onPressed: () =>
+                                    _deleteSelectedMessages(currentUid),
                               ),
-                              PopupMenuItem(
-                                value: 'disappearing',
-                                child: Text(
-                                    context.l10n
-                                        .translate('chat_menu_disappearing'),
-                                    style: TextStyle(color: context.chat.text)),
+                              IconButton(
+                                icon: Icon(Icons.forward,
+                                    color: context.chat.text),
+                                tooltip: context.l10n
+                                    .translate('chat_action_forward'),
+                                onPressed: () => _openForwardDialog(currentUid),
                               ),
-                              PopupMenuItem(
-                                value: 'delete_chat',
-                                child: Text(
-                                    context.l10n
-                                        .translate('chat_menu_delete_chat'),
-                                    style: const TextStyle(
-                                        color: Colors.redAccent)),
+                              IconButton(
+                                icon:
+                                    Icon(Icons.copy, color: context.chat.text),
+                                tooltip:
+                                    context.l10n.translate('chat_action_copy'),
+                                onPressed: _copySelectedMessages,
                               ),
                             ],
-                          ),
-                        ],
-                      ),
-            body: WhatsappWallpaper(
-              child: Column(
-                children: [
-                  // Pinned message & disappearing messages banner
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: _chatDocStream,
-                    builder: (context, chatSnap) {
-                      final data =
-                          chatSnap.data?.data() as Map<String, dynamic>?;
-                      // A pin made before this person deleted the chat stays hidden for them.
-                      final pinnedRaw =
-                          data?['pinnedMessage'] as Map<String, dynamic>?;
-                      final pinned = (pinnedRaw != null &&
-                              !isMessageHiddenByCutoff(
-                                sentAt: ChatDeletionService.timestampOf(
-                                    pinnedRaw['pinnedAt']),
-                                clearedAt: ChatDeletionService.clearedAtOf(
-                                    data, currentUid),
-                              ))
-                          ? pinnedRaw
-                          : null;
-                      final disappearingSeconds =
-                          (data?['disappearingTimerSeconds'] as num?)
-                                  ?.toInt() ??
-                              0;
-
-                      String? disappearingLabel;
-                      if (disappearingSeconds >= 7776000) {
-                        disappearingLabel =
-                            context.l10n.translate('chat_disappearing_90d');
-                      } else if (disappearingSeconds >= 604800) {
-                        disappearingLabel =
-                            context.l10n.translate('chat_disappearing_7d');
-                      } else if (disappearingSeconds >= 86400) {
-                        disappearingLabel =
-                            context.l10n.translate('chat_disappearing_24h');
-                      }
-
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (pinned != null) ...[
-                            InkWell(
-                              onTap: () => _scrollToMessage(
-                                  (pinned['id'] as String?) ?? ''),
-                              child: Container(
-                                color: context.chat.bar,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.push_pin,
-                                        color: context.chat.accentText,
-                                        size: 16),
-                                    const SizedBox(width: 8),
-                                    Expanded(
+                          )
+                        : _isSearchingInChat
+                            ? AppBar(
+                                backgroundColor: context.chat.bar,
+                                leading: IconButton(
+                                  icon: Icon(Icons.arrow_back,
+                                      color: context.chat.text),
+                                  onPressed: () => setState(() {
+                                    _isSearchingInChat = false;
+                                    _searchController.clear();
+                                    _matchingIndices.clear();
+                                  }),
+                                ),
+                                title: TextField(
+                                  controller: _searchController,
+                                  autofocus: true,
+                                  style: TextStyle(
+                                      color: context.chat.text, fontSize: 14),
+                                  decoration: InputDecoration(
+                                    hintText: context.l10n
+                                        .translate('chat_search_hint'),
+                                    hintStyle: TextStyle(
+                                        color: context.chat.text38,
+                                        fontSize: 14),
+                                    border: InputBorder.none,
+                                  ),
+                                  onChanged: _onSearchQueryChanged,
+                                ),
+                                actions: [
+                                  if (_matchingIndices.isNotEmpty) ...[
+                                    Center(
                                       child: Text(
-                                        context.l10n.translate(
-                                            'chat_pinned_label',
-                                            args: {
-                                              'text':
-                                                  (pinned['text'] as String?) ??
-                                                      ''
-                                            }),
+                                        '${_searchMatchIndex + 1}/${_matchingIndices.length}',
                                         style: TextStyle(
-                                            color: context.chat.text,
+                                            color: context.chat.text70,
                                             fontSize: 12),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.close,
-                                          color: context.chat.text54, size: 16),
+                                      icon: Icon(Icons.keyboard_arrow_up,
+                                          color: context.chat.text),
+                                      onPressed: () =>
+                                          _navigateSearchMatch(false),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.keyboard_arrow_down,
+                                          color: context.chat.text),
+                                      onPressed: () =>
+                                          _navigateSearchMatch(true),
+                                    ),
+                                  ],
+                                  IconButton(
+                                    icon: Icon(Icons.close,
+                                        color: context.chat.text),
+                                    onPressed: () => setState(() {
+                                      _isSearchingInChat = false;
+                                      _searchController.clear();
+                                      _matchingIndices.clear();
+                                    }),
+                                  ),
+                                ],
+                              )
+                            : AppBar(
+                                backgroundColor:
+                                    context.chat.bar, // WhatsApp slate dark
+                                elevation: 1.5,
+                                leadingWidth: 90,
+                                leading: Row(
+                                  children: [
+                                    const SizedBox(width: 4),
+                                    IconButton(
                                       padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
+                                      icon: Icon(Icons.arrow_back,
+                                          color: context.chat.text),
                                       onPressed: () {
-                                        FirebaseFirestore.instance
-                                            .collection('chats')
-                                            .doc(widget.chatId)
-                                            .update({
-                                          'pinnedMessage': FieldValue.delete(),
-                                        });
+                                        if (context.canPop()) {
+                                          context.pop();
+                                        } else {
+                                          context.go('/chats');
+                                        }
+                                      },
+                                    ),
+                                    InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: openOtherProfile,
+                                      child: CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: context.chat.outgoing,
+                                        backgroundImage: (avatarUrl != null &&
+                                                avatarUrl.isNotEmpty)
+                                            ? sizedImage(
+                                                NetworkImage(
+                                                    signedMediaUrl(avatarUrl)),
+                                                context.decodeWidth(36))
+                                            : null,
+                                        child: (avatarUrl == null ||
+                                                avatarUrl.isEmpty)
+                                            ? Text(initials,
+                                                style: TextStyle(
+                                                    color: context.chat.text,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 11))
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                titleSpacing: 8,
+                                title: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            onTap: openOtherProfile,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2,
+                                                      horizontal: 2),
+                                              child: Text(
+                                                otherName,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: context.chat.text,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        if (_disappearingTimerSeconds > 0)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(left: 4),
+                                            child: Icon(Icons.timer_outlined,
+                                                size: 13,
+                                                color: context.chat.text70),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    // Typing / Online / Last Seen status stream (WhatsApp parity)
+                                    StreamBuilder<DocumentSnapshot>(
+                                      stream: _chatDocStream,
+                                      builder: (context, chatSnap) {
+                                        final data = chatSnap.data?.data()
+                                            as Map<String, dynamic>?;
+                                        final bool isOtherTyping =
+                                            (data?['typing_$resolvedOtherUid']
+                                                    as bool?) ??
+                                                false;
+
+                                        if (isOtherTyping) {
+                                          return Text(
+                                            context.l10n.translate(
+                                                'chat_status_typing'),
+                                            style: TextStyle(
+                                              color: context.chat.accentText,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'NotoSansBengali',
+                                              fontFamilyFallback: const [
+                                                'HindSiliguri',
+                                                'Roboto',
+                                                'sans-serif'
+                                              ],
+                                            ),
+                                          );
+                                        }
+
+                                        if (_otherOnline) {
+                                          return Text(
+                                            context.l10n.translate(
+                                                'chat_status_online'),
+                                            style: TextStyle(
+                                              color: context.chat.text54,
+                                              fontSize: 11,
+                                              fontFamily: 'NotoSansBengali',
+                                              fontFamilyFallback: const [
+                                                'HindSiliguri',
+                                                'Roboto',
+                                                'sans-serif'
+                                              ],
+                                            ),
+                                          );
+                                        }
+
+                                        final rawLastSeen = data?[
+                                                'lastSeen_$resolvedOtherUid'] ??
+                                            data?[
+                                                'last_seen_$resolvedOtherUid'];
+                                        DateTime? lastSeen;
+                                        if (rawLastSeen is Timestamp) {
+                                          lastSeen = rawLastSeen.toDate();
+                                        } else if (rawLastSeen is DateTime) {
+                                          lastSeen = rawLastSeen;
+                                        }
+
+                                        if (lastSeen == null &&
+                                            data?['lastMessageSenderId'] ==
+                                                resolvedOtherUid) {
+                                          final t = data?['lastMessageTime'];
+                                          if (t is Timestamp) {
+                                            lastSeen = t.toDate();
+                                          } else if (t is DateTime) {
+                                            lastSeen = t;
+                                          }
+                                        }
+
+                                        if (lastSeen == null &&
+                                            _allMessages.isNotEmpty) {
+                                          for (final doc in _allMessages) {
+                                            final mData = doc.data()
+                                                as Map<String, dynamic>?;
+                                            if (mData?['senderId'] ==
+                                                resolvedOtherUid) {
+                                              final t = mData?['timestamp'];
+                                              if (t is Timestamp) {
+                                                lastSeen = t.toDate();
+                                                break;
+                                              }
+                                            }
+                                          }
+                                        }
+
+                                        final isBn = LocaleController
+                                                .instance.locale.languageCode ==
+                                            'bn';
+                                        final statusText = lastSeen != null
+                                            ? _formatLastSeen(lastSeen, isBn)
+                                            : context.l10n.translate(
+                                                'chat_status_offline');
+
+                                        return Text(
+                                          statusText,
+                                          style: TextStyle(
+                                            color: context.chat.text54,
+                                            fontSize: 11,
+                                            fontFamily: 'NotoSansBengali',
+                                            fontFamilyFallback: const [
+                                              'HindSiliguri',
+                                              'Roboto',
+                                              'sans-serif'
+                                            ],
+                                          ),
+                                        );
                                       },
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          ],
-                          if (disappearingLabel != null) ...[
-                            InkWell(
-                              onTap: () =>
-                                  _showDisappearingMessagesSheet(context),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: context.chat.recessedDeep,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color: context.chat.divider12,
-                                      width: 0.5),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.timer_outlined,
-                                        size: 15, color: context.chat.text70),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        context.l10n.translate(
-                                            'chat_disappearing_banner',
-                                            args: {
-                                              'duration': disappearingLabel
-                                            }),
-                                        style: TextStyle(
-                                            color: context.chat.text70,
-                                            fontSize: 11),
-                                        textAlign: TextAlign.center,
-                                      ),
+                                actions: [
+                                  IconButton(
+                                    icon: Icon(Icons.call,
+                                        color: context.chat.text, size: 21),
+                                    tooltip: context.l10n
+                                        .translate('chat_call_audio'),
+                                    onPressed: () => _initiateCall(
+                                      isVideo: false,
+                                      currentUid: currentUid,
+                                      otherUid: resolvedOtherUid,
+                                      otherName: otherName,
+                                      avatarUrl: avatarUrl,
+                                      localUserName: currentName,
+                                      localAvatarUrl: currentAvatarUrl,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.videocam,
+                                        color: context.chat.text, size: 23),
+                                    tooltip: context.l10n
+                                        .translate('chat_call_video'),
+                                    onPressed: () => _initiateCall(
+                                      isVideo: true,
+                                      currentUid: currentUid,
+                                      otherUid: resolvedOtherUid,
+                                      otherName: otherName,
+                                      avatarUrl: avatarUrl,
+                                      localUserName: currentName,
+                                      localAvatarUrl: currentAvatarUrl,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.search,
+                                        color: context.chat.text, size: 21),
+                                    tooltip: context.l10n
+                                        .translate('chat_search_tooltip'),
+                                    onPressed: () => setState(
+                                        () => _isSearchingInChat = true),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert,
+                                        color: context.chat.text, size: 20),
+                                    color: context.chat.bar,
+                                    onSelected: (val) {
+                                      if (val == 'search') {
+                                        setState(
+                                            () => _isSearchingInChat = true);
+                                      } else if (val == 'split') {
+                                        _showSplitBillDialog(
+                                            currentUid, currentName);
+                                      } else if (val == 'disappearing') {
+                                        _showDisappearingMessagesSheet(context);
+                                      } else if (val == 'delete_chat') {
+                                        _confirmDeleteChat(
+                                            currentUid, otherName);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        value: 'search',
+                                        child: Text(
+                                            context.l10n
+                                                .translate('chat_menu_search'),
+                                            style: TextStyle(
+                                                color: context.chat.text)),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'split',
+                                        child: Text(
+                                            context.l10n
+                                                .translate('chat_split_bill'),
+                                            style: TextStyle(
+                                                color: context.chat.text)),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'disappearing',
+                                        child: Text(
+                                            context.l10n.translate(
+                                                'chat_menu_disappearing'),
+                                            style: TextStyle(
+                                                color: context.chat.text)),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete_chat',
+                                        child: Text(
+                                            context.l10n.translate(
+                                                'chat_menu_delete_chat'),
+                                            style: const TextStyle(
+                                                color: Colors.redAccent)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ],
-                      );
-                    },
                   ),
-
-                  // Floating quick reaction bar
-                  if (_reactionTargetDoc != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: ChatReactionBar(
-                        onSelectEmoji: (emoji) => _toggleReaction(
-                            _reactionTargetDoc!, emoji, currentUid),
-                        onMore: () {
-                          _toggleReaction(
-                              _reactionTargetDoc!, '❤️', currentUid);
-                        },
-                      ),
-                    ),
-                  Expanded(
-                    child: RepaintBoundary(
-                      child: () {
-                        final docs = _visibleMessages;
-                        final hasAnyMessages = docs.isNotEmpty ||
-                            _pendingUploads.isNotEmpty ||
-                            _pendingTextMessages.isNotEmpty;
-                        if (!hasAnyMessages && _messagesSub == null) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                                  color: Color(0xFF00A884)));
-                        }
-                        if (!hasAnyMessages) {
-                          return Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: context.chat.bar,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                context.l10n.translate(
-                                    'chat_start_conversation',
-                                    args: {'name': otherName}),
-                                style: TextStyle(
-                                    color: context.chat.text70, fontSize: 12),
-                              ),
+                ),
+              ),
+            ),
+            body: WhatsappWallpaper(
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 960),
+                  decoration: BoxDecoration(
+                    border: MediaQuery.sizeOf(context).width > 960
+                        ? Border.symmetric(
+                            vertical: BorderSide(
+                              color: context.chat.divider12,
+                              width: 0.8,
                             ),
-                          );
-                        }
+                          )
+                        : null,
+                  ),
+                  child: Column(
+                    children: [
+                      // Pinned message & disappearing messages banner
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: _chatDocStream,
+                        builder: (context, chatSnap) {
+                          final data =
+                              chatSnap.data?.data() as Map<String, dynamic>?;
+                          // A pin made before this person deleted the chat stays hidden for them.
+                          final pinnedRaw =
+                              data?['pinnedMessage'] as Map<String, dynamic>?;
+                          final pinned = (pinnedRaw != null &&
+                                  !isMessageHiddenByCutoff(
+                                    sentAt: ChatDeletionService.timestampOf(
+                                        pinnedRaw['pinnedAt']),
+                                    clearedAt: ChatDeletionService.clearedAtOf(
+                                        data, currentUid),
+                                  ))
+                              ? pinnedRaw
+                              : null;
+                          final disappearingSeconds =
+                              (data?['disappearingTimerSeconds'] as num?)
+                                      ?.toInt() ??
+                                  0;
 
-                        return ListView.builder(
-                          reverse: true,
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
-                          itemCount: docs.length +
-                              _pendingUploads.length +
-                              _pendingTextMessages.length +
-                              (_isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            // ── Loading more indicator at the bottom (oldest end) ──
-                            if (index ==
-                                docs.length +
-                                    _pendingUploads.length +
-                                    _pendingTextMessages.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFF00A884),
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
+                          String? disappearingLabel;
+                          if (disappearingSeconds >= 7776000) {
+                            disappearingLabel =
+                                context.l10n.translate('chat_disappearing_90d');
+                          } else if (disappearingSeconds >= 604800) {
+                            disappearingLabel =
+                                context.l10n.translate('chat_disappearing_7d');
+                          } else if (disappearingSeconds >= 86400) {
+                            disappearingLabel =
+                                context.l10n.translate('chat_disappearing_24h');
+                          }
 
-                            // ── Pending text message bubbles (newest outgoing) ──
-                            if (index < _pendingTextMessages.length) {
-                              final pending = _pendingTextMessages[
-                                  _pendingTextMessages.length - 1 - index];
-                              return _buildPendingTextMessageBubble(pending);
-                            }
-
-                            // ── Pending upload bubbles ──────────────────────
-                            final uploadIndex =
-                                index - _pendingTextMessages.length;
-                            if (uploadIndex < _pendingUploads.length) {
-                              final pending = _pendingUploads[
-                                  _pendingUploads.length - 1 - uploadIndex];
-                              return Semantics(
-                                label: context.l10n
-                                    .translate('chat_uploading', args: {
-                                  'type': pending.type,
-                                  'percent': ((pending.progress) * 100).toInt()
-                                }),
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                        bottom: 8, left: 48),
-                                    child: pending.type == 'document'
-                                        ? ChatDocumentBubble(
-                                            documentUrl: '',
-                                            fileName: pending.fileName ?? '',
-                                            fileSizeBytes:
-                                                pending.fileSizeBytes ?? 0,
-                                            isMe: true,
-                                            timeStr: '',
-                                            uploadProgress: pending.progress,
-                                          )
-                                        : pending.type == 'audio'
-                                            ? VoiceMessageBubble(
-                                                audioUrl: '',
-                                                durationSeconds:
-                                                    pending.durationSeconds,
-                                                isMe: true,
-                                                uploadProgress:
-                                                    pending.progress,
-                                              )
-                                            : ChatMediaBubble(
-                                                localFile: pending.file,
-                                                bytes: pending.bytes,
-                                                type: pending.type,
-                                                uploadProgress:
-                                                    pending.progress,
-                                                isMe: true,
-                                              ),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            // ── Real Firestore messages ─────────────────────
-                            final realIndex =
-                                uploadIndex - _pendingUploads.length;
-                            final doc = docs[realIndex];
-                            final data = doc.data() as Map<String, dynamic>;
-                            final String msgType =
-                                (data['type'] as String?) ?? 'text';
-                            // A call log is a record, not a message: it sits
-                            // centred in the conversation.
-                            if (msgType == 'call') {
-                              return _buildCallLogEntry(
-                                data,
-                                currentUid,
-                                onCallBack: () => _initiateCall(
-                                  isVideo: CallLogEntry.fromData(data).isVideo,
-                                  currentUid: currentUid,
-                                  otherUid: resolvedOtherUid,
-                                  otherName: otherName,
-                                  avatarUrl: avatarUrl,
-                                  localUserName: currentName,
-                                  localAvatarUrl: currentAvatarUrl,
-                                ),
-                              );
-                            }
-                            final String text = (data['text'] as String?) ?? '';
-                            final String mediaUrl =
-                                (data['mediaUrl'] as String?) ?? '';
-                            final senderId = data['senderId'] ?? '';
-                            final isMe = senderId == currentUid;
-                            final bool seen = data['seen'] as bool? ?? false;
-                            // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
-                            final bool hasPendingWrites =
-                                doc.metadata.hasPendingWrites;
-                            final String status = hasPendingWrites
-                                ? 'pending'
-                                : ((data['status'] as String?) ??
-                                    (seen ? 'read' : 'sent'));
-                            final timestamp = data['timestamp'] as Timestamp?;
-
-                            // Locale-aware time string
-                            String timeStr = '';
-                            if (timestamp != null) {
-                              final date = timestamp.toDate();
-                              try {
-                                timeStr = _formatTime(date);
-                              } catch (_) {
-                                timeStr =
-                                    localizedDateFormat('h:mm a').format(date);
-                              }
-                            }
-
-                            // Delivery tick icon: a clock while pending, a single check
-                            // when sent, double grey when delivered, double blue when read.
-                            Widget deliveryIcon() {
-                              switch (
-                                  receiptStateFor(status: status, seen: seen)) {
-                                case ReceiptState.pending:
-                                  return Icon(Icons.access_time,
-                                      size: 11, color: context.chat.text54);
-                                case ReceiptState.read:
-                                  return const Icon(Icons.done_all,
-                                      size: 13, color: Color(0xFF53BDEB));
-                                case ReceiptState.delivered:
-                                  return Icon(Icons.done_all,
-                                      size: 13, color: context.chat.text54);
-                                case ReceiptState.sent:
-                                  return Icon(Icons.done,
-                                      size: 13, color: context.chat.text54);
-                              }
-                            }
-
-                            final isSelected =
-                                _selectedMessageIds.contains(doc.id);
-                            final isHighlighted =
-                                _highlightedMessageId == doc.id;
-                            final replyData =
-                                data['replyTo'] as Map<String, dynamic>?;
-                            final replyModel = replyData != null
-                                ? ReplyMessageInfo.fromMap(replyData)
-                                : null;
-                            final reactions =
-                                (data['reactions'] as Map<String, dynamic>?) ??
-                                    {};
-                            final starredBy =
-                                (data['starredBy'] as Map<String, dynamic>?) ??
-                                    {};
-                            final isStarred = starredBy[currentUid] == true;
-                            final isEdited = data['isEdited'] == true;
-                            final isForwarded = data['isForwarded'] == true;
-
-                            Widget metaRow() {
-                              return Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isEdited) ...[
-                                    Text(context.l10n.translate('chat_edited'),
-                                        style: TextStyle(
-                                            color: context.chat.text38,
-                                            fontSize: 10)),
-                                    const SizedBox(width: 3),
-                                  ],
-                                  Text(
-                                    timeStr,
-                                    style: TextStyle(
-                                      color: context.chat.text54,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  if (isStarred) ...[
-                                    const SizedBox(width: 3),
-                                    Icon(Icons.star,
-                                        size: 10, color: context.chat.text60),
-                                  ],
-                                  if (isMe) ...[
-                                    const SizedBox(width: 4),
-                                    deliveryIcon(),
-                                  ],
-                                ],
-                              );
-                            }
-
-                            Widget bubbleBody;
-
-                            // ── Deleted Message Tombstone (WhatsApp Style) ──
-                            if (msgType == 'deleted' ||
-                                data['isDeleted'] == true) {
-                              bubbleBody = Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: context.chat.bar,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: context.chat.divider10,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.block_flipped,
-                                      size: 14,
-                                      color: context.chat.text38,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      isMe
-                                          ? context.l10n
-                                              .translate('chat_deleted_by_me')
-                                          : context.l10n.translate(
-                                              'chat_deleted_message'),
-                                      style: TextStyle(
-                                        fontStyle: FontStyle.italic,
-                                        color: context.chat.text54,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      timeStr,
-                                      style: TextStyle(
-                                        color: context.chat.text30,
-                                        fontSize: 9.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            // ── Document Message ──────────────────────────────
-                            else if (msgType == 'document') {
-                              bubbleBody = Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    ChatQuotedBubble(
-                                      reply: replyModel,
-                                      isMe: isMe,
-                                      onTap: () => _scrollToMessage(
-                                          replyModel.messageId),
-                                    ),
-                                  ChatDocumentBubble(
-                                    documentUrl:
-                                        (data['documentUrl'] as String?) ?? '',
-                                    fileName: (data['fileName'] as String?) ??
-                                        context.l10n
-                                            .translate('chat_attach_document'),
-                                    fileSizeBytes:
-                                        (data['fileSizeBytes'] as num?)
-                                                ?.toInt() ??
-                                            0,
-                                    isMe: isMe,
-                                    timeStr: timeStr,
-                                    deliveryIcon: isMe ? deliveryIcon() : null,
-                                  ),
-                                ],
-                              );
-                            }
-                            // ── Location Message ──────────────────────────────
-                            else if (msgType == 'location') {
-                              bubbleBody = Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    ChatQuotedBubble(
-                                      reply: replyModel,
-                                      isMe: isMe,
-                                      onTap: () => _scrollToMessage(
-                                          replyModel.messageId),
-                                    ),
-                                  ChatLocationBubble(
-                                    latitude: (data['latitude'] as num?)
-                                            ?.toDouble() ??
-                                        0.0,
-                                    longitude: (data['longitude'] as num?)
-                                            ?.toDouble() ??
-                                        0.0,
-                                    title: (data['title'] as String?) ??
-                                        context.l10n
-                                            .translate('chat_location_title'),
-                                    address: (data['address'] as String?) ?? '',
-                                    isMe: isMe,
-                                    timeStr: timeStr,
-                                    deliveryIcon: isMe ? deliveryIcon() : null,
-                                  ),
-                                ],
-                              );
-                            }
-                            // ── Travel Expense / Split Message ────────────────
-                            else if (msgType == 'expense') {
-                              bubbleBody = Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    ChatQuotedBubble(
-                                      reply: replyModel,
-                                      isMe: isMe,
-                                      onTap: () => _scrollToMessage(
-                                          replyModel.messageId),
-                                    ),
-                                  ChatExpenseBubble(
-                                    title: (data['expenseTitle'] as String?) ??
-                                        context.l10n.translate(
-                                            'chat_expense_split_title'),
-                                    amount:
-                                        (data['amount'] as num?)?.toDouble() ??
-                                            0.0,
-                                    paidByName: (data['paidByName']
-                                            as String?) ??
-                                        context.l10n.translate('chats_member'),
-                                    isPaidByMe: data['paidById'] == currentUid,
-                                    isSettled: data['isSettled'] == true,
-                                    timeStr: timeStr,
-                                    deliveryIcon: isMe ? deliveryIcon() : null,
-                                    onSettle: data['isSettled'] == true
-                                        ? null
-                                        : () {
-                                            doc.reference
-                                                .update({'isSettled': true});
-                                          },
-                                  ),
-                                ],
-                              );
-                            }
-                            // ── Media Message (Photo / Video with Caption) ───
-                            else if (msgType == 'image' || msgType == 'video') {
-                              final bool isViewOnce =
-                                  data['isViewOnce'] == true;
-                              final bool isOpened = data['isOpened'] == true;
-
-                              if (isViewOnce) {
-                                if (isOpened) {
-                                  bubbleBody = Container(
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (pinned != null) ...[
+                                InkWell(
+                                  onTap: () => _scrollToMessage(
+                                      (pinned['id'] as String?) ?? ''),
+                                  onLongPress: () =>
+                                      _showPinnedMessageFullView(pinned),
+                                  child: Container(
+                                    color: context.chat.bar,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
+                                        horizontal: 16, vertical: 8),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.push_pin,
+                                            color: context.chat.accentText,
+                                            size: 16),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            context.l10n.translate(
+                                                'chat_pinned_label',
+                                                args: {
+                                                  'text': (pinned['text']
+                                                          as String?) ??
+                                                      ''
+                                                }),
+                                            style: TextStyle(
+                                                color: context.chat.text,
+                                                fontSize: 12),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: context.l10n.translate(
+                                              'chat_pinned_view_full'),
+                                          icon: Icon(Icons.open_in_full_rounded,
+                                              color: context.chat.text54,
+                                              size: 16),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6),
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () =>
+                                              _showPinnedMessageFullView(
+                                                  pinned),
+                                        ),
+                                        IconButton(
+                                          tooltip: context.l10n
+                                              .translate('chat_pinned_unpin'),
+                                          icon: Icon(Icons.close,
+                                              color: context.chat.text54,
+                                              size: 16),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () {
+                                            FirebaseFirestore.instance
+                                                .collection('chats')
+                                                .doc(widget.chatId)
+                                                .update({
+                                              'pinnedMessage':
+                                                  FieldValue.delete(),
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (disappearingLabel != null) ...[
+                                InkWell(
+                                  onTap: () =>
+                                      _showDisappearingMessagesSheet(context),
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 24, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: isMe
-                                          ? context.chat.outgoing
-                                          : context.chat.panel,
-                                      borderRadius: BorderRadius.circular(14),
+                                      color: context.chat.recessedDeep,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                          color: context.chat.divider12,
+                                          width: 0.5),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.looks_one_outlined,
-                                            color: context.chat.text54,
-                                            size: 18),
+                                        Icon(Icons.timer_outlined,
+                                            size: 15,
+                                            color: context.chat.text70),
                                         const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            context.l10n.translate(
+                                                'chat_disappearing_banner',
+                                                args: {
+                                                  'duration': disappearingLabel
+                                                }),
+                                            style: TextStyle(
+                                                color: context.chat.text70,
+                                                fontSize: 11),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+
+                      // Floating quick reaction bar
+                      if (_reactionTargetDoc != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: ChatReactionBar(
+                            onSelectEmoji: (emoji) => _toggleReaction(
+                                _reactionTargetDoc!, emoji, currentUid),
+                            onMore: () {
+                              _toggleReaction(
+                                  _reactionTargetDoc!, '❤️', currentUid);
+                            },
+                          ),
+                        ),
+                      Expanded(
+                        child: RepaintBoundary(
+                          child: () {
+                            final docs = _visibleMessages;
+                            final hasAnyMessages = docs.isNotEmpty ||
+                                _pendingUploads.isNotEmpty ||
+                                _pendingTextMessages.isNotEmpty;
+                            if (!hasAnyMessages && _messagesSub == null) {
+                              return const Center(
+                                  child: CircularProgressIndicator(
+                                      color: Color(0xFF00A884)));
+                            }
+                            if (!hasAnyMessages) {
+                              return Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: context.chat.bar,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    context.l10n.translate(
+                                        'chat_start_conversation',
+                                        args: {'name': otherName}),
+                                    style: TextStyle(
+                                        color: context.chat.text70,
+                                        fontSize: 12),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              reverse: true,
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 16),
+                              itemCount: docs.length +
+                                  _pendingUploads.length +
+                                  _pendingTextMessages.length +
+                                  (_isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                // ── Loading more indicator at the bottom (oldest end) ──
+                                if (index ==
+                                    docs.length +
+                                        _pendingUploads.length +
+                                        _pendingTextMessages.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF00A884),
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                // ── Pending text message bubbles (newest outgoing) ──
+                                if (index < _pendingTextMessages.length) {
+                                  final pending = _pendingTextMessages[
+                                      _pendingTextMessages.length - 1 - index];
+                                  return _buildPendingTextMessageBubble(
+                                      pending);
+                                }
+
+                                // ── Pending upload bubbles ──────────────────────
+                                final uploadIndex =
+                                    index - _pendingTextMessages.length;
+                                if (uploadIndex < _pendingUploads.length) {
+                                  final pending = _pendingUploads[
+                                      _pendingUploads.length - 1 - uploadIndex];
+                                  return Semantics(
+                                    label: context.l10n
+                                        .translate('chat_uploading', args: {
+                                      'type': pending.type,
+                                      'percent':
+                                          ((pending.progress) * 100).toInt()
+                                    }),
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            bottom: 8, left: 48),
+                                        child: pending.type == 'document'
+                                            ? ChatDocumentBubble(
+                                                documentUrl: '',
+                                                fileName:
+                                                    pending.fileName ?? '',
+                                                fileSizeBytes:
+                                                    pending.fileSizeBytes ?? 0,
+                                                isMe: true,
+                                                timeStr: '',
+                                                uploadProgress:
+                                                    pending.progress,
+                                              )
+                                            : pending.type == 'audio'
+                                                ? VoiceMessageBubble(
+                                                    audioUrl: '',
+                                                    durationSeconds:
+                                                        pending.durationSeconds,
+                                                    isMe: true,
+                                                    uploadProgress:
+                                                        pending.progress,
+                                                  )
+                                                : ChatMediaBubble(
+                                                    localFile: pending.file,
+                                                    localFiles: pending.files,
+                                                    bytes: pending.bytes,
+                                                    multiBytes:
+                                                        pending.multiBytes,
+                                                    type: pending.type,
+                                                    uploadProgress:
+                                                        pending.progress,
+                                                    isMe: true,
+                                                  ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                // ── Real Firestore messages ─────────────────────
+                                final realIndex =
+                                    uploadIndex - _pendingUploads.length;
+                                final doc = docs[realIndex];
+                                final data = doc.data() as Map<String, dynamic>;
+                                final String msgType =
+                                    (data['type'] as String?) ?? 'text';
+                                // A call log is a record, not a message: it sits
+                                // centred in the conversation.
+                                if (msgType == 'call') {
+                                  return _buildCallLogEntry(
+                                    data,
+                                    currentUid,
+                                    onCallBack: () => _initiateCall(
+                                      isVideo:
+                                          CallLogEntry.fromData(data).isVideo,
+                                      currentUid: currentUid,
+                                      otherUid: resolvedOtherUid,
+                                      otherName: otherName,
+                                      avatarUrl: avatarUrl,
+                                      localUserName: currentName,
+                                      localAvatarUrl: currentAvatarUrl,
+                                    ),
+                                  );
+                                }
+                                final String text =
+                                    (data['text'] as String?) ?? '';
+                                final String mediaUrl =
+                                    (data['mediaUrl'] as String?) ?? '';
+                                final List<String>? mediaUrls =
+                                    (data['mediaUrls'] is List)
+                                        ? (data['mediaUrls'] as List)
+                                            .cast<String>()
+                                        : null;
+                                final senderId = data['senderId'] ?? '';
+                                final isMe = senderId == currentUid;
+                                final bool seen =
+                                    data['seen'] as bool? ?? false;
+                                // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
+                                final bool hasPendingWrites =
+                                    doc.metadata.hasPendingWrites;
+                                final String status = hasPendingWrites
+                                    ? 'pending'
+                                    : ((data['status'] as String?) ??
+                                        (seen ? 'read' : 'sent'));
+                                final timestamp =
+                                    data['timestamp'] as Timestamp?;
+
+                                // Locale-aware time string
+                                String timeStr = '';
+                                if (timestamp != null) {
+                                  final date = timestamp.toDate();
+                                  try {
+                                    timeStr = _formatTime(date);
+                                  } catch (_) {
+                                    timeStr = localizedDateFormat('h:mm a')
+                                        .format(date);
+                                  }
+                                }
+
+                                // Delivery tick icon: a clock while pending, a single check
+                                // when sent, double grey when delivered, double blue when read.
+                                Widget deliveryIcon() {
+                                  switch (receiptStateFor(
+                                      status: status, seen: seen)) {
+                                    case ReceiptState.pending:
+                                      return Icon(Icons.access_time,
+                                          size: 11, color: context.chat.text54);
+                                    case ReceiptState.read:
+                                      return const Icon(Icons.done_all,
+                                          size: 13, color: Color(0xFF53BDEB));
+                                    case ReceiptState.delivered:
+                                      return Icon(Icons.done_all,
+                                          size: 13, color: context.chat.text54);
+                                    case ReceiptState.sent:
+                                      return Icon(Icons.done,
+                                          size: 13, color: context.chat.text54);
+                                  }
+                                }
+
+                                final isSelected =
+                                    _selectedMessageIds.contains(doc.id);
+                                final isHighlighted =
+                                    _highlightedMessageId == doc.id;
+                                final replyData =
+                                    data['replyTo'] as Map<String, dynamic>?;
+                                final replyModel = replyData != null
+                                    ? ReplyMessageInfo.fromMap(replyData)
+                                    : null;
+                                final reactions = (data['reactions']
+                                        as Map<String, dynamic>?) ??
+                                    {};
+                                final starredBy = (data['starredBy']
+                                        as Map<String, dynamic>?) ??
+                                    {};
+                                final isStarred = starredBy[currentUid] == true;
+                                final isEdited = data['isEdited'] == true;
+                                final isForwarded = data['isForwarded'] == true;
+
+                                Widget metaRow() {
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isEdited) ...[
                                         Text(
                                             context.l10n
-                                                .translate('chat_opened'),
-                                            style: TextStyle(
-                                                color: context.chat.text54,
-                                                fontStyle: FontStyle.italic,
-                                                fontSize: 13)),
-                                        const SizedBox(width: 8),
-                                        Text(timeStr,
+                                                .translate('chat_edited'),
                                             style: TextStyle(
                                                 color: context.chat.text38,
                                                 fontSize: 10)),
-                                        if (isMe) ...[
-                                          const SizedBox(width: 4),
-                                          deliveryIcon(),
-                                        ],
+                                        const SizedBox(width: 3),
+                                      ],
+                                      Text(
+                                        timeStr,
+                                        style: TextStyle(
+                                          color: context.chat.text54,
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      if (isStarred) ...[
+                                        const SizedBox(width: 3),
+                                        Icon(Icons.star,
+                                            size: 10,
+                                            color: context.chat.text60),
+                                      ],
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        deliveryIcon(),
+                                      ],
+                                    ],
+                                  );
+                                }
+
+                                Widget bubbleBody;
+
+                                // ── Deleted Message Tombstone (WhatsApp Style) ──
+                                if (msgType == 'deleted' ||
+                                    data['isDeleted'] == true) {
+                                  bubbleBody = Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: context.chat.bar,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: context.chat.divider10,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.block_flipped,
+                                          size: 14,
+                                          color: context.chat.text38,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          isMe
+                                              ? context.l10n.translate(
+                                                  'chat_deleted_by_me')
+                                              : context.l10n.translate(
+                                                  'chat_deleted_message'),
+                                          style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                            color: context.chat.text54,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          timeStr,
+                                          style: TextStyle(
+                                            color: context.chat.text30,
+                                            fontSize: 9.5,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );
-                                } else {
-                                  bubbleBody = InkWell(
-                                    onTap: () {
-                                      if (isMe) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text(context.l10n
-                                                  .translate(
-                                                      'chat_view_once_sent'))),
-                                        );
-                                        return;
-                                      }
-                                      Navigator.of(context)
-                                          .push(
-                                        MaterialPageRoute<void>(
-                                          builder: (ctx) => Scaffold(
-                                            backgroundColor: Colors.black,
-                                            appBar: AppBar(
-                                              backgroundColor: Colors.black,
-                                              iconTheme: const IconThemeData(
-                                                  color: Colors.white),
-                                              title: Text(
-                                                  msgType == 'video'
-                                                      ? context.l10n.translate(
-                                                          'chat_view_once_video')
-                                                      : context.l10n.translate(
-                                                          'chat_view_once_photo'),
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 16)),
-                                            ),
-                                            body: Center(
-                                              child: InteractiveViewer(
-                                                child: kIsWeb
-                                                    ? Image.network(
-                                                        signedMediaUrl(
-                                                            mediaUrl),
-                                                        fit: BoxFit.contain,
-                                                      )
-                                                    : CachedNetworkImage(
-                                                        imageUrl:
+                                }
+                                // ── Document Message ──────────────────────────────
+                                else if (msgType == 'document') {
+                                  bubbleBody = Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      ChatDocumentBubble(
+                                        documentUrl:
+                                            (data['documentUrl'] as String?) ??
+                                                '',
+                                        fileName:
+                                            (data['fileName'] as String?) ??
+                                                context.l10n.translate(
+                                                    'chat_attach_document'),
+                                        fileSizeBytes:
+                                            (data['fileSizeBytes'] as num?)
+                                                    ?.toInt() ??
+                                                0,
+                                        isMe: isMe,
+                                        timeStr: timeStr,
+                                        deliveryIcon:
+                                            isMe ? deliveryIcon() : null,
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // ── Location Message ──────────────────────────────
+                                else if (msgType == 'location') {
+                                  bubbleBody = Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      ChatLocationBubble(
+                                        latitude: (data['latitude'] as num?)
+                                                ?.toDouble() ??
+                                            0.0,
+                                        longitude: (data['longitude'] as num?)
+                                                ?.toDouble() ??
+                                            0.0,
+                                        title: (data['title'] as String?) ??
+                                            context.l10n.translate(
+                                                'chat_location_title'),
+                                        address:
+                                            (data['address'] as String?) ?? '',
+                                        isMe: isMe,
+                                        timeStr: timeStr,
+                                        deliveryIcon:
+                                            isMe ? deliveryIcon() : null,
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // ── Travel Expense / Split Message ────────────────
+                                else if (msgType == 'expense') {
+                                  bubbleBody = Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      ChatExpenseBubble(
+                                        title:
+                                            (data['expenseTitle'] as String?) ??
+                                                context.l10n.translate(
+                                                    'chat_expense_split_title'),
+                                        amount: (data['amount'] as num?)
+                                                ?.toDouble() ??
+                                            0.0,
+                                        paidByName:
+                                            (data['paidByName'] as String?) ??
+                                                context.l10n
+                                                    .translate('chats_member'),
+                                        isPaidByMe:
+                                            data['paidById'] == currentUid,
+                                        isSettled: data['isSettled'] == true,
+                                        timeStr: timeStr,
+                                        deliveryIcon:
+                                            isMe ? deliveryIcon() : null,
+                                        onSettle: data['isSettled'] == true
+                                            ? null
+                                            : () {
+                                                doc.reference.update(
+                                                    {'isSettled': true});
+                                              },
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // ── Media Message (Photo / Video with Caption) ───
+                                else if (msgType == 'image' ||
+                                    msgType == 'video') {
+                                  final bool isViewOnce =
+                                      data['isViewOnce'] == true;
+                                  final bool isOpened =
+                                      data['isOpened'] == true;
+
+                                  if (isViewOnce) {
+                                    if (isOpened) {
+                                      bubbleBody = Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isMe
+                                              ? context.chat.outgoing
+                                              : context.chat.panel,
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.looks_one_outlined,
+                                                color: context.chat.text54,
+                                                size: 18),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                                context.l10n
+                                                    .translate('chat_opened'),
+                                                style: TextStyle(
+                                                    color: context.chat.text54,
+                                                    fontStyle: FontStyle.italic,
+                                                    fontSize: 13)),
+                                            const SizedBox(width: 8),
+                                            Text(timeStr,
+                                                style: TextStyle(
+                                                    color: context.chat.text38,
+                                                    fontSize: 10)),
+                                            if (isMe) ...[
+                                              const SizedBox(width: 4),
+                                              deliveryIcon(),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    } else {
+                                      bubbleBody = InkWell(
+                                        onTap: () {
+                                          if (isMe) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(context.l10n
+                                                      .translate(
+                                                          'chat_view_once_sent'))),
+                                            );
+                                            return;
+                                          }
+                                          Navigator.of(context)
+                                              .push(
+                                            MaterialPageRoute<void>(
+                                              builder: (ctx) => Scaffold(
+                                                backgroundColor: Colors.black,
+                                                appBar: AppBar(
+                                                  backgroundColor: Colors.black,
+                                                  iconTheme:
+                                                      const IconThemeData(
+                                                          color: Colors.white),
+                                                  title: Text(
+                                                      msgType == 'video'
+                                                          ? context.l10n.translate(
+                                                              'chat_view_once_video')
+                                                          : context.l10n.translate(
+                                                              'chat_view_once_photo'),
+                                                      style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 16)),
+                                                ),
+                                                body: Center(
+                                                  child: InteractiveViewer(
+                                                    child: kIsWeb
+                                                        ? Image.network(
                                                             signedMediaUrl(
                                                                 mediaUrl),
-                                                        fit: BoxFit.contain,
-                                                        errorWidget:
-                                                            (_, __, ___) =>
+                                                            fit: BoxFit.contain,
+                                                          )
+                                                        : CachedNetworkImage(
+                                                            imageUrl:
+                                                                signedMediaUrl(
+                                                                    mediaUrl),
+                                                            fit: BoxFit.contain,
+                                                            errorWidget: (_, __,
+                                                                    ___) =>
                                                                 Image.network(
-                                                          signedMediaUrl(
-                                                              mediaUrl),
-                                                          fit: BoxFit.contain,
-                                                        ),
-                                                      ),
+                                                              signedMediaUrl(
+                                                                  mediaUrl),
+                                                              fit: BoxFit
+                                                                  .contain,
+                                                            ),
+                                                          ),
+                                                  ),
+                                                ),
                                               ),
                                             ),
+                                          )
+                                              .then((_) {
+                                            doc.reference.update({
+                                              'isOpened': true,
+                                              'openedAt':
+                                                  FieldValue.serverTimestamp(),
+                                            });
+                                          });
+                                        },
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isMe
+                                                ? context.chat.outgoing
+                                                : context.chat.panel,
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 22,
+                                                height: 22,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: const Color(
+                                                          0xFF00A884),
+                                                      width: 1.5),
+                                                ),
+                                                child: Center(
+                                                  child: Text('1',
+                                                      style: TextStyle(
+                                                          color: context
+                                                              .chat.accentText,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 11)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                  msgType == 'video'
+                                                      ? context.l10n.translate(
+                                                          'chat_video_label')
+                                                      : context.l10n.translate(
+                                                          'chat_label_photo'),
+                                                  style: TextStyle(
+                                                      color: context.chat.text,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13)),
+                                              const SizedBox(width: 8),
+                                              Text(timeStr,
+                                                  style: TextStyle(
+                                                      color:
+                                                          context.chat.text54,
+                                                      fontSize: 10)),
+                                              if (isMe) ...[
+                                                const SizedBox(width: 4),
+                                                deliveryIcon(),
+                                              ],
+                                            ],
                                           ),
                                         ),
-                                      )
-                                          .then((_) {
-                                        doc.reference.update({
-                                          'isOpened': true,
-                                          'openedAt':
-                                              FieldValue.serverTimestamp(),
-                                        });
-                                      });
-                                    },
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 8),
+                                      );
+                                    }
+                                  } else {
+                                    bubbleBody = Container(
                                       decoration: BoxDecoration(
                                         color: isMe
                                             ? context.chat.outgoing
                                             : context.chat.panel,
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: Row(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Column(
                                         mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
                                         children: [
-                                          Container(
-                                            width: 22,
-                                            height: 22,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color:
-                                                      const Color(0xFF00A884),
-                                                  width: 1.5),
+                                          if (isForwarded)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      6, 4, 6, 2),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.forward,
+                                                      size: 11,
+                                                      color:
+                                                          context.chat.text54),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                      context.l10n.translate(
+                                                          'chat_forwarded_label'),
+                                                      style: TextStyle(
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                          color: context
+                                                              .chat.text54,
+                                                          fontSize: 10)),
+                                                ],
+                                              ),
                                             ),
-                                            child: Center(
-                                              child: Text('1',
-                                                  style: TextStyle(
-                                                      color: context
-                                                          .chat.accentText,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11)),
+                                          if (replyModel != null)
+                                            ChatQuotedBubble(
+                                              reply: replyModel,
+                                              isMe: isMe,
+                                              onTap: () => _scrollToMessage(
+                                                  replyModel.messageId),
+                                            ),
+                                          ChatMediaBubble(
+                                            mediaUrl: mediaUrl,
+                                            mediaUrls: mediaUrls,
+                                            type: msgType,
+                                            isMe: isMe,
+                                          ),
+                                          if (text.isNotEmpty)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      6, 6, 6, 2),
+                                              child: Text(
+                                                text,
+                                                style: TextStyle(
+                                                  color: context.chat.text,
+                                                  fontSize: 15.5,
+                                                  height: 1.4,
+                                                  letterSpacing: 0.15,
+                                                ),
+                                              ),
+                                            ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                6, 2, 6, 4),
+                                            child: metaRow(),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                }
+                                // ── Voice / Audio message ────────────────────────
+                                else if (msgType == 'audio') {
+                                  bubbleBody = Container(
+                                    decoration: BoxDecoration(
+                                      color: isMe
+                                          ? context.chat.outgoing
+                                          : context.chat.panel,
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: const Radius.circular(12),
+                                        topRight: const Radius.circular(12),
+                                        bottomLeft: isMe
+                                            ? const Radius.circular(12)
+                                            : Radius.zero,
+                                        bottomRight: isMe
+                                            ? Radius.zero
+                                            : const Radius.circular(12),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: isMe
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
+                                      children: [
+                                        if (replyModel != null)
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                8, 8, 8, 0),
+                                            child: ChatQuotedBubble(
+                                              reply: replyModel,
+                                              isMe: isMe,
+                                              onTap: () => _scrollToMessage(
+                                                  replyModel.messageId),
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                              msgType == 'video'
-                                                  ? context.l10n.translate(
-                                                      'chat_video_label')
-                                                  : context.l10n.translate(
-                                                      'chat_label_photo'),
-                                              style: TextStyle(
-                                                  color: context.chat.text,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 13)),
-                                          const SizedBox(width: 8),
-                                          Text(timeStr,
-                                              style: TextStyle(
-                                                  color: context.chat.text54,
-                                                  fontSize: 10)),
-                                          if (isMe) ...[
-                                            const SizedBox(width: 4),
-                                            deliveryIcon(),
-                                          ],
+                                        VoiceMessageBubble(
+                                          audioUrl: mediaUrl,
+                                          durationSeconds:
+                                              (data['durationSeconds'] as num?)
+                                                  ?.toInt(),
+                                          isMe: isMe,
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              10, 0, 10, 6),
+                                          child: metaRow(),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                // ── Text bubble ─────────────────────────────────
+                                else {
+                                  bubbleBody = PhysicalShape(
+                                    clipper: isMe
+                                        ? SenderBubbleClipper()
+                                        : ReceiverBubbleClipper(),
+                                    color: isMe
+                                        ? context.chat.outgoing
+                                        : context.chat.panel,
+                                    elevation: 1,
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                          isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                        children: [
+                                          if (isForwarded)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 2),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.forward,
+                                                      size: 11,
+                                                      color:
+                                                          context.chat.text54),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                      context.l10n.translate(
+                                                          'chat_forwarded_label'),
+                                                      style: TextStyle(
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                          color: context
+                                                              .chat.text54,
+                                                          fontSize: 10)),
+                                                ],
+                                              ),
+                                            ),
+                                          if (replyModel != null)
+                                            ChatQuotedBubble(
+                                              reply: replyModel,
+                                              isMe: isMe,
+                                              onTap: () => _scrollToMessage(
+                                                  replyModel.messageId),
+                                            ),
+                                          ChatRichText(
+                                            text: text,
+                                            baseStyle: TextStyle(
+                                              color: context.chat.text,
+                                              fontSize: 15.5,
+                                              height: 1.4,
+                                              letterSpacing: 0.05,
+                                              fontFamily: 'NotoSansBengali',
+                                              fontFamilyFallback: const [
+                                                'HindSiliguri',
+                                                'Roboto',
+                                                'sans-serif'
+                                              ],
+                                            ),
+                                            isMine: isMe,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          metaRow(),
                                         ],
                                       ),
                                     ),
                                   );
                                 }
-                              } else {
-                                bubbleBody = Container(
-                                  decoration: BoxDecoration(
-                                    color: isMe
-                                        ? context.chat.outgoing
-                                        : context.chat.panel,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.all(4),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      if (isForwarded)
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              6, 4, 6, 2),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.forward,
-                                                  size: 11,
-                                                  color: context.chat.text54),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                  context.l10n.translate(
-                                                      'chat_forwarded_label'),
-                                                  style: TextStyle(
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                      color:
-                                                          context.chat.text54,
-                                                      fontSize: 10)),
-                                            ],
-                                          ),
-                                        ),
-                                      if (replyModel != null)
-                                        ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ChatMediaBubble(
-                                        mediaUrl: mediaUrl,
-                                        type: msgType,
-                                        isMe: isMe,
-                                      ),
-                                      if (text.isNotEmpty)
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              6, 6, 6, 2),
-                                          child: Text(
-                                            text,
-                                            style: TextStyle(
-                                              color: context.chat.text,
-                                              fontSize: 15.5,
-                                              height: 1.4,
-                                              letterSpacing: 0.15,
+
+                                return KeyedSubtree(
+                                  key: _messageItemKeys.putIfAbsent(
+                                      doc.id, () => GlobalKey()),
+                                  child: SwipeToReply(
+                                    isMe: isMe,
+                                    onReply: () => _setReplyToMessage(doc),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        if (_selectedMessageIds.isNotEmpty) {
+                                          setState(() {
+                                            if (isSelected) {
+                                              _selectedMessageIds
+                                                  .remove(doc.id);
+                                            } else {
+                                              _selectedMessageIds.add(doc.id);
+                                            }
+                                          });
+                                        } else if (_reactionTargetDoc != null) {
+                                          setState(
+                                              () => _reactionTargetDoc = null);
+                                        }
+                                      },
+                                      onLongPress: () {
+                                        HapticFeedback.mediumImpact();
+                                        setState(() {
+                                          _selectedMessageIds.add(doc.id);
+                                          _reactionTargetDoc = doc;
+                                        });
+                                      },
+                                      child: Container(
+                                        color: isSelected
+                                            ? const Color(0xFF00A884)
+                                                .withValues(alpha: 0.18)
+                                            : isHighlighted
+                                                ? const Color(0xFF00A884)
+                                                    .withValues(alpha: 0.28)
+                                                : Colors.transparent,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Align(
+                                              alignment: isMe
+                                                  ? Alignment.centerRight
+                                                  : Alignment.centerLeft,
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                  bottom: 8,
+                                                  left: isMe ? 48 : 0,
+                                                  right: isMe ? 0 : 48,
+                                                ),
+                                                child: bubbleBody,
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                            6, 2, 6, 4),
-                                        child: metaRow(),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            }
-                            // ── Voice / Audio message ────────────────────────
-                            else if (msgType == 'audio') {
-                              bubbleBody = Container(
-                                decoration: BoxDecoration(
-                                  color: isMe
-                                      ? context.chat.outgoing
-                                      : context.chat.panel,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: const Radius.circular(12),
-                                    topRight: const Radius.circular(12),
-                                    bottomLeft: isMe
-                                        ? const Radius.circular(12)
-                                        : Radius.zero,
-                                    bottomRight: isMe
-                                        ? Radius.zero
-                                        : const Radius.circular(12),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: isMe
-                                      ? CrossAxisAlignment.end
-                                      : CrossAxisAlignment.start,
-                                  children: [
-                                    if (replyModel != null)
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                            8, 8, 8, 0),
-                                        child: ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ),
-                                    VoiceMessageBubble(
-                                      audioUrl: mediaUrl,
-                                      durationSeconds:
-                                          (data['durationSeconds'] as num?)
-                                              ?.toInt(),
-                                      isMe: isMe,
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          10, 0, 10, 6),
-                                      child: metaRow(),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            // ── Text bubble ─────────────────────────────────
-                            else {
-                              bubbleBody = PhysicalShape(
-                                clipper: isMe
-                                    ? SenderBubbleClipper()
-                                    : ReceiverBubbleClipper(),
-                                color: isMe
-                                    ? context.chat.outgoing
-                                    : context.chat.panel,
-                                elevation: 1,
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                      isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      if (isForwarded)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 2),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.forward,
-                                                  size: 11,
-                                                  color: context.chat.text54),
-                                              const SizedBox(width: 3),
-                                              Text(
-                                                  context.l10n.translate(
-                                                      'chat_forwarded_label'),
-                                                  style: TextStyle(
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                      color:
-                                                          context.chat.text54,
-                                                      fontSize: 10)),
-                                            ],
-                                          ),
-                                        ),
-                                      if (replyModel != null)
-                                        ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ChatRichText(
-                                        text: text,
-                                        baseStyle: TextStyle(
-                                          color: context.chat.text,
-                                          fontSize: 15.5,
-                                          height: 1.4,
-                                          letterSpacing: 0.05,
-                                          fontFamily: 'NotoSansBengali',
-                                          fontFamilyFallback: const [
-                                            'HindSiliguri',
-                                            'Roboto',
-                                            'sans-serif'
+                                            if (reactions.isNotEmpty)
+                                              Positioned(
+                                                bottom: 0,
+                                                right: isMe ? 8 : null,
+                                                left: isMe ? null : 8,
+                                                child: ChatReactionBadge(
+                                                  reactions: reactions,
+                                                  onTap: () =>
+                                                      showReactionDetailsSheet(
+                                                    context,
+                                                    reactions: reactions,
+                                                    currentUid: currentUid,
+                                                  ),
+                                                ),
+                                              ),
                                           ],
                                         ),
-                                        isMine: isMe,
                                       ),
-                                      const SizedBox(height: 2),
-                                      metaRow(),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            }
+                                );
+                              },
+                            );
+                          }(),
+                        ),
+                      ),
 
-                            return SwipeToReply(
-                              isMe: isMe,
-                              onReply: () => _setReplyToMessage(doc),
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (_selectedMessageIds.isNotEmpty) {
-                                    setState(() {
-                                      if (isSelected) {
-                                        _selectedMessageIds.remove(doc.id);
-                                      } else {
-                                        _selectedMessageIds.add(doc.id);
-                                      }
-                                    });
-                                  } else if (_reactionTargetDoc != null) {
-                                    setState(() => _reactionTargetDoc = null);
-                                  }
-                                },
-                                onLongPress: () {
-                                  HapticFeedback.mediumImpact();
-                                  setState(() {
-                                    _selectedMessageIds.add(doc.id);
-                                    _reactionTargetDoc = doc;
-                                  });
-                                },
-                                child: Container(
-                                  color: isSelected
-                                      ? const Color(0xFF00A884)
-                                          .withValues(alpha: 0.18)
-                                      : isHighlighted
-                                          ? const Color(0xFF00A884)
-                                              .withValues(alpha: 0.28)
-                                          : Colors.transparent,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 2),
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      Align(
-                                        alignment: isMe
-                                            ? Alignment.centerRight
-                                            : Alignment.centerLeft,
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            bottom: 8,
-                                            left: isMe ? 48 : 0,
-                                            right: isMe ? 0 : 48,
-                                          ),
-                                          child: bubbleBody,
-                                        ),
-                                      ),
-                                      if (reactions.isNotEmpty)
-                                        Positioned(
-                                          bottom: 0,
-                                          right: isMe ? 8 : null,
-                                          left: isMe ? null : 8,
-                                          child: ChatReactionBadge(
-                                            reactions: reactions,
-                                            onTap: () =>
-                                                showReactionDetailsSheet(
-                                              context,
-                                              reactions: reactions,
-                                              currentUid: currentUid,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
+                      // Typing indicator message overlay
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: _chatDocStream,
+                        builder: (context, chatSnap) {
+                          final data =
+                              chatSnap.data?.data() as Map<String, dynamic>?;
+                          final bool isOtherTyping =
+                              (data?['typing_$resolvedOtherUid'] as bool?) ??
+                                  false;
+
+                          if (isOtherTyping) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                margin:
+                                    const EdgeInsets.only(left: 20, bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: context.chat.panel,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  context.l10n.translate('chat_is_typing',
+                                      args: {'name': otherName}),
+                                  style: TextStyle(
+                                    color: context.chat.accentText,
+                                    fontSize: 10.5,
+                                    fontStyle: FontStyle.italic,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             );
-                          },
-                        );
-                      }(),
-                    ),
-                  ),
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
 
-                  // Typing indicator message overlay
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: _chatDocStream,
-                    builder: (context, chatSnap) {
-                      final data =
-                          chatSnap.data?.data() as Map<String, dynamic>?;
-                      final bool isOtherTyping =
-                          (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
-
-                      if (isOtherTyping) {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(left: 20, bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: context.chat.panel,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              context.l10n.translate('chat_is_typing',
-                                  args: {'name': otherName}),
-                              style: TextStyle(
-                                color: context.chat.accentText,
-                                fontSize: 10.5,
-                                fontStyle: FontStyle.italic,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-
-                  // Input bar
-                  _isLoadingBlock
-                      ? const SizedBox.shrink()
-                      : _isBlocked
-                          ? Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.fromLTRB(16, 16, 16,
-                                  16 + MediaQuery.of(context).padding.bottom),
-                              color: Colors.redAccent.withValues(alpha: 0.08),
-                              child: Center(
-                                child: Text(
-                                  context.l10n.translate('chat_blocked_banner'),
-                                  style: const TextStyle(
-                                      color: Colors.redAccent,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            )
-                          : _isRecordingVoice
+                      // Input bar
+                      _isLoadingBlock
+                          ? const SizedBox.shrink()
+                          : _isBlocked
                               ? Container(
+                                  width: double.infinity,
                                   padding: EdgeInsets.fromLTRB(
-                                      8,
-                                      6,
-                                      8,
-                                      8 +
+                                      16,
+                                      16,
+                                      16,
+                                      16 +
                                           MediaQuery.of(context)
                                               .padding
                                               .bottom),
-                                  child: VoiceMessageRecorder(
-                                    onVoiceSent: (path, dur) {
-                                      setState(() => _isRecordingVoice = false);
-                                      _sendVoiceMessage(
-                                          path, dur, currentUid, currentName);
-                                    },
-                                    onCancel: () {
-                                      setState(() => _isRecordingVoice = false);
-                                    },
+                                  color:
+                                      Colors.redAccent.withValues(alpha: 0.08),
+                                  child: Center(
+                                    child: Text(
+                                      context.l10n
+                                          .translate('chat_blocked_banner'),
+                                      style: const TextStyle(
+                                          color: Colors.redAccent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ),
                                 )
-                              : Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_replyingMessage != null)
-                                      ChatReplyInputBanner(
-                                        reply: _replyingMessage!,
-                                        onCancel: () => setState(
-                                            () => _replyingMessage = null),
-                                      ),
-                                    if (_editingMessage != null)
-                                      Container(
-                                        margin: const EdgeInsets.fromLTRB(
-                                            10, 0, 10, 4),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: context.chat.bar,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: const Border(
-                                            left: BorderSide(
-                                                color: Color(0xFF00A884),
-                                                width: 4),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.edit,
-                                                color: context.chat.accentText,
-                                                size: 16),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                context.l10n
-                                                    .translate('chat_editing'),
-                                                style: TextStyle(
-                                                  color:
-                                                      context.chat.accentText,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                            IconButton(
-                                              icon: Icon(Icons.close,
-                                                  color: context.chat.text60,
-                                                  size: 18),
-                                              padding: EdgeInsets.zero,
-                                              constraints:
-                                                  const BoxConstraints(),
-                                              onPressed: () {
-                                                setState(() =>
-                                                    _editingMessage = null);
-                                                _messageController.clear();
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    if (_showFormatting)
-                                      ChatFormattingToolbar(
-                                        controller: _messageController,
-                                        focusNode: _messageFocusNode,
-                                        onClose: () => setState(
-                                            () => _showFormatting = false),
-                                      ),
-                                    Container(
+                              : _isRecordingVoice
+                                  ? Container(
                                       padding: EdgeInsets.fromLTRB(
                                           8,
                                           6,
@@ -4115,322 +4719,353 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               MediaQuery.of(context)
                                                   .padding
                                                   .bottom),
-                                      color:
-                                          Colors.transparent, // Floating look
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          // WhatsApp left rounded input container
-                                          Expanded(
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                color: context.chat.panel,
-                                                borderRadius:
-                                                    BorderRadius.circular(24),
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 4),
-                                              child: Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.end,
-                                                children: [
-                                                  Semantics(
-                                                    label: _showEmojiPicker
-                                                        ? context.l10n.translate(
-                                                            'chat_open_keyboard')
-                                                        : context.l10n.translate(
-                                                            'chat_open_emoji'),
-                                                    button: true,
-                                                    child: SizedBox(
-                                                      width: 40,
-                                                      height: 48,
-                                                      child: IconButton(
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                        icon: Icon(
-                                                            _showEmojiPicker
-                                                                ? Icons
-                                                                    .keyboard_outlined
-                                                                : Icons
-                                                                    .sentiment_satisfied_alt_outlined,
-                                                            color: context
-                                                                .chat.grey),
-                                                        onPressed:
-                                                            _toggleEmojiPicker,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    child: Padding(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 4),
-                                                      child: TextField(
-                                                        controller:
-                                                            _messageController,
-                                                        focusNode:
-                                                            _messageFocusNode,
-                                                        minLines: 1,
-                                                        maxLines: 6,
-                                                        keyboardType:
-                                                            TextInputType
-                                                                .multiline,
-                                                        onTap: () {
-                                                          if (_showEmojiPicker) {
-                                                            setState(() =>
-                                                                _showEmojiPicker =
-                                                                    false);
-                                                          }
-                                                        },
-                                                        style: TextStyle(
-                                                          color:
-                                                              context.chat.text,
-                                                          fontSize: 15.5,
-                                                          height: 1.38,
-                                                          letterSpacing: 0.05,
-                                                          fontFamily:
-                                                              'NotoSansBengali',
-                                                          fontFamilyFallback: const [
-                                                            'HindSiliguri',
-                                                            'Roboto',
-                                                            'sans-serif'
-                                                          ],
-                                                        ),
-                                                        decoration:
-                                                            InputDecoration(
-                                                          hintText: context.l10n
-                                                              .translate(
-                                                                  'chat_message_placeholder'),
-                                                          hintStyle: TextStyle(
-                                                            color: context
-                                                                .chat.grey,
-                                                            fontSize: 15.5,
-                                                            fontFamily:
-                                                                'NotoSansBengali',
-                                                            fontFamilyFallback: const [
-                                                              'HindSiliguri',
-                                                              'Roboto',
-                                                              'sans-serif'
-                                                            ],
-                                                          ),
-                                                          border:
-                                                              InputBorder.none,
-                                                          contentPadding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  vertical: 10),
-                                                        ),
-                                                        onSubmitted: (_) =>
-                                                            _sendMessage(
-                                                                currentUid,
-                                                                currentName),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  ValueListenableBuilder<
-                                                      TextEditingValue>(
-                                                    valueListenable:
-                                                        _messageController,
-                                                    builder:
-                                                        (context, textVal, _) {
-                                                      final hasText = textVal
-                                                          .text
-                                                          .trim()
-                                                          .isNotEmpty;
-                                                      return Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .end,
-                                                        children: [
-                                                          if (!hasText ||
-                                                              _showFormatting)
-                                                            Semantics(
-                                                              label: context
-                                                                  .l10n
-                                                                  .translate(
-                                                                      'format_toolbar_toggle'),
-                                                              button: true,
-                                                              child: SizedBox(
-                                                                width: 36,
-                                                                height: 48,
-                                                                child:
-                                                                    IconButton(
-                                                                  tooltip: context
-                                                                      .l10n
-                                                                      .translate(
-                                                                          'format_toolbar_toggle'),
-                                                                  padding:
-                                                                      EdgeInsets
-                                                                          .zero,
-                                                                  icon:
-                                                                      Container(
-                                                                    padding: const EdgeInsets
-                                                                        .symmetric(
-                                                                        horizontal:
-                                                                            4,
-                                                                        vertical:
-                                                                            2),
-                                                                    decoration:
-                                                                        BoxDecoration(
-                                                                      border:
-                                                                          Border
-                                                                              .all(
-                                                                        color: _showFormatting
-                                                                            ? AppColors.mintGreen
-                                                                            : context.chat.grey,
-                                                                        width:
-                                                                            1.5,
-                                                                      ),
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                              4),
-                                                                      color: _showFormatting
-                                                                          ? AppColors
-                                                                              .mintGreen
-                                                                              .withValues(alpha: 0.15)
-                                                                          : Colors.transparent,
-                                                                    ),
-                                                                    child: Text(
-                                                                      'Aa',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: _showFormatting
-                                                                            ? AppColors.mintGreen
-                                                                            : context.chat.grey,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                        fontSize:
-                                                                            12.0,
-                                                                        letterSpacing:
-                                                                            -0.5,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  onPressed: () =>
-                                                                      setState(() =>
-                                                                          _showFormatting =
-                                                                              !_showFormatting),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          Semantics(
-                                                            label: context.l10n
-                                                                .translate(
-                                                                    'chat_attach_tooltip'),
-                                                            button: true,
-                                                            child: SizedBox(
-                                                              width: 36,
-                                                              height: 48,
-                                                              child: IconButton(
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                icon: Icon(
-                                                                    Icons
-                                                                        .attach_file,
-                                                                    color: context
-                                                                        .chat
-                                                                        .grey,
-                                                                    size: 22),
-                                                                onPressed: () =>
-                                                                    _openAttachmentSheet(
-                                                                        currentUid,
-                                                                        currentName),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          if (!hasText)
-                                                            Semantics(
-                                                              label: context
-                                                                  .l10n
-                                                                  .translate(
-                                                                      'chat_open_camera_action'),
-                                                              button: true,
-                                                              child: SizedBox(
-                                                                width: 36,
-                                                                height: 48,
-                                                                child:
-                                                                    IconButton(
-                                                                  padding:
-                                                                      EdgeInsets
-                                                                          .zero,
-                                                                  icon: Icon(
-                                                                      Icons
-                                                                          .camera_alt_outlined,
-                                                                      color: context
-                                                                          .chat
-                                                                          .grey,
-                                                                      size: 22),
-                                                                  onPressed: () =>
-                                                                      _openCameraDirect(
-                                                                          currentUid,
-                                                                          currentName),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          const SizedBox(
-                                                              width: 4),
-                                                        ],
-                                                      );
-                                                    },
-                                                  ),
-                                                ],
+                                      child: VoiceMessageRecorder(
+                                        onVoiceSent: (path, dur) {
+                                          setState(
+                                              () => _isRecordingVoice = false);
+                                          _sendVoiceMessage(path, dur,
+                                              currentUid, currentName);
+                                        },
+                                        onCancel: () {
+                                          setState(
+                                              () => _isRecordingVoice = false);
+                                        },
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_replyingMessage != null)
+                                          ChatReplyInputBanner(
+                                            reply: _replyingMessage!,
+                                            onCancel: () => setState(
+                                                () => _replyingMessage = null),
+                                          ),
+                                        if (_editingMessage != null)
+                                          Container(
+                                            margin: const EdgeInsets.fromLTRB(
+                                                10, 0, 10, 4),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: context.chat.bar,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: const Border(
+                                                left: BorderSide(
+                                                    color: Color(0xFF00A884),
+                                                    width: 4),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          // WhatsApp right circular action button
-                                          ValueListenableBuilder<
-                                              TextEditingValue>(
-                                            valueListenable: _messageController,
-                                            builder: (context, val, child) {
-                                              final hasText =
-                                                  val.text.trim().isNotEmpty;
-                                              final isEditing =
-                                                  _editingMessage != null;
-                                              return GestureDetector(
-                                                onTap: () {
-                                                  if (hasText || isEditing) {
-                                                    _sendMessage(currentUid,
-                                                        currentName);
-                                                  } else {
-                                                    setState(() =>
-                                                        _isRecordingVoice =
-                                                            true);
-                                                  }
-                                                },
-                                                child: CircleAvatar(
-                                                  radius: 22,
-                                                  backgroundColor:
-                                                      const Color(0xFF00A884),
-                                                  child: Icon(
-                                                    isEditing
-                                                        ? Icons.check
-                                                        : (hasText
-                                                            ? Icons.send
-                                                            : Icons.mic),
-                                                    color: context.chat.text,
-                                                    size: 19,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit,
+                                                    color:
+                                                        context.chat.accentText,
+                                                    size: 16),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    context.l10n.translate(
+                                                        'chat_editing'),
+                                                    style: TextStyle(
+                                                      color: context
+                                                          .chat.accentText,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 12,
+                                                    ),
                                                   ),
                                                 ),
-                                              );
-                                            },
+                                                IconButton(
+                                                  icon: Icon(Icons.close,
+                                                      color:
+                                                          context.chat.text60,
+                                                      size: 18),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  onPressed: () {
+                                                    setState(() =>
+                                                        _editingMessage = null);
+                                                    _messageController.clear();
+                                                  },
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ],
-                                      ),
+                                        if (_showFormatting)
+                                          ChatFormattingToolbar(
+                                            controller: _messageController,
+                                            focusNode: _messageFocusNode,
+                                            onClose: () => setState(
+                                                () => _showFormatting = false),
+                                          ),
+                                        Container(
+                                          padding: EdgeInsets.fromLTRB(
+                                              8,
+                                              6,
+                                              8,
+                                              8 +
+                                                  MediaQuery.of(context)
+                                                      .padding
+                                                      .bottom),
+                                          color: Colors
+                                              .transparent, // Floating look
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              // WhatsApp left rounded input container
+                                              Expanded(
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    color: context.chat.panel,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            24),
+                                                  ),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 2),
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.end,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      4),
+                                                          child: TextField(
+                                                            controller:
+                                                                _messageController,
+                                                            focusNode:
+                                                                _messageFocusNode,
+                                                            minLines: 1,
+                                                            maxLines: 6,
+                                                            keyboardType:
+                                                                TextInputType
+                                                                    .multiline,
+                                                            onTap: () {
+                                                              if (_showEmojiPicker) {
+                                                                setState(() =>
+                                                                    _showEmojiPicker =
+                                                                        false);
+                                                              }
+                                                            },
+                                                            style: TextStyle(
+                                                              color: context
+                                                                  .chat.text,
+                                                              fontSize: 15.5,
+                                                              height: 1.38,
+                                                              letterSpacing:
+                                                                  0.05,
+                                                              fontFamily:
+                                                                  'NotoSansBengali',
+                                                              fontFamilyFallback: const [
+                                                                'HindSiliguri',
+                                                                'Roboto',
+                                                                'sans-serif'
+                                                              ],
+                                                            ),
+                                                            decoration:
+                                                                InputDecoration(
+                                                              hintText: context
+                                                                  .l10n
+                                                                  .translate(
+                                                                      'chat_message_placeholder'),
+                                                              hintStyle:
+                                                                  TextStyle(
+                                                                color: context
+                                                                    .chat.grey,
+                                                                fontSize: 15.5,
+                                                                fontFamily:
+                                                                    'NotoSansBengali',
+                                                                fontFamilyFallback: const [
+                                                                  'HindSiliguri',
+                                                                  'Roboto',
+                                                                  'sans-serif'
+                                                                ],
+                                                              ),
+                                                              border:
+                                                                  InputBorder
+                                                                      .none,
+                                                              contentPadding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      vertical:
+                                                                          10),
+                                                            ),
+                                                            onSubmitted: (_) =>
+                                                                _sendMessage(
+                                                                    currentUid,
+                                                                    currentName),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Semantics(
+                                                        label: context.l10n
+                                                            .translate(
+                                                                'format_toolbar_toggle'),
+                                                        button: true,
+                                                        child: SizedBox(
+                                                          width: 32,
+                                                          height: 48,
+                                                          child: IconButton(
+                                                            tooltip: context
+                                                                .l10n
+                                                                .translate(
+                                                                    'format_toolbar_toggle'),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            icon: Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          2),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                border:
+                                                                    Border.all(
+                                                                  color: _showFormatting
+                                                                      ? AppColors
+                                                                          .mintGreen
+                                                                      : context
+                                                                          .chat
+                                                                          .grey,
+                                                                  width: 1.5,
+                                                                ),
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            4),
+                                                                color: _showFormatting
+                                                                    ? AppColors
+                                                                        .mintGreen
+                                                                        .withValues(
+                                                                            alpha:
+                                                                                0.15)
+                                                                    : Colors
+                                                                        .transparent,
+                                                              ),
+                                                              child: Text(
+                                                                'Aa',
+                                                                style:
+                                                                    TextStyle(
+                                                                  color: _showFormatting
+                                                                      ? AppColors
+                                                                          .mintGreen
+                                                                      : context
+                                                                          .chat
+                                                                          .grey,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize:
+                                                                      12.0,
+                                                                  letterSpacing:
+                                                                      -0.5,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            onPressed: () =>
+                                                                setState(() =>
+                                                                    _showFormatting =
+                                                                        !_showFormatting),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Semantics(
+                                                        label: context.l10n
+                                                            .translate(
+                                                                'chat_attach_tooltip'),
+                                                        button: true,
+                                                        child: SizedBox(
+                                                          width: 34,
+                                                          height: 48,
+                                                          child: IconButton(
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            icon: Icon(
+                                                                Icons
+                                                                    .attach_file,
+                                                                color: context
+                                                                    .chat.grey,
+                                                                size: 22),
+                                                            onPressed: () =>
+                                                                _openAttachmentSheet(
+                                                                    currentUid,
+                                                                    currentName),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              // WhatsApp right circular action button
+                                              ValueListenableBuilder<
+                                                  TextEditingValue>(
+                                                valueListenable:
+                                                    _messageController,
+                                                builder: (context, val, child) {
+                                                  final hasText = val.text
+                                                      .trim()
+                                                      .isNotEmpty;
+                                                  final isEditing =
+                                                      _editingMessage != null;
+                                                  return GestureDetector(
+                                                    onTap: () {
+                                                      if (hasText ||
+                                                          isEditing) {
+                                                        _sendMessage(currentUid,
+                                                            currentName);
+                                                      } else {
+                                                        setState(() =>
+                                                            _isRecordingVoice =
+                                                                true);
+                                                      }
+                                                    },
+                                                    child: CircleAvatar(
+                                                      radius: 22,
+                                                      backgroundColor:
+                                                          const Color(
+                                                              0xFF00A884),
+                                                      child: Icon(
+                                                        isEditing
+                                                            ? Icons.check
+                                                            : (hasText
+                                                                ? Icons.send
+                                                                : Icons.mic),
+                                                        color:
+                                                            context.chat.text,
+                                                        size: 19,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_showEmojiPicker)
+                                          ChatEmojiPicker(
+                                            onEmojiSelected: _insertEmoji,
+                                            onBackspace: _backspaceEmoji,
+                                          ),
+                                      ],
                                     ),
-                                    if (_showEmojiPicker)
-                                      ChatEmojiPicker(
-                                        onEmojiSelected: _insertEmoji,
-                                        onBackspace: _backspaceEmoji,
-                                      ),
-                                  ],
-                                ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

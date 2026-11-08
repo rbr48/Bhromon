@@ -29,6 +29,7 @@ import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+import '../../../tour_group/presentation/widgets/trip_shell.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -630,7 +631,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
+        bottomNavigationBar:
+            MediaQuery.sizeOf(context).width < TripShell.railBreakpoint
+                ? const BhromonBottomNav(selectedIndex: 3)
+                : null,
         // WhatsApp style floating action button (FAB)
         floatingActionButton: FloatingActionButton(
           backgroundColor: const Color(0xFF00A884), // WhatsApp green

@@ -18,6 +18,7 @@ import '../features/chat/presentation/pages/chat_screen.dart';
 import '../features/chat/presentation/pages/call_screen.dart';
 import '../features/chat/presentation/pages/starred_messages_screen.dart';
 
+import '../features/tour_group/presentation/pages/join_group_screen.dart';
 import '../features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
 import '../features/tour_group/presentation/pages/tour_logistics_hub_screen.dart';
@@ -42,6 +43,7 @@ import '../features/tour_group/presentation/pages/tour_quiz_screen.dart';
 import '../features/tour_group/presentation/widgets/tour_membership_guard.dart';
 import '../features/tour_group/presentation/pages/tour_scrapbook_screen.dart';
 import '../features/tour_group/presentation/widgets/trip_shell.dart';
+import '../features/tour_group/data/active_group.dart';
 import 'tour_page_key.dart';
 import '../features/game_zone/teen_patti/teen_patti_screen.dart';
 
@@ -75,10 +77,17 @@ class AppRouter {
       final bool loggingIn = state.matchedLocation == '/login';
 
       if (authState is Unauthenticated) {
+        if (state.matchedLocation.startsWith('/join')) {
+          return null;
+        }
         return loggingIn ? null : '/login';
       }
 
       if (authState is Authenticated && loggingIn) {
+        final redirect = state.uri.queryParameters['redirect'];
+        if (redirect != null && redirect.isNotEmpty) {
+          return redirect;
+        }
         return '/group-hub';
       }
 
@@ -91,6 +100,32 @@ class AppRouter {
         redirect: (context, state) => '/group-hub',
       ),
       GoRoute(
+        path: '/join',
+        redirect: (context, state) {
+          final code = state.uri.queryParameters['code'];
+          if (code != null && code.isNotEmpty) {
+            return '/join/$code';
+          }
+          return '/group-hub';
+        },
+      ),
+      GoRoute(
+        path: '/join/:code',
+        pageBuilder: (context, state) {
+          final code = state.pathParameters['code'] ?? '';
+          final auto = state.uri.queryParameters['auto'] == 'true';
+          final name = state.uri.queryParameters['name'];
+          return _customPageTransition(
+            state,
+            JoinGroupScreen(
+              inviteCode: code,
+              autoJoin: auto,
+              initialGroupName: name,
+            ),
+          );
+        },
+      ),
+      GoRoute(
         path: '/login',
         pageBuilder: (context, state) =>
             _customPageTransition(state, const LoginScreen()),
@@ -98,16 +133,16 @@ class AppRouter {
       GoRoute(
         path: '/notifications',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const NotificationCenterScreen()),
+            _desktopShellPage(state, const NotificationCenterScreen()),
       ),
       GoRoute(
         path: '/official-feed',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const OfficialFeedScreen()),
+            _desktopShellPage(state, const OfficialFeedScreen()),
       ),
       GoRoute(
         path: '/profile/:uid',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _desktopShellPage(
           state,
           ExplorerProfileScreen(
             uid: state.pathParameters['uid']!,
@@ -116,18 +151,18 @@ class AppRouter {
                 ? (state.extra as Map)['email'] as String?
                 : null,
           ),
-          key: pageKeyFor(state),
+          tourId: state.uri.queryParameters['tourId'],
         ),
       ),
       GoRoute(
         path: '/trust',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const TrustDashboardScreen()),
+            _desktopShellPage(state, const TrustDashboardScreen()),
       ),
       GoRoute(
         path: '/settings',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const NotificationSettingsScreen()),
+            _desktopShellPage(state, const NotificationSettingsScreen()),
       ),
       GoRoute(
         path: '/delete-account',
@@ -137,22 +172,24 @@ class AppRouter {
       GoRoute(
         path: '/chats',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const ChatsListScreen()),
+            _desktopShellPage(state, const ChatsListScreen()),
       ),
       GoRoute(
         path: '/chat/:chatId',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final otherUid = extra?['otherUid'] as String?;
-          return _customPageTransition(
+          final sharedTourId = extra?['sharedTourId'] as String?;
+          return _desktopShellPage(
             state,
             ChatScreen(
               chatId: state.pathParameters['chatId']!,
               otherUid: otherUid,
-              sharedTourId: extra?['sharedTourId'] as String?,
+              sharedTourId: sharedTourId,
               otherEmail: extra?['otherEmail'] as String?,
               sharedFiles: (extra?['sharedFiles'] as List?)?.cast<SharedFile>(),
             ),
+            tourId: sharedTourId,
           );
         },
       ),
@@ -181,16 +218,16 @@ class AppRouter {
       GoRoute(
         path: '/starred-messages',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const StarredMessagesScreen()),
+            _desktopShellPage(state, const StarredMessagesScreen()),
       ),
       GoRoute(
         path: '/group-hub',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _desktopShellPage(
           state,
           TourGroupHubScreen(
             initialTourId: state.uri.queryParameters['tourId'],
           ),
-          key: pageKeyFor(state),
+          tourId: state.uri.queryParameters['tourId'],
         ),
       ),
       GoRoute(
@@ -344,60 +381,63 @@ class AppRouter {
       ),
       GoRoute(
         path: '/game-zone',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _desktopShellPage(
           state,
           GameZoneHubScreen(initialTourId: state.uri.queryParameters['tourId']),
-          key: pageKeyFor(state),
+          tourId: state.uri.queryParameters['tourId'],
         ),
       ),
       GoRoute(
         path: '/game-zone/card29',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const Card29Screen()),
+            _desktopShellPage(state, const Card29Screen()),
       ),
       GoRoute(
         path: '/game-zone/chess',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const ChessScreen()),
+            _desktopShellPage(state, const ChessScreen()),
       ),
       GoRoute(
         path: '/game-zone/ludo',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const LudoScreen()),
+            _desktopShellPage(state, const LudoScreen()),
       ),
       GoRoute(
         path: '/game-zone/teen-patti',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const TeenPattiScreen()),
+            _desktopShellPage(state, const TeenPattiScreen()),
       ),
       GoRoute(
         path: '/game-zone/carrom',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const CarromScreen()),
+            _desktopShellPage(state, const CarromScreen()),
       ),
       GoRoute(
         path: '/game-zone/table/:tourId/:gameId',
         pageBuilder: (context, state) {
           final tourId = state.pathParameters['tourId']!;
           final gameId = state.pathParameters['gameId']!;
-          return _customPageTransition(
+          return _desktopShellPage(
             state,
             TourMembershipGuard(
               tourId: tourId,
               child: OnlineGameTableScreen(tourId: tourId, gameId: gameId),
             ),
+            tourId: tourId,
           );
         },
       ),
       GoRoute(
         path: '/newspaper-hub',
         pageBuilder: (context, state) =>
-            _customPageTransition(state, const NewspaperHubScreen()),
+            _desktopShellPage(state, const NewspaperHubScreen()),
       ),
       GoRoute(
         path: '/holiday-calendar',
-        pageBuilder: (context, state) => _customPageTransition(
-            state, const HolidayCalendarScreen(tourId: '')),
+        pageBuilder: (context, state) => _desktopShellPage(
+          state,
+          const HolidayCalendarScreen(tourId: ''),
+        ),
       ),
       GoRoute(
         path: '/newspaper-reader',
@@ -405,7 +445,7 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           final url =
               state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
-          return _customPageTransition(
+          return _desktopShellPage(
             state,
             AdFreeArticleReaderScreen(
               articleUrl: url,
@@ -425,7 +465,7 @@ class AppRouter {
           final title = state.uri.queryParameters['title'] ??
               extra['title'] as String? ??
               'Web Browser';
-          return _customPageTransition(
+          return _desktopShellPage(
             state,
             AdBlockBrowserScreen(
               initialUrl: url,
@@ -446,6 +486,32 @@ class AppRouter {
       TripShell(
         tourId: state.pathParameters['tourId']!,
         location: state.uri.path,
+        child: screen,
+      ),
+      key: pageKeyFor(state),
+    );
+  }
+
+  /// A top-level screen wrapped with the unified 3-column desktop shell on desktop (>= 900px),
+  /// while preserving its native standalone mobile layout (< 900px) with zero regressions.
+  static Page<void> _desktopShellPage(
+    GoRouterState state,
+    Widget screen, {
+    String? tourId,
+  }) {
+    final effectiveTourId = tourId ??
+        state.pathParameters['tourId'] ??
+        state.uri.queryParameters['tourId'] ??
+        ActiveGroup.instance.current ??
+        '';
+
+    return _customPageTransition(
+      state,
+      TripShell(
+        tourId: effectiveTourId,
+        location: state.uri.path,
+        guardMembership: false,
+        ownMobileScaffold: true,
         child: screen,
       ),
       key: pageKeyFor(state),

@@ -9,6 +9,7 @@ import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
 import '../../domain/models/service_request_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -116,7 +117,10 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
       backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('society_requests_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         backgroundColor: context.forest.surfaceFor(_card),
         foregroundColor: context.forest.text,
         elevation: 0,
@@ -221,7 +225,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (request.photoUrl != null)
+            if (request.photoUrls.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 6),
                 child: Icon(
@@ -353,9 +357,14 @@ class _RequestSheetState extends State<_RequestSheet> {
       widget.existing?.category ?? ServiceRequestCategory.lift;
   bool _saving = false;
   String? _error;
-  XFile? _pickedImage;
-  Uint8List? _pickedBytes;
-  late String? _photoUrl = widget.existing?.photoUrl;
+  // Photos already on the request. The resident may take one off while editing it.
+  late final List<String> _savedPhotos = [...?widget.existing?.photoUrls];
+  // Photos picked here, in the order they were picked. They upload when the request is saved.
+  final List<XFile> _pickedImages = [];
+  final List<Uint8List> _pickedBytes = [];
+
+  int get _photoCount => _savedPhotos.length + _pickedImages.length;
+  bool get _canAddPhoto => _photoCount < kServiceRequestPhotosMax;
 
   @override
   void dispose() {
@@ -365,6 +374,7 @@ class _RequestSheetState extends State<_RequestSheet> {
   }
 
   Future<void> _pickPhoto() async {
+    if (!_canAddPhoto) return;
     try {
       final picker = ImagePicker();
       final file = await picker.pickImage(
@@ -375,13 +385,63 @@ class _RequestSheetState extends State<_RequestSheet> {
       );
       if (file == null || !mounted) return;
       final bytes = await file.readAsBytes();
+      // The picker and the read take time, so check the room and the screen again.
+      if (!mounted || !_canAddPhoto) return;
       setState(() {
-        _pickedImage = file;
-        _pickedBytes = bytes;
+        _pickedImages.add(file);
+        _pickedBytes.add(bytes);
       });
     } catch (err) {
       logError('Service request photo pick error: $err');
     }
+  }
+
+  /// Takes a photo already on the request off it. The change is kept when the request is saved.
+  VoidCallback _removeSavedPhoto(int index) => () {
+        setState(() => _savedPhotos.removeAt(index));
+      };
+
+  /// Drops a photo picked here before it is uploaded.
+  VoidCallback _removePickedPhoto(int index) => () {
+        setState(() {
+          _pickedImages.removeAt(index);
+          _pickedBytes.removeAt(index);
+        });
+      };
+
+  /// One photo in the form, with a button to take it off the request.
+  Widget _photoThumb({required Widget image, required VoidCallback onRemove}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: SizedBox(
+        width: 96,
+        height: 96,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: image,
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: InkWell(
+                onTap: _saving ? null : onRemove,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -396,19 +456,23 @@ class _RequestSheetState extends State<_RequestSheet> {
       _error = null;
     });
     try {
-      String? finalPhotoUrl = _photoUrl;
-      if (_pickedImage != null) {
-        final ext = storedExtension(_pickedImage!.name, 'jpg');
-        final cType = imageContentType(_pickedImage!.name) ?? 'image/jpeg';
+      // The photos already on the request stay, and the picked ones upload one after another.
+      final photos = <String>[..._savedPhotos];
+      for (final file in _pickedImages) {
+        final ext = storedExtension(file.name, 'jpg');
+        final cType = imageContentType(file.name) ?? 'image/jpeg';
         final upload = await TourMediaUploader.start(
           tourId: widget.tourId,
           folder: 'media',
-          file: _pickedImage!,
+          file: file,
           contentType: cType,
           extension: ext,
           maxBytes: kMaxImageBytes,
+          // A request keeps its photos for as long as the request lives. The journal's
+          // orphan sweep would otherwise delete them, since no post refers to them.
+          journal: TourMediaJournal.untracked,
         );
-        finalPhotoUrl = await upload.finish();
+        photos.add(await upload.finish());
       }
 
       final existing = widget.existing;
@@ -418,7 +482,7 @@ class _RequestSheetState extends State<_RequestSheet> {
           title: title,
           details: _details.text,
           category: _category,
-          photoUrl: finalPhotoUrl,
+          photoUrls: photos,
         );
       } else {
         await widget.repository.editServiceRequestText(
@@ -427,7 +491,7 @@ class _RequestSheetState extends State<_RequestSheet> {
           title: title,
           details: _details.text,
           category: _category,
-          photoUrl: finalPhotoUrl,
+          photoUrls: photos,
         );
       }
       if (!mounted) return;
@@ -517,57 +581,36 @@ class _RequestSheetState extends State<_RequestSheet> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (_pickedBytes != null ||
-                      (_photoUrl != null && _photoUrl!.isNotEmpty))
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      height: 140,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: context.forest.divider10),
-                      ),
-                      child: Stack(
+                  if (_photoCount > 0) ...[
+                    SizedBox(
+                      height: 96,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
                         children: [
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: _pickedBytes != null
-                                  ? Image.memory(_pickedBytes!,
-                                      fit: BoxFit.cover)
-                                  : Image.network(_photoUrl!,
-                                      fit: BoxFit.cover),
+                          for (var i = 0; i < _savedPhotos.length; i++)
+                            _photoThumb(
+                              image: Image.network(_savedPhotos[i],
+                                  fit: BoxFit.cover),
+                              onRemove: _removeSavedPhoto(i),
                             ),
-                          ),
-                          Positioned(
-                            top: 6,
-                            right: 6,
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _pickedImage = null;
-                                  _pickedBytes = null;
-                                  _photoUrl = null;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.close,
-                                    size: 16, color: Colors.white),
-                              ),
+                          for (var i = 0; i < _pickedBytes.length; i++)
+                            _photoThumb(
+                              image: Image.memory(_pickedBytes[i],
+                                  fit: BoxFit.cover),
+                              onRemove: _removePickedPhoto(i),
                             ),
-                          ),
                         ],
                       ),
-                    )
-                  else
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (_canAddPhoto)
                     OutlinedButton.icon(
                       onPressed: _saving ? null : _pickPhoto,
                       icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-                      label: const Text('সমস্যার ছবি যুক্ত করুন (ঐচ্ছিক)'),
+                      label: Text(_photoCount == 0
+                          ? 'সমস্যার ছবি যুক্ত করুন (ঐচ্ছিক)'
+                          : 'আরেকটি ছবি যুক্ত করুন'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: context.forest.text,
                         side: BorderSide(color: context.forest.text24),
@@ -703,6 +746,24 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
         _error = l10n.translate('society_save_failed', args: {'error': err});
       });
     }
+  }
+
+  /// One photo of a request, cropped to fill the space it is given.
+  Widget _requestPhoto(BuildContext context, String url) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: ColoredBox(
+        color: Colors.black26,
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Center(
+            child: Icon(Icons.broken_image_rounded,
+                color: context.forest.text38, size: 36),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildStatusTimeline(BuildContext context, ServiceRequest request) {
@@ -895,8 +956,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                         style: TextStyle(
                             color: context.forest.text70, height: 1.4)),
                   ],
-                  if (request.photoUrl != null &&
-                      request.photoUrl!.isNotEmpty) ...[
+                  if (request.photoUrls.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text('সমস্যার ছবি',
                         style: TextStyle(
@@ -904,21 +964,24 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                             fontWeight: FontWeight.bold,
                             fontSize: 12)),
                     const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 180,
-                        width: double.infinity,
-                        color: Colors.black26,
-                        child: Image.network(
-                          request.photoUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Icon(Icons.broken_image_rounded,
-                                color: context.forest.text38, size: 36),
-                          ),
-                        ),
-                      ),
+                    // One photo fills the width; more than one scroll sideways.
+                    SizedBox(
+                      height: 180,
+                      width: double.infinity,
+                      child: request.photoUrls.length == 1
+                          ? _requestPhoto(context, request.photoUrls.first)
+                          : ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: request.photoUrls.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (context, index) => SizedBox(
+                                width: 240,
+                                height: 180,
+                                child: _requestPhoto(
+                                    context, request.photoUrls[index]),
+                              ),
+                            ),
                     ),
                   ],
                   if (!widget.isAdmin && request.adminNote.isNotEmpty) ...[
