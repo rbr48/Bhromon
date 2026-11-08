@@ -311,5 +311,35 @@ void main() {
         AuthError(tAuthError.message),
       ],
     );
+
+    test('keeps the signed-in profile when the server refuses the save',
+        () async {
+      when(mockRepo.updateProfile(tProfile.copyWith(bio: 'Refused')))
+          .thenAnswer((_) async => const Left(PermissionFailure('refused')));
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+      cubit.emit(Authenticated(tProfile));
+
+      final states = <AuthState>[];
+      final subscription = cubit.stream.listen(states.add);
+      final saved =
+          await cubit.updateProfile(tProfile.copyWith(bio: 'Refused'));
+      await Future<void>.delayed(Duration.zero);
+      await subscription.cancel();
+
+      expect(saved, isFalse);
+      expect(states, [const AuthLoading(), Authenticated(tProfile)]);
+      expect(cubit.state, Authenticated(tProfile));
+    });
+
+    test('returns true when the server accepts the save', () async {
+      when(mockRepo.updateProfile(tProfile))
+          .thenAnswer((_) async => Right(tProfile));
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      expect(await cubit.updateProfile(tProfile), isTrue);
+    });
   });
 }

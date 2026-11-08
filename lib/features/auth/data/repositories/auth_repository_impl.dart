@@ -18,6 +18,7 @@ import '../../../../core/value_objects/trust_tier.dart';
 import '../../../tour_group/data/channel_message_cache.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 import '../google_sign_in_failure.dart';
+import '../profile_save_policy.dart';
 
 @LazySingleton(as: IAuthRepository)
 class AuthRepositoryImpl implements IAuthRepository {
@@ -364,23 +365,31 @@ class AuthRepositoryImpl implements IAuthRepository {
     final user = _auth.currentUser;
     if (user == null) return const Left(AuthFailure('User not authenticated'));
 
-    await _updateLocalCache(profile);
-
-    // Keep Firebase Auth in sync so other services (TourGroupRepository,
-    // OnlineGameRepository) always see in-app data via _auth.currentUser.
-    await _syncFirebaseAuthProfile(user, profile);
-
+    // The write goes to the server first. The copy on this device changes only
+    // once the server has accepted the save or has queued it, so a refused save
+    // leaves nothing changed here.
     try {
       await _withRetry(
         () => _firestore
             .collection('explorer_profiles')
             .doc(user.uid)
-            .set(profile.toJson(), SetOptions(merge: true)),
+            .set(profileSavePayload(profile.toJson()), SetOptions(merge: true)),
       );
     } catch (e, stack) {
+      if (isProfileSaveRefused(e)) {
+        logWarning(
+            'AuthRepository: profile save refused by the server', e, stack);
+        return const Left(PermissionFailure('profile save refused'));
+      }
       logWarning(
           'AuthRepository: failed to sync profile update to remote', e, stack);
     }
+
+    await _updateLocalCache(profile);
+
+    // Keep Firebase Auth in sync so other services (TourGroupRepository,
+    // OnlineGameRepository) always see in-app data via _auth.currentUser.
+    await _syncFirebaseAuthProfile(user, profile);
     return Right(profile);
   }
 
