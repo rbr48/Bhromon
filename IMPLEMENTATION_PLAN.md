@@ -264,10 +264,16 @@ Deeply audit and fix message pinning across 1-on-1 Direct Chat (`chat_screen.dar
   - Attach `ScrollController` and `GlobalKey`s to channel messages list, implement `_jumpToChannelMessage`, and add `isHighlighted` styling in `ChannelMessageBubble`.
 - [x] **Task 12.4: Automated Unit & Widget Tests**
   - Add unit/widget tests covering pinned message tap, full sheet display, scroll invocation, and channel pins.
-- [ ] **Task 12.5: PR, CI Green Check, Merge & Comprehensive Multi-Platform Deployment**
+- [x] **Task 12.5: PR, CI Green Check, Merge & Comprehensive Multi-Platform Deployment**
   - Increment version to `1.8.136+190`.
   - Submit GitHub PR via `gh pr create --base main`.
   - Monitor CI checks until 100% green and squash-merge to `main`.
   - Build and deploy Flutter Web to Firebase Hosting (`firebase deploy --only hosting`).
   - Build Android Release APK and Play Store AAB.
+- [x] **Task 12.6: Rich Markdown & Table Formatting in Full Screen Pinned Message View**
+  - Replace raw `SelectableText` with `SelectionArea` and `ChatRichText` in both `group_channels_screen.dart` (`_showPinnedChannelMessageFull`) and `chat_screen.dart` (`_showPinnedMessageFullView`).
+  - Add `ConstrainedBox(maxHeight: 0.85 screen height)` to allow long pinned messages with tables to expand and scroll smoothly.
+  - Enable full Markdown rendering for tables (headers, zebra striping, auto-sums, fullscreen table view), headings, lists, quotes, inline code, bold, italics, and URLs.
+  - Add widget test in `chat_pinned_message_test.dart` verifying table rendering in pinned view.
+  - Increment version to `1.8.137+191`, create PR, verify green CI, merge, and deploy.
 

@@ -30,6 +30,7 @@ import '../../domain/models/logistics_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../../chat/data/chat_draft_store.dart';
+import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../domain/services/channel_draft_rules.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
@@ -1849,161 +1850,171 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 16,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.push_pin_rounded,
+                          color: context.forest.readable(AppColors.gold),
+                          size: 20),
                     ),
-                    child: Icon(Icons.push_pin_rounded,
-                        color: context.forest.readable(AppColors.gold),
-                        size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.translate('chan_pins_full_title'),
-                          style: TextStyle(
-                            color: context.forest.text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          '${message.senderName} • ${localizedDateFormat('MMM d, h:mm a').format(message.timestamp)}',
-                          style: TextStyle(
-                            color: context.forest.text54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: context.forest.text70),
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Divider(height: 1, color: context.forest.divider12),
-              const SizedBox(height: 14),
-              if (message.visualAttachments.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (int idx = 0;
-                              idx < message.visualAttachments.length;
-                              idx++)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () => showChannelMediaViewer(
-                                    context, message.visualAttachments[idx]),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    message.visualAttachments[idx].url,
-                                    height: 140,
-                                    width: 140,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                          Text(
+                            l10n.translate('chan_pins_full_title'),
+                            style: TextStyle(
+                              color: context.forest.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '${message.senderName} • ${localizedDateFormat('MMM d, h:mm a').format(message.timestamp)}',
+                            style: TextStyle(
+                              color: context.forest.text54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: context.forest.text70),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: context.forest.divider12),
+                const SizedBox(height: 14),
+                if (message.visualAttachments.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (int idx = 0;
+                                idx < message.visualAttachments.length;
+                                idx++)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: GestureDetector(
+                                  onTap: () => showChannelMediaViewer(
+                                      context, message.visualAttachments[idx]),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      message.visualAttachments[idx].url,
                                       height: 140,
                                       width: 140,
-                                      color: Colors.black26,
-                                      child: const Icon(Icons.broken_image),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        height: 140,
+                                        width: 140,
+                                        color: Colors.black26,
+                                        child: const Icon(Icons.broken_image),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (text.isNotEmpty)
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: SelectableText(
-                      text,
-                      style: TextStyle(
-                        color: context.forest.text,
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(sheetContext).pop();
-                        _jumpToChannelMessage(message.id);
-                      },
-                      icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-                      label: Text(l10n.translate('chan_pins_jump')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.midGreen,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                  if (text.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: text));
-                        if (mounted) {
-                          _snack(l10n.translate('chan_copied'));
-                        }
-                      },
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: Text(l10n.translate('chan_action_copy')),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: context.forest.text,
-                        side: BorderSide(color: context.forest.divider12),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ],
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ],
+                if (text.isNotEmpty)
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: SelectionArea(
+                        child: ChatRichText(
+                          text: text,
+                          baseStyle: TextStyle(
+                            color: context.forest.text,
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                          isMine: normalizeEmail(message.senderEmail) ==
+                              normalizeEmail(_me),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                          _jumpToChannelMessage(message.id);
+                        },
+                        icon:
+                            const Icon(Icons.arrow_downward_rounded, size: 18),
+                        label: Text(l10n.translate('chan_pins_jump')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.midGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (text.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: text));
+                          if (mounted) {
+                            _snack(l10n.translate('chan_copied'));
+                          }
+                        },
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        label: Text(l10n.translate('chan_action_copy')),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.forest.text,
+                          side: BorderSide(color: context.forest.divider12),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

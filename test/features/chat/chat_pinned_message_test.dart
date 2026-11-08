@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_message_bubble.dart';
+import 'package:bhromon/features/chat/presentation/widgets/chat_rich_text.dart';
+import 'package:bhromon/features/chat/presentation/widgets/chat_table_widget.dart';
 
 void main() {
   group('Pinned Message Tests - Models & UI', () {
@@ -121,6 +123,31 @@ void main() {
       );
       final decoration = container.decoration as BoxDecoration?;
       expect(decoration?.border, isNull);
+    });
+
+    testWidgets(
+        'ChatRichText renders Markdown table and formatted text in pinned full view',
+        (tester) async {
+      const markdown = '# Notice\n'
+          '| Feature | Value |\n'
+          '|---|---|\n'
+          '| Cost | 500 BDT |\n';
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SelectionArea(
+              child: ChatRichText(
+                text: markdown,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ChatRichText), findsOneWidget);
+      expect(find.byType(ChatTableWidget), findsOneWidget);
+      expect(find.text('Notice'), findsOneWidget);
     });
   });
 }
