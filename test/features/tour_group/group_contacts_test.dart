@@ -108,16 +108,20 @@ void main() {
       expect(isInMyTours({'sharedTourId': 'sajek'}, {'sajek'}), isTrue);
     });
 
-    test('a chat from another tour, or from before tours, does not', () {
+    test('a chat or call in another tour does not', () {
       expect(isInMyTours({'sharedTourId': 'other'}, {'sajek'}), isFalse);
+    });
+
+    test('a chat from before tours, with no tour id, still counts', () {
       expect(
           isInMyTours({
             'participants': ['a', 'b']
           }, {
             'sajek'
           }),
-          isFalse);
-      expect(isInMyTours(null, {'sajek'}), isFalse);
+          isTrue);
+      expect(isInMyTours({'sharedTourId': ''}, {'sajek'}), isTrue);
+      expect(isInMyTours(null, {'sajek'}), isTrue);
     });
   });
 }

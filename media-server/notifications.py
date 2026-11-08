@@ -493,8 +493,9 @@ class NotificationEngine:
         sender_id: str,
         text: str = "",
         message_type: str = "text",
+        encrypted: bool = False,
     ) -> Dict[str, Any]:
-        """Notify direct chat recipient."""
+        """Notify direct chat recipient. An encrypted chat's text is never shown in a push."""
         try:
             db = self._get_db()
             chat_doc = db.collection("chats").document(chat_id).get()
@@ -516,7 +517,11 @@ class NotificationEngine:
                 pass
 
             recipient_language = self.get_language_for_uid(recipient_id)
-            preview = _preview_of(text, kind=message_type, language=recipient_language)
+            preview = (
+                push_text(recipient_language, "preview.text")
+                if encrypted
+                else _preview_of(text, kind=message_type, language=recipient_language)
+            )
 
             # In-app notification
             try:
@@ -539,7 +544,11 @@ class NotificationEngine:
                 targets,
                 lambda lang: (
                     push_text(lang, "chat.title", sender=sender_name),
-                    _preview_of(text, kind=message_type, language=lang),
+                    (
+                        push_text(lang, "preview.text")
+                        if encrypted
+                        else _preview_of(text, kind=message_type, language=lang)
+                    ),
                 ),
                 data,
                 high_priority=False,

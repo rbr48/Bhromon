@@ -36,7 +36,7 @@ import chat
 import limits
 import media_access
 import news
-from chat import chat_db, chat_router
+from chat import chat_db, chat_is_encrypted, chat_router
 from ack_reminders import AckReminderScheduler, run_ack_reminders
 from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
@@ -1216,12 +1216,19 @@ async def trigger_chat_notification(
             detail="You can only notify a chat you are in, as yourself.",
         )
 
+    # The text of an encrypted chat never reaches the server, so none is pushed.
+    encrypted = await chat_is_encrypted(chat_id)
+    if encrypted:
+        text = ""
+        message_type = "text"
+
     res = await run_in_threadpool(
         notification_engine.send_chat_notification,
         chat_id=chat_id,
         sender_id=sender_id,
         text=text,
         message_type=message_type,
+        encrypted=encrypted,
     )
     return res
 
