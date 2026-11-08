@@ -10,15 +10,17 @@ enum _MessageDeleteChoice { forMe, forEveryone }
 
 /// Asks how to delete the selected [messages], then deletes them.
 ///
-/// "Delete for everyone" is offered only when at least one message can still be
-/// deleted for everyone, and it applies only to those messages. Returns the ids
-/// that were changed, so the caller can reload them, or null when nothing was
+/// "Delete for everyone" is offered only when [allowForEveryone] is set and at least one
+/// message can still be deleted for everyone, and it applies only to those messages. An
+/// encrypted chat does not allow it, because the rules refuse that write. Returns the
+/// ids that were changed, so the caller can reload them, or null when nothing was
 /// deleted.
 Future<Set<String>?> showDeleteMessagesDialog(
   BuildContext context, {
   required List<QueryDocumentSnapshot> messages,
   required String chatId,
   required String currentUid,
+  bool allowForEveryone = true,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final failedText = context.l10n.translate('chat_delete_failed');
@@ -33,13 +35,14 @@ Future<Set<String>?> showDeleteMessagesDialog(
     allIds.add(doc.id);
     final alreadyDeleted =
         data['type'] == 'deleted' || data['isDeleted'] == true;
-    final allowed = canDeleteForEveryone(
-      senderId: data['senderId'] as String?,
-      currentUid: currentUid,
-      sentAt: ChatDeletionService.timestampOf(data['timestamp']),
-      now: now,
-      alreadyDeleted: alreadyDeleted,
-    );
+    final allowed = allowForEveryone &&
+        canDeleteForEveryone(
+          senderId: data['senderId'] as String?,
+          currentUid: currentUid,
+          sentAt: ChatDeletionService.timestampOf(data['timestamp']),
+          now: now,
+          alreadyDeleted: alreadyDeleted,
+        );
     if (allowed) {
       everyoneIds.add(doc.id);
     } else if (!alreadyDeleted) {

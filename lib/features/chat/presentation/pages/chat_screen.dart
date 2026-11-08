@@ -45,10 +45,12 @@ import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/e2ee/e2ee_chat_controller.dart';
 import '../../domain/e2ee/e2ee_service.dart';
+import '../../domain/e2ee/encrypted_chat_actions.dart';
 import 'e2ee_verification_screen.dart';
 import '../../data/chat_draft_store.dart';
 import '../../data/chat_deletion_service.dart';
 import '../../domain/chat_deletion.dart';
+import '../../domain/chat_search.dart';
 import '../widgets/chat_delete_dialogs.dart';
 import '../widgets/chat_formatting_toolbar.dart';
 import '../widgets/chat_rich_text.dart';
@@ -821,13 +823,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           envelope: Map<String, dynamic>.from(envelope),
         );
         if (!mounted) return;
-        setState(() => _e2eeTexts[doc.id] = text);
+        setState(() {
+          _e2eeTexts[doc.id] = text;
+          if (_isSearchingInChat) _computeSearchMatches(_searchController.text);
+        });
       } catch (error, stackTrace) {
         logWarning('An encrypted message could not be read', error, stackTrace);
         if (!mounted) return;
         setState(() => _e2eeUnreadable.add(doc.id));
       }
     }
+  }
+
+  /// The text of [doc] as this device can show it. An encrypted message has its text
+  /// once it has been read on this device, and nothing before that.
+  String _plainTextOf(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data?['envelope'] != null) return _e2eeTexts[doc.id] ?? '';
+    return (data?['text'] as String?) ?? '';
   }
 
   /// The data of a message as the list shows it. An encrypted message shows its
@@ -2557,6 +2570,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _setReplyToMessage(QueryDocumentSnapshot doc) {
+    if (!chatActionAllowed(ChatAction.reply, encrypted: _chatIsEncrypted)) {
+      return;
+    }
     final data = doc.data() as Map<String, dynamic>;
     final type = (data['type'] as String?) ?? 'text';
     final text = (data['text'] as String?) ?? '';
@@ -2951,8 +2967,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     for (final docId in _selectedMessageIds) {
       try {
         final doc = _allMessages.firstWhere((d) => d.id == docId);
-        final data = doc.data() as Map<String, dynamic>?;
-        final text = data?['text'] as String? ?? '';
+        final text = _plainTextOf(doc);
         if (text.isNotEmpty) texts.add(text);
       } catch (error, stackTrace) {
         logSkipped(error, stackTrace);
@@ -2972,6 +2987,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _pinSelectedMessage() async {
+    if (!chatActionAllowed(ChatAction.pin, encrypted: _chatIsEncrypted)) return;
     if (_selectedMessageIds.isEmpty) return;
     final docId = _selectedMessageIds.first;
     try {
@@ -3009,6 +3025,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _openForwardDialog(String currentUid) {
+    if (!chatActionAllowed(ChatAction.forward, encrypted: _chatIsEncrypted)) {
+      return;
+    }
     if (_selectedMessageIds.isEmpty) return;
     final docId = _selectedMessageIds.first;
     final doc = _allMessages.firstWhere((d) => d.id == docId);
@@ -3092,6 +3111,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       messages: selected,
       chatId: widget.chatId,
       currentUid: currentUid,
+      allowForEveryone: chatActionAllowed(ChatAction.deleteForEveryone,
+          encrypted: _chatIsEncrypted),
     );
     if (!mounted) return;
     setState(() {
@@ -3149,24 +3170,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _onSearchQueryChanged(String query) {
-    final q = query.trim().toLowerCase();
-    _matchingIndices.clear();
-    if (q.isNotEmpty) {
-      final docs = _visibleMessages;
-      for (int i = 0; i < docs.length; i++) {
-        final data = docs[i].data() as Map<String, dynamic>;
-        final text = (data['text'] as String?)?.toLowerCase() ?? '';
-        if (text.contains(q)) {
-          _matchingIndices.add(i);
-        }
-      }
-    }
+    _computeSearchMatches(query);
     setState(() {
       _searchMatchIndex = 0;
     });
     if (_matchingIndices.isNotEmpty) {
       _scrollToSearchMatch();
     }
+  }
+
+  /// Finds the loaded messages whose text matches [query]. An encrypted message matches
+  /// by the text this device has read, so one read later is found once it is.
+  void _computeSearchMatches(String query) {
+    _matchingIndices.clear();
+    final docs = _visibleMessages;
+    for (int i = 0; i < docs.length; i++) {
+      if (chatTextMatchesQuery(_plainTextOf(docs[i]), query)) {
+        _matchingIndices.add(i);
+      }
+    }
+    if (_searchMatchIndex >= _matchingIndices.length) _searchMatchIndex = 0;
   }
 
   void _navigateSearchMatch(bool next) {
@@ -3419,21 +3442,23 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             ),
                             actions: [
                               if (_selectedMessageIds.length == 1) ...[
-                                IconButton(
-                                  icon: Icon(Icons.reply,
-                                      color: context.chat.text),
-                                  tooltip: context.l10n
-                                      .translate('chat_action_reply'),
-                                  onPressed: () {
-                                    final doc = _allMessages.firstWhere((d) =>
-                                        d.id == _selectedMessageIds.first);
-                                    _setReplyToMessage(doc);
-                                    setState(() {
-                                      _selectedMessageIds.clear();
-                                      _reactionTargetDoc = null;
-                                    });
-                                  },
-                                ),
+                                if (chatActionAllowed(ChatAction.reply,
+                                    encrypted: _chatIsEncrypted))
+                                  IconButton(
+                                    icon: Icon(Icons.reply,
+                                        color: context.chat.text),
+                                    tooltip: context.l10n
+                                        .translate('chat_action_reply'),
+                                    onPressed: () {
+                                      final doc = _allMessages.firstWhere((d) =>
+                                          d.id == _selectedMessageIds.first);
+                                      _setReplyToMessage(doc);
+                                      setState(() {
+                                        _selectedMessageIds.clear();
+                                        _reactionTargetDoc = null;
+                                      });
+                                    },
+                                  ),
                                 Builder(builder: (context) {
                                   final doc = _allMessages.firstWhere(
                                       (d) => d.id == _selectedMessageIds.first);
@@ -3447,7 +3472,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               .difference(ts.toDate())
                                               .inMinutes <=
                                           15;
-                                  if (isMe && isText && isWithin15Min) {
+                                  if (isMe &&
+                                      isText &&
+                                      isWithin15Min &&
+                                      chatActionAllowed(ChatAction.edit,
+                                          encrypted: _chatIsEncrypted)) {
                                     return IconButton(
                                       icon: Icon(Icons.edit,
                                           color: context.chat.text),
@@ -3459,22 +3488,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   }
                                   return const SizedBox.shrink();
                                 }),
-                                IconButton(
-                                  icon: Icon(Icons.push_pin_outlined,
-                                      color: context.chat.text),
-                                  tooltip:
-                                      context.l10n.translate('chat_action_pin'),
-                                  onPressed: _pinSelectedMessage,
-                                ),
+                                if (chatActionAllowed(ChatAction.pin,
+                                    encrypted: _chatIsEncrypted))
+                                  IconButton(
+                                    icon: Icon(Icons.push_pin_outlined,
+                                        color: context.chat.text),
+                                    tooltip: context.l10n
+                                        .translate('chat_action_pin'),
+                                    onPressed: _pinSelectedMessage,
+                                  ),
                               ],
-                              IconButton(
-                                icon: Icon(Icons.star_outline,
-                                    color: context.chat.text),
-                                tooltip:
-                                    context.l10n.translate('chat_action_star'),
-                                onPressed: () =>
-                                    _toggleStarSelectedMessages(currentUid),
-                              ),
+                              if (chatActionAllowed(ChatAction.star,
+                                  encrypted: _chatIsEncrypted))
+                                IconButton(
+                                  icon: Icon(Icons.star_outline,
+                                      color: context.chat.text),
+                                  tooltip: context.l10n
+                                      .translate('chat_action_star'),
+                                  onPressed: () =>
+                                      _toggleStarSelectedMessages(currentUid),
+                                ),
                               IconButton(
                                 icon: Icon(Icons.delete_outline,
                                     color: context.chat.text),
@@ -3483,13 +3516,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 onPressed: () =>
                                     _deleteSelectedMessages(currentUid),
                               ),
-                              IconButton(
-                                icon: Icon(Icons.forward,
-                                    color: context.chat.text),
-                                tooltip: context.l10n
-                                    .translate('chat_action_forward'),
-                                onPressed: () => _openForwardDialog(currentUid),
-                              ),
+                              if (chatActionAllowed(ChatAction.forward,
+                                  encrypted: _chatIsEncrypted))
+                                IconButton(
+                                  icon: Icon(Icons.forward,
+                                      color: context.chat.text),
+                                  tooltip: context.l10n
+                                      .translate('chat_action_forward'),
+                                  onPressed: () =>
+                                      _openForwardDialog(currentUid),
+                                ),
                               IconButton(
                                 icon:
                                     Icon(Icons.copy, color: context.chat.text),
@@ -4847,6 +4883,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       doc.id, () => GlobalKey()),
                                   child: SwipeToReply(
                                     isMe: isMe,
+                                    enabled: chatActionAllowed(ChatAction.reply,
+                                        encrypted: _chatIsEncrypted),
                                     onReply: () => _setReplyToMessage(doc),
                                     child: GestureDetector(
                                       onTap: () {
@@ -4868,7 +4906,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         HapticFeedback.mediumImpact();
                                         setState(() {
                                           _selectedMessageIds.add(doc.id);
-                                          _reactionTargetDoc = doc;
+                                          _reactionTargetDoc =
+                                              chatActionAllowed(
+                                                      ChatAction.react,
+                                                      encrypted:
+                                                          _chatIsEncrypted)
+                                                  ? doc
+                                                  : null;
                                         });
                                       },
                                       child: Container(
