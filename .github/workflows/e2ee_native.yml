@@ -3,8 +3,9 @@ name: E2EE native library
 # Builds and tests the vodozemac-based library for the end-to-end encrypted
 # one-to-one chat (native/e2ee_olm; E2EE_DESIGN.md, milestone M1).
 #
-# The Linux job runs the Rust checks, the C smoke test and the export check. The
-# Android job builds the shared library for three ABIs with the NDK. The iOS job
+# The Linux job runs the Rust checks, the C smoke test, the export check and the
+# libolm interoperability test. The Android job builds the shared library for three
+# ABIs with the NDK. The iOS job
 # builds device and simulator libraries on macOS, which costs several times the
 # Linux minutes, so it runs on a manual start or when the repository variable
 # IOS_BUILD_ENABLED is 'true', as native_build.yml does.
@@ -62,6 +63,21 @@ jobs:
           cc -std=c11 -Wall -Wextra -Werror -I include tests/c/smoke.c \
             target/release/libe2ee_olm.a -lpthread -ldl -lm -o target/smoke
           target/smoke
+
+      # libolm is the reference Olm implementation. The test runs both directions
+      # with fresh keys and checks that the session ids match on both ends.
+      - name: Install libolm (reference Olm implementation)
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y libolm-dev
+
+      - name: libolm interoperability (session version 1, both directions)
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -I include tests/interop/libolm_interop.c \
+            target/release/libe2ee_olm.a -lolm -lpthread -ldl -lm -o target/libolm_interop
+          target/libolm_interop
 
       # The same runner rebuilds the crate from the same inputs. Identical
       # checksums show the build is deterministic here. Bit-identical output
