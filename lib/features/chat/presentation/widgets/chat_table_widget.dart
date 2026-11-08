@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/colors.dart';
@@ -226,6 +227,26 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
   }
 
   InlineSpan _span(ChatSpan span, TextStyle style) {
+    if (span.math) {
+      return WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Math.tex(
+              span.text,
+              textStyle: style,
+              onErrorFallback: (_) => Text(
+                '\$${span.text}\$',
+                style: style.copyWith(fontFamily: 'monospace'),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     var textStyle = style.copyWith(
       fontWeight: span.bold ? FontWeight.bold : null,
       fontStyle: span.italic ? FontStyle.italic : null,

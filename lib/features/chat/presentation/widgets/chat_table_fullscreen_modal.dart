@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
@@ -177,7 +178,68 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
     return results;
   }
 
-  void _showCellDetail(String header, String content) {
+  InlineSpan _span(ChatSpan span, TextStyle style) {
+    if (span.math) {
+      return WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Math.tex(
+              span.text,
+              textStyle: style,
+              onErrorFallback: (_) => Text(
+                '\$${span.text}\$',
+                style: style.copyWith(fontFamily: 'monospace'),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final textStyle = style.copyWith(
+      fontWeight: span.bold ? FontWeight.bold : null,
+      fontStyle: span.italic ? FontStyle.italic : null,
+      decoration: TextDecoration.combine([
+        if (span.strike) TextDecoration.lineThrough,
+        if (span.underline || span.link != null) TextDecoration.underline,
+      ]),
+      fontFamily: span.code ? 'monospace' : null,
+      backgroundColor: span.code
+          ? Colors.black38
+          : (span.highlight ? AppColors.gold.withValues(alpha: 0.35) : null),
+      color: span.link != null ? AppColors.mintGreen : null,
+    );
+
+    return TextSpan(text: span.text, style: textStyle);
+  }
+
+  Widget _buildCellContent(
+    List<ChatSpan> spans,
+    ChatTableAlign align,
+    TextStyle style,
+  ) {
+    final textAlign = switch (align) {
+      ChatTableAlign.center => TextAlign.center,
+      ChatTableAlign.right => TextAlign.right,
+      ChatTableAlign.left => TextAlign.left,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      alignment: _toAlignment(align),
+      child: Text.rich(
+        TextSpan(
+          children: [for (final span in spans) _span(span, style)],
+        ),
+        textAlign: textAlign,
+      ),
+    );
+  }
+
+  void _showCellDetail(String header, ChatTableCell cell) {
+    final content = cell.plainText;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
@@ -185,6 +247,13 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetCtx) {
+        final cellDetailStyle = TextStyle(
+          fontFamily: 'NotoSansBengali',
+          fontFamilyFallback: const ['NotoSansBengali', 'Roboto', 'sans-serif'],
+          fontSize: 16,
+          height: 1.45,
+          color: context.forest.text,
+        );
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -219,21 +288,38 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                SelectableText(
-                  content,
-                  style: TextStyle(
-                    fontFamily: 'NotoSansBengali',
-                    fontFamilyFallback: const [
-                      'NotoSansBengali',
-                      'Roboto',
-                      'sans-serif'
-                    ],
-                    fontSize: 16,
-                    height: 1.45,
-                    color: context.forest.text,
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        for (final span in cell.spans)
+                          _span(span, cellDetailStyle),
+                      ],
+                    ),
                   ),
                 ),
+                if (cell.spans.any((s) => s.math)) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: SelectableText(
+                      content,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: context.forest.text70,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -676,26 +762,22 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   InkWell(
                     onTap: () => _showCellDetail(
                       'কলাম হেডার',
-                      widget.table.headers[c].plainText,
+                      widget.table.headers[c],
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      alignment: _toAlignment(widget.table.alignments[c]),
-                      child: Text(
-                        widget.table.headers[c].plainText,
-                        style: const TextStyle(
-                          fontFamily: 'NotoSansBengali',
-                          fontFamilyFallback: [
-                            'NotoSansBengali',
-                            'Roboto',
-                            'sans-serif'
-                          ],
-                          color: Colors.white,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.05,
-                        ),
+                    child: _buildCellContent(
+                      widget.table.headers[c].spans,
+                      widget.table.alignments[c],
+                      const TextStyle(
+                        fontFamily: 'NotoSansBengali',
+                        fontFamilyFallback: [
+                          'NotoSansBengali',
+                          'Roboto',
+                          'sans-serif'
+                        ],
+                        color: Colors.white,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.05,
                       ),
                     ),
                   ),
@@ -712,34 +794,30 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                   for (var c = 0; c < colCount; c++)
                     InkWell(
                       onTap: () {
-                        final cellText = c < widget.table.rows[r].cells.length
-                            ? widget.table.rows[r].cells[c].plainText
-                            : '';
+                        final cell = c < widget.table.rows[r].cells.length
+                            ? widget.table.rows[r].cells[c]
+                            : const ChatTableCell([]);
                         final header = c < widget.table.headers.length
                             ? widget.table.headers[c].plainText
                             : 'কলাম ${c + 1}';
-                        _showCellDetail(header, cellText);
+                        _showCellDetail(header, cell);
                       },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        alignment: _toAlignment(widget.table.alignments[c]),
-                        child: Text(
-                          c < widget.table.rows[r].cells.length
-                              ? widget.table.rows[r].cells[c].plainText
-                              : '',
-                          style: const TextStyle(
-                            fontFamily: 'NotoSansBengali',
-                            fontFamilyFallback: [
-                              'NotoSansBengali',
-                              'Roboto',
-                              'sans-serif'
-                            ],
-                            color: Colors.white,
-                            fontSize: 14,
-                            height: 1.4,
-                            letterSpacing: 0.05,
-                          ),
+                      child: _buildCellContent(
+                        c < widget.table.rows[r].cells.length
+                            ? widget.table.rows[r].cells[c].spans
+                            : const [],
+                        widget.table.alignments[c],
+                        const TextStyle(
+                          fontFamily: 'NotoSansBengali',
+                          fontFamilyFallback: [
+                            'NotoSansBengali',
+                            'Roboto',
+                            'sans-serif'
+                          ],
+                          color: Colors.white,
+                          fontSize: 14,
+                          height: 1.4,
+                          letterSpacing: 0.05,
                         ),
                       ),
                     ),
