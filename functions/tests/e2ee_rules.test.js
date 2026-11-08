@@ -2,7 +2,7 @@
 // Needs the Firestore emulator on port 8080:
 //   npx firebase-tools@13.35.1 emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/e2ee_rules"
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, getDoc, updateDoc, deleteDoc, addDoc, collection, serverTimestamp } = require('firebase/firestore');
+const { doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, collection, query, where, serverTimestamp } = require('firebase/firestore');
 const fs = require('fs');
 const path = require('path');
 
@@ -104,7 +104,7 @@ describe('end-to-end encryption rules', () => {
     });
 
     test('the owner adds and removes one-time keys; others cannot', async () => {
-      const otk = { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG };
+      const otk = { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG, claimedBy: null };
       const ref = doc(as(ALICE), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID);
 
       await assertSucceeds(setDoc(ref, otk));
@@ -117,8 +117,48 @@ describe('end-to-end encryption rules', () => {
     test('a one-time key must sit at the path of its own id', async () => {
       await assertFails(setDoc(
         doc(as(ALICE), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', 'M'.repeat(22)),
-        { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG },
+        { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG, claimedBy: null },
       ));
+    });
+
+    test('a key is created unclaimed, and a claimed key cannot be created', async () => {
+      const otk = { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG, claimedBy: null };
+      await assertFails(setDoc(doc(as(ALICE), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), { ...otk, claimedBy: BOB.uid }));
+      const { claimedBy, ...withoutField } = otk;
+      await assertFails(setDoc(doc(as(ALICE), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), withoutField));
+      await assertSucceeds(setDoc(doc(as(ALICE), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), otk));
+    });
+
+    test('a signed-in user claims an unclaimed key once, and the key then reads as claimed', async () => {
+      const otk = { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG, claimedBy: null };
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), otk);
+      });
+      const ref = doc(as(ALICE), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID);
+      const claim = { claimedBy: BOB.uid, claimedAt: serverTimestamp() };
+      await assertSucceeds(updateDoc(doc(as(BOB), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), claim));
+
+      // Once claimed, nobody claims it again, not even the claimer or the owner.
+      await assertFails(updateDoc(doc(as(BOB), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), claim));
+      await assertFails(updateDoc(ref, { claimedBy: ALICE.uid, claimedAt: serverTimestamp() }));
+      const unclaimed = await assertSucceeds(getDocs(query(
+        collection(as(BOB), 'e2ee_keys', ALICE.uid, 'oneTimeKeys'),
+        where('claimedBy', '==', null),
+      )));
+      expect(unclaimed.docs).toHaveLength(0);
+    });
+
+    test('a claim names the claimer, the server time, and nothing else', async () => {
+      const otk = { deviceId: 'device-alice', keyId: KEY_ID, key: KEY, signature: SIG, claimedBy: null };
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), otk);
+      });
+      const bobRef = doc(as(BOB), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID);
+      await assertFails(updateDoc(bobRef, { claimedBy: ALICE.uid, claimedAt: serverTimestamp() }));
+      await assertFails(updateDoc(bobRef, { claimedBy: BOB.uid, claimedAt: serverTimestamp(), key: 'C'.repeat(43) }));
+      await assertFails(updateDoc(bobRef, { claimedBy: BOB.uid, claimedAt: new Date() }));
+      await assertFails(updateDoc(doc(signedOut(), 'e2ee_keys', ALICE.uid, 'oneTimeKeys', KEY_ID), { claimedBy: BOB.uid, claimedAt: serverTimestamp() }));
+      await assertSucceeds(updateDoc(bobRef, { claimedBy: BOB.uid, claimedAt: serverTimestamp() }));
     });
   });
 

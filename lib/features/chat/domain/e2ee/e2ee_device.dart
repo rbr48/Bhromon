@@ -7,14 +7,56 @@ import 'package:bhromon/features/chat/domain/e2ee/e2ee_payload.dart';
 import 'package:bhromon/features/chat/domain/e2ee/olm_engine.dart';
 import 'package:bhromon/features/chat/domain/e2ee/prekey_bundle.dart';
 
+/// One session with a peer identity, pickled for storage.
+class SessionSnapshot {
+  const SessionSnapshot({
+    required this.userId,
+    required this.identityKey,
+    required this.pickle,
+    required this.confirmed,
+  });
+
+  final String userId;
+
+  /// The peer's Curve25519 identity key the session was made with.
+  final Uint8List identityKey;
+
+  /// The session, encrypted under the pickle key.
+  final Uint8List pickle;
+
+  /// Whether a message from the peer has been decrypted on this session.
+  final bool confirmed;
+}
+
+/// The result of [E2eeDevice.decrypt].
+class DecryptedEnvelope {
+  const DecryptedEnvelope({
+    required this.payload,
+    required this.startedSession,
+  });
+
+  final E2eePayload payload;
+
+  /// Whether this was a pre-key message that started a session, so its one-time
+  /// key has now been used up and must be removed from the server.
+  final bool startedSession;
+}
+
 /// The end-to-end encryption state of one device: its Olm account and its
 /// sessions with peer devices (E2EE_DESIGN.md, sections 4 and 6). It works over
 /// [OlmEngine], so it does not depend on the native library.
 ///
-/// Nothing is decrypted or used after a failed check. A peer key is used only
-/// after its signature verifies, and a changed identity key stops the session.
+/// Sessions are kept per peer identity, several at a time (decision in M4 of
+/// E2EE_DESIGN.md). Two first messages sent at the same moment each start a session,
+/// and both stay usable. Nothing is decrypted or used after a failed check. A peer
+/// key is used only after its signature verifies. A changed identity does not stop
+/// the chat. The app warns about it and keeps the old session for old messages.
 class E2eeDevice {
   E2eeDevice._(this._engine, this.userId, this.deviceId, this._account);
+
+  /// The most sessions kept with one peer identity. The oldest unconfirmed session
+  /// is dropped first.
+  static const int maxSessionsPerIdentity = 4;
 
   /// Creates a device with fresh keys: [oneTimeKeyCount] one-time keys and a
   /// fallback key.
@@ -37,16 +79,42 @@ class E2eeDevice {
     return E2eeDevice._(engine, userId, deviceId, account);
   }
 
+  /// Restores a device from its pickles, as written by [pickleAccount] and
+  /// [snapshotSessions]. [pickleKey] is the 32-byte key they were written under.
+  factory E2eeDevice.restore({
+    required OlmEngine engine,
+    required String userId,
+    required String deviceId,
+    required Uint8List accountPickle,
+    required Uint8List pickleKey,
+    required List<SessionSnapshot> sessions,
+  }) {
+    final account = engine.restoreAccount(accountPickle, pickleKey);
+    final device = E2eeDevice._(engine, userId, deviceId, account);
+    for (final snapshot in sessions) {
+      final session = engine.restoreSession(snapshot.pickle, pickleKey);
+      device._add(
+        snapshot.userId,
+        snapshot.identityKey,
+        session,
+        confirmed: snapshot.confirmed,
+      );
+    }
+    return device;
+  }
+
   final OlmEngine _engine;
   final String userId;
   final String deviceId;
   final OlmAccount _account;
-  final Map<String, _Peer> _peers = {};
+
+  /// The sessions by peer identity, keyed by the identity's fingerprint.
+  final Map<String, _Bucket> _buckets = {};
 
   /// The bundle to publish. It carries the identity key, signed by this device's
   /// Ed25519 key, and the keys not yet published, each signed the same way. The
-  /// server keeps a published fallback key and adds new keys to the bundle (M3).
-  /// Uploading it and calling [markPublished] are the app's job.
+  /// app merges it into the published bundle, which keeps the published fallback
+  /// key (see the chat service).
   E2eePrekeyBundle buildBundle() {
     final fallback = _account.unpublishedFallbackKey();
     final identity = _account.curve25519Key;
@@ -65,30 +133,106 @@ class E2eeDevice {
     );
   }
 
-  /// Marks the current keys as published, after the bundle is uploaded.
+  /// The one-time keys not yet uploaded, signed. Call [markPublished] once they
+  /// are on the server.
+  List<E2eeSignedKey> unpublishedOneTimeKeys() {
+    return [
+      for (final key in _account.unpublishedOneTimeKeys()) _sign(key),
+    ];
+  }
+
+  /// Makes [count] one-time keys and returns every unpublished one, signed, ready
+  /// to upload. Call [markPublished] once the upload has succeeded.
+  List<E2eeSignedKey> newOneTimeKeys(int count) {
+    _account.generateOneTimeKeys(count);
+    return unpublishedOneTimeKeys();
+  }
+
+  /// Starts a new fallback key and returns it signed, ready to publish. The
+  /// previous fallback key stays valid for messages already on their way. Call
+  /// [markPublished] once the upload has succeeded.
+  E2eeSignedKey rotateFallbackKey() {
+    _account.generateFallbackKey();
+    final fallback = _account.unpublishedFallbackKey();
+    if (fallback == null) {
+      throw StateError('the new fallback key is not unpublished');
+    }
+    return _sign(fallback);
+  }
+
+  /// Marks the unpublished keys as published, after the upload succeeded.
   void markPublished() => _account.markKeysPublished();
+
+  /// The Curve25519 and Ed25519 identity keys together, for safety numbers.
+  Uint8List get identityBlock => Uint8List.fromList(
+        [..._account.curve25519Key, ..._account.ed25519Key],
+      );
+
+  /// The account, encrypted under [key] (32 bytes), for storage.
+  Uint8List pickleAccount(Uint8List key) => _account.pickle(key);
+
+  /// Every session, encrypted under [key], oldest first within each identity.
+  List<SessionSnapshot> snapshotSessions(Uint8List key) {
+    return [
+      for (final bucket in _buckets.values)
+        for (final entry in bucket.sessions)
+          SessionSnapshot(
+            userId: bucket.userId,
+            identityKey: bucket.identityKey,
+            pickle: entry.session.pickle(key),
+            confirmed: entry.confirmed,
+          ),
+    ];
+  }
+
+  /// Whether a session exists with the identity [peer] presents. If not, the next
+  /// [encrypt] needs a one-time key.
+  bool hasSessionWith(E2eePrekeyBundle peer) {
+    final bucket = _buckets[_fingerprint(peer.curve25519Key)];
+    return bucket != null && bucket.sessions.isNotEmpty;
+  }
+
+  /// The one-time keys of [peer] whose signatures verify. Throws if the identity
+  /// key is not signed by the peer's device key.
+  List<E2eeSignedKey> verifiedOneTimeKeys(E2eePrekeyBundle peer) {
+    _checkBundle(peer);
+    return [
+      for (final key in peer.oneTimeKeys)
+        if (_verifies(peer, key)) key,
+    ];
+  }
 
   /// Frees the native account and every session. The device must not be used
   /// afterwards.
   void dispose() {
-    for (final peer in _peers.values) {
-      peer.session.dispose();
+    for (final bucket in _buckets.values) {
+      for (final entry in bucket.sessions) {
+        entry.session.dispose();
+      }
     }
-    _peers.clear();
+    _buckets.clear();
     _account.dispose();
   }
 
-  /// Encrypts [payload] for [recipient]. A session is started from one of the
-  /// recipient's verified one-time keys, or its verified fallback key, if there is
-  /// no session yet.
+  /// Encrypts [payload] for [recipient]. If no session exists with the recipient's
+  /// identity, one is started from [oneTimeKey] (which the caller has claimed on the
+  /// server), or from the recipient's verified fallback key when there is none.
   E2eeEnvelope encrypt({
     required E2eePrekeyBundle recipient,
     required E2eePayload payload,
+    E2eeSignedKey? oneTimeKey,
   }) {
+    if (payload.senderUid != userId ||
+        payload.recipientUid != recipient.userId) {
+      throw ArgumentError('the payload names other users than the devices');
+    }
+    if (utf8.encode(payload.text).length > E2eePayload.maxTextBytes) {
+      throw ArgumentError('the text is longer than the payload allows');
+    }
     _checkBundle(recipient);
-    final peer = _outboundPeer(recipient);
+    final session = _outboundSession(recipient, oneTimeKey);
     final plaintext = Uint8List.fromList(utf8.encode(payload.encode()));
-    final message = peer.session.encrypt(plaintext);
+    final message = session.encrypt(plaintext);
     return E2eeEnvelope(
       senderDeviceId: deviceId,
       recipientDeviceId: recipient.deviceId,
@@ -100,7 +244,7 @@ class E2eeDevice {
   /// Decrypts [envelope] from [sender] and checks the payload against the chat,
   /// the sender, this user and the message id. Throws if any check fails. The text
   /// is returned only after all of them pass.
-  E2eePayload decrypt({
+  DecryptedEnvelope decrypt({
     required E2eePrekeyBundle sender,
     required E2eeEnvelope envelope,
     required String chatId,
@@ -113,10 +257,10 @@ class E2eeDevice {
       throw const E2eeSecurityException('the envelope is for another device');
     }
     _checkBundle(sender);
-    final plaintext = _decryptRaw(sender, envelope);
+    final decrypted = _decryptRaw(sender, envelope);
     final String text;
     try {
-      text = utf8.decode(plaintext);
+      text = utf8.decode(decrypted.plaintext);
     } on FormatException {
       throw const E2eeFormatException('the payload is not UTF-8');
     }
@@ -127,7 +271,10 @@ class E2eeDevice {
       expectedRecipientUid: userId,
       expectedMessageId: messageId,
     );
-    return payload;
+    return DecryptedEnvelope(
+      payload: payload,
+      startedSession: decrypted.startedSession,
+    );
   }
 
   E2eeSignedKey _sign(Uint8List key) {
@@ -138,47 +285,69 @@ class E2eeDevice {
     );
   }
 
-  _Peer _outboundPeer(E2eePrekeyBundle recipient) {
-    final existing = _peers[recipient.deviceId];
-    if (existing != null) {
-      _checkIdentity(existing, recipient);
-      return existing;
+  /// The session to send on: the newest one the peer has answered, else the
+  /// newest one. A new session starts from [oneTimeKey] or the fallback key.
+  OlmSession _outboundSession(
+    E2eePrekeyBundle recipient,
+    E2eeSignedKey? oneTimeKey,
+  ) {
+    final bucket = _buckets[_fingerprint(recipient.curve25519Key)];
+    if (bucket != null && bucket.sessions.isNotEmpty) {
+      return _preferred(bucket).session;
     }
-    final oneTimeKey = _verifiedKey(recipient);
+    final Uint8List theirKey;
+    if (oneTimeKey != null) {
+      if (!_verifies(recipient, oneTimeKey)) {
+        throw const E2eeSecurityException(
+          'the one-time key is not signed by the peer device',
+        );
+      }
+      theirKey = oneTimeKey.key;
+    } else {
+      final fallback = recipient.fallbackKey;
+      if (fallback == null || !_verifies(recipient, fallback)) {
+        throw const E2eeSecurityException(
+          'the peer has no key with a valid signature',
+        );
+      }
+      theirKey = fallback.key;
+    }
     final session = _engine.createOutboundSession(
       account: _account,
       theirCurve25519Key: recipient.curve25519Key,
-      theirOneTimeKey: oneTimeKey,
+      theirOneTimeKey: theirKey,
     );
-    final peer = _Peer(recipient.curve25519Key, session);
-    _peers[recipient.deviceId] = peer;
-    return peer;
+    _add(recipient.userId, recipient.curve25519Key, session, confirmed: false);
+    return session;
   }
 
-  Uint8List _decryptRaw(E2eePrekeyBundle sender, E2eeEnvelope envelope) {
-    final existing = _peers[sender.deviceId];
-    if (existing != null) {
-      _checkIdentity(existing, sender);
-      try {
-        return existing.session.decrypt(
-          envelope.messageType,
-          envelope.ciphertext,
-        );
-      } on OlmEngineException {
-        throw const E2eeSecurityException('the message could not be decrypted');
+  ({Uint8List plaintext, bool startedSession}) _decryptRaw(
+    E2eePrekeyBundle sender,
+    E2eeEnvelope envelope,
+  ) {
+    for (final bucket in _buckets.values) {
+      if (bucket.userId != sender.userId) {
+        continue;
+      }
+      for (final entry in bucket.sessions.reversed) {
+        try {
+          final plaintext = entry.session.decrypt(
+            envelope.messageType,
+            envelope.ciphertext,
+          );
+          entry.confirmed = true;
+          return (plaintext: plaintext, startedSession: false);
+        } on OlmEngineException {
+          // Not this session. Another one may hold the message.
+        }
       }
     }
     if (envelope.messageType != 0) {
-      throw const E2eeSecurityException('there is no session with the sender');
+      throw const E2eeSecurityException('the message could not be decrypted');
     }
-    final inbound = _startInbound(sender, envelope);
-    _peers[sender.deviceId] = _Peer(sender.curve25519Key, inbound.session);
-    return inbound.plaintext;
-  }
-
-  OlmInbound _startInbound(E2eePrekeyBundle sender, E2eeEnvelope envelope) {
+    final OlmInbound inbound;
     try {
-      return _engine.createInboundSession(
+      inbound = _engine.createInboundSession(
         account: _account,
         theirCurve25519Key: sender.curve25519Key,
         prekeyMessage: envelope.ciphertext,
@@ -188,23 +357,43 @@ class E2eeDevice {
         'the first message does not start a session',
       );
     }
+    _add(sender.userId, sender.curve25519Key, inbound.session, confirmed: true);
+    return (plaintext: inbound.plaintext, startedSession: true);
   }
 
-  /// A one-time key whose signature verifies, or the fallback key if none does.
-  /// Throws if the peer has neither.
-  Uint8List _verifiedKey(E2eePrekeyBundle peer) {
-    for (final signed in peer.oneTimeKeys) {
-      if (_verifies(peer, signed)) {
-        return signed.key;
+  _Session _preferred(_Bucket bucket) {
+    for (final entry in bucket.sessions.reversed) {
+      if (entry.confirmed) {
+        return entry;
       }
     }
-    final fallback = peer.fallbackKey;
-    if (fallback != null && _verifies(peer, fallback)) {
-      return fallback.key;
-    }
-    throw const E2eeSecurityException(
-      'the peer has no key with a valid signature',
+    return bucket.sessions.last;
+  }
+
+  /// Keeps [session] with the identity, dropping the oldest unconfirmed session
+  /// when there are too many. The new session is never the one dropped.
+  void _add(
+    String userId,
+    Uint8List identityKey,
+    OlmSession session, {
+    required bool confirmed,
+  }) {
+    final bucket = _buckets.putIfAbsent(
+      _fingerprint(identityKey),
+      () => _Bucket(userId, identityKey),
     );
+    bucket.sessions.add(_Session(session, confirmed: confirmed));
+    while (bucket.sessions.length > maxSessionsPerIdentity) {
+      final last = bucket.sessions.length - 1;
+      var victim = 0;
+      for (var i = 0; i < last; i++) {
+        if (!bucket.sessions[i].confirmed) {
+          victim = i;
+          break;
+        }
+      }
+      bucket.sessions.removeAt(victim).session.dispose();
+    }
   }
 
   bool _verifies(E2eePrekeyBundle peer, E2eeSignedKey signed) {
@@ -246,29 +435,24 @@ class E2eeDevice {
     }
   }
 
-  void _checkIdentity(_Peer peer, E2eePrekeyBundle other) {
-    if (!_sameBytes(peer.identityKey, other.curve25519Key)) {
-      throw const E2eeSecurityException("the peer's identity key has changed");
-    }
-  }
-
-  static bool _sameBytes(Uint8List a, Uint8List b) {
-    if (a.length != b.length) {
-      return false;
-    }
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
+  static String _fingerprint(Uint8List identityKey) =>
+      base64Url.encode(identityKey);
 }
 
-/// A session with one peer device, and the identity key it was started with.
-class _Peer {
-  const _Peer(this.identityKey, this.session);
+/// The sessions with one peer identity, oldest first.
+class _Bucket {
+  _Bucket(this.userId, this.identityKey);
 
+  final String userId;
   final Uint8List identityKey;
+  final List<_Session> sessions = [];
+}
+
+class _Session {
+  _Session(this.session, {required this.confirmed});
+
   final OlmSession session;
+
+  /// Set once a message from the peer has been decrypted on this session.
+  bool confirmed;
 }

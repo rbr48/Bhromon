@@ -325,17 +325,25 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && isBundle(request.resource.data);
       allow delete:        if isOwner(uid);
 
-      // A one-time key is used once. The owner removes it after the first message that uses it.
+      // A one-time key is used once. A sender claims an unclaimed key before it starts a
+      // session from it, so two senders never start from the same key. The owner removes
+      // the key after the first message that uses it.
       match /oneTimeKeys/{keyId} {
         function isOneTimeKey(d) {
-          return d.keys().hasOnly(['deviceId', 'keyId', 'key', 'signature'])
-            && d.keys().hasAll(['deviceId', 'keyId', 'key', 'signature'])
+          return d.keys().hasOnly(['deviceId', 'keyId', 'key', 'signature', 'claimedBy'])
+            && d.keys().hasAll(['deviceId', 'keyId', 'key', 'signature', 'claimedBy'])
             && isDevice(d.deviceId) && isKeyId(d.keyId) && d.keyId == keyId
-            && isKey(d.key) && isSig(d.signature);
+            && isKey(d.key) && isSig(d.signature) && d.claimedBy == null;
         }
         allow read:   if isAuth();
         allow create: if isOwner(uid) && isKeyId(keyId) && isOneTimeKey(request.resource.data);
-        allow update: if false;
+        // Any signed-in user may claim a key nobody has claimed, once. The claim sets the
+        // claimer's uid and the server time, and nothing else changes.
+        allow update: if isAuth()
+          && resource.data.claimedBy == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy', 'claimedAt'])
+          && request.resource.data.claimedBy == request.auth.uid
+          && request.resource.data.claimedAt == request.time;
         allow delete: if isOwner(uid);
       }
     }

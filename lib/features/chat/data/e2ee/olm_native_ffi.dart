@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:bhromon/features/chat/domain/e2ee/olm_engine.dart';
+import 'package:bhromon/features/chat/domain/e2ee/prekey_message.dart';
 
 // The C interface of native/e2ee_olm (E2EE_DESIGN.md, section 5). The signatures
 // below follow include/e2ee_olm.h, and the library must report ABI version 1.
@@ -367,6 +368,11 @@ class _FfiEngine implements OlmEngine {
       key,
     );
     return _FfiSession(_b, handle);
+  }
+
+  @override
+  Uint8List oneTimeKeyOfPreKey(Uint8List prekeyMessage) {
+    return oneTimeKeyOfPreKeyMessage(prekeyMessage);
   }
 
   @override

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:bhromon/features/chat/domain/e2ee/e2ee_exceptions.dart';
+
 /// The Olm operations the chat code needs (E2EE_DESIGN.md, section 4). The chat
 /// logic depends only on this interface, so it can be tested without the native
 /// library. The implementation is the native library, in `data/e2ee/`.
@@ -28,6 +30,11 @@ abstract interface class OlmEngine {
 
   /// Restores a session from a pickle. [key] is 32 bytes.
   OlmSession restoreSession(Uint8List pickle, Uint8List key);
+
+  /// The one-time key a pre-key message was made with. The receiver reads it before
+  /// decrypting, so the server copy can be removed first. Throws
+  /// [E2eeFormatException] if the message is not a pre-key message.
+  Uint8List oneTimeKeyOfPreKey(Uint8List prekeyMessage);
 
   /// Whether [signature] is a valid Ed25519 signature of [message] under
   /// [ed25519Key]. Returns false for a bad signature.
