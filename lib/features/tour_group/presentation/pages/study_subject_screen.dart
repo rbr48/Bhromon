@@ -9,6 +9,8 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_module_sheet.dart';
+import '../widgets/study/study_today_card.dart';
+import 'study_challenge_screen.dart';
 import 'study_findings_screen.dart';
 import 'study_problems_screen.dart';
 import 'study_module_posts_screen.dart';
@@ -97,6 +99,12 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
           settings: settings,
           repository: _repository,
         ),
+      StudyModuleKey.challenges => StudyChallengeScreen(
+          tourId: widget.tourId,
+          subject: widget.subject,
+          settings: settings,
+          repository: _repository,
+        ),
       _ => StudyModulePostsScreen(
           tourId: widget.tourId,
           subject: widget.subject,
@@ -167,6 +175,15 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               _overview(),
+              StudyTodayCard(
+                tourId: widget.tourId,
+                subject: widget.subject,
+                repository: _repository,
+                findingsModule: _liveModule(settings, StudyModuleKey.findings),
+                challengeModule:
+                    _liveModule(settings, StudyModuleKey.challenges),
+                onOpenModule: _open,
+              ),
               if (keys.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
@@ -221,8 +238,18 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         StudyModuleKey.suggestions => Icons.thumb_up_rounded,
         StudyModuleKey.findings => Icons.fact_check_rounded,
         StudyModuleKey.problems => Icons.assignment_rounded,
+        StudyModuleKey.challenges => Icons.flag_rounded,
         _ => Icons.extension_rounded,
       };
+
+  /// A module's settings when an admin has turned it on, or null when it is off or not set up.
+  StudyModuleSettings? _liveModule(
+    Map<StudyModuleKey, StudyModuleSettings> settings,
+    StudyModuleKey key,
+  ) {
+    final module = settings[key];
+    return module != null && module.enabled ? module : null;
+  }
 
   /// One module. A live module that is on opens its posts. An admin also sees the modules
   /// that are off, and which are still coming.

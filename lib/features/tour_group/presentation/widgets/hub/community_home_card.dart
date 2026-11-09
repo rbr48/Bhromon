@@ -12,6 +12,7 @@ import '../../../domain/models/family_task_models.dart';
 import '../../../domain/models/service_request_models.dart';
 import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
+import '../study/study_today_card.dart';
 
 const _card = Color(0xFF142428);
 
@@ -299,6 +300,10 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
               ),
             ],
           ),
+          if (g.isStudy) ...[
+            const SizedBox(height: 10),
+            StudyGroupTodayCard(tourId: g.id, repository: widget.repository),
+          ],
         ],
       ),
     );

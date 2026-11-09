@@ -32,6 +32,9 @@ import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/models/study_finding_models.dart';
 import '../domain/models/study_problem_models.dart';
+import '../domain/models/study_challenge_models.dart';
+import '../domain/models/study_today_models.dart';
+import '../domain/services/study_challenge_rules.dart';
 import '../domain/services/study_chapter_rules.dart';
 import '../domain/services/study_material_rules.dart';
 import '../domain/models/meal_log.dart';
@@ -2894,6 +2897,191 @@ class TourGroupRepository {
     batch.delete(finding.collection('checks').doc(email));
     batch.update(finding, {countField: FieldValue.increment(-1)});
     await batch.commit();
+  }
+
+  // Weekly challenges (Phase 9). A subject has one challenge a week, set by an admin: a kind of task and how many of
+  // it. A member joins for themselves, once. Progress is counted from the member's own work, so the challenge shows
+  // only counts. The rules say who may write each document (firestore.rules).
+  // ---------------------------------------------------------------------------
+
+  /// A challenge's document in a subject, by the week it is for.
+  DocumentReference<Map<String, dynamic>> _challengeRef(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) =>
+      _sub(tourId, 'study_subjects')
+          .doc(subjectId)
+          .collection('challenges')
+          .doc(weekKey);
+
+  /// The challenge of a week, or null when an admin has not set one.
+  Stream<StudyChallenge?> watchStudyChallenge(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) {
+    return _challengeRef(tourId, subjectId, weekKey).snapshots().map((s) {
+      final data = s.data();
+      if (!s.exists || data == null) return null;
+      return StudyChallenge.fromMap(weekKey, _datesAsDateTimes(data));
+    });
+  }
+
+  /// The emails of the members who joined a week's challenge. The app shows only how many.
+  Stream<Set<String>> watchChallengeJoins(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) {
+    return _challengeRef(tourId, subjectId, weekKey)
+        .collection('joins')
+        .snapshots()
+        .map((s) => {for (final doc in s.docs) doc.id});
+  }
+
+  /// Sets a week's challenge: its kind and how many tasks. An admin does this, and setting it again changes it.
+  Future<void> setStudyChallenge(
+    String tourId,
+    String subjectId,
+    StudyChallenge challenge,
+  ) async {
+    final email = _requireEmail();
+    await _challengeRef(tourId, subjectId, challenge.weekKey).set({
+      ...challenge.toFields(),
+      'setByEmail': email,
+      'setAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Joins a week's challenge for the signed-in member.
+  Future<void> joinStudyChallenge(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) async {
+    final email = _requireEmail();
+    await _challengeRef(tourId, subjectId, weekKey)
+        .collection('joins')
+        .doc(email)
+        .set({'joinedAt': FieldValue.serverTimestamp()});
+  }
+
+  /// Leaves a week's challenge for the signed-in member.
+  Future<void> leaveStudyChallenge(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) async {
+    final email = _requireEmail();
+    await _challengeRef(tourId, subjectId, weekKey)
+        .collection('joins')
+        .doc(email)
+        .delete();
+  }
+
+  /// How many problems of a subject the signed-in member submitted or edited during the week that starts on
+  /// [weekStart]. Each problem counts once. Read from the member's own working, so only they see it.
+  Future<int> countMyProblemsWorked(
+    String tourId,
+    String subjectId,
+    DateTime weekStart,
+  ) async {
+    final problems = await watchStudyProblems(tourId, subjectId).first;
+    final work = await loadMyWork(
+      tourId,
+      subjectId,
+      [for (final problem in problems) problem.id],
+    );
+    return countInChallengeWeek(
+      [
+        for (final solution in work.values)
+          solution.updatedAt ?? solution.createdAt,
+      ],
+      weekStart,
+    );
+  }
+
+  /// How many findings of a subject the signed-in member checked during the week that starts on [weekStart]. Each
+  /// finding counts once. Read from the member's own checks, so only they see it.
+  Future<int> countMyFindingsChecked(
+    String tourId,
+    String subjectId,
+    DateTime weekStart,
+  ) async {
+    final findings = await watchStudyFindings(tourId, subjectId).first;
+    final checks = await loadMyFindingChecks(
+      tourId,
+      subjectId,
+      [for (final finding in findings) finding.id],
+    );
+    return countInChallengeWeek(
+      [for (final check in checks.values) check.createdAt],
+      weekStart,
+    );
+  }
+
+  /// The tasks a member has done this week toward a challenge of [kind]. Problems and findings are counted from the
+  /// member's own work here. Flashcards are counted on the device, so the caller supplies that count.
+  Future<int> countMyChallengeTasks(
+    String tourId,
+    String subjectId,
+    ChallengeKind kind,
+    DateTime weekStart, {
+    required Future<int> Function() cardsReviewed,
+  }) {
+    return switch (kind) {
+      ChallengeKind.problems =>
+        countMyProblemsWorked(tourId, subjectId, weekStart),
+      ChallengeKind.findings =>
+        countMyFindingsChecked(tourId, subjectId, weekStart),
+      ChallengeKind.cards => cardsReviewed(),
+    };
+  }
+
+  /// The chapters with a due day, in the listed books, that the signed-in member has not marked read. The books and
+  /// their dates are the group's, so every member sees the same deadlines.
+  Future<List<StudyDeadline>> loadStudyDeadlines(String tourId) async {
+    final books = await watchStudyBooks(tourId).first;
+    final deadlines = <StudyDeadline>[];
+    for (final book in books) {
+      if (!book.isListed) continue;
+      final chapters = await watchStudyChapters(tourId, book.id).first;
+      final read = await _myReadChapterIds(
+        tourId,
+        book.id,
+        [for (final chapter in chapters) chapter.id],
+      );
+      for (final chapter in chapters) {
+        final due = chapter.dueOn;
+        if (due == null || read.contains(chapter.id)) continue;
+        deadlines.add(StudyDeadline(
+          chapterId: chapter.id,
+          bookTitle: book.title,
+          chapterTitle: chapter.title,
+          dueOn: due,
+        ));
+      }
+    }
+    return deadlines;
+  }
+
+  /// The chapters of a book that the signed-in member has marked read. Each mark is read once, so the answer does not
+  /// depend on when a stream has delivered its first snapshot.
+  Future<Set<String>> _myReadChapterIds(
+    String tourId,
+    String bookId,
+    List<String> chapterIds,
+  ) async {
+    final email = _requireEmail();
+    final snaps = await Future.wait([
+      for (final id in chapterIds)
+        _readMarkDoc(tourId, bookId, id, email).get(),
+    ]);
+    return {
+      for (var i = 0; i < chapterIds.length; i++)
+        if (snaps[i].exists) chapterIds[i],
+    };
   }
 
   // Problem solving: problems a group works through, each with a reference solution an admin writes
