@@ -2003,8 +2003,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         } catch (e) {
           if (trxId != null &&
               trxId.isNotEmpty &&
-              (e.toString().contains('permission-denied') ||
-                  await _repository.isMfsTrxRegistered(widget.tourId, trxId))) {
+              await _repository.isMfsTrxRegistered(widget.tourId, trxId)) {
             if (mounted) {
               _toast(
                 l10n.translate('fund_mfs_duplicate_trxid'),
@@ -2166,9 +2165,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             } catch (e) {
               if (trxId != null &&
                   trxId.isNotEmpty &&
-                  (e.toString().contains('permission-denied') ||
-                      await _repository.isMfsTrxRegistered(
-                          widget.tourId, trxId))) {
+                  await _repository.isMfsTrxRegistered(widget.tourId, trxId)) {
                 if (mounted) {
                   _toast(l10n.translate('fund_mfs_duplicate_trxid'),
                       error: true);

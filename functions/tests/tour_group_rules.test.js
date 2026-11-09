@@ -322,6 +322,9 @@ describe('Tour Group Firestore rules', () => {
       // Member records unverified settlement where they are the payer
       await assertSucceeds(setDoc(s('member', 's1'), settlement(people.member.email, people.member.email, people.other.email, 'unverified')));
 
+      // Member cannot record a settlement where they are neither payer nor recipient
+      await assertFails(setDoc(s('member', 's_unrelated'), settlement(people.member.email, people.other.email, people.admin.email, 'unverified')));
+
       // Member cannot record already 'verified' settlement on create (canVerifyMfsOnCreate)
       await assertFails(setDoc(s('member', 's2'), settlement(people.member.email, people.member.email, people.other.email, 'verified')));
 
