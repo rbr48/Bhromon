@@ -102,7 +102,7 @@ class _FakeChapterRepo extends TourGroupRepository {
 
 /// The reading position kept in memory, so a test sees what the screen saved.
 class _FakePosition extends StudyReadingPosition {
-  _FakePosition([this.number]);
+  _FakePosition();
 
   int? number;
 
