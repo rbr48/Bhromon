@@ -7,6 +7,7 @@ import '../../../../../core/theme/colors.dart';
 import '../../../../../core/utils/logger.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/family_date_models.dart';
+import '../../../domain/models/tour_group.dart';
 
 const _sheet = Color(0xFF142428);
 const _chip = Color(0xFF1E3326);
@@ -22,6 +23,7 @@ Future<bool> showFamilyDateEditor(
   BuildContext context, {
   required String tourId,
   required TourGroupRepository repository,
+  TourGroup? group,
   FamilyDate? existing,
   bool canEdit = true,
   String? presetTitle,
@@ -40,6 +42,7 @@ Future<bool> showFamilyDateEditor(
     builder: (_) => _FamilyDateEditor(
       tourId: tourId,
       repository: repository,
+      group: group,
       existing: existing,
       canEdit: canEdit,
       presetTitle: presetTitle,
@@ -57,6 +60,7 @@ class _FamilyDateEditor extends StatefulWidget {
     required this.tourId,
     required this.repository,
     required this.canEdit,
+    this.group,
     this.existing,
     this.presetTitle,
     this.presetDate,
@@ -67,6 +71,7 @@ class _FamilyDateEditor extends StatefulWidget {
 
   final String tourId;
   final TourGroupRepository repository;
+  final TourGroup? group;
   final FamilyDate? existing;
   final bool canEdit;
   final String? presetTitle;
@@ -85,8 +90,9 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
       TextEditingController(text: _e?.title ?? widget.presetTitle ?? '');
   late final TextEditingController _note =
       TextEditingController(text: _e?.note ?? '');
-  late FamilyDateKind _kind =
-      _e?.kind ?? widget.presetKind ?? FamilyDateKind.birthday;
+  late FamilyDateKind _kind = _e?.kind ??
+      widget.presetKind ??
+      kindsForGroup(widget.group).first;
   late FamilyRecurrence _recurrence =
       _e?.recurrence ?? widget.presetRecurrence ?? FamilyRecurrence.yearly;
   late DateTime _startOn = _e == null
@@ -104,11 +110,18 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
   }
 
   Future<void> _pickDate() async {
+    final first = DateTime(1900);
+    final last = DateTime(2100);
+    final initial = _startOn.isBefore(first)
+        ? first
+        : (_startOn.isAfter(last) ? last : _startOn);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _startOn,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2040),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+      initialDatePickerMode:
+          _startOn.year <= 2005 ? DatePickerMode.year : DatePickerMode.day,
     );
     if (picked == null || !mounted) return;
     setState(() => _startOn = DateUtils.dateOnly(picked));
@@ -217,6 +230,56 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
                         TextStyle(color: context.forest.text54, fontSize: 12)),
               ],
               const SizedBox(height: 12),
+              if (_e == null) ...[
+                Builder(builder: (ctx) {
+                  final presets = presetTemplatesFor(widget.group);
+                  if (presets.isEmpty) return const SizedBox.shrink();
+                  final isBn = l10n.locale.languageCode == 'bn';
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(l10n.translate('fd_quick_presets'),
+                          style: TextStyle(
+                              color: context.forest.text70, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final p in presets)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ActionChip(
+                                  backgroundColor:
+                                      context.forest.surfaceFor(_chip),
+                                  label: Text(
+                                    '${p.kind.emoji} ${isBn ? p.titleBn : p.titleEn}',
+                                    style: TextStyle(
+                                        color: context.forest.text,
+                                        fontSize: 12),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _title.text =
+                                          isBn ? p.titleBn : p.titleEn;
+                                      _kind = p.kind;
+                                      _recurrence = p.recurrence;
+                                      _remindDays = p.remindDays;
+                                      _note.text =
+                                          isBn ? p.noteBn : p.noteEn;
+                                    });
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                }),
+              ],
               TextField(
                 controller: _title,
                 maxLength: 80,
@@ -231,19 +294,25 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
               Text(l10n.translate('fd_kind_label'),
                   style: TextStyle(color: context.forest.text70, fontSize: 12)),
               const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final k in FamilyDateKind.values)
-                    _choice(
-                      label:
-                          '${k.emoji} ${l10n.translate('fd_kind_${k.name}')}',
-                      selected: _kind == k,
-                      onTap: () => setState(() => _kind = k),
-                    ),
-                ],
-              ),
+              Builder(builder: (ctx) {
+                final groupKinds = kindsForGroup(widget.group);
+                final kinds = groupKinds.contains(_kind)
+                    ? groupKinds
+                    : [_kind, ...groupKinds];
+                return Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final k in kinds)
+                      _choice(
+                        label:
+                            '${k.emoji} ${l10n.translate('fd_kind_${k.name}')}',
+                        selected: _kind == k,
+                        onTap: () => setState(() => _kind = k),
+                      ),
+                  ],
+                );
+              }),
               const SizedBox(height: 12),
               Text(l10n.translate('fd_repeat_label'),
                   style: TextStyle(color: context.forest.text70, fontSize: 12)),

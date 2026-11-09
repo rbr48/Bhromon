@@ -2509,8 +2509,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final ids = [
       for (final id in hubModulesFor(group))
         if (!(excludeGamesAndNews && (id == 'games' || id == 'news')))
-          if (!(isGroupPage && id == 'safety'))
-            if (!(isGroupPage && id == 'calendar' && !group.isFamily)) id,
+          if (!(isGroupPage && id == 'safety')) id,
     ];
     final builders = <String, _ModuleItem Function()>{
       'feed': () => _ModuleItem(
@@ -2534,23 +2533,47 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             color: const Color(0xFF6366F1),
             onTap: () => context.push('/group/${group.id}/logistics'),
           ),
-      // Family dates belong to the household alone. Other family-style circles, such as
-      // a study group or a friends circle, keep the ordinary calendar.
-      'calendar': () => group.isHousehold
-          ? _ModuleItem(
-              title: l10n.translate('hub_module_family_dates'),
-              subtitle: l10n.translate('hub_module_family_dates_sub'),
-              icon: Icons.event_repeat_rounded,
-              color: const Color(0xFF84CC16),
-              onTap: () => context.push('/group/${group.id}/family-dates'),
-            )
-          : _ModuleItem(
-              title: l10n.translate('hub_module_calendar'),
-              subtitle: l10n.translate('hub_module_calendar_sub'),
-              icon: Icons.calendar_month_rounded,
-              color: const Color(0xFF84CC16),
-              onTap: () => context.push('/group/${group.id}/calendar'),
-            ),
+      'calendar': () {
+        final title = group.isOffice
+            ? l10n.translate('hub_module_dates_office')
+            : (group.isCampus
+                ? l10n.translate('hub_module_dates_campus')
+                : (group.isMess
+                    ? l10n.translate('hub_module_dates_mess')
+                    : (group.isSociety
+                        ? l10n.translate('hub_module_dates_society')
+                        : (group.isSamity
+                            ? l10n.translate('hub_module_dates_samity')
+                            : (group.isStudy
+                                ? l10n.translate('hub_module_dates_study')
+                                : (!group.isFamily
+                                    ? l10n.translate('hub_module_dates_trip')
+                                    : l10n.translate('hub_module_family_dates')))))));
+        final subtitle = group.isOffice
+            ? l10n.translate('hub_module_dates_office_sub')
+            : (group.isCampus
+                ? l10n.translate('hub_module_dates_campus_sub')
+                : (group.isMess
+                    ? l10n.translate('hub_module_dates_mess_sub')
+                    : (group.isSociety
+                        ? l10n.translate('hub_module_dates_society_sub')
+                        : (group.isSamity
+                            ? l10n.translate('hub_module_dates_samity_sub')
+                            : (group.isStudy
+                                ? l10n.translate('hub_module_dates_study_sub')
+                                : (!group.isFamily
+                                    ? l10n.translate('hub_module_dates_trip_sub')
+                                    : l10n.translate('hub_module_family_dates_sub')))))));
+        return _ModuleItem(
+          title: title,
+          subtitle: subtitle,
+          icon: group.isHousehold
+              ? Icons.event_repeat_rounded
+              : Icons.event_available_rounded,
+          color: const Color(0xFF84CC16),
+          onTap: () => context.push('/group/${group.id}/family-dates'),
+        );
+      },
       'study_reading': () => _ModuleItem(
             title: l10n.translate('hub_module_study_reading'),
             subtitle: l10n.translate('hub_module_study_reading_sub'),

@@ -46,6 +46,14 @@ KIND_EMOJI = {
     "bill": "🧾",
     "school": "🎒",
     "medicine": "💊",
+    "meeting": "🤝",
+    "deadline": "⏳",
+    "exam": "📝",
+    "rent": "🏠",
+    "maintenance": "🛠️",
+    "installment": "💰",
+    "payout": "🎁",
+    "event": "🎉",
     "custom": "📅",
 }
 

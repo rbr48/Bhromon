@@ -4,7 +4,6 @@ import 'package:bhromon/core/theme/forest_palette.dart';
 import 'hotel_room_map_screen.dart';
 import 'transport_screen.dart';
 import 'luggage_tracker_screen.dart';
-import 'holiday_calendar_screen.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../tour_routes.dart';
@@ -25,7 +24,7 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -75,9 +74,6 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
             Tab(
                 icon: const Icon(Icons.luggage_rounded),
                 text: context.l10n.translate('tour_tab_luggage')),
-            Tab(
-                icon: const Icon(Icons.calendar_month_rounded),
-                text: context.l10n.translate('tour_tab_calendar')),
           ],
         ),
       ),
@@ -87,7 +83,6 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
           TransportScreen(tourId: widget.tourId, embedded: true),
           HotelRoomMapScreen(tourId: widget.tourId, embedded: true),
           LuggageTrackerScreen(tourId: widget.tourId, embedded: true),
-          HolidayCalendarScreen(tourId: widget.tourId, embedded: true),
         ],
       ),
     );
