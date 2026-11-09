@@ -160,7 +160,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       if (g.isSociety) return l10n.translate('tour_meeting_point_society');
       if (g.isSamity) return l10n.translate('tour_meeting_point_samity');
       if (g.isStudy) return l10n.translate('tour_meeting_point_study');
-      if (g.isFamily) return l10n.translate('tour_meeting_point_family');
+      if (g.isFriends) return l10n.translate('tour_meeting_point_friends');
+      if (g.isSchool) return l10n.translate('tour_meeting_point_school');
+      if (g.isSports) return l10n.translate('tour_meeting_point_sports');
+      if (g.isCommittee) return l10n.translate('tour_meeting_point_committee');
+      if (g.isHousehold) return l10n.translate('tour_meeting_point_family');
     }
     return l10n.translate('tour_meeting_point_default', args: {
       'destination': _effectiveDestination(l10n),
@@ -183,7 +187,15 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         fallback = '${g.name} Meeting Venue';
       } else if (g.isStudy) {
         fallback = '${g.name} Library';
-      } else if (g.isFamily) {
+      } else if (g.isFriends) {
+        fallback = '${g.name} Hangout Spot';
+      } else if (g.isSchool) {
+        fallback = '${g.name} School';
+      } else if (g.isSports) {
+        fallback = '${g.name} Sports Ground';
+      } else if (g.isCommittee) {
+        fallback = '${g.name} Community Center';
+      } else if (g.isHousehold) {
         fallback = '${g.name} Residence';
       } else {
         final cur = g.currentDestination(_now);
@@ -273,7 +285,67 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               'Seminar Hall'
             ];
     }
-    if (g.isFamily) {
+    if (g.isFriends) {
+      return isBn
+          ? const [
+              'প্রিয় ক্যাফে ও আড্ডার স্থান',
+              'টিএসসি বা আড্ডার মোড়',
+              'রেস্তোরাঁ ও ফুড কোর্ট',
+              'দোস্তের বাসা বা ছাদ'
+            ]
+          : const [
+              'Favorite Cafe & Hangout',
+              'Campus Hangout Corner',
+              'Food Court & Restaurant',
+              "Friend's Place / Rooftop"
+            ];
+    }
+    if (g.isSchool) {
+      return isBn
+          ? const [
+              'স্কুল অডিটোরিয়াম',
+              'প্রধান ফটক',
+              'স্টাফ রুম',
+              'মাঠের প্যাভিলিয়ন'
+            ]
+          : const [
+              'School Auditorium',
+              'Main Gate',
+              'Staff Room',
+              'School Field & Pavilion'
+            ];
+    }
+    if (g.isSports) {
+      return isBn
+          ? const [
+              'ড্রেসিং রুম',
+              'ক্লাব হাউজ',
+              'স্টেডিয়াম গ্যালারি',
+              'জিমনেসিয়াম'
+            ]
+          : const [
+              'Dressing Room',
+              'Club House',
+              'Stadium Gallery',
+              'Gymnasium'
+            ];
+    }
+    if (g.isCommittee) {
+      return isBn
+          ? const [
+              'কমিটি কনফারেন্স রুম',
+              'কমিউনিটি হল',
+              'অ্যাসোসিয়েশন অফিস',
+              'পার্ক প্রাঙ্গণ'
+            ]
+          : const [
+              'Committee Conference Room',
+              'Community Hall',
+              'Association Office',
+              'Park / Plaza'
+            ];
+    }
+    if (g.isHousehold) {
       return isBn
           ? const ['ড্রয়িং রুম', 'পারিবারিক বাসভবন', 'ডাইনিং স্পেস', 'বাগান']
           : const ['Living Room', 'Family Residence', 'Dining Area', 'Garden'];
