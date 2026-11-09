@@ -240,6 +240,9 @@ enum CheckpointKind {
         shopping => '🛍️',
         custom => '📍',
       };
+
+  /// Canonical translation key in [TourTranslationKeys] for this kind.
+  String get translationKey => 'route_cp_$name';
 }
 
 /// A stop along a leg of the route that a member added: a meal break, a

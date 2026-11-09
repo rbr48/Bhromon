@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -22,8 +23,9 @@ void main() {
       supportedLocales: const [Locale('en'), Locale('bn')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
-        DefaultMaterialLocalizations.delegate,
-        DefaultWidgetsLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       home: OfflineMapViewerScreen(
         region: sajek,
@@ -138,8 +140,9 @@ void main() {
       supportedLocales: const [Locale('en'), Locale('bn')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
-        DefaultMaterialLocalizations.delegate,
-        DefaultWidgetsLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       home: OfflineMapViewerScreen(
         region: sajek,
@@ -175,7 +178,7 @@ void main() {
     await tester.tap(find.textContaining('#1 Dighinala Army Camp'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('CHECKPOST · 45 km'), findsOneWidget);
+    expect(find.textContaining('Checkpost / escort · 45 km'), findsOneWidget);
     expect(find.text('Army escort registration point'), findsOneWidget);
     expect(find.text('Directions'), findsOneWidget);
 
@@ -252,5 +255,125 @@ void main() {
     expect(feature['properties']['sequence'], 1);
     expect(feature['properties']['kind'], 'checkpost');
     expect(feature['properties']['emoji'], '🛡️');
+  });
+
+  test('CheckpointKind translationKey maps to route_cp keys', () {
+    expect(CheckpointKind.checkpost.translationKey, 'route_cp_checkpost');
+    expect(CheckpointKind.food.translationKey, 'route_cp_food');
+    expect(CheckpointKind.prayer.translationKey, 'route_cp_prayer');
+    expect(CheckpointKind.fuel.translationKey, 'route_cp_fuel');
+    expect(CheckpointKind.washroom.translationKey, 'route_cp_washroom');
+  });
+
+  testWidgets('renders checkpoints with Bengali labels in Bengali locale',
+      (tester) async {
+    const checkpoints = [
+      RouteCheckpoint(
+        id: 'cp1',
+        name: 'দীঘিনালা আর্মি ক্যাম্প',
+        highlight: 'এসকোর্ট পয়েন্ট',
+        kmFromStart: 45,
+        lat: 23.2500,
+        lng: 92.0500,
+        kind: CheckpointKind.checkpost,
+      ),
+    ];
+
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('bn'),
+      supportedLocales: const [Locale('en'), Locale('bn')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: OfflineMapViewerScreen(
+        region: sajek,
+        initialPosition: Position(
+          latitude: 23.3833,
+          longitude: 92.2833,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 800.0,
+          altitudeAccuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 5.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+        checkpoints: checkpoints,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Switch to Checkpoints
+    await tester.tap(find.textContaining('চেকপয়েন্ট (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('#1 দীঘিনালা আর্মি ক্যাম্প'), findsOneWidget);
+
+    // Tap Checkpoint 1
+    await tester.tap(find.textContaining('#1 দীঘিনালা আর্মি ক্যাম্প'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('চেকপোস্ট / এসকর্ট · 45 km'), findsOneWidget);
+    expect(find.text('এসকোর্ট পয়েন্ট'), findsOneWidget);
+  });
+
+  testWidgets('renders checkpoints with English labels in English locale',
+      (tester) async {
+    const checkpoints = [
+      RouteCheckpoint(
+        id: 'cp1',
+        name: 'Dighinala Army Camp',
+        highlight: 'Escort Point',
+        kmFromStart: 45,
+        lat: 23.2500,
+        lng: 92.0500,
+        kind: CheckpointKind.checkpost,
+      ),
+    ];
+
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      supportedLocales: const [Locale('en'), Locale('bn')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: OfflineMapViewerScreen(
+        region: sajek,
+        initialPosition: Position(
+          latitude: 23.3833,
+          longitude: 92.2833,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 800.0,
+          altitudeAccuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 5.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+        checkpoints: checkpoints,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Switch to Checkpoints
+    await tester.tap(find.textContaining('Checkpoints (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('#1 Dighinala Army Camp'), findsOneWidget);
+
+    // Tap Checkpoint 1
+    await tester.tap(find.textContaining('#1 Dighinala Army Camp'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Checkpost / escort · 45 km'), findsOneWidget);
+    expect(find.text('Escort Point'), findsOneWidget);
   });
 }
