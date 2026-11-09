@@ -931,8 +931,9 @@ String groupDateScreenSubtitle(TourGroup? group, AppLocalizations l10n) {
     if (group.isFriends) return l10n.translate('hub_module_dates_friends_sub');
     if (group.isSchool) return l10n.translate('hub_module_dates_school_sub');
     if (group.isSports) return l10n.translate('hub_module_dates_sports_sub');
-    if (group.isCommittee)
+    if (group.isCommittee) {
       return l10n.translate('hub_module_dates_committee_sub');
+    }
     if (!group.isFamily) return l10n.translate('hub_module_dates_trip_sub');
     if (group.isHousehold) return l10n.translate('hub_module_family_dates_sub');
   }
