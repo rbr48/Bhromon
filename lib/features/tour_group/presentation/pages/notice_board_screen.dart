@@ -562,7 +562,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         fontSize: 18,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                _progress(l10n, a, rollcall),
+                _progressRing(l10n, a, rollcall),
                 const SizedBox(height: 12),
                 if (a.waiting.isNotEmpty) ...[
                   Row(children: [
@@ -1002,6 +1002,88 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     );
   }
 
+  Widget _progressRing(AppLocalizations l10n, NoticeAnswers a, bool rollcall) {
+    final pct = (a.ratio * 100).round();
+    final isDone = a.waiting.isEmpty && a.total > 0;
+    final ringColor = isDone ? AppColors.mintGreen : AppColors.gold;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: context.forest.divider10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 38,
+            height: 38,
+            child: Stack(
+              fit: StackFit.expand,
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: a.ratio,
+                  strokeWidth: 3.5,
+                  color: ringColor,
+                  backgroundColor: context.forest.divider10,
+                ),
+                Center(
+                  child: Text(
+                    '$pct%',
+                    style: TextStyle(
+                      color: ringColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.translate(
+                      rollcall ? 'notice_present_of' : 'notice_answered_of',
+                      args: {
+                        'n': l10n.number(a.answered.length),
+                        'total': l10n.number(a.total),
+                      }),
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  a.waiting.isEmpty
+                      ? l10n.translate(rollcall
+                          ? 'notice_progress_all_present'
+                          : 'notice_progress_all_done')
+                      : l10n.translate('notice_pending_count',
+                          args: {'n': l10n.number(a.waiting.length)}),
+                  style: TextStyle(
+                    color: isDone ? AppColors.mintGreen : context.forest.text54,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded,
+              size: 16, color: context.forest.text38),
+        ],
+      ),
+    );
+  }
+
   Widget _progress(AppLocalizations l10n, NoticeAnswers a, bool rollcall) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1201,10 +1283,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     Expanded(
                       child: InkWell(
                         onTap: () => _answersSheet(n),
-                        child: _progress(
-                            l10n,
-                            NoticeEngine.answers(n, _members),
-                            n.kind == NoticeKind.rollcall),
+                        child: (_group?.isManaged ?? false)
+                            ? _progressRing(
+                                l10n,
+                                NoticeEngine.answers(n, _members),
+                                n.kind == NoticeKind.rollcall)
+                            : _progress(l10n, NoticeEngine.answers(n, _members),
+                                n.kind == NoticeKind.rollcall),
                       ),
                     ),
                   ]),
