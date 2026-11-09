@@ -1,3 +1,4 @@
+import '../../../../core/localization/app_localizations.dart';
 import 'tour_group.dart';
 
 // A date a family keeps: a birthday, an anniversary, a bill, a school day or a
@@ -163,7 +164,15 @@ class GroupDatePresetTemplate {
 
 /// The available date kinds tailored for [group].
 List<FamilyDateKind> kindsForGroup(TourGroup? group) {
-  if (group == null) return FamilyDateKind.values;
+  if (group == null) {
+    return const [
+      FamilyDateKind.event,
+      FamilyDateKind.deadline,
+      FamilyDateKind.meeting,
+      FamilyDateKind.bill,
+      FamilyDateKind.custom,
+    ];
+  }
   if (group.isOffice) {
     return const [
       FamilyDateKind.deadline,
@@ -221,6 +230,46 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
+  if (group.isFriends) {
+    return const [
+      FamilyDateKind.event,
+      FamilyDateKind.birthday,
+      FamilyDateKind.meeting,
+      FamilyDateKind.deadline,
+      FamilyDateKind.bill,
+      FamilyDateKind.anniversary,
+      FamilyDateKind.custom,
+    ];
+  }
+  if (group.isSchool) {
+    return const [
+      FamilyDateKind.exam,
+      FamilyDateKind.meeting,
+      FamilyDateKind.deadline,
+      FamilyDateKind.bill,
+      FamilyDateKind.event,
+      FamilyDateKind.custom,
+    ];
+  }
+  if (group.isSports) {
+    return const [
+      FamilyDateKind.event,
+      FamilyDateKind.meeting,
+      FamilyDateKind.deadline,
+      FamilyDateKind.bill,
+      FamilyDateKind.custom,
+    ];
+  }
+  if (group.isCommittee) {
+    return const [
+      FamilyDateKind.meeting,
+      FamilyDateKind.maintenance,
+      FamilyDateKind.bill,
+      FamilyDateKind.deadline,
+      FamilyDateKind.event,
+      FamilyDateKind.custom,
+    ];
+  }
   if (!group.isFamily) {
     // Trip
     return const [
@@ -231,21 +280,68 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  // Family / Household
+  if (group.isHousehold) {
+    return const [
+      FamilyDateKind.birthday,
+      FamilyDateKind.anniversary,
+      FamilyDateKind.bill,
+      FamilyDateKind.school,
+      FamilyDateKind.medicine,
+      FamilyDateKind.event,
+      FamilyDateKind.custom,
+    ];
+  }
   return const [
-    FamilyDateKind.birthday,
-    FamilyDateKind.anniversary,
-    FamilyDateKind.bill,
-    FamilyDateKind.school,
-    FamilyDateKind.medicine,
     FamilyDateKind.event,
+    FamilyDateKind.deadline,
+    FamilyDateKind.meeting,
+    FamilyDateKind.bill,
     FamilyDateKind.custom,
   ];
 }
 
 /// Suggested preset templates for [group] to quickly add important milestones.
 List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
-  if (group == null) return const [];
+  if (group == null) {
+    return const [
+      GroupDatePresetTemplate(
+        titleEn: 'Important Event & Milestone',
+        titleBn: 'গুরুত্বপূর্ণ অনুষ্ঠান বা আয়োজন',
+        kind: FamilyDateKind.event,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 3,
+        noteEn: 'Special occasion and group milestone',
+        noteBn: 'বিশেষ আয়োজন বা গ্রুপের গুরুত্বপূর্ণ দিন',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Project / Task Deadline',
+        titleBn: 'জরুরি ডেডলাইন',
+        kind: FamilyDateKind.deadline,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 2,
+        noteEn: 'Deadline for key deliverables',
+        noteBn: 'নির্ধারিত কাজ শেষ করার শেষ তারিখ',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Group Meeting & Sync',
+        titleBn: 'গ্রুপ মিটিং বা আলোচনা',
+        kind: FamilyDateKind.meeting,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 1,
+        noteEn: 'Group discussion and alignment',
+        noteBn: 'সদস্যদের পারস্পরিক আলোচনা ও প্রস্তুতি',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Due Payment / Contribution',
+        titleBn: 'পেমেন্ট বা চাঁদা পরিশোধ',
+        kind: FamilyDateKind.bill,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 2,
+        noteEn: 'Payment or contribution cutoff',
+        noteBn: 'বিল, চাঁদা বা পাওনা পরিশোধের শেষ সময়',
+      ),
+    ];
+  }
   if (group.isOffice) {
     return const [
       GroupDatePresetTemplate(
@@ -348,70 +444,61 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Monthly House Rent',
-        titleBn: 'মাসিক মেস ভাড়া',
+        titleBn: 'মাসিক বাড়ি ভাড়া পরিশোধ',
         kind: FamilyDateKind.rent,
         recurrence: FamilyRecurrence.monthly,
         remindDays: 3,
         noteEn: 'Flat rent due to landlord',
-        noteBn: 'বাড়িওয়ালাকে বাসা ভাড়া পরিশোধের শেষ সময়',
+        noteBn: 'বাড়িওয়ালার মাসিক ফ্ল্যাট ভাড়া পরিশোধের শেষ দিন',
       ),
       GroupDatePresetTemplate(
-        titleEn: 'Mess Meal Calculation & Audit',
-        titleBn: 'মাসিক মিল হিসাব সমাপনী',
-        kind: FamilyDateKind.deadline,
+        titleEn: 'Monthly Meal Calculation & Bazar',
+        titleBn: 'মাসিক মিল ও বাজার হিসাব সমাপনী',
+        kind: FamilyDateKind.bill,
         recurrence: FamilyRecurrence.monthly,
         remindDays: 1,
-        noteEn: 'Closing meal records and calculating meal rate',
-        noteBn: 'মাসের মিল হিসাব ফাইনাল ও মিল রেট নির্ধারণ',
+        noteEn: 'Month-end meal count and balance settlement',
+        noteBn: 'মাসের মিল রেট ও বাজার খরচের হিসাব মেলানো',
       ),
       GroupDatePresetTemplate(
-        titleEn: 'Electricity & Utility Bills',
-        titleBn: 'বিদ্যুৎ ও গ্যাস বিল',
+        titleEn: 'Mess Committee Meeting',
+        titleBn: 'মেস সদস্যদের মাসিক বৈঠক',
+        kind: FamilyDateKind.meeting,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 1,
+        noteEn: 'Menu, cook salary & chores discussion',
+        noteBn: 'খালা বিল, মেনু ও মেসের নতুন নিয়ম আলোচনা',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Gas & Electricity Bill',
+        titleBn: 'গ্যাস, বিদ্যুৎ ও ওয়াইফাই বিল',
         kind: FamilyDateKind.bill,
         recurrence: FamilyRecurrence.monthly,
         remindDays: 3,
-        noteEn: 'Monthly utility bill payment',
-        noteBn: 'মাসের বিদ্যুৎ, গ্যাস ও ওয়াইফাই বিল পরিশোধ',
-      ),
-      GroupDatePresetTemplate(
-        titleEn: 'Bazar Duty Handover',
-        titleBn: 'বাজার ডিউটি পরিবর্তন',
-        kind: FamilyDateKind.meeting,
-        recurrence: FamilyRecurrence.monthly,
-        remindDays: 1,
-        noteEn: 'Monthly bazar duty rotation',
-        noteBn: 'বাজারের দায়িত্ব পরবর্তী সদস্যদের বুঝিয়ে দেওয়া',
-      ),
-      GroupDatePresetTemplate(
-        titleEn: 'Mess General Meeting',
-        titleBn: 'মেস সাধারণ সভা ও বৈঠক',
-        kind: FamilyDateKind.meeting,
-        recurrence: FamilyRecurrence.monthly,
-        remindDays: 1,
-        noteEn: 'Monthly discussion on mess rules and food menu',
-        noteBn: 'খাবারের মান, মেস নিয়মাবলী ও খরচ পর্যালোচনা',
+        noteEn: 'Shared apartment utility bills cutoff',
+        noteBn: 'মাসের ইউটিলিটি বিল পরিশোধের শেষ তারিখ',
       ),
     ];
   }
   if (group.isSociety) {
     return const [
       GroupDatePresetTemplate(
-        titleEn: 'Monthly Maintenance Charge',
-        titleBn: 'মাসিক সার্ভিস চার্জ',
+        titleEn: 'Monthly Maintenance Service Charge',
+        titleBn: 'মাসিক সার্ভিস চার্জ ও রক্ষণাবেক্ষণ ফি',
         kind: FamilyDateKind.maintenance,
         recurrence: FamilyRecurrence.monthly,
-        remindDays: 3,
-        noteEn: 'Flat maintenance collection cutoff',
-        noteBn: 'ফ্ল্যাট সার্ভিস ও মেইনটেন্যান্স চার্জ জমার শেষ সময়',
+        remindDays: 5,
+        noteEn: 'Building upkeep, security & cleanliness dues',
+        noteBn: 'ফ্ল্যাট মালিকদের মাসিক সার্ভিস চার্জ জমার শেষ সময়',
       ),
       GroupDatePresetTemplate(
         titleEn: 'Annual General Meeting (AGM)',
         titleBn: 'বার্ষিক সাধারণ সভা (AGM)',
-        kind: FamilyDateKind.event,
+        kind: FamilyDateKind.meeting,
         recurrence: FamilyRecurrence.yearly,
-        remindDays: 14,
-        noteEn: 'Annual committee report and election',
-        noteBn: 'সোসাইটির বাৎসরিক হিসাব ও নতুন কমিটি নির্বাচন',
+        remindDays: 7,
+        noteEn: 'Annual society committee election & budget review',
+        noteBn: 'সোসাইটির বার্ষিক পর্যালোচনা, নির্বাচন ও বাজেট সভা',
       ),
       GroupDatePresetTemplate(
         titleEn: 'Building Committee Meeting',
@@ -522,6 +609,157 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
+  if (group.isFriends) {
+    return const [
+      GroupDatePresetTemplate(
+        titleEn: 'Weekend Adda & Dinner',
+        titleBn: 'উইকেন্ড আড্ডা ও ডিনার',
+        kind: FamilyDateKind.event,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 2,
+        noteEn: 'Casual gathering and food hangout',
+        noteBn: 'বন্ধুদের জমজমাট আড্ডা ও খাওয়া-দাওয়া',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: "Friend's Birthday Celebration",
+        titleBn: 'বন্ধুর জন্মদিন উদযাপন',
+        kind: FamilyDateKind.birthday,
+        recurrence: FamilyRecurrence.yearly,
+        remindDays: 3,
+        noteEn: 'Cake cutting and surprise hangout',
+        noteBn: 'কেক কাটা ও বন্ধুদের সারপ্রাইজ পার্টি',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Batch Reunion & Get-together',
+        titleBn: 'ব্যাচ পুনর্মিলনী ও আড্ডা',
+        kind: FamilyDateKind.meeting,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 7,
+        noteEn: 'Batch reunion and friends meetup',
+        noteBn: 'স্কুল/কলেজ বন্ধুদের পুনর্মিলনী ও দেখা সাক্ষাৎ',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Day Tour & Outing Plan',
+        titleBn: 'বন্ধুদের ডে ট্যুর / ঘোরাঘুরি',
+        kind: FamilyDateKind.event,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 3,
+        noteEn: 'Day trip or resort hangout',
+        noteBn: 'একদিনের ট্যুর বা রিসোর্টে আড্ডা',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Friendship Day Celebration',
+        titleBn: 'ফ্রেন্ডশিপ ডে উদযাপন',
+        kind: FamilyDateKind.anniversary,
+        recurrence: FamilyRecurrence.yearly,
+        remindDays: 3,
+        noteEn: 'Celebrating bond and memories',
+        noteBn: 'বন্ধুত্বের বিশেষ দিন ও স্মৃতিচারণ',
+      ),
+    ];
+  }
+  if (group.isSchool) {
+    return const [
+      GroupDatePresetTemplate(
+        titleEn: 'Term Final Examination',
+        titleBn: 'সাময়িক / ফাইনাল পরীক্ষা',
+        kind: FamilyDateKind.exam,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 7,
+        noteEn: 'Term final exams commencement',
+        noteBn: 'সাময়িক বা বার্ষিক পরীক্ষার শুরুর তারিখ',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Parent-Teacher Meeting (PTM)',
+        titleBn: 'অভিভাবক ও শিক্ষক সমাবেশ',
+        kind: FamilyDateKind.meeting,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 3,
+        noteEn: 'Academic progress and discussion',
+        noteBn: 'শিক্ষার্থীদের ফলাফল ও অগ্রগতি আলোচনা সভা',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Tuition Fee Due Date',
+        titleBn: 'স্কুল ফি বা বেতন জমার শেষ তারিখ',
+        kind: FamilyDateKind.bill,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 3,
+        noteEn: 'Monthly school fee cutoff',
+        noteBn: 'মাসিক বেতন ও ফি পরিশোধের শেষ সময়',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Annual Sports & Cultural Day',
+        titleBn: 'বার্ষিক ক্রীড়া ও সাংস্কৃতিক অনুষ্ঠান',
+        kind: FamilyDateKind.event,
+        recurrence: FamilyRecurrence.yearly,
+        remindDays: 7,
+        noteEn: 'Annual competitions and prize ceremony',
+        noteBn: 'বার্ষিক প্রতিযোগিতা ও পুরস্কার বিতরণী',
+      ),
+    ];
+  }
+  if (group.isSports) {
+    return const [
+      GroupDatePresetTemplate(
+        titleEn: 'Tournament Match Day',
+        titleBn: 'টুর্নামেন্ট ম্যাচ ডে',
+        kind: FamilyDateKind.event,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 2,
+        noteEn: 'Tournament match fixture',
+        noteBn: 'টুর্নামেন্টের গুরুত্বপূর্ণ ম্যাচ',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Weekly Practice & Training',
+        titleBn: 'সাপ্তাহিক অনুশীলন ও ট্রেনিং',
+        kind: FamilyDateKind.meeting,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 1,
+        noteEn: 'Regular team practice session',
+        noteBn: 'দলের নিয়মিত ট্রেনিং ও প্রস্তুতি সেশন',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Club Membership Renewal',
+        titleBn: 'ক্লাব মেম্বারশিপ ফি পরিশোধ',
+        kind: FamilyDateKind.bill,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 3,
+        noteEn: 'Monthly gym or sports club subscription',
+        noteBn: 'মাসিক জিম বা স্পোর্টস ক্লাব সাবস্ক্রিপশন',
+      ),
+    ];
+  }
+  if (group.isCommittee) {
+    return const [
+      GroupDatePresetTemplate(
+        titleEn: 'Committee General Meeting',
+        titleBn: 'কমিটির সাধারণ সভা',
+        kind: FamilyDateKind.meeting,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 2,
+        noteEn: 'Community management monthly review',
+        noteBn: 'এলাকা পরিচালনা ও উন্নয়ন সংক্রান্ত মাসিক বৈঠক',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Community Cleanliness Drive',
+        titleBn: 'এলাকা পরিচ্ছন্নতা অভিযান',
+        kind: FamilyDateKind.maintenance,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 3,
+        noteEn: 'Neighborhood cleanup activity',
+        noteBn: 'এলাকার পরিবেশ ও পরিচ্ছন্নতা কর্মসূচি',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Community Upkeep Collection',
+        titleBn: 'উন্নয়ন ও রক্ষণাবেক্ষণ চাঁদা',
+        kind: FamilyDateKind.bill,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 3,
+        noteEn: 'Monthly neighbourhood maintenance dues',
+        noteBn: 'মাসিক রক্ষণাবেক্ষণ ও নিরাপত্তা চাঁদা সংগ্রহ',
+      ),
+    ];
+  }
   if (!group.isFamily) {
     // Trip
     return const [
@@ -572,52 +810,171 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  // Household / Family
+  if (group.isHousehold) {
+    return const [
+      GroupDatePresetTemplate(
+        titleEn: 'Birthday',
+        titleBn: 'জন্মদিন',
+        kind: FamilyDateKind.birthday,
+        recurrence: FamilyRecurrence.yearly,
+        remindDays: 3,
+        noteEn: 'Annual birthday celebration',
+        noteBn: 'পরিবারের সদস্যের শুভ জন্মদিন',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Wedding Anniversary',
+        titleBn: 'বিবাহবার্ষিকী',
+        kind: FamilyDateKind.anniversary,
+        recurrence: FamilyRecurrence.yearly,
+        remindDays: 7,
+        noteEn: 'Family wedding milestone celebration',
+        noteBn: 'বিবাহবার্ষিকী উদযাপন ও শুভেচ্ছা',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Utility Bill Payment',
+        titleBn: 'বিদ্যুৎ বা গ্যাস বিল পরিশোধ',
+        kind: FamilyDateKind.bill,
+        recurrence: FamilyRecurrence.monthly,
+        remindDays: 3,
+        noteEn: 'Monthly household utility bill cutoff',
+        noteBn: 'মাসের গ্যাস, বিদ্যুৎ বা ইন্টারনেট বিল জমার শেষ সময়',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'School Term Reopening / Exam',
+        titleBn: 'স্কুল খোলা বা পরীক্ষার তারিখ',
+        kind: FamilyDateKind.school,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 3,
+        noteEn: 'School fees and examination timeline',
+        noteBn: 'বাচ্চাদের নতুন ক্লাস বা পরীক্ষার সময়সূচি',
+      ),
+      GroupDatePresetTemplate(
+        titleEn: 'Medical Checkup & Prescription',
+        titleBn: 'স্বাস্থ্য পরীক্ষা ও প্রেসক্রিপশন ফলোআপ',
+        kind: FamilyDateKind.medicine,
+        recurrence: FamilyRecurrence.once,
+        remindDays: 3,
+        noteEn: 'Routine doctor visit or medicine refill',
+        noteBn: 'ডাক্তারের ফলোআপ ভিজিট বা নিয়মিত ওষুধ সংগ্রহ',
+      ),
+    ];
+  }
+  // Generic non-household group fallback
   return const [
     GroupDatePresetTemplate(
-      titleEn: 'Birthday',
-      titleBn: 'জন্মদিন',
-      kind: FamilyDateKind.birthday,
-      recurrence: FamilyRecurrence.yearly,
+      titleEn: 'Important Event & Milestone',
+      titleBn: 'গুরুত্বপূর্ণ অনুষ্ঠান বা আয়োজন',
+      kind: FamilyDateKind.event,
+      recurrence: FamilyRecurrence.once,
       remindDays: 3,
-      noteEn: 'Annual birthday celebration',
-      noteBn: 'পরিবারের সদস্যের শুভ জন্মদিন',
+      noteEn: 'Special occasion and group milestone',
+      noteBn: 'বিশেষ আয়োজন বা গ্রুপের গুরুত্বপূর্ণ দিন',
     ),
     GroupDatePresetTemplate(
-      titleEn: 'Wedding Anniversary',
-      titleBn: 'বিবাহবার্ষিকী',
-      kind: FamilyDateKind.anniversary,
-      recurrence: FamilyRecurrence.yearly,
-      remindDays: 7,
-      noteEn: 'Family wedding milestone celebration',
-      noteBn: 'বিবাহবার্ষিকী উদযাপন ও শুভেচ্ছা',
+      titleEn: 'Project / Task Deadline',
+      titleBn: 'জরুরি ডেডলাইন',
+      kind: FamilyDateKind.deadline,
+      recurrence: FamilyRecurrence.once,
+      remindDays: 2,
+      noteEn: 'Deadline for key deliverables',
+      noteBn: 'নির্ধারিত কাজ শেষ করার শেষ তারিখ',
     ),
     GroupDatePresetTemplate(
-      titleEn: 'Utility Bill Payment',
-      titleBn: 'বিদ্যুৎ বা গ্যাস বিল পরিশোধ',
+      titleEn: 'Group Meeting & Sync',
+      titleBn: 'গ্রুপ মিটিং বা আলোচনা',
+      kind: FamilyDateKind.meeting,
+      recurrence: FamilyRecurrence.once,
+      remindDays: 1,
+      noteEn: 'Group discussion and alignment',
+      noteBn: 'সদস্যদের পারস্পরিক আলোচনা ও প্রস্তুতি',
+    ),
+    GroupDatePresetTemplate(
+      titleEn: 'Due Payment / Contribution',
+      titleBn: 'পেমেন্ট বা চাঁদা পরিশোধ',
       kind: FamilyDateKind.bill,
-      recurrence: FamilyRecurrence.monthly,
-      remindDays: 3,
-      noteEn: 'Monthly household utility bill cutoff',
-      noteBn: 'মাসের গ্যাস, বিদ্যুৎ বা ইন্টারনেট বিল জমার শেষ সময়',
-    ),
-    GroupDatePresetTemplate(
-      titleEn: 'School Term Reopening / Exam',
-      titleBn: 'স্কুল খোলা বা পরীক্ষার তারিখ',
-      kind: FamilyDateKind.school,
       recurrence: FamilyRecurrence.once,
-      remindDays: 3,
-      noteEn: 'School fees and examination timeline',
-      noteBn: 'বাচ্চাদের নতুন ক্লাস বা পরীক্ষার সময়সূচি',
-    ),
-    GroupDatePresetTemplate(
-      titleEn: 'Medical Checkup & Prescription',
-      titleBn: 'স্বাস্থ্য পরীক্ষা ও প্রেসক্রিপশন ফলোআপ',
-      kind: FamilyDateKind.medicine,
-      recurrence: FamilyRecurrence.once,
-      remindDays: 3,
-      noteEn: 'Routine doctor visit or medicine refill',
-      noteBn: 'ডাক্তারের ফলোআপ ভিজিট বা নিয়মিত ওষুধ সংগ্রহ',
+      remindDays: 2,
+      noteEn: 'Payment or contribution cutoff',
+      noteBn: 'বিল, চাঁদা বা পাওনা পরিশোধের শেষ সময়',
     ),
   ];
+}
+
+/// Returns the localized title of the Important Dates / Calendar screen for [group].
+String groupDateScreenTitle(TourGroup? group, AppLocalizations l10n) {
+  if (group != null) {
+    if (group.isOffice) return l10n.translate('hub_module_dates_office');
+    if (group.isCampus) return l10n.translate('hub_module_dates_campus');
+    if (group.isMess) return l10n.translate('hub_module_dates_mess');
+    if (group.isSociety) return l10n.translate('hub_module_dates_society');
+    if (group.isSamity) return l10n.translate('hub_module_dates_samity');
+    if (group.isStudy) return l10n.translate('hub_module_dates_study');
+    if (group.isFriends) return l10n.translate('hub_module_dates_friends');
+    if (group.isSchool) return l10n.translate('hub_module_dates_school');
+    if (group.isSports) return l10n.translate('hub_module_dates_sports');
+    if (group.isCommittee) return l10n.translate('hub_module_dates_committee');
+    if (!group.isFamily) return l10n.translate('hub_module_dates_trip');
+    if (group.isHousehold) return l10n.translate('hub_module_family_dates');
+  }
+  return l10n.translate('hub_module_dates_general');
+}
+
+/// Returns the localized subtitle or introduction for the Important Dates / Calendar screen.
+String groupDateScreenSubtitle(TourGroup? group, AppLocalizations l10n) {
+  if (group != null) {
+    if (group.isOffice) return l10n.translate('hub_module_dates_office_sub');
+    if (group.isCampus) return l10n.translate('hub_module_dates_campus_sub');
+    if (group.isMess) return l10n.translate('hub_module_dates_mess_sub');
+    if (group.isSociety) return l10n.translate('hub_module_dates_society_sub');
+    if (group.isSamity) return l10n.translate('hub_module_dates_samity_sub');
+    if (group.isStudy) return l10n.translate('hub_module_dates_study_sub');
+    if (group.isFriends) return l10n.translate('hub_module_dates_friends_sub');
+    if (group.isSchool) return l10n.translate('hub_module_dates_school_sub');
+    if (group.isSports) return l10n.translate('hub_module_dates_sports_sub');
+    if (group.isCommittee)
+      return l10n.translate('hub_module_dates_committee_sub');
+    if (!group.isFamily) return l10n.translate('hub_module_dates_trip_sub');
+    if (group.isHousehold) return l10n.translate('hub_module_family_dates_sub');
+  }
+  return l10n.translate('hub_module_dates_general_sub');
+}
+
+/// Returns the group-aware title for the date editor modal bottom sheet.
+String groupDateModalHeader(
+  TourGroup? group,
+  AppLocalizations l10n, {
+  required bool isAdd,
+  required bool canEdit,
+}) {
+  if (!canEdit && !isAdd) {
+    if (group?.isHousehold == true) return l10n.translate('fd_view_title');
+    return l10n.translate('fd_view_general');
+  }
+  if (!isAdd) {
+    if (group?.isHousehold == true) return l10n.translate('fd_edit_title');
+    return l10n.translate('fd_edit_general');
+  }
+  if (group != null) {
+    if (group.isOffice) return l10n.translate('fd_add_office');
+    if (group.isCampus) return l10n.translate('fd_add_campus');
+    if (group.isMess) return l10n.translate('fd_add_mess');
+    if (group.isSociety) return l10n.translate('fd_add_society');
+    if (group.isSamity) return l10n.translate('fd_add_samity');
+    if (group.isStudy) return l10n.translate('fd_add_study');
+    if (group.isFriends) return l10n.translate('fd_add_friends');
+    if (group.isSchool) return l10n.translate('fd_add_school');
+    if (group.isSports) return l10n.translate('fd_add_sports');
+    if (group.isCommittee) return l10n.translate('fd_add_committee');
+    if (!group.isFamily) return l10n.translate('fd_add_trip');
+    if (group.isHousehold) return l10n.translate('fd_add_title');
+  }
+  return l10n.translate('fd_add_general');
+}
+
+/// Returns the localized empty state message for the dates list.
+String groupDateEmptyText(TourGroup? group, AppLocalizations l10n) {
+  if (group?.isHousehold == true) {
+    return l10n.translate('fd_empty');
+  }
+  return l10n.translate('fd_empty_general');
 }

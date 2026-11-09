@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/models/family_date_models.dart';
 import '../../domain/services/group_search_engine.dart';
 import '../../domain/services/hub_modules.dart';
 import '../../domain/services/tour_choice.dart';
@@ -2534,39 +2535,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             onTap: () => context.push('/group/${group.id}/logistics'),
           ),
       'calendar': () {
-        final title = group.isOffice
-            ? l10n.translate('hub_module_dates_office')
-            : (group.isCampus
-                ? l10n.translate('hub_module_dates_campus')
-                : (group.isMess
-                    ? l10n.translate('hub_module_dates_mess')
-                    : (group.isSociety
-                        ? l10n.translate('hub_module_dates_society')
-                        : (group.isSamity
-                            ? l10n.translate('hub_module_dates_samity')
-                            : (group.isStudy
-                                ? l10n.translate('hub_module_dates_study')
-                                : (!group.isFamily
-                                    ? l10n.translate('hub_module_dates_trip')
-                                    : l10n.translate(
-                                        'hub_module_family_dates')))))));
-        final subtitle = group.isOffice
-            ? l10n.translate('hub_module_dates_office_sub')
-            : (group.isCampus
-                ? l10n.translate('hub_module_dates_campus_sub')
-                : (group.isMess
-                    ? l10n.translate('hub_module_dates_mess_sub')
-                    : (group.isSociety
-                        ? l10n.translate('hub_module_dates_society_sub')
-                        : (group.isSamity
-                            ? l10n.translate('hub_module_dates_samity_sub')
-                            : (group.isStudy
-                                ? l10n.translate('hub_module_dates_study_sub')
-                                : (!group.isFamily
-                                    ? l10n
-                                        .translate('hub_module_dates_trip_sub')
-                                    : l10n.translate(
-                                        'hub_module_family_dates_sub')))))));
+        final title = groupDateScreenTitle(group, l10n);
+        final subtitle = groupDateScreenSubtitle(group, l10n);
         return _ModuleItem(
           title: title,
           subtitle: subtitle,
@@ -2574,7 +2544,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ? Icons.event_repeat_rounded
               : Icons.event_available_rounded,
           color: const Color(0xFF84CC16),
-          onTap: () => context.push('/group/${group.id}/family-dates'),
+          onTap: () => context.push(
+            '/group/${group.id}/family-dates',
+            extra: group,
+          ),
         );
       },
       'study_subjects': () => _ModuleItem(

@@ -215,9 +215,12 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                  l10n.translate(_e == null
-                      ? 'fd_add_title'
-                      : (widget.canEdit ? 'fd_edit_title' : 'fd_view_title')),
+                  groupDateModalHeader(
+                    widget.group,
+                    l10n,
+                    isAdd: _e == null,
+                    canEdit: widget.canEdit,
+                  ),
                   style: TextStyle(
                       color: context.forest.text,
                       fontSize: 18,
