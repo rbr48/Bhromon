@@ -1,7 +1,8 @@
 // A study or book club's shared book list and reading plan, stored under
-// tours/{id}/study_books and tours/{id}/reading_sessions. Any member adds a book or a
-// session, and anyone moves a book along its statuses. A book's creator or an admin
-// changes its details or removes it, and the same goes for a session.
+// tours/{id}/study_books and tours/{id}/reading_sessions. A member proposes a book, and an
+// admin lists it or declines it. Anyone on the list moves a book along its statuses. A
+// book's creator or an admin changes its details or removes it, and the same goes for a
+// session.
 
 /// Where a book stands in the group's reading.
 enum StudyBookStatus {
@@ -14,6 +15,19 @@ enum StudyBookStatus {
       .firstWhere((s) => s.name == raw, orElse: () => StudyBookStatus.toRead);
 }
 
+/// Whether a book is on the group's list. A member's book is proposed until an admin lists
+/// it or declines it.
+enum StudyBookApproval {
+  proposed,
+  listed,
+  declined;
+
+  /// A book with no stored approval was listed before approvals existed, so it reads as
+  /// listed.
+  static StudyBookApproval fromName(Object? raw) => StudyBookApproval.values
+      .firstWhere((a) => a.name == raw, orElse: () => StudyBookApproval.listed);
+}
+
 /// A book the group reads or has read.
 class StudyBook {
   const StudyBook({
@@ -24,6 +38,8 @@ class StudyBook {
     this.status = StudyBookStatus.toRead,
     this.createdByEmail = '',
     this.statusByEmail,
+    this.approval = StudyBookApproval.listed,
+    this.declineNote = '',
   });
 
   final String id;
@@ -37,15 +53,25 @@ class StudyBook {
 
   final StudyBookStatus status;
 
-  /// The member who added the book. Only they, or an admin, change its details or
-  /// remove it.
+  /// The member who added or proposed the book. Only they, or an admin, change its details
+  /// or remove it.
   final String createdByEmail;
 
   /// The member who set the current status. Null until someone sets it.
   final String? statusByEmail;
 
-  /// The fields a member writes when adding a book. Empty optional text is stored as
-  /// null, so the rules see the same shape every time.
+  /// Whether the book is proposed, listed or declined.
+  final StudyBookApproval approval;
+
+  /// Why an admin declined the proposal. Empty unless it was declined with a note.
+  final String declineNote;
+
+  bool get isProposed => approval == StudyBookApproval.proposed;
+  bool get isListed => approval == StudyBookApproval.listed;
+  bool get isDeclined => approval == StudyBookApproval.declined;
+
+  /// The fields written when a book is added. Empty optional text is stored as null, so
+  /// the rules see the same shape every time.
   Map<String, dynamic> toFields() => {
         'title': title,
         'author': author.isEmpty ? null : author,
@@ -53,6 +79,8 @@ class StudyBook {
         'status': status.name,
         'statusByEmail': statusByEmail,
         'createdByEmail': createdByEmail,
+        'approval': approval.name,
+        'declineNote': declineNote.isEmpty ? null : declineNote,
       };
 
   /// Reads one stored book. Returns null when it has no title, so a damaged book does
@@ -68,6 +96,8 @@ class StudyBook {
       status: StudyBookStatus.fromName(map['status']),
       createdByEmail: (map['createdByEmail'] as String?) ?? '',
       statusByEmail: _nonEmpty(map['statusByEmail'] as String?),
+      approval: StudyBookApproval.fromName(map['approval']),
+      declineNote: (map['declineNote'] as String?)?.trim() ?? '',
     );
   }
 }

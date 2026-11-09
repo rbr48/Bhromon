@@ -8,7 +8,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, Timestamp } = require('firebase/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
 const STUDY = 'studyclub';
@@ -82,10 +82,10 @@ describe('study group rules', () => {
     });
   });
 
-  test('a member adds a book under their own email, and no one else\'s', async () => {
-    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b2'), book(people.member.email, { title: 'Emma' })));
-    await assertFails(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b3'), book(people.owner.email)));
-    await assertFails(setDoc(doc(db('outsider'), 'tours', STUDY, 'study_books', 'b4'), book(people.outsider.email)));
+  test('a member proposes a book under their own email, and no one else\'s', async () => {
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b2'), book(people.member.email, { title: 'Emma', approval: 'proposed' })));
+    await assertFails(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b3'), book(people.owner.email, { approval: 'proposed' })));
+    await assertFails(setDoc(doc(db('outsider'), 'tours', STUDY, 'study_books', 'b4'), book(people.outsider.email, { approval: 'proposed' })));
   });
 
   test('books and sessions are written only in a study group', async () => {
@@ -105,10 +105,12 @@ describe('study group rules', () => {
       { notes: 'x'.repeat(501) },
       { status: 'paused' },
       { statusByEmail: people.owner.email },
+      { approval: 'paused' },
+      { declineNote: 'Not for us' },
       { surprise: true },
     ];
     for (let i = 0; i < bad.length; i++) {
-      await assertFails(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', `bad${i}`), book(me, bad[i])));
+      await assertFails(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', `bad${i}`), book(me, { approval: 'proposed', ...bad[i] })));
     }
   });
 
@@ -138,8 +140,47 @@ describe('study group rules', () => {
     await assertFails(updateDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b1'), { createdByEmail: people.other.email }));
   });
 
+  test('a member proposes a book, and only an admin lists one', async () => {
+    const me = people.member.email;
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), book(me, { approval: 'proposed' })));
+    // A member cannot list a book, on creation or afterwards.
+    await assertFails(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p2'), book(me, { approval: 'listed' })));
+    await assertFails(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p3'), book(me)));
+    await assertFails(updateDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'listed' }));
+    await assertFails(updateDoc(doc(db('other'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'listed' }));
+    // An admin or the owner lists a book, on creation or afterwards.
+    await assertSucceeds(setDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p4'), book(people.admin.email, { approval: 'listed' })));
+    await assertSucceeds(setDoc(doc(db('owner'), 'tours', STUDY, 'study_books', 'p5'), book(people.owner.email, { approval: 'listed' })));
+    await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'listed' }));
+  });
+
+  test('a proposal waits: its creator can correct it, but it has no status to move', async () => {
+    const me = people.member.email;
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), book(me, { approval: 'proposed' })));
+    await assertSucceeds(updateDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), { title: 'Anna Karenina (Garnett)' }));
+    await assertFails(updateDoc(doc(db('other'), 'tours', STUDY, 'study_books', 'p1'), { status: 'reading', statusByEmail: people.other.email }));
+    await assertFails(updateDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), { status: 'finished', statusByEmail: me }));
+    // Once listed, the status moves as it does for any book.
+    await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'listed' }));
+    await assertSucceeds(updateDoc(doc(db('other'), 'tours', STUDY, 'study_books', 'p1'), { status: 'reading', statusByEmail: people.other.email }));
+  });
+
+  test('an admin declines a proposal with a note, and lists it again later', async () => {
+    const me = people.member.email;
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), book(me, { approval: 'proposed', title: 'Emma' })));
+    // Only an admin declines, and a note goes with a declined book.
+    await assertFails(updateDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'declined', declineNote: 'Not for us' }));
+    await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'declined', declineNote: 'Not for us' }));
+    await assertFails(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { declineNote: 'x'.repeat(301) }));
+    // A note on a listed book is refused. Listing a declined book clears its note.
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p2'), book(me, { approval: 'proposed' })));
+    await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p2'), { approval: 'listed' }));
+    await assertFails(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p2'), { declineNote: 'Too late' }));
+    await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'listed', declineNote: deleteField() }));
+  });
+
   test('only the creator or an admin removes a book', async () => {
-    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b5'), book(people.member.email)));
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b5'), book(people.member.email, { approval: 'proposed' })));
     await assertFails(deleteDoc(doc(db('other'), 'tours', STUDY, 'study_books', 'b5')));
     await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'b5')));
     await assertSucceeds(deleteDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'b1')));

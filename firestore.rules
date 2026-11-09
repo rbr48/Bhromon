@@ -739,8 +739,8 @@ service cloud.firestore {
       return isFamilyTour(tId) && !isManagedTour(tId);
     }
 
-    // A study or book club: a family circle with the study preset. Its book list and
-    // reading plan are open to every member to add to.
+    // A study or book club: a family circle with the study preset. Any member proposes a
+    // book, which an admin lists or declines; its reading plan is open to every member.
     function isStudyTour(tId) {
       return isFamilyTour(tId) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'study';
@@ -772,16 +772,41 @@ service cloud.firestore {
              (d.get('doneByEmail', null) == null || (d.doneByEmail is string && d.doneByEmail.size() <= 254)) &&
              d.createdByEmail is string;
     }
-    // A book on a study group's list: a title, an optional author and note, and one of
-    // three statuses.
+    // A book on a study group's list: a title, an optional author and note, one of three
+    // statuses, and an approval. A member's book is proposed until an admin lists it or
+    // declines it with a note. A book with no approval was listed before approvals existed.
     function validStudyBook(d) {
-      return d.keys().hasOnly(['title', 'author', 'notes', 'status', 'statusByEmail', 'createdByEmail']) &&
+      return d.keys().hasOnly(['title', 'author', 'notes', 'status', 'statusByEmail', 'createdByEmail', 'approval', 'declineNote']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
              (d.get('author', null) == null || (d.author is string && d.author.size() <= 120)) &&
              (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
              d.status in ['toRead', 'reading', 'finished'] &&
              (d.get('statusByEmail', null) == null || (d.statusByEmail is string && d.statusByEmail.size() <= 254)) &&
+             (d.get('approval', null) == null || d.approval in ['proposed', 'listed', 'declined']) &&
+             (d.get('declineNote', null) == null || (d.declineNote is string && d.declineNote.size() <= 300)) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
+    }
+    // Whether a book is on the group's list. A book with no approval is, as it was before
+    // approvals existed.
+    function studyBookListed(d) {
+      return d.get('approval', 'listed') == 'listed';
+    }
+    // Whether an update to a study book is allowed. The admin check reads the member record,
+    // so it is made once here, and the cheaper checks come first.
+    function studyBookUpdateAllowed(tourId, newData, oldData) {
+      let byAdmin = isTourAdmin(tourId);
+      return newData.createdByEmail == oldData.createdByEmail &&
+             validStudyBook(newData) &&
+             // Only an admin lists a book or declines it.
+             (newData.get('approval', 'listed') == oldData.get('approval', 'listed') || byAdmin) &&
+             // A declined book keeps its note, and no other book has one.
+             (newData.get('declineNote', null) == null || newData.get('approval', null) == 'declined') &&
+             ((newData.diff(oldData).affectedKeys().hasOnly(['status', 'statusByEmail']) &&
+               newData.get('statusByEmail', null) == tourUserEmail() &&
+               studyBookListed(oldData) && studyBookListed(newData)) ||
+              ((byAdmin || oldData.get('createdByEmail', '') == tourUserEmail()) &&
+               (newData.status == oldData.status ||
+                (newData.get('statusByEmail', null) == tourUserEmail() && studyBookListed(newData)))));
     }
     // A reading session: what to read, when it starts, and where it meets.
     function validStudySession(d) {
@@ -984,24 +1009,21 @@ service cloud.firestore {
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 
-      // A study or book club's book list. Any member adds a book and moves it along its
-      // statuses under their own name. Its creator or an admin changes the details or
-      // removes it.
+      // A study or book club's book list. A member proposes a book, and it waits for an admin,
+      // who lists it or declines it. Any member moves a listed book along its statuses under
+      // their own name. Its creator or an admin changes the details or removes it.
       match /study_books/{bookId} {
         allow read: if isActiveMember(tourId);
         allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == tourUserEmail() &&
                          (request.resource.data.get('statusByEmail', null) == null ||
                           request.resource.data.statusByEmail == tourUserEmail()) &&
+                         ((isTourAdmin(tourId) && studyBookListed(request.resource.data)) ||
+                          request.resource.data.get('approval', null) == 'proposed') &&
+                         request.resource.data.get('declineNote', null) == null &&
                          validStudyBook(request.resource.data);
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
-                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
-                         validStudyBook(request.resource.data) &&
-                         ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusByEmail']) &&
-                           request.resource.data.get('statusByEmail', null) == tourUserEmail()) ||
-                          ((isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
-                           (request.resource.data.status == resource.data.status ||
-                            request.resource.data.get('statusByEmail', null) == tourUserEmail())));
+                         studyBookUpdateAllowed(tourId, request.resource.data, resource.data);
         allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }

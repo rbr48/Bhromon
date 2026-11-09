@@ -121,6 +121,59 @@ void main() {
       expect(groups.keys, containsAll(StudyBookStatus.values));
       expect(groups[StudyBookStatus.finished], isEmpty);
     });
+
+    test('proposals and declined books are kept out of the status sections',
+        () {
+      final books = [
+        _book('1', 'Zorba', StudyBookStatus.toRead),
+        const StudyBook(
+          id: '2',
+          title: 'Sapiens',
+          approval: StudyBookApproval.proposed,
+        ),
+        const StudyBook(
+          id: '3',
+          title: 'Dune',
+          approval: StudyBookApproval.declined,
+          declineNote: 'Too long',
+        ),
+      ];
+
+      expect(
+        groupStudyBooks(books)[StudyBookStatus.toRead]!
+            .map((b) => b.id)
+            .toList(),
+        ['1'],
+      );
+      expect(studyBookProposals(books).map((b) => b.id).toList(), ['2']);
+      expect(studyBookDeclined(books).map((b) => b.id).toList(), ['3']);
+    });
+
+    test('proposals are sorted by title, ignoring case', () {
+      final proposals = studyBookProposals(const [
+        StudyBook(
+          id: '1',
+          title: 'beloved',
+          approval: StudyBookApproval.proposed,
+        ),
+        StudyBook(
+          id: '2',
+          title: 'Atonement',
+          approval: StudyBookApproval.proposed,
+        ),
+      ]);
+
+      expect(proposals.map((b) => b.id).toList(), ['2', '1']);
+    });
+
+    test('a book stored with no approval is listed, as it was before approvals',
+        () {
+      final book =
+          StudyBook.fromMap('4', {'title': 'Emma', 'status': 'reading'});
+
+      expect(book!.approval, StudyBookApproval.listed);
+      expect(groupStudyBooks([book])[StudyBookStatus.reading], [book]);
+    });
   });
 
   group('reading stored records', () {

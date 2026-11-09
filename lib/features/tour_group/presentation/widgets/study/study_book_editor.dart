@@ -21,11 +21,13 @@ class StudyBookDraft {
   final StudyBookStatus status;
 }
 
-/// Opens the editor for a book. [existing] is null for a new book. Returns what the
-/// member saved, or null when they cancel.
+/// Opens the editor for a book. [existing] is null for a new book. [proposal] is true when
+/// a member proposes a new book, which has no status until an admin lists it. Returns what
+/// the member saved, or null when they cancel.
 Future<StudyBookDraft?> showStudyBookEditor(
   BuildContext context, {
   StudyBook? existing,
+  bool proposal = false,
 }) {
   return showModalBottomSheet<StudyBookDraft>(
     context: context,
@@ -34,14 +36,17 @@ Future<StudyBookDraft?> showStudyBookEditor(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => StudyBookEditor(existing: existing),
+    builder: (_) => StudyBookEditor(existing: existing, proposal: proposal),
   );
 }
 
 class StudyBookEditor extends StatefulWidget {
-  const StudyBookEditor({super.key, this.existing});
+  const StudyBookEditor({super.key, this.existing, this.proposal = false});
 
   final StudyBook? existing;
+
+  /// Whether the member is proposing a new book.
+  final bool proposal;
 
   @override
   State<StudyBookEditor> createState() => _StudyBookEditorState();
@@ -57,6 +62,11 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
   late StudyBookStatus _status =
       widget.existing?.status ?? StudyBookStatus.toRead;
   bool _tried = false;
+
+  bool get _isNew => widget.existing == null;
+
+  /// A status is set only for a book on the list. A proposal has none until it is listed.
+  bool get _showStatus => _isNew ? !widget.proposal : widget.existing!.isListed;
 
   @override
   void dispose() {
@@ -84,6 +94,13 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
     final titleError = _tried && !isValidStudyTitle(_title.text)
         ? l10n.translate('study_book_title_required')
         : null;
+    final titleKey = _isNew
+        ? (widget.proposal
+            ? 'study_book_proposal_title'
+            : 'study_book_new_title')
+        : 'study_book_edit_title';
+    final saveKey =
+        _isNew && widget.proposal ? 'study_book_send_proposal' : 'study_save';
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -94,9 +111,7 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.translate(widget.existing == null
-                    ? 'study_book_new_title'
-                    : 'study_book_edit_title'),
+                l10n.translate(titleKey),
                 style: TextStyle(
                     color: palette.text,
                     fontSize: 18,
@@ -105,7 +120,7 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
               const SizedBox(height: 16),
               TextField(
                 controller: _title,
-                autofocus: widget.existing == null,
+                autofocus: _isNew,
                 maxLength: kStudyTitleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
@@ -131,29 +146,31 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
                   labelText: l10n.translate('study_book_notes_label'),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.translate('study_book_status_label'),
-                style: TextStyle(color: palette.text70),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final status in StudyBookStatus.values)
-                    ChoiceChip(
-                      label: Text(l10n.translate(studyBookStatusKey(status))),
-                      selected: _status == status,
-                      onSelected: (_) => setState(() => _status = status),
-                    ),
-                ],
-              ),
+              if (_showStatus) ...[
+                const SizedBox(height: 12),
+                Text(
+                  l10n.translate('study_book_status_label'),
+                  style: TextStyle(color: palette.text70),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final status in StudyBookStatus.values)
+                      ChoiceChip(
+                        label: Text(l10n.translate(studyBookStatusKey(status))),
+                        selected: _status == status,
+                        onSelected: (_) => setState(() => _status = status),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton(
                   onPressed: _save,
-                  child: Text(l10n.translate('study_save')),
+                  child: Text(l10n.translate(saveKey)),
                 ),
               ),
             ],

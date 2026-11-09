@@ -13,10 +13,17 @@ import 'package:flutter_test/flutter_test.dart';
 // emulator in functions/tests/study_rules.test.js.
 
 class _FakeStudyRepo extends TourGroupRepository {
-  _FakeStudyRepo({this.books = const [], this.sessions = const []});
+  _FakeStudyRepo({
+    this.books = const [],
+    this.sessions = const [],
+    this.role,
+  });
 
   final List<StudyBook> books;
   final List<ReadingSession> sessions;
+
+  /// The signed-in member's role. Null is an ordinary member.
+  final TourRole? role;
   final List<String> calls = [];
 
   /// The signed-in member. The books and sessions in these tests are by this person
@@ -25,7 +32,7 @@ class _FakeStudyRepo extends TourGroupRepository {
   String get currentEmail => 'me@x.com';
 
   @override
-  Future<TourRole?> myRole(String tourId) async => null;
+  Future<TourRole?> myRole(String tourId) async => role;
 
   @override
   Stream<List<StudyBook>> watchStudyBooks(String tourId) => Stream.value(books);
@@ -38,11 +45,27 @@ class _FakeStudyRepo extends TourGroupRepository {
   Future<void> addStudyBook(
     String tourId, {
     required String title,
+    required StudyBookApproval approval,
     String author = '',
     String notes = '',
     StudyBookStatus status = StudyBookStatus.toRead,
   }) async {
-    calls.add('add $title');
+    final verb = approval == StudyBookApproval.proposed ? 'propose' : 'add';
+    calls.add('$verb $title');
+  }
+
+  @override
+  Future<void> approveStudyBook(String tourId, String bookId) async {
+    calls.add('list $bookId');
+  }
+
+  @override
+  Future<void> declineStudyBook(
+    String tourId,
+    String bookId, {
+    String note = '',
+  }) async {
+    calls.add('decline $bookId $note');
   }
 
   @override
@@ -104,6 +127,24 @@ final _books = [
   ),
 ];
 
+/// A book a member proposed and no admin has decided on yet.
+const _proposal = StudyBook(
+  id: 'p1',
+  title: 'Sapiens',
+  author: 'Yuval Noah Harari',
+  approval: StudyBookApproval.proposed,
+  createdByEmail: 'other@x.com',
+);
+
+/// A proposal an admin declined, with a note for the person who proposed it.
+const _declined = StudyBook(
+  id: 'd1',
+  title: 'Dune',
+  approval: StudyBookApproval.declined,
+  declineNote: 'Too long for this term',
+  createdByEmail: 'other@x.com',
+);
+
 void main() {
   group('the book list', () {
     testWidgets('books are shown in their status sections', (tester) async {
@@ -130,7 +171,9 @@ void main() {
             repository: _FakeStudyRepo(),
           ));
 
-      expect(find.text('No books yet. Add the first book the group will read.'),
+      expect(
+          find.text(
+              'No books yet. Propose the first book the group will read.'),
           findsOneWidget);
     });
 
@@ -185,23 +228,96 @@ void main() {
       expect(repo.calls, contains('status b2 reading'));
     });
 
-    testWidgets('adding a book needs a title', (tester) async {
+    testWidgets('a member proposes a book, and the proposal needs a title',
+        (tester) async {
       final repo = _FakeStudyRepo();
+      await _pump(tester, StudyBooksScreen(tourId: 't1', repository: repo));
+
+      await tester.tap(find.text('Propose a book'));
+      await tester.pumpAndSettle();
+      expect(find.text('New proposal'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Send proposal'));
+      await tester.pumpAndSettle();
+      expect(find.text('Add a title for the book.'), findsOneWidget);
+      expect(repo.calls, isEmpty);
+
+      await tester.enterText(find.byType(TextField).first, 'Sapiens');
+      await tester.tap(find.widgetWithText(FilledButton, 'Send proposal'));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['propose Sapiens']);
+    });
+
+    testWidgets('an admin adds a book straight to the list', (tester) async {
+      final repo = _FakeStudyRepo(role: TourRole.admin);
       await _pump(tester, StudyBooksScreen(tourId: 't1', repository: repo));
 
       await tester.tap(find.text('Add book'));
       await tester.pumpAndSettle();
       expect(find.text('New book'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
-      await tester.pumpAndSettle();
-      expect(find.text('Add a title for the book.'), findsOneWidget);
-      expect(repo.calls, isEmpty);
-
       await tester.enterText(find.byType(TextField).first, 'Sapiens');
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pumpAndSettle();
       expect(repo.calls, ['add Sapiens']);
+    });
+
+    testWidgets('a proposal waits in its own section for an admin to decide',
+        (tester) async {
+      await _pump(
+          tester,
+          StudyBooksScreen(
+            tourId: 't1',
+            repository: _FakeStudyRepo(books: const [_proposal]),
+          ));
+
+      expect(find.text('Proposed'), findsOneWidget);
+      expect(find.text('Yuval Noah Harari · Waiting for an admin to decide'),
+          findsOneWidget);
+      // A member cannot list or decline it.
+      expect(find.text('List this book'), findsNothing);
+      expect(find.widgetWithText(TextButton, 'Decline'), findsNothing);
+    });
+
+    testWidgets('an admin lists a proposal', (tester) async {
+      final repo = _FakeStudyRepo(
+        books: const [_proposal],
+        role: TourRole.admin,
+      );
+      await _pump(tester, StudyBooksScreen(tourId: 't1', repository: repo));
+
+      await tester.tap(find.text('List this book'));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['list p1']);
+    });
+
+    testWidgets('an admin declines a proposal, with a note for the proposer',
+        (tester) async {
+      final repo = _FakeStudyRepo(
+        books: const [_proposal],
+        role: TourRole.admin,
+      );
+      await _pump(tester, StudyBooksScreen(tourId: 't1', repository: repo));
+
+      await tester.tap(find.widgetWithText(TextButton, 'Decline'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Too long for this term');
+      await tester.tap(find.widgetWithText(FilledButton, 'Decline'));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['decline p1 Too long for this term']);
+    });
+
+    testWidgets('a declined proposal shows the note it was declined with',
+        (tester) async {
+      await _pump(
+          tester,
+          StudyBooksScreen(
+            tourId: 't1',
+            repository: _FakeStudyRepo(books: const [_declined]),
+          ));
+
+      expect(find.text('Declined'), findsOneWidget);
+      expect(find.text('Declined: Too long for this term'), findsOneWidget);
     });
   });
 

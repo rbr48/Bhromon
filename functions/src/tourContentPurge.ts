@@ -50,8 +50,9 @@ import {
  *   reactions, votes, mentions and tags. At a game table only their seat goes,
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
- * - The group's shared record (the ledger, notices, route stops and the packing
- *   list) keeps its amounts and dates. The person is replaced by a stand-in.
+ * - The group's shared record (the ledger, notices, route stops, the packing
+ *   list, and the study book list and reading plan) keeps its amounts and dates.
+ *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
  *
  * Each purge is written as a job before it starts and removed once it has
@@ -133,6 +134,10 @@ const CHECKLIST_ITEM: AnonymizePlan = { removeFromLists: ['checkedBy'] };
 const CHANNEL: AnonymizePlan = { emails: ['createdByEmail', 'updatedByEmail'] };
 const PINNED_MESSAGE: AnonymizePlan = { emails: ['pinnedByEmail'] };
 const ITINERARY_META: AnonymizePlan = { emails: ['updatedByEmail'] };
+/** A book on a study group's list: who added or proposed it, and who last set its status. */
+const STUDY_BOOK: AnonymizePlan = { emails: ['createdByEmail', 'statusByEmail'] };
+/** A reading session: who planned it. */
+const STUDY_SESSION: AnonymizePlan = { emails: ['createdByEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -458,6 +463,8 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('checkpoints'), anonymize(CHECKPOINT, email, standIn));
   await applyToQuery(db, tour.collection('checklist'), anonymize(CHECKLIST_ITEM, email, standIn));
   await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));
+  await applyToQuery(db, tour.collection('study_books'), anonymize(STUDY_BOOK, email, standIn));
+  await applyToQuery(db, tour.collection('reading_sessions'), anonymize(STUDY_SESSION, email, standIn));
 
   // What only the person used goes: luggage they own, seats and rooms they hold,
   // and their profile in the tour. At a game table only their seat goes.

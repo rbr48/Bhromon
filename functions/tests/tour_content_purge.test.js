@@ -157,6 +157,29 @@ async function seed() {
     resolvedByEmail: LEAVER,
   });
 
+  // The study group's book list and reading plan: a proposal and a session by the leaver,
+  // and a listed book whose status they last set.
+  await set(`tours/${TOUR}/study_books/sb_leaver`, {
+    title: 'Sapiens',
+    status: 'toRead',
+    approval: 'proposed',
+    createdByEmail: LEAVER,
+    statusByEmail: null,
+  });
+  await set(`tours/${TOUR}/study_books/sb_other`, {
+    title: 'Dune',
+    status: 'reading',
+    approval: 'listed',
+    createdByEmail: OTHER,
+    statusByEmail: LEAVER,
+  });
+  await set(`tours/${TOUR}/reading_sessions/rs_leaver`, {
+    title: 'Chapter 1',
+    startsAt: new Date('2026-11-20T18:00:00Z'),
+    bookId: 'sb_other',
+    createdByEmail: LEAVER,
+  });
+
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
     title: 'Lunch',
@@ -424,6 +447,30 @@ describe('tour content purge', () => {
     expect((await read(`tours/${TOUR}/meta/itinerary`)).updatedByEmail).toBe(STAND_IN);
     expect((await read(`tours/${TOUR}/channels/general`)).createdByEmail).toBe(STAND_IN);
     expect((await read(`tours/${TOUR}/channels/general`)).updatedByEmail).toBe(OTHER);
+  });
+
+  it('study books and sessions keep the record and drop the person', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    // A proposal the leaver made waits for an admin, with a stand-in as its proposer.
+    expect(await read(`tours/${TOUR}/study_books/sb_leaver`)).toMatchObject({
+      title: 'Sapiens',
+      approval: 'proposed',
+      createdByEmail: STAND_IN,
+    });
+    // A book whose status the leaver set keeps it, under the stand-in.
+    expect(await read(`tours/${TOUR}/study_books/sb_other`)).toMatchObject({
+      title: 'Dune',
+      status: 'reading',
+      createdByEmail: OTHER,
+      statusByEmail: STAND_IN,
+    });
+    expect(await read(`tours/${TOUR}/reading_sessions/rs_leaver`)).toMatchObject({
+      title: 'Chapter 1',
+      createdByEmail: STAND_IN,
+    });
   });
 
   it('removes what the person alone used: luggage, seats, rooms and profiles', async () => {
