@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
@@ -11,13 +12,8 @@ Future<List<StudyModuleSettings>?> showStudyModuleSheet(
   BuildContext context, {
   required Map<StudyModuleKey, StudyModuleSettings> current,
 }) {
-  return showModalBottomSheet<List<StudyModuleSettings>>(
+  return showStudyModal<List<StudyModuleSettings>>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyModuleSheet(current: current),
   );
 }

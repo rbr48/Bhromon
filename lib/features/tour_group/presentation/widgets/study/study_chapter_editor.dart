@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
@@ -32,13 +33,8 @@ Future<StudyChapterDraft?> showStudyChapterEditor(
   StudyChapter? existing,
   int suggestedNumber = 1,
 }) {
-  return showModalBottomSheet<StudyChapterDraft>(
+  return showStudyModal<StudyChapterDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyChapterEditor(
       existing: existing,
       suggestedNumber: suggestedNumber,

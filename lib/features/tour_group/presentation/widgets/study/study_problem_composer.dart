@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
@@ -27,13 +28,8 @@ Future<StudyProblemDraft?> showStudyProblemEditor(
   StudyProblem? existing,
   bool withRelease = false,
 }) {
-  return showModalBottomSheet<StudyProblemDraft>(
+  return showStudyModal<StudyProblemDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyProblemEditor(
       existing: existing,
       withRelease: withRelease,
@@ -49,13 +45,8 @@ Future<String?> showStudyTextEditor(
   required String labelKey,
   String initial = '',
 }) {
-  return showModalBottomSheet<String>(
+  return showStudyModal<String>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => _StudyTextSheet(
       titleKey: titleKey,
       labelKey: labelKey,

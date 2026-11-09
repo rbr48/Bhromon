@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../domain/models/study_material_models.dart';
@@ -48,10 +49,8 @@ Future<StudyMaterialDraft?> showStudyMaterialComposer(
   BuildContext context, {
   required List<StudyChapter> chapters,
 }) {
-  return showModalBottomSheet<StudyMaterialDraft>(
+  return showStudyModal<StudyMaterialDraft>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
     builder: (_) => _StudyMaterialComposer(chapters: chapters),
   );
 }

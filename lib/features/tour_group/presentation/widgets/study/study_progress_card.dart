@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'study_modal.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -20,9 +21,8 @@ Future<void> showStudyProgressCardSheet(
   required int chaptersRead,
   required int cardsReviewed,
 }) {
-  return showModalBottomSheet<void>(
+  return showStudyModal<void>(
     context: context,
-    isScrollControlled: true,
     builder: (_) => _ProgressCardSheet(
       bookTitle: bookTitle,
       weeks: weeks,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
@@ -27,13 +28,8 @@ Future<StudyPostDraft?> showStudyPostEditor(
   required bool withLink,
   StudyPost? existing,
 }) {
-  return showModalBottomSheet<StudyPostDraft>(
+  return showStudyModal<StudyPostDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyPostEditor(withLink: withLink, existing: existing),
   );
 }

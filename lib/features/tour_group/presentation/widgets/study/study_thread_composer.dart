@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
@@ -32,13 +33,8 @@ Future<StudyThreadDraft?> showStudyThreadComposer(
   String initialTitle = '',
   String? initialChapterId,
 }) {
-  return showModalBottomSheet<StudyThreadDraft>(
+  return showStudyModal<StudyThreadDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyThreadComposer(
       chapters: chapters,
       initialTitle: initialTitle,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
@@ -12,13 +13,8 @@ Future<StudyChallenge?> showStudyChallengeEditor(
   required String weekKey,
   StudyChallenge? current,
 }) {
-  return showModalBottomSheet<StudyChallenge>(
+  return showStudyModal<StudyChallenge>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => _StudyChallengeSheet(weekKey: weekKey, current: current),
   );
 }

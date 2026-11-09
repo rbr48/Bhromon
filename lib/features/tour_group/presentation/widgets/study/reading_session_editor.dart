@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'study_modal.dart';
 
 import 'package:flutter/material.dart';
 
@@ -45,13 +46,8 @@ Future<ReadingSessionDraft?> showReadingSessionEditor(
   StudyChaptersOf? chaptersOf,
   ReadingSession? existing,
 }) {
-  return showModalBottomSheet<ReadingSessionDraft>(
+  return showStudyModal<ReadingSessionDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => ReadingSessionEditor(
       books: books,
       chaptersOf: chaptersOf,

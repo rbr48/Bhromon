@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
@@ -31,13 +32,8 @@ Future<StudyBookDraft?> showStudyBookEditor(
   StudyBook? existing,
   bool proposal = false,
 }) {
-  return showModalBottomSheet<StudyBookDraft>(
+  return showStudyModal<StudyBookDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyBookEditor(existing: existing, proposal: proposal),
   );
 }

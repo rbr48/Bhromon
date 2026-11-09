@@ -1,5 +1,6 @@
 import '../widgets/group_back_button.dart';
 import 'dart:async';
+import '../widgets/study/study_modal.dart';
 
 import 'package:flutter/material.dart';
 
@@ -278,9 +279,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   Future<void> _openLearning() async {
     final l10n = context.l10n;
     final palette = context.forest;
-    final tool = await showModalBottomSheet<_LearningTool>(
+    final tool = await showStudyModal<_LearningTool>(
       context: context,
-      backgroundColor: palette.card,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

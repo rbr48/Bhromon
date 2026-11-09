@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
@@ -29,13 +30,8 @@ Future<StudySubjectDraft?> showStudySubjectEditor(
   StudySubject? existing,
   bool proposal = false,
 }) {
-  return showModalBottomSheet<StudySubjectDraft>(
+  return showStudyModal<StudySubjectDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudySubjectEditor(existing: existing, proposal: proposal),
   );
 }
