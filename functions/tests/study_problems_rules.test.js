@@ -428,6 +428,32 @@ describe('problems, reference solutions, working and reviews', () => {
     });
   });
 
+  describe('an admin reviewing a working', () => {
+    test('an admin reviews a member\'s working without having submitted one: the review and its count go together', async () => {
+      await assertSucceeds(reviewBatch('admin', P_REVIEW, people.other.email, 'right'));
+      await assertSucceeds(reviewBatch('admin', P_REVIEW, people.member.email, 'gap'));
+    });
+
+    test('an admin does not review their own working', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(workRef(ctx.firestore(), P_REVIEW, people.admin.email), work({ text: 'The admin\'s own working.' }));
+      });
+      await assertFails(reviewBatch('admin', P_REVIEW, people.admin.email, 'right'));
+    });
+
+    // Removing a review is the reviewer's own act for now. The working's count must fall in the same batch, and the
+    // working's update rule can only check the signed-in member's review, so an admin's removal is refused until that
+    // rule has a design. See the PR notes.
+    test('an admin cannot remove a member\'s review, even with the count falling in the same batch', async () => {
+      const f = db('admin');
+      await assertFails(deleteDoc(reviewRef(f, P_MEMBER, people.other.email, people.member.email)));
+      const batch = writeBatch(f);
+      batch.delete(reviewRef(f, P_MEMBER, people.other.email, people.member.email));
+      batch.update(workRef(f, P_MEMBER, people.other.email), { gapCount: increment(-1) });
+      await assertFails(batch.commit());
+    });
+  });
+
   describe('deleting a problem', () => {
     test('the author deletes their problem; another member does not; an admin does', async () => {
       await assertSucceeds(deleteDoc(problemRef(db('member'), P_MEMBER)));
