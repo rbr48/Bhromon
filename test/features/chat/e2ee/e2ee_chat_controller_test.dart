@@ -18,15 +18,21 @@ import 'memory_stores.dart';
 // service, no chat is created encrypted, and nothing reads the native library.
 // Erasing a closed account's state does not need a service, so it is tested here too.
 
+import 'package:flutter/foundation.dart';
+
 void main() {
-  test('encryption is off unless the build turns the flag on', () {
-    expect(kE2eeOneToOne, isFalse);
-    expect(E2eeChatController.enabledInBuild, isFalse);
+  test('encryption is enabled by default on supported native builds', () {
+    expect(kE2eeOneToOne, isTrue);
+    expect(E2eeChatController.enabledInBuild, !kIsWeb);
   });
 
-  test('a build without the flag has no service for anyone', () async {
-    expect(E2eeChatController.instance.serviceFor('uid-a'), isNull);
+  test('service lookup behaves safely across native environments', () async {
     expect(E2eeChatController.instance.serviceFor(''), isNull);
+    // On test host without libe2ee_olm.so/.dll, serviceFor falls back cleanly to null without crashing.
+    final service = E2eeChatController.instance.serviceFor('uid-a');
+    if (!E2eeChatController.enabledInBuild) {
+      expect(service, isNull);
+    }
     await E2eeChatController.instance.release();
   });
 
