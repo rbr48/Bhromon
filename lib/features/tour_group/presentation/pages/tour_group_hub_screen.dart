@@ -2551,6 +2551,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               color: const Color(0xFF84CC16),
               onTap: () => context.push('/group/${group.id}/calendar'),
             ),
+      'study_subjects': () => _ModuleItem(
+            title: l10n.translate('hub_module_study_subjects'),
+            subtitle: l10n.translate('hub_module_study_subjects_sub'),
+            icon: Icons.school_rounded,
+            color: const Color(0xFF14B8A6),
+            onTap: () => context.push('/group/${group.id}/study-subjects'),
+          ),
       'study_reading': () => _ModuleItem(
             title: l10n.translate('hub_module_study_reading'),
             subtitle: l10n.translate('hub_module_study_reading_sub'),

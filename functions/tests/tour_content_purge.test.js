@@ -179,6 +179,33 @@ async function seed() {
     bookId: 'sb_other',
     createdByEmail: LEAVER,
   });
+  // A subject the leaver proposed, with a tip they wrote, and a tip of another member's that
+  // the leaver and a third member found helpful.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver`, {
+    title: 'Chemistry',
+    approval: 'proposed',
+    createdByEmail: LEAVER,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_leaver`, {
+    text: 'Read the lab manual first.',
+    createdByEmail: LEAVER,
+    helpfulCount: 0,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other`, {
+    text: 'Past papers for the last five years.',
+    createdByEmail: OTHER,
+    helpfulCount: 2,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other/helpful/${LEAVER}`, {
+    createdAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other/helpful/third@x.com`, {
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
 
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
@@ -470,6 +497,32 @@ describe('tour content purge', () => {
     expect(await read(`tours/${TOUR}/reading_sessions/rs_leaver`)).toMatchObject({
       title: 'Chapter 1',
       createdByEmail: STAND_IN,
+    });
+  });
+
+  it('a study subject keeps its tips under a stand-in and takes the person’s helpful marks away', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    // A subject the leaver proposed waits for an admin, with a stand-in as its proposer.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver`)).toMatchObject({
+      title: 'Chemistry',
+      approval: 'proposed',
+      createdByEmail: STAND_IN,
+    });
+    // Their tip keeps its words under the stand-in.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_leaver`)).toMatchObject({
+      text: 'Read the lab manual first.',
+      createdByEmail: STAND_IN,
+    });
+    // Their mark on another member's tip goes and the count falls by one; the third mark stays.
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other/helpful/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other/helpful/third@x.com`)).toBe(true);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other`)).toMatchObject({
+      text: 'Past papers for the last five years.',
+      createdByEmail: OTHER,
+      helpfulCount: 1,
     });
   });
 
