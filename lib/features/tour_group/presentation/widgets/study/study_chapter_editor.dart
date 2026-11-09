@@ -100,7 +100,7 @@ class _StudyChapterEditorState extends State<StudyChapterEditor> {
 
   bool get _titleOk {
     final title = _title.text.trim();
-    return title.isNotEmpty && title.length <= 120;
+    return title.isNotEmpty;
   }
 
   /// A page is blank, or a whole number. The pair is checked with the rule for pages.
@@ -201,7 +201,6 @@ class _StudyChapterEditorState extends State<StudyChapterEditor> {
               TextField(
                 controller: _title,
                 autofocus: _isNew,
-                maxLength: 120,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_chapter_title_label'),
@@ -268,7 +267,6 @@ class _StudyChapterEditorState extends State<StudyChapterEditor> {
                     Expanded(
                       child: TextField(
                         controller: _guide[i],
-                        maxLength: 300,
                         style: TextStyle(color: palette.text),
                         decoration: InputDecoration(
                           labelText: l10n.translate('study_chapter_guide_hint'),

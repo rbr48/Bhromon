@@ -29,14 +29,8 @@ StudyQuestionProblem? questionProblem({
 }) {
   final trimmedText = text.trim();
   if (trimmedText.isEmpty) return StudyQuestionProblem.emptyText;
-  if (trimmedText.length > StudyQuizLimits.questionMax) {
-    return StudyQuestionProblem.textTooLong;
-  }
   final trimmedExplanation = explanation.trim();
   if (trimmedExplanation.isEmpty) return StudyQuestionProblem.emptyExplanation;
-  if (trimmedExplanation.length > StudyQuizLimits.explanationMax) {
-    return StudyQuestionProblem.explanationTooLong;
-  }
   switch (type) {
     case StudyQuestionType.single:
       if (choices.length < StudyQuizLimits.choicesMin ||
@@ -45,9 +39,6 @@ StudyQuestionProblem? questionProblem({
       }
       for (final choice in choices) {
         if (choice.trim().isEmpty) return StudyQuestionProblem.emptyChoice;
-        if (choice.trim().length > StudyQuizLimits.choiceMax) {
-          return StudyQuestionProblem.choiceTooLong;
-        }
       }
       if (answerIndex == null ||
           answerIndex < 0 ||
@@ -63,9 +54,6 @@ StudyQuestionProblem? questionProblem({
     case StudyQuestionType.explain:
       final trimmedAnswer = modelAnswer.trim();
       if (trimmedAnswer.isEmpty) return StudyQuestionProblem.emptyModelAnswer;
-      if (trimmedAnswer.length > StudyQuizLimits.answerMax) {
-        return StudyQuestionProblem.answerTooLong;
-      }
       return null;
   }
 }

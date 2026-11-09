@@ -4,9 +4,6 @@
 /// The limits a glossary term is checked against, as firestore.rules checks them.
 class StudyGlossaryLimits {
   const StudyGlossaryLimits._();
-
-  static const int termMax = 80;
-  static const int definitionMax = 500;
 }
 
 /// One glossary term.

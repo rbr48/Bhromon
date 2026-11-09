@@ -157,14 +157,14 @@ describe('chapter summaries: revisions and the pinned revision', () => {
       );
     });
 
-    test('a revision holds up to 4,000 characters and no more', async () => {
+    test('a revision can be any length', async () => {
       await assertSucceeds(
         setDoc(
           revisionRef(db('member'), 'rev5'),
           revisionFields(people.member.email, { text: 'x'.repeat(4000) }),
         ),
       );
-      await assertFails(
+      await assertSucceeds(
         setDoc(
           revisionRef(db('member'), 'rev6'),
           revisionFields(people.member.email, { text: 'x'.repeat(4001) }),

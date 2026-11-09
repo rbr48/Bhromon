@@ -9,6 +9,8 @@ import '../../../domain/models/study_models.dart';
 import '../../../domain/services/study_chapter_rules.dart';
 import '../../../domain/services/study_rules.dart';
 
+import 'study_text_field.dart';
+
 /// What a member entered for a reading session.
 class ReadingSessionDraft {
   const ReadingSessionDraft({
@@ -218,7 +220,6 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
               TextField(
                 controller: _title,
                 autofocus: widget.existing == null,
-                maxLength: kStudyTitleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_session_title_label'),
@@ -312,18 +313,15 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
               const SizedBox(height: 8),
               TextField(
                 controller: _place,
-                maxLength: 120,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_session_place_label'),
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _notes,
-                maxLength: 500,
                 minLines: 1,
                 maxLines: 3,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_session_notes_label'),
                 ),

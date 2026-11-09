@@ -17,14 +17,8 @@ StudyTermProblem? termProblem({
 }) {
   final word = term.trim();
   if (word.isEmpty) return StudyTermProblem.emptyTerm;
-  if (word.length > StudyGlossaryLimits.termMax) {
-    return StudyTermProblem.termTooLong;
-  }
   final meaning = definition.trim();
   if (meaning.isEmpty) return StudyTermProblem.emptyDefinition;
-  if (meaning.length > StudyGlossaryLimits.definitionMax) {
-    return StudyTermProblem.definitionTooLong;
-  }
   return null;
 }
 

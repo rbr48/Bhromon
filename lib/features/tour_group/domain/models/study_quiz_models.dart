@@ -7,13 +7,8 @@
 class StudyQuizLimits {
   const StudyQuizLimits._();
 
-  static const int titleMax = 120;
-  static const int questionMax = 300;
-  static const int choiceMax = 150;
   static const int choicesMin = 2;
   static const int choicesMax = 5;
-  static const int answerMax = 1000;
-  static const int explanationMax = 1000;
 }
 
 /// The three kinds of question a quiz holds.

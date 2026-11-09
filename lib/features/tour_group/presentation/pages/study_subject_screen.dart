@@ -16,6 +16,8 @@ import 'study_findings_screen.dart';
 import 'study_problems_screen.dart';
 import 'study_module_posts_screen.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// One subject: its modules. Members see the modules an admin has turned on. An admin sees
 /// every module, and customises them.
 class StudySubjectScreen extends StatefulWidget {
@@ -231,7 +233,8 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
             for (final line in lines)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(line, style: TextStyle(color: palette.text)),
+                child:
+                    StudyRichText(line, style: TextStyle(color: palette.text)),
               ),
           ],
         ),

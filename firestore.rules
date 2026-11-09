@@ -777,13 +777,13 @@ service cloud.firestore {
     // declines it with a note. A book with no approval was listed before approvals existed.
     function validStudyBook(d) {
       return d.keys().hasOnly(['title', 'author', 'notes', 'status', 'statusByEmail', 'createdByEmail', 'approval', 'declineNote']) &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
-             (d.get('author', null) == null || (d.author is string && d.author.size() <= 120)) &&
-             (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
+             d.title is string && d.title.size() >= 1 &&
+             (d.get('author', null) == null || d.author is string) &&
+             (d.get('notes', null) == null || d.notes is string) &&
              d.status in ['toRead', 'reading', 'finished'] &&
              (d.get('statusByEmail', null) == null || (d.statusByEmail is string && d.statusByEmail.size() <= 254)) &&
              (d.get('approval', null) == null || d.approval in ['proposed', 'listed', 'declined']) &&
-             (d.get('declineNote', null) == null || (d.declineNote is string && d.declineNote.size() <= 300)) &&
+             (d.get('declineNote', null) == null || d.declineNote is string) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
     }
     // Whether a book is on the group's list. A book with no approval is, as it was before
@@ -795,12 +795,12 @@ service cloud.firestore {
     // approval like a book's.
     function validStudySubject(d) {
       return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail', 'archived']) &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 80 &&
-             (d.get('code', null) == null || (d.code is string && d.code.size() <= 20)) &&
-             (d.get('description', null) == null || (d.description is string && d.description.size() <= 300)) &&
+             d.title is string && d.title.size() >= 1 &&
+             (d.get('code', null) == null || d.code is string) &&
+             (d.get('description', null) == null || d.description is string) &&
              (d.get('examDate', null) == null || d.examDate is timestamp) &&
              (d.get('approval', null) == null || d.approval in ['proposed', 'listed', 'declined']) &&
-             (d.get('declineNote', null) == null || (d.declineNote is string && d.declineNote.size() <= 300)) &&
+             (d.get('declineNote', null) == null || d.declineNote is string) &&
              (d.get('archived', null) == null || d.archived is bool) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
     }
@@ -812,7 +812,7 @@ service cloud.firestore {
     function validStudyModule(d) {
       return d.keys().hasOnly(['enabled', 'name', 'postPolicy']) &&
              d.enabled is bool &&
-             d.name is string && d.name.size() >= 1 && d.name.size() <= 40 &&
+             d.name is string && d.name.size() >= 1 &&
              d.postPolicy in ['members', 'admins', 'approval'];
     }
     // A weekly challenge: what it asks (a kind of task), how many tasks, and who set it. Its id is the week's Monday,
@@ -829,9 +829,9 @@ service cloud.firestore {
     // members found it helpful, and whether it is shown and pinned.
     function validStudyPost(d) {
       return d.keys().hasOnly(['text', 'title', 'url', 'createdByEmail', 'createdAt', 'helpfulCount', 'shown', 'pinned']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
-             (d.get('title', null) == null || (d.title is string && d.title.size() <= 120)) &&
-             (d.get('url', null) == null || (d.url is string && d.url.size() <= 500 && d.url.matches('https://.*'))) &&
+             d.text is string && d.text.size() >= 1 &&
+             (d.get('title', null) == null || d.title is string) &&
+             (d.get('url', null) == null || (d.url is string && d.url.matches('https://.*'))) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              d.helpfulCount is int && d.helpfulCount >= 0 &&
@@ -903,8 +903,8 @@ service cloud.firestore {
     // confirmed and challenged it, and whether it is shown and pinned.
     function validStudyFinding(d) {
       return d.keys().hasOnly(['text', 'method', 'createdByEmail', 'createdAt', 'confirmCount', 'challengeCount', 'shown', 'pinned', 'reportCount', 'reportedAt']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
-             d.method is string && d.method.size() >= 1 && d.method.size() <= 500 &&
+             d.text is string && d.text.size() >= 1 &&
+             d.method is string && d.method.size() >= 1 &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              d.confirmCount is int && d.confirmCount >= 0 &&
@@ -917,7 +917,7 @@ service cloud.firestore {
     function validStudyCheck(d) {
       return d.keys().hasOnly(['verdict', 'note', 'createdAt']) &&
              d.verdict in ['confirm', 'challenge'] &&
-             (d.get('note', null) == null || (d.note is string && d.note.size() <= 300)) &&
+             (d.get('note', null) == null || d.note is string) &&
              d.createdAt is timestamp;
     }
     // Whether a member may add a finding to a listed subject whose findings module is on. An
@@ -991,8 +991,8 @@ service cloud.firestore {
     // as no reports.
     function validStudyProblem(d) {
       return d.keys().hasOnly(['text', 'title', 'createdByEmail', 'createdAt', 'releaseAt', 'shown', 'pinned', 'reportCount', 'reportedAt', 'setId']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
-             (d.get('title', null) == null || (d.title is string && d.title.size() <= 120)) &&
+             d.text is string && d.text.size() >= 1 &&
+             (d.get('title', null) == null || d.title is string) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              (d.get('releaseAt', null) == null || d.releaseAt is timestamp) &&
@@ -1004,7 +1004,7 @@ service cloud.firestore {
     // A problem set: a name of up to 120 characters, an optional due date (the start of its day), and who made it and when.
     function validStudyProblemSet(d) {
       return d.keys().hasOnly(['title', 'dueAt', 'createdByEmail', 'createdAt', 'updatedAt']) &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.title is string && d.title.size() >= 1 &&
              (d.get('dueAt', null) == null || d.dueAt is timestamp) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp && d.updatedAt is timestamp;
@@ -1049,7 +1049,7 @@ service cloud.firestore {
     // The reference solution of a problem: its text, the admin who reviewed it, and when it was written.
     function validStudyReference(d) {
       return d.keys().hasOnly(['text', 'reviewedByEmail', 'updatedAt']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
+             d.text is string && d.text.size() >= 1 &&
              d.reviewedByEmail is string && d.reviewedByEmail.size() <= 254 &&
              d.updatedAt is timestamp;
     }
@@ -1058,7 +1058,7 @@ service cloud.firestore {
     // has neither, and reads as no reports.
     function validStudyWork(d) {
       return d.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'rightCount', 'gapCount', 'reportCount', 'reportedAt']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
+             d.text is string && d.text.size() >= 1 &&
              d.createdAt is timestamp && d.updatedAt is timestamp &&
              d.rightCount is int && d.rightCount >= 0 &&
              d.gapCount is int && d.gapCount >= 0 &&
@@ -1069,7 +1069,7 @@ service cloud.firestore {
     function validStudyWorkReview(d) {
       return d.keys().hasOnly(['verdict', 'note', 'createdAt']) &&
              d.verdict in ['right', 'gap'] &&
-             (d.get('note', null) == null || (d.note is string && d.note.size() <= 300)) &&
+             (d.get('note', null) == null || d.note is string) &&
              d.createdAt is timestamp;
     }
     // Whether the signed-in member has submitted their own working on a problem. A request-level check, so
@@ -1151,7 +1151,7 @@ service cloud.firestore {
     function validStudyChapter(d) {
       return d.keys().hasOnly(['number', 'title', 'pageFrom', 'pageTo', 'dueOn', 'guide', 'pinnedSummaryId']) &&
              d.number is int && d.number >= 1 && d.number <= 500 &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.title is string && d.title.size() >= 1 &&
              (d.get('pageFrom', null) == null || (d.pageFrom is int && d.pageFrom >= 1 && d.pageFrom <= 5000)) &&
              (d.get('pageTo', null) == null || (d.pageTo is int && d.pageTo >= 1 && d.pageTo <= 5000)) &&
              ((d.get('pageFrom', null) == null && d.get('pageTo', null) == null) ||
@@ -1164,9 +1164,9 @@ service cloud.firestore {
     // restores when it is a restore.
     function validStudySummary(d) {
       return d.keys().hasOnly(['text', 'editorEmail', 'editorName', 'createdAt', 'restoredFromId', 'hidden', 'reportCount', 'reportedAt']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
+             d.text is string && d.text.size() >= 1 &&
              d.editorEmail is string && d.editorEmail.size() >= 1 && d.editorEmail.size() <= 254 &&
-             d.editorName is string && d.editorName.size() <= 80 &&
+             d.editorName is string &&
              d.createdAt is timestamp &&
              (d.get('restoredFromId', null) == null || (d.restoredFromId is string && d.restoredFromId.size() >= 1 && d.restoredFromId.size() <= 40)) &&
              d.get('hidden', false) is bool &&
@@ -1177,9 +1177,9 @@ service cloud.firestore {
     // pinned or locked it, and which reply is the accepted answer.
     function validStudyThread(d) {
       return d.keys().hasOnly(['title', 'body', 'pageRef', 'chapterId', 'createdByEmail', 'createdAt', 'pinned', 'locked', 'acceptedReplyId']) &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
-             d.body is string && d.body.size() >= 1 && d.body.size() <= 2000 &&
-             (d.get('pageRef', null) == null || (d.pageRef is string && d.pageRef.size() <= 20)) &&
+             d.title is string && d.title.size() >= 1 &&
+             d.body is string && d.body.size() >= 1 &&
+             (d.get('pageRef', null) == null || d.pageRef is string) &&
              (d.get('chapterId', null) == null || (d.chapterId is string && d.chapterId.size() <= 40)) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
@@ -1189,7 +1189,7 @@ service cloud.firestore {
     // A reply: its text, its author, when it was written, and how many members found it helpful or reported it.
     function validStudyReply(d) {
       return d.keys().hasOnly(['text', 'createdByEmail', 'createdAt', 'helpfulCount', 'reportCount']) &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
+             d.text is string && d.text.size() >= 1 &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              d.helpfulCount is int && d.helpfulCount >= 0 &&
@@ -1205,7 +1205,7 @@ service cloud.firestore {
     function validStudyQuiz(d) {
       return d.keys().hasOnly(['chapterId', 'title', 'createdByEmail', 'takerCount']) &&
              d.chapterId is string && d.chapterId.size() >= 1 && d.chapterId.size() <= 40 &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.title is string && d.title.size() >= 1 &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.takerCount is int && d.takerCount >= 0;
     }
@@ -1215,14 +1215,14 @@ service cloud.firestore {
     function validStudyQuestion(d) {
       return d.keys().hasOnly(['type', 'text', 'explanation', 'choices', 'answerIndex', 'modelAnswer', 'approved', 'proposedByEmail', 'createdAt']) &&
              d.type in ['single', 'trueFalse', 'explain'] &&
-             d.text is string && d.text.size() >= 1 && d.text.size() <= 300 &&
-             d.explanation is string && d.explanation.size() >= 1 && d.explanation.size() <= 1000 &&
+             d.text is string && d.text.size() >= 1 &&
+             d.explanation is string && d.explanation.size() >= 1 &&
              d.approved is bool &&
              d.proposedByEmail is string && d.proposedByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              (d.get('choices', null) == null || (d.choices is list && d.choices.size() >= 2 && d.choices.size() <= 5)) &&
              (d.get('answerIndex', null) == null || (d.answerIndex is int && d.answerIndex >= 0 && d.answerIndex <= 4)) &&
-             (d.get('modelAnswer', null) == null || (d.modelAnswer is string && d.modelAnswer.size() <= 1000)) &&
+             (d.get('modelAnswer', null) == null || d.modelAnswer is string) &&
              (d.type != 'single' || (d.choices is list && d.answerIndex is int && d.answerIndex < d.choices.size())) &&
              (d.type != 'trueFalse' || (d.answerIndex is int && d.answerIndex <= 1)) &&
              (d.type != 'explain' || (d.modelAnswer is string && d.modelAnswer.size() >= 1));
@@ -1240,8 +1240,8 @@ service cloud.firestore {
     // proposed it.
     function validStudyTerm(d) {
       return d.keys().hasOnly(['term', 'definition', 'chapterId', 'approved', 'createdByEmail', 'createdAt']) &&
-             d.term is string && d.term.size() >= 1 && d.term.size() <= 80 &&
-             d.definition is string && d.definition.size() >= 1 && d.definition.size() <= 500 &&
+             d.term is string && d.term.size() >= 1 &&
+             d.definition is string && d.definition.size() >= 1 &&
              (d.get('chapterId', null) == null || (d.chapterId is string && d.chapterId.size() <= 40)) &&
              d.approved is bool &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
@@ -1272,9 +1272,9 @@ service cloud.firestore {
       );
     }
     function studyMaterialShapeOk(tourId, d) {
-      return (d.kind == 'link' && d.url is string && d.url.size() >= 8 && d.url.size() <= 2000 &&
+      return (d.kind == 'link' && d.url is string && d.url.size() >= 8 &&
               d.url.matches('https?://.+') && d.get('sizeBytes', null) == null && d.get('body', null) == null) ||
-             (d.kind == 'note' && d.body is string && d.body.size() >= 1 && d.body.size() <= 20000 &&
+             (d.kind == 'note' && d.body is string && d.body.size() >= 1 &&
               d.get('url', null) == null && d.get('sizeBytes', null) == null) ||
              (d.kind in ['file', 'image', 'audio', 'video'] && studyMaterialFileOk(tourId, d) && d.get('body', null) == null);
     }
@@ -1282,11 +1282,11 @@ service cloud.firestore {
     // published or hidden, the member's confirmation of rights, and its reports.
     function validStudyMaterial(tourId, d) {
       return d.keys().hasOnly(['title', 'kind', 'bookId', 'chapterId', 'url', 'fileName', 'sizeBytes', 'body', 'status', 'rightsConfirmed', 'reportCount', 'reportedAt', 'createdByEmail', 'createdAt', 'replacesId']) &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.title is string && d.title.size() >= 1 &&
              d.kind in ['file', 'image', 'audio', 'video', 'link', 'note'] &&
              d.bookId is string && d.bookId.size() >= 1 && d.bookId.size() <= 40 &&
              (d.get('chapterId', null) == null || (d.chapterId is string && d.chapterId.size() <= 40)) &&
-             (d.get('fileName', null) == null || (d.fileName is string && d.fileName.size() <= 120)) &&
+             (d.get('fileName', null) == null || d.fileName is string) &&
              (d.get('replacesId', null) == null || (d.replacesId is string && d.replacesId.size() <= 40)) &&
              d.status in ['pending', 'published', 'hidden'] &&
              d.rightsConfirmed == true &&
@@ -1388,14 +1388,14 @@ service cloud.firestore {
     // A reading session: what to read, when it starts, and where it meets.
     function validStudySession(d) {
       return d.keys().hasOnly(['title', 'bookId', 'chapterIds', 'startsAt', 'place', 'notes', 'createdByEmail', 'agenda', 'link', 'timerStartsAt', 'timerSeconds', 'recap', 'recapAt', 'reminder24Sent', 'reminder30Sent']) &&
-             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.title is string && d.title.size() >= 1 &&
              (d.get('bookId', null) == null || (d.bookId is string && d.bookId.size() <= 100)) &&
              (d.get('chapterIds', null) == null || (d.chapterIds is list && d.chapterIds.size() <= 10)) &&
              d.startsAt is timestamp &&
-             (d.get('place', null) == null || (d.place is string && d.place.size() <= 120)) &&
-             (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
-             (d.get('agenda', null) == null || (d.agenda is string && d.agenda.size() <= 500)) &&
-             (d.get('link', null) == null || (d.link is string && d.link.size() <= 2000 && d.link.matches('https://.+'))) &&
+             (d.get('place', null) == null || d.place is string) &&
+             (d.get('notes', null) == null || d.notes is string) &&
+             (d.get('agenda', null) == null || d.agenda is string) &&
+             (d.get('link', null) == null || (d.link is string && d.link.matches('https://.+'))) &&
              (d.get('timerStartsAt', null) == null || d.timerStartsAt is timestamp) &&
              (d.get('timerSeconds', null) == null || (d.timerSeconds is int && d.timerSeconds >= 60 && d.timerSeconds <= 14400)) &&
              (d.get('recap', null) == null || validSessionRecap(d.recap)) &&
@@ -1418,8 +1418,8 @@ service cloud.firestore {
     // length is checked by the app, since the rules cannot check every item of a list.
     function validSessionRecap(r) {
       return r is map && r.keys().hasOnly(['covered', 'hard', 'openQuestions']) &&
-             (r.get('covered', null) == null || (r.covered is string && r.covered.size() <= 1000)) &&
-             (r.get('hard', null) == null || (r.hard is string && r.hard.size() <= 1000)) &&
+             (r.get('covered', null) == null || r.covered is string) &&
+             (r.get('hard', null) == null || r.hard is string) &&
              (r.get('openQuestions', null) == null || (r.openQuestions is list && r.openQuestions.size() <= 10));
     }
     // A member's answer to a session: going, maybe or cannot, and when they checked in, if they did.

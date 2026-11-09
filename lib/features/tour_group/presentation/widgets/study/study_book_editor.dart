@@ -6,6 +6,8 @@ import '../../../domain/models/study_models.dart';
 import '../../../domain/services/study_rules.dart';
 import 'study_labels.dart';
 
+import 'study_text_field.dart';
+
 /// What a member entered for a book.
 class StudyBookDraft {
   const StudyBookDraft({
@@ -121,7 +123,6 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
               TextField(
                 controller: _title,
                 autofocus: _isNew,
-                maxLength: kStudyTitleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_book_title_label'),
@@ -130,18 +131,15 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
               ),
               TextField(
                 controller: _author,
-                maxLength: 120,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_book_author_label'),
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _notes,
-                maxLength: 500,
                 minLines: 1,
                 maxLines: 3,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_book_notes_label'),
                 ),

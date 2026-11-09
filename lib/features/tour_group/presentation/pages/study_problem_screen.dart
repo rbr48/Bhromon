@@ -15,6 +15,8 @@ import '../widgets/group_back_button.dart';
 import '../widgets/study/study_problem_composer.dart';
 import '../widgets/study/study_problem_set_sheets.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// One problem: its statement, its reference solution once it has opened, the member's own working,
 /// and the working of the other members. A member sees and reviews the others' working only after
 /// they have submitted their own. An admin writes the reference solution and sets when it opens.
@@ -180,7 +182,6 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       context,
       titleKey: 'study_work_submit_title',
       labelKey: 'study_work_text_label',
-      maxLength: StudyProblemLimits.workMax,
     );
     if (text == null || !mounted) return;
     await _saveWork(() => _repository.submitStudyWork(
@@ -198,7 +199,6 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       context,
       titleKey: 'study_work_edit_title',
       labelKey: 'study_work_text_label',
-      maxLength: StudyProblemLimits.workMax,
       initial: current.text,
     );
     if (text == null || !mounted) return;
@@ -285,7 +285,6 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       context,
       titleKey: 'study_problem_reference_title',
       labelKey: 'study_problem_reference_text_label',
-      maxLength: StudyProblemLimits.referenceMax,
       initial: _reference?.text ?? '',
     );
     if (text == null || !mounted) return;
@@ -784,7 +783,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
                 fontSize: 16)),
         const SizedBox(height: 4),
       ],
-      Text(_problem.text, style: TextStyle(color: palette.text)),
+      StudyRichText(_problem.text, style: TextStyle(color: palette.text)),
       if (_setTitle != null) ...[
         const SizedBox(height: 6),
         Text(
@@ -849,7 +848,8 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     if (!_referenceChecked) {
       children.add(const Center(child: CircularProgressIndicator()));
     } else if (reference != null) {
-      children.add(Text(reference.text, style: TextStyle(color: palette.text)));
+      children.add(
+          StudyRichText(reference.text, style: TextStyle(color: palette.text)));
       children.add(Text(l10n.translate('study_problem_reviewed_by_admin'),
           style: TextStyle(
               color: palette.accentText, fontWeight: FontWeight.w600)));
@@ -924,7 +924,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     return _card(children: [
       heading,
       const SizedBox(height: 6),
-      Text(mine.text, style: TextStyle(color: palette.text)),
+      StudyRichText(mine.text, style: TextStyle(color: palette.text)),
       const SizedBox(height: 6),
       Text(
         l10n.translate('study_work_counts', args: {
@@ -1019,7 +1019,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         Text(l10n.translate('study_work_yours'),
             style: TextStyle(
                 color: palette.accentText, fontWeight: FontWeight.bold)),
-      Text(work.text, style: TextStyle(color: palette.text)),
+      StudyRichText(work.text, style: TextStyle(color: palette.text)),
       const SizedBox(height: 6),
       Text(
         l10n.translate('study_work_counts', args: {

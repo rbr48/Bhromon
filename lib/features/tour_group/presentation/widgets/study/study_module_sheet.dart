@@ -112,7 +112,6 @@ class _StudyModuleSheetState extends State<StudyModuleSheet> {
                 ),
                 TextField(
                   controller: _names[key],
-                  maxLength: 40,
                   style: TextStyle(color: palette.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('study_module_name_label'),

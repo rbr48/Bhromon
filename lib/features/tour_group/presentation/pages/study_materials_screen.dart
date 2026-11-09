@@ -425,7 +425,6 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          maxLength: StudyMaterial.titleMax,
         ),
         actions: [
           TextButton(

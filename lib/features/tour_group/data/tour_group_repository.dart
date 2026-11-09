@@ -3836,9 +3836,7 @@ class TourGroupRepository {
     final bookId = session.bookId;
     if (bookId == null) return;
     for (final question in newQuestions) {
-      final title = question.length > StudySessionLimits.threadTitleMax
-          ? question.substring(0, StudySessionLimits.threadTitleMax)
-          : question;
+      final title = question;
       await addStudyThread(tourId, bookId, title: title, body: question);
     }
   }
@@ -6062,9 +6060,7 @@ class TourGroupRepository {
       id: '',
       text: text.trim(),
       editorEmail: email,
-      editorName: name.length > StudySummaryLimits.nameMax
-          ? name.substring(0, StudySummaryLimits.nameMax)
-          : name,
+      editorName: name,
       restoredFromId: restoredFromId,
     );
     await _summariesCol(tourId, bookId, chapterId).add({

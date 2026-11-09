@@ -183,8 +183,8 @@ describe('study subjects, modules and posts', () => {
       await assertFails(updateDoc(subjectRef(db('member'), PROPOSED), { createdByEmail: people.other.email }));
     });
 
-    test('a title is at most 80 characters', async () => {
-      await assertFails(setDoc(subjectRef(db('admin'), 'long'), subject(people.admin.email, { title: 'x'.repeat(81) })));
+    test('a title can be any length', async () => {
+      await assertSucceeds(setDoc(subjectRef(db('admin'), 'long'), subject(people.admin.email, { title: 'x'.repeat(81) })));
       await assertSucceeds(setDoc(subjectRef(db('admin'), 'fits'), subject(people.admin.email, { title: 'x'.repeat(80) })));
     });
 
@@ -260,9 +260,9 @@ describe('study subjects, modules and posts', () => {
       await assertFails(setDoc(moduleRef(db('admin'), 'tips'), { ...moduleSettings(), colour: 'red' }));
     });
 
-    test('a module name is 1 to 40 characters', async () => {
+    test('a module name is at least 1 character, with no upper limit', async () => {
       await assertFails(setDoc(moduleRef(db('admin'), 'tips'), moduleSettings({ name: '' })));
-      await assertFails(setDoc(moduleRef(db('admin'), 'tips'), moduleSettings({ name: 'x'.repeat(41) })));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'tips'), moduleSettings({ name: 'x'.repeat(41) })));
       await assertSucceeds(setDoc(moduleRef(db('admin'), 'tips'), moduleSettings({ name: 'x'.repeat(40) })));
     });
 
@@ -314,9 +314,9 @@ describe('study subjects, modules and posts', () => {
       await assertFails(setDoc(postRef(db('member'), 'tips', 'new-tip'), newPost(people.member.email, { createdAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')) })));
     });
 
-    test('a post text is 1 to 1000 characters', async () => {
+    test('a post text can be any length', async () => {
       await assertFails(setDoc(postRef(db('member'), 'tips', 'new-tip'), newPost(people.member.email, { text: '' })));
-      await assertFails(setDoc(postRef(db('member'), 'tips', 'new-tip'), newPost(people.member.email, { text: 'x'.repeat(1001) })));
+      await assertSucceeds(setDoc(postRef(db('member'), 'tips', 'new-tip'), newPost(people.member.email, { text: 'x'.repeat(1001) })));
     });
 
     test('an outsider reads and writes no posts', async () => {

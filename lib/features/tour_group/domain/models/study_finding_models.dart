@@ -20,15 +20,6 @@ enum FindingVerdict {
 /// The limits on a finding's words and a check's note. The rules enforce the same numbers.
 class StudyFindingLimits {
   const StudyFindingLimits._();
-
-  /// The longest result a finding can carry.
-  static const int textMax = 1000;
-
-  /// The longest method a finding can carry.
-  static const int methodMax = 500;
-
-  /// The longest note a check can carry.
-  static const int noteMax = 300;
 }
 
 /// A finding posted in a subject's findings module.

@@ -72,7 +72,7 @@ void main() {
         () {
       expect(check(), isNull);
       expect(check(text: '   '), StudyQuestionProblem.emptyText);
-      expect(check(text: 'x' * 301), StudyQuestionProblem.textTooLong);
+      expect(check(text: 'x' * 301), isNull);
       expect(check(explanation: ''), StudyQuestionProblem.emptyExplanation);
       expect(check(choices: const ['Only one']),
           StudyQuestionProblem.choicesCount);
@@ -82,10 +82,7 @@ void main() {
       );
       expect(
           check(choices: const ['A', '  ']), StudyQuestionProblem.emptyChoice);
-      expect(
-        check(choices: ['A', 'x' * 151]),
-        StudyQuestionProblem.choiceTooLong,
-      );
+      expect(check(choices: ['A', 'x' * 151]), isNull);
       expect(check(answerIndex: null), StudyQuestionProblem.answerMissing);
       expect(check(answerIndex: 2), StudyQuestionProblem.answerMissing);
     });
@@ -111,7 +108,7 @@ void main() {
           );
       expect(explain('Because of the plot.'), isNull);
       expect(explain(''), StudyQuestionProblem.emptyModelAnswer);
-      expect(explain('x' * 1001), StudyQuestionProblem.answerTooLong);
+      expect(explain('x' * 1001), isNull);
     });
 
     test(
@@ -267,18 +264,14 @@ void main() {
   });
 
   group('glossary', () {
-    test('a term needs a word and a meaning within the limits', () {
+    test('a term needs a word and a meaning, of any length', () {
       expect(termProblem(term: 'Vronsky', definition: 'The officer.'), isNull);
       expect(
           termProblem(term: ' ', definition: 'x'), StudyTermProblem.emptyTerm);
-      expect(termProblem(term: 'x' * 81, definition: 'x'),
-          StudyTermProblem.termTooLong);
+      expect(termProblem(term: 'x' * 81, definition: 'x'), isNull);
       expect(termProblem(term: 'a', definition: ''),
           StudyTermProblem.emptyDefinition);
-      expect(
-        termProblem(term: 'a', definition: 'x' * 501),
-        StudyTermProblem.definitionTooLong,
-      );
+      expect(termProblem(term: 'a', definition: 'x' * 501), isNull);
     });
 
     test('only approved terms are listed, sorted A to Z ignoring case', () {
@@ -471,7 +464,8 @@ void main() {
       expect(imported, hasLength(1));
     });
 
-    test('a stored card is read only when its text, box and due day are valid',
+    test(
+        'a stored card is read only when its text, box and due day are valid, of any length',
         () {
       Map<String, dynamic> json(
               {String dueOn = '2026-11-09', int box = 1, String front = 'F'}) =>
@@ -487,7 +481,7 @@ void main() {
       expect(StudyFlashcard.fromJson(json(dueOn: '2026/11/09')), isNull);
       expect(StudyFlashcard.fromJson(json(box: 0)), isNull);
       expect(StudyFlashcard.fromJson(json(front: '   ')), isNull);
-      expect(StudyFlashcard.fromJson(json(front: 'x' * 501)), isNull);
+      expect(StudyFlashcard.fromJson(json(front: 'x' * 501)), isNotNull);
     });
 
     test('a card without a term leaves the term out of its stored form', () {

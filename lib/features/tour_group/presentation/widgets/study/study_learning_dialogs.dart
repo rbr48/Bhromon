@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
-import '../../../domain/models/study_flashcard_models.dart';
-import '../../../domain/models/study_glossary_models.dart';
 import '../../../domain/models/study_models.dart';
-import '../../../domain/models/study_quiz_models.dart';
 import '../../../domain/services/study_glossary_rules.dart';
 
+import 'study_text_field.dart';
 // The short dialogs of the learning tools: a quiz's title and chapter, a glossary term, and the two sides of a
 // flashcard. Each returns what the member typed once it passes its checks, or null when they cancel. The caller
 // saves it.
@@ -119,7 +117,6 @@ class _QuizEditorState extends State<_QuizEditor> {
     final title = _title.text.trim();
     final key = switch (title) {
       '' => 'study_quiz_title_required',
-      _ when title.length > StudyQuizLimits.titleMax => 'study_quiz_title_long',
       _ => null,
     };
     if (key != null) {
@@ -166,7 +163,6 @@ class _QuizEditorState extends State<_QuizEditor> {
             const SizedBox(height: 12),
             TextField(
               controller: _title,
-              maxLength: StudyQuizLimits.titleMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_quiz_title_label'),
                 errorText: _error,
@@ -247,15 +243,13 @@ class _GlossaryEditorState extends State<_GlossaryEditor> {
           children: [
             TextField(
               controller: _term,
-              maxLength: StudyGlossaryLimits.termMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_glossary_term_label'),
               ),
             ),
-            TextField(
+            StudyTextField(
               controller: _definition,
               maxLines: 3,
-              maxLength: StudyGlossaryLimits.definitionMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_glossary_definition_label'),
               ),
@@ -336,10 +330,6 @@ class _FlashcardEditorState extends State<_FlashcardEditor> {
     final back = _back.text.trim();
     final key = switch ((front, back)) {
       ('', _) || (_, '') => 'study_flashcard_text_required',
-      _
-          when front.length > StudyFlashcardLimits.textMax ||
-              back.length > StudyFlashcardLimits.textMax =>
-        'study_flashcard_text_long',
       _ => null,
     };
     if (key != null) {
@@ -362,7 +352,6 @@ class _FlashcardEditorState extends State<_FlashcardEditor> {
             TextField(
               controller: _front,
               maxLines: 2,
-              maxLength: StudyFlashcardLimits.textMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_flashcard_front'),
               ),
@@ -370,7 +359,6 @@ class _FlashcardEditorState extends State<_FlashcardEditor> {
             TextField(
               controller: _back,
               maxLines: 3,
-              maxLength: StudyFlashcardLimits.textMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_flashcard_back'),
               ),

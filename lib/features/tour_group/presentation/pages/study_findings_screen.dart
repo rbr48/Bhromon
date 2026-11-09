@@ -14,6 +14,8 @@ import '../../domain/services/study_finding_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_finding_composer.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// The shared findings of one subject: a result a member reached, and how it was checked.
 /// Members post findings where the module lets them, and confirm or challenge the findings of
 /// others, once each. An admin shows findings that wait for approval, and pins the ones to read
@@ -374,7 +376,7 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.bold)),
               ),
-            Text(finding.text,
+            StudyRichText(finding.text,
                 style: TextStyle(color: palette.text, fontSize: 16)),
             const SizedBox(height: 6),
             Text(

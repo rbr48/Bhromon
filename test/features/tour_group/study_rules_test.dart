@@ -25,9 +25,8 @@ void main() {
       expect(isValidStudyTitle('  Chapters 1 to 3 '), isTrue);
     });
 
-    test('a title can be as long as the limit, and no longer', () {
-      expect(isValidStudyTitle('a' * kStudyTitleMax), isTrue);
-      expect(isValidStudyTitle('a' * (kStudyTitleMax + 1)), isFalse);
+    test('a title can be any length', () {
+      expect(isValidStudyTitle('a' * 500), isTrue);
     });
   });
 

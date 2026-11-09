@@ -24,6 +24,8 @@ import 'study_progress_screen.dart';
 import 'study_quizzes_screen.dart';
 import 'study_summary_screen.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// The learning tools a book offers, from the sheet on its chapters.
 enum _LearningTool { quizzes, glossary, flashcards, progress, studyPack }
 
@@ -593,7 +595,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(question,
+                          child: StudyRichText(question,
                               style: TextStyle(color: palette.text)),
                         ),
                       ),

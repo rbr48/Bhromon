@@ -91,11 +91,11 @@ StudyFileProblem? studyFileProblem({
   return null;
 }
 
-/// Whether [raw] is a link the app can list: an http or https address with a host, at most 2,000
-/// characters. No preview is fetched for it.
+/// Whether [raw] is a link the app can list: an http or https address with a host. No preview is fetched
+/// for it.
 bool isStudyLinkValid(String raw) {
   final text = raw.trim();
-  if (text.isEmpty || text.length > StudyMaterial.linkMax) return false;
+  if (text.isEmpty) return false;
   final uri = Uri.tryParse(text);
   return uri != null &&
       (uri.scheme == 'http' || uri.scheme == 'https') &&

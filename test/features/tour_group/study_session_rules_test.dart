@@ -118,14 +118,14 @@ void main() {
       );
     });
 
-    test('at most ten, and each at most 300 characters', () {
+    test('at most ten, and each of any length', () {
       expect(openQuestionsProblem(List.generate(10, (i) => 'q$i')), isNull);
       expect(
         openQuestionsProblem(List.generate(11, (i) => 'q$i')),
         StudyRecapProblem.tooMany,
       );
       expect(openQuestionsProblem(['x' * 300]), isNull);
-      expect(openQuestionsProblem(['x' * 301]), StudyRecapProblem.tooLong);
+      expect(openQuestionsProblem(['x' * 301]), isNull);
     });
   });
 

@@ -15,6 +15,8 @@ import '../widgets/study/study_learning_dialogs.dart';
 import '../widgets/study/study_question_composer.dart';
 import 'study_quiz_run_screen.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// One quiz. It shows the signed-in member's own record, which nobody else reads, and the questions an admin has
 /// approved. Proposed questions are listed for everyone, with the actions each person may take: an admin approves
 /// or removes any proposal, and a member withdraws their own while it waits.
@@ -368,7 +370,8 @@ class _StudyQuizScreenState extends State<StudyQuizScreen> {
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text(question.text, style: TextStyle(color: palette.text)),
+        title:
+            StudyRichText(question.text, style: TextStyle(color: palette.text)),
         subtitle: Text(
           [
             l10n.translate('study_quiz_type_${question.type.name}'),

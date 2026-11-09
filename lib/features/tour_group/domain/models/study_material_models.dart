@@ -63,10 +63,6 @@ class StudyMaterial {
     this.replacesId,
   });
 
-  static const int titleMax = 120;
-  static const int noteMax = 20000;
-  static const int linkMax = 2000;
-
   final String id;
   final String title;
   final StudyMaterialKind kind;

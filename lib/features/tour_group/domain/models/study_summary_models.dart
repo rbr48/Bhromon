@@ -5,9 +5,6 @@
 /// The limits a summary revision is checked against, as firestore.rules checks them.
 class StudySummaryLimits {
   const StudySummaryLimits._();
-
-  static const int textMax = 4000;
-  static const int nameMax = 80;
 }
 
 /// One revision of a chapter summary. Its words are never changed after it is written. An admin may hide it
@@ -27,7 +24,7 @@ class StudySummaryRevision {
 
   final String id;
 
-  /// The summary itself, up to [StudySummaryLimits.textMax] characters.
+  /// The summary itself: its words, with any table in them.
   final String text;
 
   /// The member who wrote the revision. Stands in for a member who has left.

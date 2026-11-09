@@ -196,9 +196,9 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertFails(setDoc(materialRef(db('other'), 'new9'), { ...linkFields(people.other.email), createdAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')) }));
     });
 
-    test('a link is an http or https address of at most 2000 characters', async () => {
+    test('a link is an http or https address of any length', async () => {
       await assertFails(setDoc(materialRef(db('other'), 'new10'), { ...linkFields(people.other.email, { url: 'ftp://example.com/x' }), createdAt: serverTimestamp() }));
-      await assertFails(setDoc(materialRef(db('other'), 'new11'), { ...linkFields(people.other.email, { url: `https://example.com/${'x'.repeat(2000)}` }), createdAt: serverTimestamp() }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'new11'), { ...linkFields(people.other.email, { url: `https://example.com/${'x'.repeat(2000)}` }), createdAt: serverTimestamp() }));
       await assertSucceeds(setDoc(materialRef(db('other'), 'new12'), { ...linkFields(people.other.email, { url: 'http://example.com/x' }), createdAt: serverTimestamp() }));
     });
 
@@ -220,9 +220,9 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertFails(setDoc(materialRef(db('other'), 'g5'), { ...fileFields(people.other.email, { kind: 'audio', url: `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.mp3`, sizeBytes: 25 * mb + 1 }), createdAt: serverTimestamp() }));
     });
 
-    test('a note is text of 1 to 20000 characters, with no file', async () => {
+    test('a note is text of any length, with no file', async () => {
       await assertSucceeds(setDoc(materialRef(db('other'), 'n1'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), body: 'x'.repeat(20000) }));
-      await assertFails(setDoc(materialRef(db('other'), 'n2'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), body: 'x'.repeat(20001) }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'n2'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), body: 'x'.repeat(20001) }));
       await assertFails(setDoc(materialRef(db('other'), 'n3'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), url: 'https://example.com/x' }));
     });
   });

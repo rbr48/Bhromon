@@ -190,7 +190,6 @@ class _StudyProblemSetEditorState extends State<_StudyProblemSetEditor> {
               TextField(
                 controller: _title,
                 autofocus: widget.existing == null,
-                maxLength: StudyProblemSetLimits.titleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_set_title_label'),

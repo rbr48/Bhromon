@@ -238,10 +238,10 @@ describe('problems, reference solutions, working and reviews', () => {
       await assertFails(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { shown: false })));
     });
 
-    test('a problem statement is required and at most 1,000 characters, and a title at most 120', async () => {
+    test('a problem statement is required and can be any length, and so can its title', async () => {
       await assertFails(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: '' })));
-      await assertFails(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: 'x'.repeat(1001) })));
-      await assertFails(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { title: 'x'.repeat(121) })));
+      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: 'x'.repeat(1001) })));
+      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { title: 'x'.repeat(121) })));
       await assertSucceeds(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: 'x'.repeat(1000) })));
     });
 
@@ -401,8 +401,8 @@ describe('problems, reference solutions, working and reviews', () => {
       await assertFails(batch.commit());
     });
 
-    test('a note is at most 300 characters, and the verdict is right or gap', async () => {
-      await assertFails(reviewBatch('member', P_REVIEW, people.other.email, 'right', SUBJECT, { note: 'x'.repeat(301) }));
+    test('a note can be any length, and the verdict is right or gap', async () => {
+      await assertSucceeds(reviewBatch('member', P_REVIEW, people.other.email, 'right', SUBJECT, { note: 'x'.repeat(301) }));
       await assertFails(reviewBatch('member', P_REVIEW, people.other.email, 'maybe'));
       await assertSucceeds(reviewBatch('member', P_REVIEW, people.other.email, 'gap', SUBJECT, { note: 'x'.repeat(300) }));
     });
@@ -659,9 +659,9 @@ describe('problems, reference solutions, working and reviews', () => {
       await assertFails(deleteDoc(setRef(db('member'), SET_ONE)));
     });
 
-    test('a set has a name of 1 to 120 characters, and a due date only as a time', async () => {
+    test('a set has a name of any length, and a due date only as a time', async () => {
       await assertFails(setDoc(setRef(db('admin'), 'bad-empty'), newSet(people.admin.email, { title: '' })));
-      await assertFails(setDoc(setRef(db('admin'), 'bad-long'), newSet(people.admin.email, { title: 'x'.repeat(121) })));
+      await assertSucceeds(setDoc(setRef(db('admin'), 'long-set'), newSet(people.admin.email, { title: 'x'.repeat(121) })));
       await assertFails(setDoc(setRef(db('admin'), 'bad-due'), newSet(people.admin.email, { dueAt: '2026-11-20' })));
       await assertSucceeds(setDoc(setRef(db('admin'), 'ok-long'), newSet(people.admin.email, { title: 'x'.repeat(120) })));
     });

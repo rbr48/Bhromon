@@ -53,15 +53,10 @@ List<String> cleanOpenQuestions(Iterable<String> raw) => [
 /// What is wrong with a recap's open questions.
 enum StudyRecapProblem { tooMany, tooLong }
 
-/// The problem with the open questions of a recap, or null when they are fine: at most ten, each at most
-/// 300 characters.
+/// The problem with the open questions of a recap, or null when they are fine: at most ten.
 StudyRecapProblem? openQuestionsProblem(List<String> questions) {
   if (questions.length > StudySessionLimits.openQuestionMax) {
     return StudyRecapProblem.tooMany;
-  }
-  if (questions.any(
-      (question) => question.length > StudySessionLimits.openQuestionLength)) {
-    return StudyRecapProblem.tooLong;
   }
   return null;
 }
@@ -106,12 +101,10 @@ StudySessionTally tallySessionAnswers(Iterable<StudySessionRsvp> answers) {
   );
 }
 
-/// Whether a meeting link is fine: empty (there is none), or an https address with a host, at most 2,000
-/// characters.
+/// Whether a meeting link is fine: empty (there is none), or an https address with a host.
 bool isSessionLinkValid(String raw) {
   final text = raw.trim();
   if (text.isEmpty) return true;
-  if (text.length > StudySessionLimits.linkMax) return false;
   final uri = Uri.tryParse(text);
   return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
 }

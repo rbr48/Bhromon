@@ -9,6 +9,8 @@ import '../../../domain/models/study_models.dart';
 import '../../../domain/services/media_rules.dart';
 import '../../../domain/services/study_material_rules.dart';
 
+import 'study_text_field.dart';
+
 /// A material as the member filed it in the composer: its kind, title and chapter, with the file picked,
 /// the link or the note's text. The screen uploads the file and saves the material.
 class StudyMaterialDraft {
@@ -182,7 +184,6 @@ class _StudyMaterialComposerState extends State<_StudyMaterialComposer> {
             const SizedBox(height: 12),
             TextField(
               controller: _title,
-              maxLength: StudyMaterial.titleMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_material_title_label'),
               ),
@@ -269,11 +270,10 @@ class _StudyMaterialComposerState extends State<_StudyMaterialComposer> {
       ];
     }
     return [
-      TextField(
+      StudyTextField(
         controller: _note,
         minLines: 4,
         maxLines: 10,
-        maxLength: StudyMaterial.noteMax,
         decoration: InputDecoration(
           labelText: l10n.translate('study_material_note_label'),
           alignLabelWithHint: true,

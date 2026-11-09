@@ -207,8 +207,8 @@ describe('shared findings and the checks on them', () => {
 
     test('a finding needs a result and a method, within their limits', async () => {
       await assertFails(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { method: '' })));
-      await assertFails(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { text: 'x'.repeat(1001) })));
-      await assertFails(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { method: 'x'.repeat(501) })));
+      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { text: 'x'.repeat(1001) })));
+      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { method: 'x'.repeat(501) })));
       await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { text: 'x'.repeat(1000) })));
     });
 
@@ -298,9 +298,9 @@ describe('shared findings and the checks on them', () => {
       }));
     });
 
-    test('a check has a verdict of confirm or challenge, and a note of at most 300 characters', async () => {
+    test('a check has a verdict of confirm or challenge, and a note of any length', async () => {
       await assertFails(checkBatch('other', F_MEMBER, 'maybe'));
-      await assertFails(checkBatch('other', F_MEMBER, 'confirm', SUBJECT, { note: 'x'.repeat(301) }));
+      await assertSucceeds(checkBatch('other', F_MEMBER, 'confirm', SUBJECT, { note: 'x'.repeat(301) }));
       await assertSucceeds(checkBatch('other', F_MEMBER, 'confirm', SUBJECT, { note: 'x'.repeat(300) }));
     });
   });
