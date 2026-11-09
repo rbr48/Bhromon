@@ -14,16 +14,19 @@ bool canSeeReference({
     isAdmin ||
     (problem.shown && referenceOpen(releaseAt: problem.releaseAt, now: now));
 
-/// Whether a viewer may review a peer's working: it is not their own, they have submitted their
-/// own working, and they have not reviewed this one yet. A member who has reviewed it withdraws
-/// the review first to change it.
+/// Whether a viewer may review a peer's working: it is not their own, they have not reviewed this one
+/// yet, and they have submitted their own working. An admin reviews without a working of their own. A
+/// member who has reviewed it withdraws the review first to change it.
 bool canReviewWork({
   required String solverEmail,
   required String viewerEmail,
   required bool viewerHasWork,
   required bool viewerHasReview,
+  bool viewerIsAdmin = false,
 }) =>
-    solverEmail != viewerEmail && viewerHasWork && !viewerHasReview;
+    solverEmail != viewerEmail &&
+    (viewerHasWork || viewerIsAdmin) &&
+    !viewerHasReview;
 
 /// How a working stands, from its reviews.
 enum WorkStanding { unreviewed, rightSoFar, gapsFound, mixed }

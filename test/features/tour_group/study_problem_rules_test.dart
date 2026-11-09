@@ -146,6 +146,41 @@ void main() {
         ),
         isFalse,
       );
+      expect(
+        canReviewWork(
+          solverEmail: 'a@x.com',
+          viewerEmail: 'a@x.com',
+          viewerHasWork: false,
+          viewerHasReview: false,
+          viewerIsAdmin: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test(
+        'an admin reviews a peer\'s working without a working of their own, and once',
+        () {
+      expect(
+        canReviewWork(
+          solverEmail: 'b@x.com',
+          viewerEmail: 'a@x.com',
+          viewerHasWork: false,
+          viewerHasReview: false,
+          viewerIsAdmin: true,
+        ),
+        isTrue,
+      );
+      expect(
+        canReviewWork(
+          solverEmail: 'b@x.com',
+          viewerEmail: 'a@x.com',
+          viewerHasWork: false,
+          viewerHasReview: true,
+          viewerIsAdmin: true,
+        ),
+        isFalse,
+      );
     });
   });
 
