@@ -127,12 +127,19 @@ jobs:
               } catch (Throwable ignored) {}
           }
           EOF
-
-      - name: Build debug APK
+      - name: Build debug APK (with E2EE enabled)
         env:
           GRADLE_OPTS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
           _JAVA_OPTIONS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
-        run: flutter build apk --debug
+        run: flutter build apk --debug --dart-define=E2EE_ONE_TO_ONE=true
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bhromon-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
 
   # ─────────────────────────────────────────────────────────────────────────────
   # iOS: no-codesign build on macOS, which costs several times the Linux minutes.

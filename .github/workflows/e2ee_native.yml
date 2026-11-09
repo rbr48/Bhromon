@@ -197,51 +197,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Package the freshly built shared libraries into the Android app's jniLibs
-      # and build an E2EE-enabled test debug APK (Milestones M4 & M5).
-      - name: Package native libraries into Android jniLibs
+      # Package and verify the freshly built shared libraries into the Android app's jniLibs
+      - name: Package and verify native libraries in Android jniLibs
         working-directory: .
         run: |
           bash tool/package_e2ee_android.sh
-          rm -rf native/e2ee_olm/dist/android
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: 'gradle'
-          cache-dependency-path: 'android/gradle/wrapper/gradle-wrapper.properties'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.9'
-          channel: stable
-          cache: true
-
-      - name: Install Flutter dependencies
-        working-directory: .
-        run: flutter pub get
-
-      - name: Drop Windows-only JDK path for this job
-        working-directory: .
-        run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
-
-      - name: Build E2EE-enabled test APK (debug)
-        working-directory: .
-        env:
-          GRADLE_OPTS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
-          _JAVA_OPTIONS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
-        run: flutter build apk --debug --dart-define=E2EE_ONE_TO_ONE=true
-
-      - name: Upload E2EE test APK artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bhromon-e2ee-test-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+          ls -l android/app/src/main/jniLibs/*/libe2ee_olm.so
 
   ios:
     name: iOS static libraries
