@@ -238,16 +238,36 @@ StudyProblemScreen _screen(_FakeProblemRepo repo, StudyProblem problem) =>
       repository: repo,
     );
 
-/// Pumps the problems list of the subject, the screen a member opens from the problem solving module.
-Future<void> _pumpList(WidgetTester tester, _FakeProblemRepo repo) => _pump(
-      tester,
-      StudyProblemsScreen(
-        tourId: 't1',
-        subject: _subject,
-        settings: _module,
-        repository: repo,
-      ),
+/// The problems list of the subject, the screen a member opens from the problem solving module.
+StudyProblemsScreen _listScreen(_FakeProblemRepo repo) => StudyProblemsScreen(
+      tourId: 't1',
+      subject: _subject,
+      settings: _module,
+      repository: repo,
     );
+
+/// Pumps the problems list of the subject.
+Future<void> _pumpList(WidgetTester tester, _FakeProblemRepo repo) =>
+    _pump(tester, _listScreen(repo));
+
+/// A page with one button that opens [page] over it, so a test can press system back on [page].
+class _OpenOver extends StatelessWidget {
+  const _OpenOver({required this.page});
+
+  final WidgetBuilder page;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(
+          child: TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: page),
+            ),
+            child: const Text('Open the page'),
+          ),
+        ),
+      );
+}
 
 void main() {
   testWidgets(
@@ -576,5 +596,53 @@ void main() {
 
     expect(find.byType(GroupPopScope), findsOneWidget);
     expect(find.byType(GroupBackButton), findsOneWidget);
+  });
+
+  testWidgets(
+      'system back and the back arrow both close a problem screen opened over another route',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.member);
+    await _pump(tester, _OpenOver(page: (_) => _screen(repo, _released)));
+
+    // System back takes the screen off the stack and shows the page under it.
+    await tester.tap(find.text('Open the page'));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyProblemScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyProblemScreen), findsNothing);
+    expect(find.text('Open the page'), findsOneWidget);
+
+    // The back arrow in the app bar does the same.
+    await tester.tap(find.text('Open the page'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(GroupBackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyProblemScreen), findsNothing);
+    expect(find.text('Open the page'), findsOneWidget);
+  });
+
+  testWidgets(
+      'system back and the back arrow both close the problems list opened over another route',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.member);
+    await _pump(tester, _OpenOver(page: (_) => _listScreen(repo)));
+
+    await tester.tap(find.text('Open the page'));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyProblemsScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyProblemsScreen), findsNothing);
+    expect(find.text('Open the page'), findsOneWidget);
+
+    await tester.tap(find.text('Open the page'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(GroupBackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyProblemsScreen), findsNothing);
+    expect(find.text('Open the page'), findsOneWidget);
   });
 }
