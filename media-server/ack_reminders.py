@@ -141,6 +141,96 @@ def claim_ack_reminder(
     return record, waiting
 
 
+# --- an admin's ping: an answer reminder sent by hand ------------------------------
+#
+# An owner or admin can remind a notice's waiting members at once, from the answers sheet
+# (POST /notify/notice/ping). It uses the reminder's text and push, but its own record
+# (ackPingSentAt, ackPingCount), so it neither uses up nor delays the scheduled reminders.
+
+# An admin's pings for one notice are at least this far apart.
+PING_GAP = timedelta(minutes=30)
+
+
+class PingRefused(Exception):
+    """A ping that was not sent, and why. `retry_after` is in seconds, for too_soon."""
+
+    def __init__(self, reason: str, retry_after: int = 0) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.retry_after = retry_after
+
+
+def ack_ping_refusal(
+    record: Dict[str, Any], now: datetime, waiting: List[str]
+) -> Optional[Tuple[str, int]]:
+    """Why a ping for this notice cannot go out now, with the seconds to wait; None when it can."""
+    if not asks_answer(record):
+        return "no_answer_needed", 0
+    if is_archived(record, now):
+        return "archived", 0
+    if not waiting:
+        return "nobody_waiting", 0
+    last = _moment(record.get("ackPingSentAt"))
+    if last is not None and now - last < PING_GAP:
+        wait = PING_GAP - (now - last)
+        return "too_soon", max(1, int(wait.total_seconds() + 0.999))
+    return None
+
+
+def claim_ack_ping(
+    transaction: Any, ref: Any, now: datetime, members: List[str]
+) -> Tuple[Dict[str, Any], List[str]]:
+    """Reads one notice inside a transaction and records the ping. Raises PingRefused otherwise."""
+    snapshot = ref.get(transaction=transaction)
+    if not snapshot.exists:
+        raise PingRefused("not_found")
+    record = snapshot.to_dict() or {}
+    waiting = waiting_emails(record, members)
+    refusal = ack_ping_refusal(record, now, waiting)
+    if refusal is not None:
+        raise PingRefused(*refusal)
+    transaction.update(
+        ref,
+        {"ackPingSentAt": now, "ackPingCount": _count(record.get("ackPingCount")) + 1},
+    )
+    return record, waiting
+
+
+def send_ack_ping(
+    db: Any,
+    engine: Any,
+    tour_id: str,
+    notice_id: str,
+    now: datetime,
+    transactional: Optional[Callable[[Callable[..., Any]], Callable[..., Any]]] = None,
+) -> Dict[str, int]:
+    """Pushes the answer reminder to the notice's waiting members now, once per PING_GAP.
+
+    The caller has already checked that the person asking is an owner or admin of the
+    tour. Returns how many members were waiting and how many devices were pushed.
+    """
+    if now.tzinfo is None:
+        raise ValueError("send_ack_ping needs a timezone-aware datetime")
+    if transactional is None:
+        from google.cloud import firestore
+
+        transactional = firestore.transactional
+    claim = transactional(
+        lambda transaction, ref, members: claim_ack_ping(transaction, ref, now, members)
+    )
+    members = engine.get_active_tour_members(tour_id, "")
+    ref = db.collection("tours").document(tour_id).collection("notices").document(notice_id)
+    record, waiting = claim(db.transaction(), ref, members)
+    targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(waiting))
+    pushes = engine.send_localized(
+        targets,
+        _ack_reminder_for(record, len(waiting)),
+        {"action": PUSH_ACTION, "tourId": tour_id, "noticeId": notice_id},
+        high_priority=True,
+    )
+    return {"waiting": len(waiting), "pushes": pushes}
+
+
 def _candidate_notices(db: Any) -> List[Any]:
     """The notices that ask for an answer: one query for each way of asking, merged by path."""
     found: Dict[str, Any] = {}

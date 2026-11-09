@@ -326,3 +326,120 @@ def test_the_manual_run_needs_the_configured_key(monkeypatch):
     assert client.post(
         "/internal/ack-reminders/run", headers={"X-Ack-Reminder-Key": "wrong"}
     ).status_code == 401
+
+
+# --- an admin's ping ------------------------------------------------------------------
+
+
+class _PathRef:
+    """A notice reference reached by tours/{tour}/notices/{id}; None fields mean missing."""
+
+    def __init__(self, fields):
+        self.fields = fields
+
+    def get(self, transaction=None):
+        if self.fields is None:
+            snapshot = FakeSnapshot({})
+            snapshot.exists = False
+            return snapshot
+        return FakeSnapshot(self.fields)
+
+
+class _PathDB:
+    def __init__(self, notices):
+        self._notices = notices  # {(tour_id, notice_id): fields}
+        self._path = []
+
+    def collection(self, name):
+        self._path.append(name)
+        return self
+
+    def document(self, doc_id):
+        self._path.append(doc_id)
+        if len(self._path) == 4:
+            _, tour_id, _, notice_id = self._path
+            self._path = []
+            return _PathRef(self._notices.get((tour_id, notice_id)))
+        return self
+
+    def transaction(self):
+        return FakeTransaction()
+
+
+def test_a_ping_is_refused_unless_it_can_reach_someone():
+    waiting = ["bob@x.com"]
+
+    assert ar.ack_ping_refusal(_notice(requireAck=False), NOW, waiting) == ("no_answer_needed", 0)
+    assert ar.ack_ping_refusal(
+        _notice(expiresAt=NOW - timedelta(minutes=1)), NOW, waiting
+    ) == ("archived", 0)
+    assert ar.ack_ping_refusal(_notice(), NOW, []) == ("nobody_waiting", 0)
+    assert ar.ack_ping_refusal(_notice(), NOW, waiting) is None
+
+
+def test_a_ping_has_no_first_delay_and_ignores_the_scheduled_reminders():
+    # Posted a minute ago, and the scheduled reminders are used up: the admin may still ping.
+    record = _notice(
+        createdAt=NOW - timedelta(minutes=1),
+        ackReminderCount=ar.MAX_REMINDERS,
+        ackReminderSentAt=NOW - timedelta(minutes=1),
+    )
+
+    assert ar.ack_ping_refusal(record, NOW, ["bob@x.com"]) is None
+
+
+def test_pings_for_one_notice_wait_the_ping_gap_and_say_how_long():
+    record = _notice(ackPingSentAt=NOW - timedelta(minutes=20))
+
+    assert ar.ack_ping_refusal(record, NOW, ["bob@x.com"]) == ("too_soon", 600)
+    assert ar.ack_ping_refusal(
+        _notice(ackPingSentAt=NOW - ar.PING_GAP), NOW, ["bob@x.com"]
+    ) is None
+
+
+def test_a_ping_pushes_the_waiting_members_and_records_itself_only():
+    notice = _notice(ackBy=["alice@x.com"], ackReminderCount=1)
+    db = _PathDB({("t1", "n1"): notice})
+    engine = FakeEngine({"t1": ["alice@x.com", "bob@x.com", "carol@x.com"]})
+
+    result = ar.send_ack_ping(db, engine, "t1", "n1", NOW, transactional=_no_transaction)
+
+    assert result == {"waiting": 2, "pushes": 2}
+    assert engine.pushes[0]["targets"] == ["tok-uid-bob", "tok-uid-carol"]
+    assert engine.pushes[0]["title"] == "Please answer: Bazar on Friday"
+    assert engine.pushes[0]["data"] == {"action": "notice", "tourId": "t1", "noticeId": "n1"}
+    assert notice["ackPingSentAt"] == NOW
+    assert notice["ackPingCount"] == 1
+    # The scheduled reminders' record is untouched.
+    assert notice["ackReminderCount"] == 1
+    assert "ackReminderSentAt" not in notice
+
+
+def test_a_second_ping_inside_the_gap_sends_nothing():
+    notice = _notice()
+    db = _PathDB({("t1", "n1"): notice})
+    engine = FakeEngine({"t1": ["bob@x.com"]})
+    ar.send_ack_ping(db, engine, "t1", "n1", NOW, transactional=_no_transaction)
+
+    try:
+        ar.send_ack_ping(
+            db, engine, "t1", "n1", NOW + timedelta(minutes=5), transactional=_no_transaction
+        )
+        raise AssertionError("the second ping should be refused")
+    except ar.PingRefused as refused:
+        assert refused.reason == "too_soon"
+        assert refused.retry_after == 25 * 60
+    assert len(engine.pushes) == 1
+    assert notice["ackPingCount"] == 1
+
+
+def test_a_ping_for_a_missing_notice_is_refused():
+    db = _PathDB({})
+    engine = FakeEngine({"t1": ["bob@x.com"]})
+
+    try:
+        ar.send_ack_ping(db, engine, "t1", "gone", NOW, transactional=_no_transaction)
+        raise AssertionError("a missing notice should be refused")
+    except ar.PingRefused as refused:
+        assert refused.reason == "not_found"
+    assert engine.pushes == []
