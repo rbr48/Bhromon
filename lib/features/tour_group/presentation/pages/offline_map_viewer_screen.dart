@@ -40,6 +40,9 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   maplibre.MapLibreMapController? _mapController;
   Position? _currentPosition;
   OfflineWaypoint? _selectedWaypoint;
+  RouteCheckpoint? _selectedCheckpoint;
+  int? _selectedCheckpointIndex;
+  bool _showCheckpointsList = false;
   bool _isRadarMode = false;
   bool _isLocating = false;
 
@@ -47,6 +50,8 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   void initState() {
     super.initState();
     _currentPosition = widget.initialPosition;
+    _showCheckpointsList =
+        widget.checkpoints.isNotEmpty && widget.region.waypoints.isEmpty;
     if (_currentPosition == null) {
       unawaited(_fetchGps());
     }
@@ -217,40 +222,73 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
     final controller = _mapController;
     if (controller == null) return;
 
-    // 1. Draw route line between consecutive points if available
+    // 1. Draw mode-specific route paths for each leg in RoutePlan
     final plan = widget.routePlan;
     if (plan != null) {
-      final linePoints = <maplibre.LatLng>[];
       for (final leg in plan.legs) {
-        if (leg.from.hasLocation) {
-          linePoints.add(maplibre.LatLng(leg.from.lat!, leg.from.lng!));
+        if (leg.from.hasLocation && leg.to.hasLocation) {
+          final color = colorHexForTransportMode(leg.plan.mode);
+          final double lineWidth = switch (leg.status) {
+            LegStatus.underway => 5.0,
+            LegStatus.done => 3.0,
+            LegStatus.planned => 3.5,
+          };
+          final double lineOpacity = switch (leg.status) {
+            LegStatus.underway => 1.0,
+            LegStatus.done => 0.65,
+            LegStatus.planned => 0.85,
+          };
+
+          controller.addLine(
+            maplibre.LineOptions(
+              geometry: [
+                maplibre.LatLng(leg.from.lat!, leg.from.lng!),
+                maplibre.LatLng(leg.to.lat!, leg.to.lng!),
+              ],
+              lineColor: color,
+              lineWidth: lineWidth,
+              lineOpacity: lineOpacity,
+            ),
+          );
+
+          // Render node circle at leg destination
+          controller.addCircle(
+            maplibre.CircleOptions(
+              geometry: maplibre.LatLng(leg.to.lat!, leg.to.lng!),
+              circleRadius: 6.0,
+              circleColor: '#FFFFFF',
+              circleStrokeColor: color,
+              circleStrokeWidth: 2.5,
+            ),
+          );
+          controller.addSymbol(
+            maplibre.SymbolOptions(
+              geometry: maplibre.LatLng(leg.to.lat!, leg.to.lng!),
+              textField: leg.to.name,
+              textSize: 10.5,
+              textColor: '#FFFFFF',
+              textHaloColor: '#142428',
+              textHaloWidth: 1.5,
+              textOffset: const Offset(0, 1.2),
+            ),
+          );
         }
-        if (leg.to.hasLocation) {
-          linePoints.add(maplibre.LatLng(leg.to.lat!, leg.to.lng!));
-        }
-      }
-      if (linePoints.length >= 2) {
-        controller.addLine(
-          maplibre.LineOptions(
-            geometry: linePoints,
-            lineColor: '#2E6F5E',
-            lineWidth: 3.5,
-            lineOpacity: 0.85,
-          ),
-        );
       }
     }
 
-    // 2. Add checkpoint markers with sequential numbering
+    // 2. Add checkpoint markers with sequential numbering and visited styling
     for (int i = 0; i < widget.checkpoints.length; i++) {
       final cp = widget.checkpoints[i];
       if (cp.hasLocation) {
         final pos = maplibre.LatLng(cp.lat!, cp.lng!);
+        final isVisited = cp.visitedAt != null;
+        final pinColor = isVisited ? '#52B788' : '#FFB703';
+
         controller.addCircle(
           maplibre.CircleOptions(
             geometry: pos,
             circleRadius: 10.0,
-            circleColor: '#FFB703',
+            circleColor: pinColor,
             circleStrokeWidth: 2.0,
             circleStrokeColor: '#142428',
             circleOpacity: 1.0,
@@ -264,7 +302,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
             textSize: 11.0,
             textColor: '#142428',
             textHaloColor: '#FFFFFF',
-            textHaloWidth: 0.5,
+            textHaloWidth: 0.6,
           ),
         );
       }
@@ -272,7 +310,11 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   }
 
   void _focusWaypoint(OfflineWaypoint wp) {
-    setState(() => _selectedWaypoint = wp);
+    setState(() {
+      _selectedWaypoint = wp;
+      _selectedCheckpoint = null;
+      _selectedCheckpointIndex = null;
+    });
     final controller = _mapController;
     if (controller != null && !_isRadarMode) {
       controller.animateCamera(
@@ -284,8 +326,29 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
     }
   }
 
+  void _focusCheckpoint(RouteCheckpoint cp, int index) {
+    setState(() {
+      _selectedCheckpoint = cp;
+      _selectedCheckpointIndex = index;
+      _selectedWaypoint = null;
+    });
+    final controller = _mapController;
+    if (controller != null && !_isRadarMode && cp.hasLocation) {
+      controller.animateCamera(
+        maplibre.CameraUpdate.newLatLngZoom(
+          maplibre.LatLng(cp.lat!, cp.lng!),
+          14.5,
+        ),
+      );
+    }
+  }
+
   void _fitRegionBounds() {
-    setState(() => _selectedWaypoint = null);
+    setState(() {
+      _selectedWaypoint = null;
+      _selectedCheckpoint = null;
+      _selectedCheckpointIndex = null;
+    });
     final controller = _mapController;
     if (controller != null && !_isRadarMode) {
       controller.animateCamera(
@@ -326,6 +389,16 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   Future<void> _openExternalDirections(OfflineWaypoint wp) async {
     final uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=${wp.lat},${wp.lng}',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _openExternalCheckpointDirections(RouteCheckpoint cp) async {
+    if (!cp.hasLocation) return;
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${cp.lat},${cp.lng}',
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -527,7 +600,9 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
             // 3. Floating GPS Locator Button
             Positioned(
               right: 14,
-              bottom: _selectedWaypoint != null ? 220 : 120,
+              bottom: (_selectedWaypoint != null || _selectedCheckpoint != null)
+                  ? 220
+                  : 120,
               child: FloatingActionButton.small(
                 heroTag: 'offline_map_gps_fab',
                 backgroundColor:
@@ -549,59 +624,180 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
               ),
             ),
 
-            // 4. Horizontal Waypoints Carousel (bottom docked)
+            // 4. Horizontal Waypoints / Checkpoints Carousel (bottom docked)
             Positioned(
               left: 0,
               right: 0,
-              bottom: _selectedWaypoint != null ? 140 : 16,
-              child: SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: widget.region.waypoints.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final wp = widget.region.waypoints[index];
-                    final isSelected = _selectedWaypoint == wp;
-                    return ActionChip(
-                      avatar: Text(wp.categoryEmoji,
-                          style: const TextStyle(fontSize: 13)),
-                      label: Text(
-                        isBn ? wp.nameBn : wp.nameEn,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isSelected
-                              ? AppColors.darkGreen
-                              : context.forest.text,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w500,
-                        ),
+              bottom: (_selectedWaypoint != null || _selectedCheckpoint != null)
+                  ? 140
+                  : 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.checkpoints.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 14, bottom: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ChoiceChip(
+                            label: Text(
+                              isBn
+                                  ? 'আগ্রহের স্থান (${widget.region.waypoints.length})'
+                                  : 'Waypoints (${widget.region.waypoints.length})',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            selected: !_showCheckpointsList,
+                            onSelected: (val) {
+                              if (val) {
+                                setState(() => _showCheckpointsList = false);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: Text(
+                              isBn
+                                  ? 'চেকপয়েন্ট (${widget.checkpoints.length})'
+                                  : 'Checkpoints (${widget.checkpoints.length})',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            selected: _showCheckpointsList,
+                            onSelected: (val) {
+                              if (val) {
+                                setState(() => _showCheckpointsList = true);
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                      backgroundColor: isSelected
-                          ? AppColors.mintGreen
-                          : context.forest
-                              .surfaceFor(const Color(0xFF14241F))
-                              .withValues(alpha: 0.9),
-                      side: BorderSide(
-                        color: isSelected
-                            ? AppColors.mintGreen
-                            : context.forest.text24,
-                      ),
-                      onPressed: () => _focusWaypoint(wp),
-                    );
-                  },
-                ),
+                    ),
+                  SizedBox(
+                    height: 44,
+                    child: _showCheckpointsList
+                        ? ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: widget.checkpoints.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final cp = widget.checkpoints[index];
+                              final isSelected = _selectedCheckpoint == cp;
+                              final isVisited = cp.visitedAt != null;
+                              return ActionChip(
+                                avatar: Text(cp.kind.emoji,
+                                    style: const TextStyle(fontSize: 13)),
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '#${index + 1} ${cp.name}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isSelected
+                                            ? AppColors.darkGreen
+                                            : (isVisited
+                                                ? context.forest.text54
+                                                : context.forest.text),
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        decoration: isVisited
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                      ),
+                                    ),
+                                    if (isVisited) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        size: 14,
+                                        color: AppColors.mintGreen,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                backgroundColor: isSelected
+                                    ? (isVisited
+                                        ? AppColors.mintGreen
+                                        : const Color(0xFFFFB703))
+                                    : context.forest
+                                        .surfaceFor(const Color(0xFF14241F))
+                                        .withValues(alpha: 0.9),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? (isVisited
+                                          ? AppColors.mintGreen
+                                          : const Color(0xFFFFB703))
+                                      : context.forest.text24,
+                                ),
+                                onPressed: () => _focusCheckpoint(cp, index),
+                              );
+                            },
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: widget.region.waypoints.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final wp = widget.region.waypoints[index];
+                              final isSelected = _selectedWaypoint == wp;
+                              return ActionChip(
+                                avatar: Text(wp.categoryEmoji,
+                                    style: const TextStyle(fontSize: 13)),
+                                label: Text(
+                                  isBn ? wp.nameBn : wp.nameEn,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSelected
+                                        ? AppColors.darkGreen
+                                        : context.forest.text,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                                backgroundColor: isSelected
+                                    ? AppColors.mintGreen
+                                    : context.forest
+                                        .surfaceFor(const Color(0xFF14241F))
+                                        .withValues(alpha: 0.9),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? AppColors.mintGreen
+                                      : context.forest.text24,
+                                ),
+                                onPressed: () => _focusWaypoint(wp),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
 
-            // 5. Selected Waypoint Details Card
+            // 5. Selected Waypoint / Checkpoint Details Card
             if (_selectedWaypoint != null)
               Positioned(
                 left: 14,
                 right: 14,
                 bottom: 16,
                 child: _buildWaypointCard(_selectedWaypoint!, isBn),
+              )
+            else if (_selectedCheckpoint != null)
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 16,
+                child: _buildCheckpointCard(
+                  _selectedCheckpoint!,
+                  _selectedCheckpointIndex ?? 0,
+                  isBn,
+                ),
               ),
           ],
         ),
@@ -650,11 +846,35 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
           userPosition: _currentPosition,
           selectedWaypoint: _selectedWaypoint,
           palette: context.forest,
+          routePlan: widget.routePlan,
+          checkpoints: widget.checkpoints,
+          selectedCheckpoint: _selectedCheckpoint,
         ),
         child: GestureDetector(
           onTapUp: (details) {
-            // Find closest waypoint on canvas
             final size = context.size ?? const Size(400, 600);
+
+            // 1. Check tap near checkpoints if present
+            for (var i = 0; i < widget.checkpoints.length; i++) {
+              final cp = widget.checkpoints[i];
+              if (cp.hasLocation) {
+                final normX = (cp.lng! - widget.region.minLng) /
+                    (widget.region.maxLng - widget.region.minLng);
+                final normY = 1.0 -
+                    ((cp.lat! - widget.region.minLat) /
+                        (widget.region.maxLat - widget.region.minLat));
+                final pt = Offset(
+                  normX * (size.width - 80) + 40,
+                  normY * (size.height - 180) + 60,
+                );
+                if ((details.localPosition - pt).distance < 28) {
+                  _focusCheckpoint(cp, i);
+                  return;
+                }
+              }
+            }
+
+            // 2. Check tap near waypoints
             for (final wp in widget.region.waypoints) {
               final normX = (wp.lng - widget.region.minLng) /
                   (widget.region.maxLng - widget.region.minLng);
@@ -785,6 +1005,142 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
       ),
     );
   }
+
+  Widget _buildCheckpointCard(RouteCheckpoint cp, int index, bool isBn) {
+    double? distKm;
+    final pos = _currentPosition;
+    if (pos != null && cp.hasLocation) {
+      distKm =
+          _calculateDistanceKm(pos.latitude, pos.longitude, cp.lat!, cp.lng!);
+    }
+    final isVisited = cp.visitedAt != null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.forest
+            .surfaceFor(const Color(0xFF14241F))
+            .withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isVisited
+              ? AppColors.mintGreen.withValues(alpha: 0.6)
+              : const Color(0xFFFFB703).withValues(alpha: 0.8),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black45,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(cp.kind.emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '#${index + 1} ${cp.name}',
+                      style: TextStyle(
+                        color: context.forest.text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${cp.kind.name.toUpperCase()} · ${cp.kmFromStart} km'
+                      '${isVisited ? (isBn ? " · ভ্রমণ সম্পন্ন" : " · Visited") : ""}',
+                      style: TextStyle(
+                        color: isVisited
+                            ? AppColors.mintGreen
+                            : const Color(0xFFFFB703),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 20),
+                color: context.forest.text70,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => setState(() {
+                  _selectedCheckpoint = null;
+                  _selectedCheckpointIndex = null;
+                }),
+              ),
+            ],
+          ),
+          if (cp.highlight.isNotEmpty || cp.notes.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              cp.highlight.isNotEmpty ? cp.highlight : cp.notes,
+              style: TextStyle(
+                color: context.forest.text70,
+                fontSize: 12,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (cp.hasLocation)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: context.forest.text24.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${cp.lat!.toStringAsFixed(4)}° N, ${cp.lng!.toStringAsFixed(4)}° E',
+                    style: TextStyle(
+                      color: context.forest.text70,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 8),
+              if (distKm != null)
+                Text(
+                  isBn
+                      ? '${distKm.toStringAsFixed(1)} কিমি দূরে'
+                      : '${distKm.toStringAsFixed(1)} km away',
+                  style: TextStyle(
+                    color: context.forest.accentText,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              const Spacer(),
+              if (cp.hasLocation)
+                FilledButton.tonalIcon(
+                  onPressed: () => _openExternalCheckpointDirections(cp),
+                  icon: const Icon(Icons.directions_rounded, size: 16),
+                  label: Text(
+                    isBn ? 'ডিরেকশন' : 'Directions',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Canvas painter that renders a vector coordinate grid, radar concentric circles,
@@ -794,13 +1150,25 @@ class _OfflineWaypointPainter extends CustomPainter {
   final Position? userPosition;
   final OfflineWaypoint? selectedWaypoint;
   final ForestPalette palette;
+  final RoutePlan? routePlan;
+  final List<RouteCheckpoint> checkpoints;
+  final RouteCheckpoint? selectedCheckpoint;
 
   _OfflineWaypointPainter({
     required this.region,
     required this.userPosition,
     required this.selectedWaypoint,
     required this.palette,
+    this.routePlan,
+    this.checkpoints = const [],
+    this.selectedCheckpoint,
   });
+
+  static Color _parseHex(String hex, [double opacity = 1.0]) {
+    final clean = hex.replaceAll('#', '');
+    final val = int.tryParse(clean, radix: 16) ?? 0xFF52B788;
+    return Color(0xFF000000 | val).withValues(alpha: opacity);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -848,7 +1216,47 @@ class _OfflineWaypointPainter extends CustomPainter {
     drawLabel('W', Offset(12, center.dy));
     drawLabel('E', Offset(size.width - 12, center.dy));
 
-    // 3. Render Waypoints
+    // 3. Draw Route Plan Legs if available
+    final plan = routePlan;
+    if (plan != null) {
+      for (final leg in plan.legs) {
+        if (leg.from.hasLocation && leg.to.hasLocation) {
+          final x1 =
+              (leg.from.lng! - region.minLng) / (region.maxLng - region.minLng);
+          final y1 = 1.0 -
+              ((leg.from.lat! - region.minLat) /
+                  (region.maxLat - region.minLat));
+          final x2 =
+              (leg.to.lng! - region.minLng) / (region.maxLng - region.minLng);
+          final y2 = 1.0 -
+              ((leg.to.lat! - region.minLat) / (region.maxLat - region.minLat));
+
+          final p1 = Offset(
+              x1 * (size.width - 80) + 40, y1 * (size.height - 180) + 60);
+          final p2 = Offset(
+              x2 * (size.width - 80) + 40, y2 * (size.height - 180) + 60);
+
+          final legPaint = Paint()
+            ..color = _parseHex(
+              colorHexForTransportMode(leg.plan.mode),
+              leg.status == LegStatus.done ? 0.5 : 0.85,
+            )
+            ..strokeWidth = leg.status == LegStatus.underway ? 3.5 : 2.2
+            ..style = PaintingStyle.stroke;
+
+          canvas.drawLine(p1, p2, legPaint);
+          canvas.drawCircle(
+            p2,
+            3.5,
+            Paint()
+              ..color = Colors.white
+              ..style = PaintingStyle.fill,
+          );
+        }
+      }
+    }
+
+    // 4. Render Waypoints
     for (final wp in region.waypoints) {
       final normX = (wp.lng - region.minLng) / (region.maxLng - region.minLng);
       final normY =
@@ -889,7 +1297,69 @@ class _OfflineWaypointPainter extends CustomPainter {
           canvas, Offset(pt.dx - textPainter.width / 2, pt.dy + 12));
     }
 
-    // 4. Render User Location if available
+    // 5. Render Route Checkpoints if present
+    for (var i = 0; i < checkpoints.length; i++) {
+      final cp = checkpoints[i];
+      if (!cp.hasLocation) continue;
+      final normX = (cp.lng! - region.minLng) / (region.maxLng - region.minLng);
+      final normY =
+          1.0 - ((cp.lat! - region.minLat) / (region.maxLat - region.minLat));
+      final pt = Offset(
+        normX * (size.width - 80) + 40,
+        normY * (size.height - 180) + 60,
+      );
+
+      final isSelected = selectedCheckpoint == cp;
+      final isVisited = cp.visitedAt != null;
+      final pinColor =
+          isVisited ? AppColors.mintGreen : const Color(0xFFFFB703);
+
+      canvas.drawCircle(
+        pt,
+        isSelected ? 13.0 : 9.0,
+        Paint()
+          ..color = pinColor
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        pt,
+        isSelected ? 13.0 : 9.0,
+        Paint()
+          ..color = const Color(0xFF142428)
+          ..strokeWidth = 2.0
+          ..style = PaintingStyle.stroke,
+      );
+
+      // Sequential number
+      textPainter.text = TextSpan(
+        text: '${i + 1}',
+        style: TextStyle(
+          color: const Color(0xFF142428),
+          fontSize: isSelected ? 10 : 8.5,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(pt.dx - textPainter.width / 2, pt.dy - textPainter.height / 2),
+      );
+
+      // Label below pin
+      textPainter.text = TextSpan(
+        text: '${cp.kind.emoji} ${cp.name}',
+        style: TextStyle(
+          color: isSelected ? const Color(0xFFFFB703) : palette.text,
+          fontSize: isSelected ? 10.5 : 9.0,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+          canvas, Offset(pt.dx - textPainter.width / 2, pt.dy + 12));
+    }
+
+    // 6. Render User Location if available
     final user = userPosition;
     if (user != null && region.contains(user.latitude, user.longitude)) {
       final normX =
@@ -930,6 +1400,9 @@ class _OfflineWaypointPainter extends CustomPainter {
   bool shouldRepaint(covariant _OfflineWaypointPainter oldDelegate) {
     return oldDelegate.region != region ||
         oldDelegate.userPosition != userPosition ||
-        oldDelegate.selectedWaypoint != selectedWaypoint;
+        oldDelegate.selectedWaypoint != selectedWaypoint ||
+        oldDelegate.selectedCheckpoint != selectedCheckpoint ||
+        oldDelegate.routePlan != routePlan ||
+        oldDelegate.checkpoints != checkpoints;
   }
 }
