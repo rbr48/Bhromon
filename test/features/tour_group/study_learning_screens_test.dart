@@ -275,6 +275,11 @@ void main() {
     expect(store.cards.values.single.front, 'Vronsky');
     expect(store.cards.values.single.termId, 't1');
 
+    // The first snackbar stays up for four seconds. A snackbar shown while another is up waits in a queue, so
+    // let the first one leave before tapping again; otherwise the second message is not on screen yet.
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byTooltip('Make a flashcard'));
     await tester.pumpAndSettle();
     expect(find.text('This term already has a flashcard.'), findsOneWidget);
