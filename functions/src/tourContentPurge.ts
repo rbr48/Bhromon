@@ -303,6 +303,20 @@ async function applyToQuery(db: Db, query: Query, decide: Decide): Promise<void>
 }
 
 /** Whether [email] holds a membership row in the tour, active or not. */
+/**
+ * Removes the person's report of a reported item (a finding, a problem or a working) and drops the item's
+ * report count by one, in one batch. The item stays as it is: a hidden item waits for an admin. Runs again
+ * safely, because it acts only when the report is there.
+ */
+async function removeReport(db: Db, item: DocRef, email: string): Promise<void> {
+  const report = item.collection('reports').doc(email);
+  if (!(await report.get()).exists) return;
+  const batch = db.batch();
+  batch.delete(report);
+  batch.update(item, { reportCount: FieldValue.increment(-1) });
+  await batch.commit();
+}
+
 async function holdsMembership(db: Db, tourId: string, email: string): Promise<boolean> {
   const row = await db.collection('memberships').doc(`${tourId}__${email}`).get();
   return row.exists;
@@ -512,12 +526,13 @@ export async function purgeMemberContent(
       }
     }
 
-    // Shared findings keep their words under the stand-in. The person's checks come out, and each
-    // finding's count drops by the check removed, so the counts stay true.
+    // Shared findings keep their words under the stand-in. The person's checks and reports come out, and
+    // each finding's count drops by the one removed, so the counts stay true.
     const findings = subject.ref.collection('findings');
     await applyToQuery(db, findings, anonymize(STUDY_FINDING, email, standIn));
     const found = await findings.get();
     for (const finding of found.docs) {
+      await removeReport(db, finding.ref, email);
       const check = finding.ref.collection('checks').doc(email);
       const snap = await check.get();
       if (!snap.exists) continue;
@@ -537,6 +552,7 @@ export async function purgeMemberContent(
     await applyToQuery(db, subject.ref.collection('problem_sets'), anonymize(STUDY_PROBLEM_SET, email, standIn));
     const problemDocs = await problems.get();
     for (const problem of problemDocs.docs) {
+      await removeReport(db, problem.ref, email);
       await applyToQuery(db, problem.ref.collection('reference'), anonymize(STUDY_REFERENCE, email, standIn));
       const solutions = problem.ref.collection('solutions');
       const own = solutions.doc(email);
@@ -547,6 +563,7 @@ export async function purgeMemberContent(
       }
       const workDocs = await solutions.get();
       for (const work of workDocs.docs) {
+        await removeReport(db, work.ref, email);
         const review = work.ref.collection('reviews').doc(email);
         const snap = await review.get();
         if (!snap.exists) continue;

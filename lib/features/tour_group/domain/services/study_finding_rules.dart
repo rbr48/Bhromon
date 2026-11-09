@@ -26,6 +26,24 @@ bool canCheckFinding({
 }) =>
     finding.shown && finding.createdByEmail != viewerEmail && !hasOwnCheck;
 
+/// Whether a viewer may report a finding: a shown finding that the viewer did not write. A report hides
+/// the finding from everyone but its author and the admins, until an admin restores it.
+bool canReportFinding({
+  required StudyFinding finding,
+  required String viewerEmail,
+}) =>
+    finding.shown && finding.createdByEmail != viewerEmail;
+
+/// The findings an admin must decide, because they were reported and are hidden: the oldest report first.
+List<StudyFinding> reportedFindingsForReview(Iterable<StudyFinding> findings) {
+  final reported = [
+    for (final finding in findings)
+      if (finding.isReported && !finding.shown) finding,
+  ];
+  reported.sort((a, b) => a.reportedAt!.compareTo(b.reportedAt!));
+  return reported;
+}
+
 /// The findings a viewer sees: every shown finding, plus one still waiting for an admin when
 /// the viewer wrote it or is an admin.
 List<StudyFinding> visibleStudyFindings({

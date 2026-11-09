@@ -897,14 +897,16 @@ service cloud.firestore {
     // A shared finding: the result a member reached, how it was checked, how many members
     // confirmed and challenged it, and whether it is shown and pinned.
     function validStudyFinding(d) {
-      return d.keys().hasOnly(['text', 'method', 'createdByEmail', 'createdAt', 'confirmCount', 'challengeCount', 'shown', 'pinned']) &&
+      return d.keys().hasOnly(['text', 'method', 'createdByEmail', 'createdAt', 'confirmCount', 'challengeCount', 'shown', 'pinned', 'reportCount', 'reportedAt']) &&
              d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
              d.method is string && d.method.size() >= 1 && d.method.size() <= 500 &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              d.confirmCount is int && d.confirmCount >= 0 &&
              d.challengeCount is int && d.challengeCount >= 0 &&
-             d.shown is bool && d.pinned is bool;
+             d.shown is bool && d.pinned is bool &&
+             d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
     }
     // A member's check of a finding: a confirmation or a challenge, and an optional note.
     function validStudyCheck(d) {
@@ -921,6 +923,7 @@ service cloud.firestore {
       return isStudyTour(tourId) && isActiveMember(tourId) &&
              d.createdByEmail == tourUserEmail() &&
              d.confirmCount == 0 && d.challengeCount == 0 && d.pinned == false &&
+             d.get('reportCount', 0) == 0 && d.get('reportedAt', null) == null &&
              d.createdAt == request.time &&
              validStudyFinding(d) &&
              studySubjectListed(tourId, subjectId) &&
@@ -954,12 +957,27 @@ service cloud.firestore {
     function studyFindingUpdateAllowed(tourId, subjectId, findingId, newData, oldData) {
       let byAdmin = isTourAdmin(tourId);
       let changed = newData.diff(oldData).affectedKeys();
+      // The cheap key checks come first in each branch, and the shape check runs only in the branch
+      // that matches, so the rule stays under the evaluation limit.
       return newData.createdByEmail == oldData.createdByEmail &&
-             validStudyFinding(newData) &&
-             ((changed.hasOnly(['confirmCount', 'challengeCount']) &&
+             ((changed.hasOnly(['confirmCount', 'challengeCount']) && validStudyFinding(newData) &&
                studyCountsMoveOk(tourId, subjectId, findingId, newData, oldData)) ||
-              (byAdmin && changed.hasOnly(['text', 'method', 'shown', 'pinned'])) ||
-              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'method'])));
+              // An admin's restore of a reported finding shows it again and clears its report time.
+              (byAdmin && changed.hasOnly(['text', 'method', 'shown', 'pinned', 'reportedAt']) &&
+               (!changed.hasAny(['reportedAt']) || newData.get('reportedAt', null) == null) &&
+               validStudyFinding(newData)) ||
+              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'method']) &&
+               validStudyFinding(newData)) ||
+              // Any other member who can see the finding may report it: the report hides it at once, its count
+              // rises by one, and the report is written in the same batch.
+              (oldData.createdByEmail != tourUserEmail() && oldData.shown == true &&
+               changed.hasOnly(['shown', 'reportCount', 'reportedAt']) &&
+               newData.shown == false &&
+               newData.get('reportCount', 0) == oldData.get('reportCount', 0) + 1 &&
+               ((oldData.get('reportedAt', null) == null && newData.reportedAt == request.time) ||
+                (oldData.get('reportedAt', null) != null && newData.reportedAt == oldData.reportedAt)) &&
+               existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/reports/$(tourUserEmail())) &&
+               validStudyFinding(newData)));
     }
 
     // A problem a group works through: its statement, an optional title, the time its reference solution
@@ -1910,6 +1928,19 @@ service cloud.firestore {
                            studyFindingUpdateAllowed(tourId, subjectId, findingId, request.resource.data, resource.data);
           allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                            (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+          // A member's report of a finding someone else wrote, once, while it is shown. The finding is hidden at
+          // once and its count moves in the same batch (studyFindingUpdateAllowed). The reporter and an admin read
+          // the reports.
+          match /reports/{reporter} {
+            allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || reporter == tourUserEmail());
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) && reporter == tourUserEmail() &&
+                             validStudyReport(request.resource.data) &&
+                             request.resource.data.createdAt == request.time &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.createdByEmail != tourUserEmail() &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.shown == true &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.get('reportCount', 0) == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.get('reportCount', 0) + 1;
+          }
 
           // A member's check: confirmed or challenged, once. Never on their own finding, and never on one
           // an admin has not shown. The finding's count moves in the same batch (studyCountsMoveOk).
