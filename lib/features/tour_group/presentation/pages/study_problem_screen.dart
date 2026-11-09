@@ -8,6 +8,7 @@ import '../../data/study_activity_log.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_problem_models.dart';
 import '../../domain/models/study_subject_models.dart';
+import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_problem_rules.dart';
 import '../widgets/study/study_problem_composer.dart';
@@ -407,10 +408,9 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     );
   }
 
-  Future<void> _remove() async {
+  /// Asks the member to confirm a removal. Returns true when they do.
+  Future<bool> _confirmRemove() async {
     final l10n = context.l10n;
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -428,7 +428,126 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         ],
       ),
     );
-    if (sure != true || !mounted) return;
+    return sure == true;
+  }
+
+  /// Asks why a problem or a working is reported. Returns null when the member cancels.
+  Future<StudyReportReason?> _askReportReason(String titleKey) {
+    final l10n = context.l10n;
+    return showDialog<StudyReportReason>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l10n.translate(titleKey)),
+        children: [
+          for (final reason in StudyReportReason.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(reason),
+              child: Text(l10n.translate('study_thread_reason_${reason.name}')),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Reports the problem to the admins. The members stop seeing it at once, so the page closes.
+  Future<void> _reportProblem() async {
+    final reason = await _askReportReason('study_problem_report_title');
+    if (reason == null || !mounted) return;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      await _repository.reportStudyProblem(
+          widget.tourId, widget.subject.id, _problem.id,
+          reason: reason);
+      if (!mounted) return;
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.translate('study_report_thanks'))));
+      navigator.pop();
+    } catch (error, stackTrace) {
+      logWarning('Reporting a study problem failed', error, stackTrace);
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.translate('study_failed')),
+        backgroundColor: Colors.redAccent,
+      ));
+    }
+  }
+
+  /// Reports a working to the admins. The other members stop seeing it at once.
+  Future<void> _reportWork(StudyProblemSolution work) async {
+    final reason = await _askReportReason('study_work_report_title');
+    if (reason == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      await _repository.reportStudyWork(
+          widget.tourId, widget.subject.id, _problem.id, work.solverEmail,
+          reason: reason);
+      if (!mounted) return;
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.translate('study_report_thanks'))));
+    } catch (error, stackTrace) {
+      logWarning('Reporting a study working failed', error, stackTrace);
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.translate('study_failed')),
+        backgroundColor: Colors.redAccent,
+      ));
+    }
+  }
+
+  /// An admin shows a reported problem again, and clears its report.
+  Future<void> _restoreProblem() async {
+    await _runProblem(
+      () => _repository.restoreStudyProblem(
+          widget.tourId, widget.subject.id, _problem.id),
+      _copy(shown: true, clearReport: true),
+      'study_problem_restored',
+    );
+  }
+
+  /// An admin shows a reported working to the members again.
+  Future<void> _restoreWork(StudyProblemSolution work) async {
+    await _runWorkChange(
+      () => _repository.restoreStudyWork(
+          widget.tourId, widget.subject.id, _problem.id, work.solverEmail),
+      'study_problem_restored',
+    );
+  }
+
+  /// An admin removes a reported working for good.
+  Future<void> _removeWork(StudyProblemSolution work) async {
+    if (!await _confirmRemove() || !mounted) return;
+    await _runWorkChange(
+      () => _repository.deleteStudyWork(
+          widget.tourId, widget.subject.id, _problem.id, work.solverEmail),
+      'study_post_deleted',
+    );
+  }
+
+  /// Runs one change to a working and reports the outcome. The list of workings updates itself, since it
+  /// is a live stream.
+  Future<void> _runWorkChange(
+      Future<void> Function() change, String doneKey) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      await change();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.translate(doneKey))));
+    } catch (error, stackTrace) {
+      logWarning('A study working change failed', error, stackTrace);
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.translate('study_failed')),
+        backgroundColor: Colors.redAccent,
+      ));
+    }
+  }
+
+  Future<void> _remove() async {
+    final l10n = context.l10n;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await _confirmRemove() || !mounted) return;
     try {
       await _repository.deleteStudyProblem(
           widget.tourId, widget.subject.id, _problem.id);
@@ -451,6 +570,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     bool? pinned,
     DateTime? releaseAt,
     bool clearRelease = false,
+    bool clearReport = false,
   }) =>
       StudyProblem(
         id: _problem.id,
@@ -461,6 +581,8 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         releaseAt: clearRelease ? null : (releaseAt ?? _problem.releaseAt),
         shown: shown ?? _problem.shown,
         pinned: pinned ?? _problem.pinned,
+        reportCount: _problem.reportCount,
+        reportedAt: clearReport ? null : _problem.reportedAt,
       );
 
   String _standingKey(WorkStanding standing) => switch (standing) {
@@ -469,6 +591,18 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         WorkStanding.gapsFound => 'study_work_standing_gaps',
         WorkStanding.mixed => 'study_work_standing_mixed',
       };
+
+  /// Whether the signed-in member may report this problem: a shown one they did not write.
+  bool get _canReportProblem =>
+      canReportProblem(problem: _problem, viewerEmail: _me);
+
+  /// Whether the signed-in member may report this working.
+  bool _canReportWork(StudyProblemSolution work) => canReportWork(
+        solverEmail: work.solverEmail,
+        viewerEmail: _me,
+        viewerHasWork: _myWork != null,
+        viewerIsAdmin: _isAdmin,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -491,12 +625,14 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         iconTheme: IconThemeData(color: palette.text),
         elevation: 0,
         actions: [
-          if (_canManage)
+          if (_canManage || _canReportProblem)
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert_rounded, color: palette.text),
               tooltip: l10n.translate('study_post_menu'),
               onSelected: (value) {
                 switch (value) {
+                  case 'report':
+                    _reportProblem();
                   case 'edit':
                     _editProblem();
                   case 'show':
@@ -507,17 +643,22 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
                     _pickRelease();
                   case 'clear_release':
                     _clearRelease();
-                  default:
+                  case 'delete':
                     _remove();
                 }
               },
               itemBuilder: (_) => [
+                if (_canReportProblem)
+                  PopupMenuItem<String>(
+                    value: 'report',
+                    child: Text(l10n.translate('study_problem_report')),
+                  ),
                 if (_isAuthor)
                   PopupMenuItem<String>(
                     value: 'edit',
                     child: Text(l10n.translate('study_edit')),
                   ),
-                if (_isAdmin && !_problem.shown)
+                if (_isAdmin && !_problem.shown && !_problem.isReported)
                   PopupMenuItem<String>(
                     value: 'show',
                     child: Text(l10n.translate('study_post_show')),
@@ -539,10 +680,11 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
                     value: 'clear_release',
                     child: Text(l10n.translate('study_problem_release_clear')),
                   ),
-                PopupMenuItem<String>(
-                  value: 'delete',
-                  child: Text(l10n.translate('study_remove')),
-                ),
+                if (_canManage)
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Text(l10n.translate('study_remove')),
+                  ),
               ],
             ),
         ],
@@ -590,12 +732,35 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         const SizedBox(height: 4),
       ],
       Text(_problem.text, style: TextStyle(color: palette.text)),
-      if (!_problem.shown) ...[
+      if (_problem.isReported) ...[
+        const SizedBox(height: 6),
+        Text(l10n.translate('study_problem_reported_notice'),
+            style:
+                TextStyle(color: palette.text70, fontStyle: FontStyle.italic)),
+        Text(
+            l10n.translate('study_report_count', args: {
+              'count': l10n.number(_problem.reportCount),
+            }),
+            style: TextStyle(color: palette.text54)),
+      ] else if (!_problem.shown) ...[
         const SizedBox(height: 6),
         Text(l10n.translate('study_post_waiting_label'),
             style:
                 TextStyle(color: palette.text54, fontStyle: FontStyle.italic)),
       ],
+      if (_isAdmin && _problem.isReported)
+        Wrap(
+          children: [
+            TextButton(
+              onPressed: _restoreProblem,
+              child: Text(l10n.translate('study_problem_restore')),
+            ),
+            TextButton(
+              onPressed: _remove,
+              child: Text(l10n.translate('study_remove')),
+            ),
+          ],
+        ),
     ]);
   }
 
@@ -707,6 +872,10 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         }),
         style: TextStyle(color: palette.text54),
       ),
+      if (mine.isReported)
+        Text(l10n.translate('study_work_reported_notice'),
+            style:
+                TextStyle(color: palette.text70, fontStyle: FontStyle.italic)),
       Align(
         alignment: Alignment.centerRight,
         child: TextButton(
@@ -747,7 +916,11 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        final work = snap.data!;
+        // A reported working is hidden from everyone but its author and the admins.
+        final work = [
+          for (final w in snap.data!)
+            if (workVisibleTo(work: w, viewerEmail: _me, isAdmin: _isAdmin)) w,
+        ];
         _askReviews([for (final w in work) w.solverEmail]);
         if (work.isEmpty) {
           return _card(children: [
@@ -808,6 +981,10 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         if (myReview.note.isNotEmpty)
           Text(myReview.note, style: TextStyle(color: palette.text70)),
       ],
+      if (work.isReported)
+        Text(l10n.translate('study_work_reported_notice'),
+            style:
+                TextStyle(color: palette.text70, fontStyle: FontStyle.italic)),
       Wrap(
         children: [
           if (canReview)
@@ -829,6 +1006,23 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
               onPressed: () => _withdrawReview(work, myReview.verdict),
               child: Text(l10n.translate('study_work_withdraw')),
             ),
+          if (!mine && _canReportWork(work))
+            TextButton.icon(
+              onPressed: () => _reportWork(work),
+              icon:
+                  Icon(Icons.report_outlined, size: 18, color: palette.text70),
+              label: Text(l10n.translate('study_work_report')),
+            ),
+          if (_isAdmin && work.isReported) ...[
+            TextButton(
+              onPressed: () => _restoreWork(work),
+              child: Text(l10n.translate('study_problem_restore')),
+            ),
+            TextButton(
+              onPressed: () => _removeWork(work),
+              child: Text(l10n.translate('study_remove')),
+            ),
+          ],
         ],
       ),
     ]);

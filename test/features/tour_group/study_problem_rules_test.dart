@@ -260,4 +260,135 @@ void main() {
       );
     });
   });
+
+  group('reporting a problem or a working', () {
+    test(
+        'a member reports a shown problem that someone else wrote, and not their own or a waiting one',
+        () {
+      final byAdmin = _problem('p', by: 'admin@x.com');
+      expect(
+          canReportProblem(problem: byAdmin, viewerEmail: 'a@x.com'), isTrue);
+      expect(canReportProblem(problem: byAdmin, viewerEmail: 'admin@x.com'),
+          isFalse);
+      final waiting = _problem('p', shown: false, by: 'admin@x.com');
+      expect(
+          canReportProblem(problem: waiting, viewerEmail: 'a@x.com'), isFalse);
+    });
+
+    test(
+        'a working is reported by a peer who has submitted their own, or by an admin, never by its author',
+        () {
+      expect(
+        canReportWork(
+            solverEmail: 'b@x.com',
+            viewerEmail: 'a@x.com',
+            viewerHasWork: true),
+        isTrue,
+      );
+      expect(
+        canReportWork(
+            solverEmail: 'b@x.com',
+            viewerEmail: 'a@x.com',
+            viewerHasWork: false),
+        isFalse,
+      );
+      expect(
+        canReportWork(
+          solverEmail: 'b@x.com',
+          viewerEmail: 'a@x.com',
+          viewerHasWork: false,
+          viewerIsAdmin: true,
+        ),
+        isTrue,
+      );
+      expect(
+        canReportWork(
+          solverEmail: 'a@x.com',
+          viewerEmail: 'a@x.com',
+          viewerHasWork: true,
+          viewerIsAdmin: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test(
+        'a reported working is hidden from members other than its author, and the admins still see it',
+        () {
+      final reported = StudyProblemSolution(
+        solverEmail: 'b@x.com',
+        text: 'Working',
+        reportCount: 1,
+        reportedAt: DateTime(2026, 11, 9),
+      );
+      expect(
+          workVisibleTo(work: reported, viewerEmail: 'a@x.com', isAdmin: false),
+          isFalse);
+      expect(
+          workVisibleTo(work: reported, viewerEmail: 'b@x.com', isAdmin: false),
+          isTrue);
+      expect(
+          workVisibleTo(work: reported, viewerEmail: 'a@x.com', isAdmin: true),
+          isTrue);
+      expect(
+          workVisibleTo(
+              work: _work('b@x.com'), viewerEmail: 'a@x.com', isAdmin: false),
+          isTrue);
+    });
+
+    test(
+        'the reports read from the store: a count never reads below zero, and a report needs a time',
+        () {
+      final reported = StudyProblem.fromMap('p', {
+        'text': 'Solve it',
+        'reportCount': 2,
+        'reportedAt': DateTime(2026, 11, 9),
+        'shown': false,
+      });
+      expect(reported?.reportCount, 2);
+      expect(reported?.isReported, isTrue);
+      final clean =
+          StudyProblem.fromMap('p', {'text': 'Solve it', 'reportCount': -3});
+      expect(clean?.reportCount, 0);
+      expect(clean?.isReported, isFalse);
+      final work = StudyProblemSolution.fromMap('a@x.com', {
+        'text': 'Done',
+        'reportCount': 1,
+        'reportedAt': 'not a time',
+      });
+      expect(work?.reportCount, 1);
+      expect(work?.isReported, isFalse);
+    });
+
+    test(
+        'an admin reviews the reported problems that are hidden, the oldest report first',
+        () {
+      final older = StudyProblem(
+        id: 'old',
+        text: 'Old',
+        shown: false,
+        reportCount: 1,
+        reportedAt: DateTime(2026, 11, 2),
+      );
+      final newer = StudyProblem(
+        id: 'new',
+        text: 'New',
+        shown: false,
+        reportCount: 1,
+        reportedAt: DateTime(2026, 11, 5),
+      );
+      final restored = StudyProblem(
+        id: 'restored',
+        text: 'Restored',
+        reportCount: 1,
+        reportedAt: DateTime(2026, 11, 1),
+      );
+      final plain = StudyProblem(id: 'plain', text: 'Plain', shown: false);
+      expect(
+        reportedProblemsForReview([newer, plain, older, restored])
+            .map((p) => p.id),
+        ['old', 'new'],
+      );
+    });
+  });
 }

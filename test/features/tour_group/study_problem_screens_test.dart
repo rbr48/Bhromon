@@ -2,6 +2,7 @@ import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_problem_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_thread_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_problem_screen.dart';
 import 'package:flutter/material.dart';
@@ -91,6 +92,46 @@ class _FakeProblemRepo extends TourGroupRepository {
   }) async {
     calls.add(
         'review $solverEmail ${verdict.name} ${note.isEmpty ? '-' : note}');
+  }
+
+  @override
+  Future<void> reportStudyProblem(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    required StudyReportReason reason,
+  }) async {
+    calls.add('report problem $problemId ${reason.name}');
+  }
+
+  @override
+  Future<void> restoreStudyProblem(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) async {
+    calls.add('restore problem $problemId');
+  }
+
+  @override
+  Future<void> reportStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail, {
+    required StudyReportReason reason,
+  }) async {
+    calls.add('report work $solverEmail ${reason.name}');
+  }
+
+  @override
+  Future<void> restoreStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+  ) async {
+    calls.add('restore work $solverEmail');
   }
 }
 
@@ -257,5 +298,120 @@ void main() {
       repo.calls.where((call) => call.startsWith('review')),
       ['review b@x.com right -'],
     );
+  });
+
+  testWidgets(
+      'a member reports a problem someone else wrote, for the reason they choose',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.member);
+    await _pump(tester, _screen(repo, _released));
+
+    await tester.tap(find.byIcon(Icons.more_vert_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Report this problem'));
+    await tester.pumpAndSettle();
+    expect(find.text('Why are you reporting this problem?'), findsOneWidget);
+    await tester.tap(find.text('It is unclear'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, contains('report problem p1 unclear'));
+  });
+
+  testWidgets(
+      'a member cannot report their own problem, so the menu has no report item',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.member);
+    final own = StudyProblem(
+      id: 'p3',
+      text: 'My own problem.',
+      createdByEmail: 'me@x.com',
+      createdAt: DateTime(2026, 11, 1),
+      releaseAt: DateTime(2020, 1, 1),
+    );
+    await _pump(tester, _screen(repo, own));
+
+    await tester.tap(find.byIcon(Icons.more_vert_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Report this problem'), findsNothing);
+    expect(repo.calls.where((call) => call.startsWith('report')), isEmpty);
+  });
+
+  testWidgets('an admin sees a reported problem as hidden, and restores it',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.admin);
+    final reported = StudyProblem(
+      id: 'p1',
+      text: 'Find the mean of 2, 4 and 9.',
+      title: 'Mean',
+      createdByEmail: 'admin@x.com',
+      createdAt: DateTime(2026, 11, 1),
+      releaseAt: DateTime(2020, 1, 1),
+      shown: false,
+      reportCount: 2,
+      reportedAt: DateTime(2026, 11, 8),
+    );
+    await _pump(tester, _screen(repo, reported));
+
+    expect(
+        find.text(
+            'Reported. It is hidden from members until an admin decides.'),
+        findsOneWidget);
+    expect(find.text('Reports so far: 2'), findsOneWidget);
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, contains('restore problem p1'));
+  });
+
+  testWidgets(
+      'a member does not see a reported working, and reports a peer\'s working for a reason they choose',
+      (tester) async {
+    final hidden = StudyProblemSolution(
+      solverEmail: 'c@x.com',
+      text: 'Hidden working of c@x.com',
+      reportCount: 1,
+      reportedAt: DateTime(2026, 11, 8),
+    );
+    final repo = _FakeProblemRepo(
+      role: TourRole.member,
+      myWork: {'p1': _mine},
+      workList: [_mine, _theirs, hidden],
+    );
+    await _pump(tester, _screen(repo, _released));
+
+    expect(find.text('Hidden working of c@x.com'), findsNothing);
+    expect(find.text('Working of b@x.com'), findsOneWidget);
+
+    await tester.tap(find.text('Report this working'));
+    await tester.pumpAndSettle();
+    expect(find.text('Why are you reporting this working?'), findsOneWidget);
+    await tester.tap(find.text('It is wrong'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, contains('report work b@x.com wrong'));
+  });
+
+  testWidgets(
+      'an admin sees a reported working with its notice, and restores it',
+      (tester) async {
+    final reported = StudyProblemSolution(
+      solverEmail: 'b@x.com',
+      text: 'Working of b@x.com',
+      reportCount: 1,
+      reportedAt: DateTime(2026, 11, 8),
+    );
+    final repo = _FakeProblemRepo(role: TourRole.admin, workList: [reported]);
+    await _pump(tester, _screen(repo, _released));
+
+    expect(find.text('Working of b@x.com'), findsOneWidget);
+    expect(
+      find.text(
+          'Reported. Other members cannot see this working until an admin decides.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, contains('restore work b@x.com'));
   });
 }

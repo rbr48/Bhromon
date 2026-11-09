@@ -52,6 +52,8 @@ class StudyProblem {
     this.releaseAt,
     this.shown = true,
     this.pinned = false,
+    this.reportCount = 0,
+    this.reportedAt,
   });
 
   final String id;
@@ -70,11 +72,22 @@ class StudyProblem {
   /// When the reference solution opens to members. Null while no release time is set.
   final DateTime? releaseAt;
 
-  /// Whether members can see it. A problem waiting for an admin is not shown yet.
+  /// Whether members can see it. A problem waiting for an admin is not shown yet, and a reported one is
+  /// hidden from members until an admin restores it.
   final bool shown;
 
   /// Whether an admin has pinned it to the top.
   final bool pinned;
+
+  /// How many members have reported the problem.
+  final int reportCount;
+
+  /// When the first report was made, and the problem was hidden. Null when it has never been reported
+  /// or an admin has restored it.
+  final DateTime? reportedAt;
+
+  /// Whether the problem is reported and waiting for an admin's decision.
+  bool get isReported => reportedAt != null;
 
   /// Reads one stored problem. Returns null when it has no statement, so a damaged problem does not
   /// break the list.
@@ -83,6 +96,7 @@ class StudyProblem {
     if (text.isEmpty) return null;
     final created = map['createdAt'];
     final release = map['releaseAt'];
+    final reported = map['reportedAt'];
     return StudyProblem(
       id: id,
       text: text,
@@ -92,7 +106,14 @@ class StudyProblem {
       releaseAt: release is DateTime ? release : null,
       shown: map['shown'] != false,
       pinned: map['pinned'] == true,
+      reportCount: _count(map['reportCount']),
+      reportedAt: reported is DateTime ? reported : null,
     );
+  }
+
+  static int _count(Object? raw) {
+    final n = (raw as num?)?.toInt() ?? 0;
+    return n < 0 ? 0 : n;
   }
 }
 
@@ -135,6 +156,8 @@ class StudyProblemSolution {
     this.updatedAt,
     this.rightCount = 0,
     this.gapCount = 0,
+    this.reportCount = 0,
+    this.reportedAt,
   });
 
   final String solverEmail;
@@ -151,8 +174,18 @@ class StudyProblemSolution {
   /// How many reviewers found a gap in the working.
   final int gapCount;
 
+  /// How many members have reported the working.
+  final int reportCount;
+
+  /// When the first report was made, and the working was hidden from the other members. Null when it
+  /// has never been reported or an admin has restored it.
+  final DateTime? reportedAt;
+
   /// How many reviews the working has had, either way.
   int get reviewCount => rightCount + gapCount;
+
+  /// Whether the working is reported and hidden from members other than its author and the admins.
+  bool get isReported => reportedAt != null;
 
   /// Reads one stored working. Returns null when it has no text. Counts never read below zero.
   static StudyProblemSolution? fromMap(
@@ -161,6 +194,7 @@ class StudyProblemSolution {
     if (text.isEmpty) return null;
     final created = map['createdAt'];
     final updated = map['updatedAt'];
+    final reported = map['reportedAt'];
     return StudyProblemSolution(
       solverEmail: solverEmail,
       text: text,
@@ -168,6 +202,8 @@ class StudyProblemSolution {
       updatedAt: updated is DateTime ? updated : null,
       rightCount: _count(map['rightCount']),
       gapCount: _count(map['gapCount']),
+      reportCount: _count(map['reportCount']),
+      reportedAt: reported is DateTime ? reported : null,
     );
   }
 

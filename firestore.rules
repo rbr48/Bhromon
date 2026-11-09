@@ -964,14 +964,18 @@ service cloud.firestore {
 
     // A problem a group works through: its statement, an optional title, the time its reference solution
     // opens to members, and whether it is shown and pinned.
+    // A problem's report fields are optional: a problem written before reports existed has neither, which reads
+    // as no reports.
     function validStudyProblem(d) {
-      return d.keys().hasOnly(['text', 'title', 'createdByEmail', 'createdAt', 'releaseAt', 'shown', 'pinned']) &&
+      return d.keys().hasOnly(['text', 'title', 'createdByEmail', 'createdAt', 'releaseAt', 'shown', 'pinned', 'reportCount', 'reportedAt']) &&
              d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
              (d.get('title', null) == null || (d.title is string && d.title.size() <= 120)) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              (d.get('releaseAt', null) == null || d.releaseAt is timestamp) &&
-             d.shown is bool && d.pinned is bool;
+             d.shown is bool && d.pinned is bool &&
+             d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
     }
     // Whether a member may add a problem: the same rule as a finding's (the module's post policy).
     function studyProblemCreateAllowed(tourId, subjectId, d) {
@@ -980,21 +984,32 @@ service cloud.firestore {
              d.createdByEmail == tourUserEmail() &&
              d.pinned == false &&
              d.createdAt == request.time &&
+             d.get('reportCount', 0) == 0 && d.get('reportedAt', null) == null &&
              validStudyProblem(d) &&
              studySubjectListed(tourId, subjectId) &&
              studyModuleOn(tourId, subjectId, 'problems') &&
              (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/problems).data.postPolicy != 'admins') &&
              d.shown == (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/problems).data.postPolicy == 'members');
     }
-    // Whether an update to a problem is allowed. An admin shows, pins, schedules or edits it; its author
-    // changes the words and the title only, never the release time or the flags.
-    function studyProblemUpdateAllowed(tourId, newData, oldData) {
+    // Whether an update to a problem is allowed. An admin shows, pins, schedules or edits it, and an admin's
+    // restore of a reported problem shows it again and clears its report time. Its author changes the words
+    // and the title only, never the release time or the flags. Any other member who can see the problem may
+    // report it: the report hides it at once, its count rises by one, and the report is written in the same batch.
+    function studyProblemUpdateAllowed(tourId, subjectId, problemId, newData, oldData) {
       let byAdmin = isTourAdmin(tourId);
       let changed = newData.diff(oldData).affectedKeys();
       return newData.createdByEmail == oldData.createdByEmail &&
              validStudyProblem(newData) &&
-             ((byAdmin && changed.hasOnly(['text', 'title', 'releaseAt', 'shown', 'pinned'])) ||
-              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'title'])));
+             ((byAdmin && changed.hasOnly(['text', 'title', 'releaseAt', 'shown', 'pinned', 'reportedAt']) &&
+               (!changed.hasAny(['reportedAt']) || newData.get('reportedAt', null) == null)) ||
+              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'title'])) ||
+              (oldData.createdByEmail != tourUserEmail() && oldData.shown == true &&
+               changed.hasOnly(['shown', 'reportCount', 'reportedAt']) &&
+               newData.shown == false &&
+               newData.get('reportCount', 0) == oldData.get('reportCount', 0) + 1 &&
+               ((oldData.get('reportedAt', null) == null && newData.reportedAt == request.time) ||
+                (oldData.get('reportedAt', null) != null && newData.reportedAt == oldData.reportedAt)) &&
+               existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/reports/$(tourUserEmail()))));
     }
     // The reference solution of a problem: its text, the admin who reviewed it, and when it was written.
     function validStudyReference(d) {
@@ -1004,12 +1019,16 @@ service cloud.firestore {
              d.updatedAt is timestamp;
     }
     // A member's working on a problem: its text, when it was first and last written, and its review counts.
+    // The report fields of a working are optional, as a problem's are: a working written before reports existed
+    // has neither, and reads as no reports.
     function validStudyWork(d) {
-      return d.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'rightCount', 'gapCount']) &&
+      return d.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'rightCount', 'gapCount', 'reportCount', 'reportedAt']) &&
              d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
              d.createdAt is timestamp && d.updatedAt is timestamp &&
              d.rightCount is int && d.rightCount >= 0 &&
-             d.gapCount is int && d.gapCount >= 0;
+             d.gapCount is int && d.gapCount >= 0 &&
+             d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
     }
     // A review of a working: a verdict of right or gap, and an optional note.
     function validStudyWorkReview(d) {
@@ -1044,12 +1063,22 @@ service cloud.firestore {
              (dRight == 0 && dGap == -1 && studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'gap') && !studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'gap'));
     }
     // Whether an update to a working is allowed: its counts move only with a review; its author edits the words.
+    // An admin restores a reported working, which clears its report time. A member who can see a working, other
+    // than its author, may report it: it is hidden at once, and its count rises by one in the same batch as the
+    // member's own report.
     function studyWorkUpdateAllowed(tourId, subjectId, problemId, solverEmail, newData, oldData) {
       let changed = newData.diff(oldData).affectedKeys();
       return validStudyWork(newData) &&
              ((changed.hasOnly(['rightCount', 'gapCount']) &&
                studyWorkCountsOk(tourId, subjectId, problemId, solverEmail, newData, oldData)) ||
-              (solverEmail == tourUserEmail() && changed.hasOnly(['text', 'updatedAt']) && newData.updatedAt == request.time));
+              (changed.hasOnly(['text', 'updatedAt']) && solverEmail == tourUserEmail() && newData.updatedAt == request.time) ||
+              (changed.hasOnly(['reportedAt']) && newData.get('reportedAt', null) == null && isTourAdmin(tourId)) ||
+              (changed.hasOnly(['reportCount', 'reportedAt']) && solverEmail != tourUserEmail() &&
+               (isTourAdmin(tourId) || studyHasOwnWork(tourId, subjectId, problemId)) &&
+               newData.get('reportCount', 0) == oldData.get('reportCount', 0) + 1 &&
+               ((oldData.get('reportedAt', null) == null && newData.reportedAt == request.time) ||
+                (oldData.get('reportedAt', null) != null && newData.reportedAt == oldData.reportedAt)) &&
+               existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reports/$(tourUserEmail()))));
     }
     // Whether a member may submit their own working: once, on a shown problem, in a listed subject whose
     // problems module is on. The counts start at zero.
@@ -1058,6 +1087,7 @@ service cloud.firestore {
              solverEmail == tourUserEmail() &&
              d.createdAt == request.time && d.updatedAt == request.time &&
              d.rightCount == 0 && d.gapCount == 0 &&
+             d.get('reportCount', 0) == 0 && d.get('reportedAt', null) == null &&
              validStudyWork(d) &&
              studySubjectListed(tourId, subjectId) &&
              studyModuleOn(tourId, subjectId, 'problems') &&
@@ -1927,7 +1957,7 @@ service cloud.firestore {
           allow read: if isActiveMember(tourId);
           allow create: if studyProblemCreateAllowed(tourId, subjectId, request.resource.data);
           allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
-                           studyProblemUpdateAllowed(tourId, request.resource.data, resource.data);
+                           studyProblemUpdateAllowed(tourId, subjectId, problemId, request.resource.data, resource.data);
           allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                            (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
 
@@ -1946,6 +1976,19 @@ service cloud.firestore {
             allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
           }
 
+          // The reports of a problem: one per member, never on their own problem, and only on a problem they can see.
+          // The problem is hidden at once and its count moves in the same batch (studyProblemUpdateAllowed). The
+          // reporter and an admin read the reports.
+          match /reports/{reporter} {
+            allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || reporter == tourUserEmail());
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) && reporter == tourUserEmail() &&
+                             validStudyReport(request.resource.data) &&
+                             request.resource.data.createdAt == request.time &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.createdByEmail != tourUserEmail() &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.shown == true &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.get('reportCount', 0) == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.get('reportCount', 0) + 1;
+          }
+
           // A member's own working. Read by its author, and by an admin or a member who has submitted their own
           // working. A list query needs the request-level condition alone, so the list rule has no document test.
           match /solutions/{solverEmail} {
@@ -1959,6 +2002,19 @@ service cloud.firestore {
             allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                              (solverEmail == tourUserEmail() || isTourAdmin(tourId));
 
+            // The reports of a working: one per member, never on their own working, and only by a member who can see
+            // it. The working is hidden at once and its count moves in the same batch (studyWorkUpdateAllowed). The
+            // reporter and an admin read the reports.
+            match /reports/{reporter} {
+              allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || reporter == tourUserEmail());
+              allow create: if isStudyTour(tourId) && isActiveMember(tourId) && reporter == tourUserEmail() &&
+                               validStudyReport(request.resource.data) &&
+                               request.resource.data.createdAt == request.time &&
+                               solverEmail != tourUserEmail() &&
+                               (studyHasOwnWork(tourId, subjectId, problemId) || isTourAdmin(tourId)) &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.get('reportCount', 0) == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.get('reportCount', 0) + 1;
+            }
+
             // A review of a working by a member who has submitted their own, and never of their own working. The
             // working's review counts move in the same batch (studyWorkCountsOk).
             match /reviews/{voter} {
@@ -1970,7 +2026,12 @@ service cloud.firestore {
                                voter != solverEmail &&
                                validStudyWorkReview(request.resource.data) &&
                                request.resource.data.createdAt == request.time &&
-                               (studyHasOwnWork(tourId, subjectId, problemId) || isTourAdmin(tourId)) &&
+                               // A member reviews a working only once they have a working of their own, and never a reported
+                               // one; an admin reviews any working. One check of the role, so the batch stays under the
+                               // rules' expression limit.
+                               (isTourAdmin(tourId) ||
+                                (studyHasOwnWork(tourId, subjectId, problemId) &&
+                                 get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.get('reportedAt', null) == null)) &&
                                ((request.resource.data.verdict == 'right' &&
                                  getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount + 1 &&
                                  getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount) ||
