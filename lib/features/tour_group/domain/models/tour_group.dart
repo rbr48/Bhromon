@@ -376,6 +376,7 @@ class TourGroup {
   /// Resolves the preset either from the explicit [preset] attribute, or inferred
   /// from the group's [name] when [preset] is unset.
   String? get effectivePreset {
+    if (!isFamily) return null;
     if (preset != null && preset!.trim().isNotEmpty) return preset;
     final lower = name.toLowerCase().trim();
     if (_matchesAnyKeyword(lower, const [
