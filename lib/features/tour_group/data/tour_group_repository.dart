@@ -22,6 +22,7 @@ import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/study_models.dart';
+import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/services/study_chapter_rules.dart';
 import '../domain/models/meal_log.dart';
@@ -2966,6 +2967,223 @@ class TourGroupRepository {
   ) async {
     final email = _requireEmail();
     await _readMarkDoc(tourId, bookId, chapterId, email).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Discussions: threads on a book, their replies, helpful votes, reports, the accepted answer,
+  // pins and locks (study_thread_models.dart). The rules in firestore.rules say who may write
+  // each one.
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> _threadsCol(
+    String tourId,
+    String bookId,
+  ) =>
+      _studyBookDoc(tourId, bookId).collection('threads');
+
+  DocumentReference<Map<String, dynamic>> _threadDoc(
+    String tourId,
+    String bookId,
+    String threadId,
+  ) =>
+      _threadsCol(tourId, bookId).doc(threadId);
+
+  DocumentReference<Map<String, dynamic>> _replyDoc(
+    String tourId,
+    String bookId,
+    String threadId,
+    String replyId,
+  ) =>
+      _threadDoc(tourId, bookId, threadId).collection('replies').doc(replyId);
+
+  /// The threads of a book, in no particular order; sort them with sortStudyThreads.
+  Stream<List<StudyThread>> watchStudyThreads(String tourId, String bookId) {
+    return _threadsCol(tourId, bookId).limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (StudyThread.fromMap(d.id, _datesAsDateTimes(d.data()))
+                case final thread?)
+              thread,
+        ]);
+  }
+
+  /// Starts a thread on a book. The signed-in member is its author.
+  Future<void> addStudyThread(
+    String tourId,
+    String bookId, {
+    required String title,
+    required String body,
+    String? chapterId,
+    String pageRef = '',
+  }) async {
+    final email = _requireEmail();
+    final thread = StudyThread(
+      id: '',
+      title: title.trim(),
+      body: body.trim(),
+      pageRef: pageRef.trim(),
+      chapterId: chapterId,
+      createdByEmail: email,
+    );
+    await _threadsCol(tourId, bookId).add({
+      ...thread.toFields(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// The replies of a thread, oldest first.
+  Stream<List<StudyReply>> watchStudyReplies(
+    String tourId,
+    String bookId,
+    String threadId,
+  ) {
+    return _threadDoc(tourId, bookId, threadId)
+        .collection('replies')
+        .orderBy('createdAt')
+        .limit(500)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyReply.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final reply?)
+                  reply,
+            ]);
+  }
+
+  /// Adds a reply under an id the app made, so a reply sent again after being written offline
+  /// arrives once. The signed-in member is its author.
+  Future<void> addStudyReply(
+    String tourId,
+    String bookId,
+    String threadId, {
+    required String replyId,
+    required String text,
+  }) async {
+    final email = _requireEmail();
+    final reply =
+        StudyReply(id: replyId, text: text.trim(), createdByEmail: email);
+    await _replyDoc(tourId, bookId, threadId, replyId).set({
+      ...reply.toFields(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Marks a reply helpful, or takes the mark back. The mark and the count change in one batch.
+  /// Returns true when the reply is marked afterwards.
+  Future<bool> toggleStudyReplyHelpful(
+    String tourId,
+    String bookId,
+    String threadId,
+    String replyId,
+  ) async {
+    final email = _requireEmail();
+    final reply = _replyDoc(tourId, bookId, threadId, replyId);
+    final mark = reply.collection('helpful').doc(email);
+    final existing = await mark.get();
+    final batch = _firestore.batch();
+    if (existing.exists) {
+      batch.delete(mark);
+      batch.update(reply, {'helpfulCount': FieldValue.increment(-1)});
+      await batch.commit();
+      return false;
+    }
+    batch.set(mark, {'createdAt': FieldValue.serverTimestamp()});
+    batch.update(reply, {'helpfulCount': FieldValue.increment(1)});
+    await batch.commit();
+    return true;
+  }
+
+  /// Reports a reply, once for each member. The report and the count change in one batch.
+  Future<void> reportStudyReply(
+    String tourId,
+    String bookId,
+    String threadId,
+    String replyId, {
+    required StudyReportReason reason,
+  }) async {
+    final email = _requireEmail();
+    final reply = _replyDoc(tourId, bookId, threadId, replyId);
+    final batch = _firestore.batch();
+    batch.set(reply.collection('reports').doc(email), {
+      'reason': reason.name,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(reply, {'reportCount': FieldValue.increment(1)});
+    await batch.commit();
+  }
+
+  /// Accepts a reply as the answer, or takes the acceptance back when [replyId] is null. The
+  /// member who asked, or an admin, does this.
+  Future<void> setStudyAcceptedAnswer(
+    String tourId,
+    String bookId,
+    String threadId, {
+    String? replyId,
+  }) async {
+    _requireEmail();
+    await _threadDoc(tourId, bookId, threadId)
+        .update({'acceptedReplyId': replyId});
+  }
+
+  /// Pins a thread to the top of the book, or unpins it. Only an admin does this.
+  Future<void> setStudyThreadPinned(
+    String tourId,
+    String bookId,
+    String threadId, {
+    required bool pinned,
+  }) async {
+    _requireEmail();
+    await _threadDoc(tourId, bookId, threadId).update({'pinned': pinned});
+  }
+
+  /// Locks a thread, so it takes no more replies, or unlocks it. Only an admin does this.
+  Future<void> setStudyThreadLocked(
+    String tourId,
+    String bookId,
+    String threadId, {
+    required bool locked,
+  }) async {
+    _requireEmail();
+    await _threadDoc(tourId, bookId, threadId).update({'locked': locked});
+  }
+
+  /// Removes a reply. Its author or an admin does this. When the reply was the accepted answer,
+  /// the acceptance goes with it in the same batch.
+  Future<void> deleteStudyReply(
+    String tourId,
+    String bookId,
+    String threadId,
+    String replyId, {
+    required bool wasAccepted,
+  }) async {
+    _requireEmail();
+    final batch = _firestore.batch();
+    batch.delete(_replyDoc(tourId, bookId, threadId, replyId));
+    if (wasAccepted) {
+      batch.update(
+          _threadDoc(tourId, bookId, threadId), {'acceptedReplyId': null});
+    }
+    await batch.commit();
+  }
+
+  /// Removes a thread with the replies its signed-in member may remove: an admin removes them
+  /// all, and anyone else removes their own. The thread's author or an admin does this.
+  Future<void> deleteStudyThread(
+    String tourId,
+    String bookId,
+    String threadId,
+  ) async {
+    final email = _requireEmail();
+    final admin = (await myRole(tourId))?.isAdminOrOwner ?? false;
+    final thread = _threadDoc(tourId, bookId, threadId);
+    final replies = await thread.collection('replies').get();
+    final batch = _firestore.batch();
+    for (final reply in replies.docs) {
+      if (admin || reply.data()['createdByEmail'] == email) {
+        batch.delete(reply.reference);
+      }
+    }
+    batch.delete(thread);
+    await batch.commit();
   }
 
   // ---------------------------------------------------------------------------

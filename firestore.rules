@@ -914,6 +914,85 @@ service cloud.firestore {
              (d.get('dueOn', null) == null || d.dueOn is timestamp) &&
              (d.get('guide', null) == null || (d.guide is list && d.guide.size() <= 5));
     }
+    // A thread on a book: a title, a body, an optional page reference and chapter, whether an admin has
+    // pinned or locked it, and which reply is the accepted answer.
+    function validStudyThread(d) {
+      return d.keys().hasOnly(['title', 'body', 'pageRef', 'chapterId', 'createdByEmail', 'createdAt', 'pinned', 'locked', 'acceptedReplyId']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.body is string && d.body.size() >= 1 && d.body.size() <= 2000 &&
+             (d.get('pageRef', null) == null || (d.pageRef is string && d.pageRef.size() <= 20)) &&
+             (d.get('chapterId', null) == null || (d.chapterId is string && d.chapterId.size() <= 40)) &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp &&
+             d.pinned is bool && d.locked is bool &&
+             (d.get('acceptedReplyId', null) == null || (d.acceptedReplyId is string && d.acceptedReplyId.size() <= 40));
+    }
+    // A reply: its text, its author, when it was written, and how many members found it helpful or reported it.
+    function validStudyReply(d) {
+      return d.keys().hasOnly(['text', 'createdByEmail', 'createdAt', 'helpfulCount', 'reportCount']) &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp &&
+             d.helpfulCount is int && d.helpfulCount >= 0 &&
+             d.reportCount is int && d.reportCount >= 0;
+    }
+    // A report of a reply: one of the reasons, and when it was made.
+    function validStudyReport(d) {
+      return d.keys().hasOnly(['reason', 'createdAt']) &&
+             d.reason in ['wrong', 'unclear', 'spam', 'other'] &&
+             d.createdAt is timestamp;
+    }
+    // Whether an update to a thread is allowed. An admin pins or locks it, or accepts an answer on
+    // the asker's behalf. The member who asked accepts or un-accepts an answer, and changes nothing
+    // else. An accepted answer must be a reply that exists.
+    function studyThreadUpdateAllowed(tourId, bookId, threadId, newData, oldData) {
+      let byAdmin = isTourAdmin(tourId);
+      let changed = newData.diff(oldData).affectedKeys();
+      return newData.createdByEmail == oldData.createdByEmail &&
+             newData.createdAt == oldData.createdAt &&
+             validStudyThread(newData) &&
+             (newData.get('acceptedReplyId', null) == null ||
+              exists(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(newData.acceptedReplyId))) &&
+             ((byAdmin && changed.hasOnly(['pinned', 'locked', 'acceptedReplyId'])) ||
+              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['acceptedReplyId'])));
+    }
+    // The signed-in member's helpful mark and report on a reply: whether each is there now, and
+    // whether it will be once the batch being written has been applied.
+    function studyReplyMarkNow(tourId, bookId, threadId, replyId) {
+      return exists(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)/helpful/$(tourUserEmail()));
+    }
+    function studyReplyMarkAfter(tourId, bookId, threadId, replyId) {
+      return existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)/helpful/$(tourUserEmail()));
+    }
+    function studyReplyReportNow(tourId, bookId, threadId, replyId) {
+      return exists(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)/reports/$(tourUserEmail()));
+    }
+    function studyReplyReportAfter(tourId, bookId, threadId, replyId) {
+      return existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)/reports/$(tourUserEmail()));
+    }
+    // Whether an update to a reply is allowed. Its author edits the text. A helpful count moves by one
+    // with the member's own mark, and a report count rises by one with the member's own report, both in
+    // the same batch. Nothing else changes.
+    function studyReplyUpdateAllowed(tourId, bookId, threadId, replyId, newData, oldData) {
+      let byAdmin = isTourAdmin(tourId);
+      let changed = newData.diff(oldData).affectedKeys();
+      return newData.createdByEmail == oldData.createdByEmail &&
+             newData.createdAt == oldData.createdAt &&
+             validStudyReply(newData) &&
+             ((changed.hasOnly(['helpfulCount']) &&
+               ((newData.helpfulCount - oldData.helpfulCount == 1 &&
+                 !studyReplyMarkNow(tourId, bookId, threadId, replyId) &&
+                 studyReplyMarkAfter(tourId, bookId, threadId, replyId)) ||
+                (oldData.helpfulCount - newData.helpfulCount == 1 &&
+                 studyReplyMarkNow(tourId, bookId, threadId, replyId) &&
+                 !studyReplyMarkAfter(tourId, bookId, threadId, replyId)))) ||
+              (changed.hasOnly(['reportCount']) &&
+               newData.reportCount - oldData.reportCount == 1 &&
+               !studyReplyReportNow(tourId, bookId, threadId, replyId) &&
+               studyReplyReportAfter(tourId, bookId, threadId, replyId)) ||
+              ((byAdmin || oldData.createdByEmail == tourUserEmail()) && changed.hasOnly(['text'])));
+    }
+
     // A reading session: what to read, when it starts, and where it meets.
     function validStudySession(d) {
       return d.keys().hasOnly(['title', 'bookId', 'chapterIds', 'startsAt', 'place', 'notes', 'createdByEmail']) &&
@@ -1166,6 +1245,63 @@ service cloud.firestore {
                              request.resource.data.readAt == resource.data.readAt &&
                              request.resource.data.counted is bool;
             allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
+          }
+        }
+
+        // Discussions on the book: a thread a member starts on a listed book. An admin pins or locks it,
+        // and the member who asked accepts an answer. Its replies are below.
+        match /threads/{threadId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           request.resource.data.createdByEmail == tourUserEmail() &&
+                           request.resource.data.createdAt == request.time &&
+                           request.resource.data.pinned == false &&
+                           request.resource.data.locked == false &&
+                           request.resource.data.get('acceptedReplyId', null) == null &&
+                           validStudyThread(request.resource.data) &&
+                           studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+          allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           studyThreadUpdateAllowed(tourId, bookId, threadId, request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+          // The replies, flat and in time order. A member replies to an unlocked thread on a listed book.
+          match /replies/{replyId} {
+            allow read: if isActiveMember(tourId);
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             request.resource.data.createdByEmail == tourUserEmail() &&
+                             request.resource.data.createdAt == request.time &&
+                             request.resource.data.helpfulCount == 0 &&
+                             request.resource.data.reportCount == 0 &&
+                             validStudyReply(request.resource.data) &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)).data.locked == false &&
+                             studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+            allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             studyReplyUpdateAllowed(tourId, bookId, threadId, replyId, request.resource.data, resource.data);
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+            // One helpful mark per member, never on their own reply. The count moves with the mark.
+            match /helpful/{voter} {
+              allow read: if isActiveMember(tourId);
+              allow create: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                               request.resource.data.keys().hasOnly(['createdAt']) &&
+                               request.resource.data.createdAt == request.time &&
+                               get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.createdByEmail != tourUserEmail() &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.helpfulCount + 1;
+              allow delete: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.helpfulCount - 1;
+            }
+
+            // One report per member, never on their own reply. The count moves with the report. The
+            // reporter and an admin read it.
+            match /reports/{voter} {
+              allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || voter == tourUserEmail());
+              allow create: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                               validStudyReport(request.resource.data) &&
+                               get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.createdByEmail != tourUserEmail() &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.reportCount == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.reportCount + 1;
+            }
           }
         }
       }
