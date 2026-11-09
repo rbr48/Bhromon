@@ -249,7 +249,17 @@ void main() {
         ),
       );
       expect(find.text('Add a tip'), findsNothing);
+    });
 
+    // A separate test, so the screen starts afresh and reads the admin role itself.
+    testWidgets('an admin adds a tip to a module that only admins post in',
+        (tester) async {
+      const adminsOnly = StudyModuleSettings(
+        key: StudyModuleKey.tips,
+        enabled: true,
+        name: 'Exam tips',
+        postPolicy: StudyPostPolicy.admins,
+      );
       await _pump(
         tester,
         StudyModulePostsScreen(
