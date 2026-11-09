@@ -77,4 +77,16 @@ void main() {
       expect([for (final session in listed) session.id], ['sooner', 'later']);
     });
   });
+
+  test(
+      'the calendar marks the day of each session it lists, and no day of a closed one',
+      () {
+    final now = DateTime(2030, 1, 10, 12);
+    final open = _session(id: 'open', startsAt: DateTime(2030, 1, 12, 18));
+    final closed = _session(id: 'closed', startsAt: DateTime(2030, 1, 2, 18));
+
+    final days = calendarSessionDays([open, closed], now: now);
+
+    expect(days, {DateTime(2030, 1, 12)});
+  });
 }

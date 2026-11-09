@@ -76,12 +76,13 @@ List<StudySummaryRevision> newestFirst(
 }
 
 /// What the group reads for a chapter: the revision an admin pinned, or the newest when none is pinned. When the
-/// pinned revision is no longer there, the newest is shown. [pinned] says whether the shown one is the pinned one.
+/// pinned revision is no longer there, or an admin has hidden it, the newest shown one is read. A hidden revision is
+/// never read by the group. [pinned] says whether the shown one is the pinned one.
 ({StudySummaryRevision? revision, bool pinned}) summaryShownToGroup(
   Iterable<StudySummaryRevision> revisions, {
   String? pinnedId,
 }) {
-  final list = newestFirst(revisions);
+  final list = newestFirst(revisions.where((revision) => !revision.hidden));
   if (pinnedId != null) {
     for (final revision in list) {
       if (revision.id == pinnedId) return (revision: revision, pinned: true);

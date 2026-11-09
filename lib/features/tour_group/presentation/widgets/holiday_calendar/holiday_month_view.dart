@@ -18,6 +18,7 @@ class HolidayMonthView extends StatelessWidget {
     required this.selected,
     required this.onMonthChanged,
     required this.onDayTap,
+    this.studyDays = const {},
   });
 
   final HolidayCalendar calendar;
@@ -26,6 +27,9 @@ class HolidayMonthView extends StatelessWidget {
   final DateTime? selected;
   final ValueChanged<int> onMonthChanged;
   final ValueChanged<DateTime> onDayTap;
+
+  /// The days a study session falls on, as dates at midnight. Each is marked with a mint dot.
+  final Set<DateTime> studyDays;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +111,7 @@ class HolidayMonthView extends StatelessWidget {
       date: date,
       isWeekend: HolidayCalendar.isWeekend(date),
       isHoliday: calendar.holidaysOn(date).isNotEmpty,
+      hasStudy: studyDays.contains(date),
       inTrip: trip?.contains(date) ?? false,
       isSelected: isSelected,
       onTap: () => onDayTap(date),
@@ -119,6 +124,7 @@ class _HolidayDayCell extends StatelessWidget {
     required this.date,
     required this.isWeekend,
     required this.isHoliday,
+    this.hasStudy = false,
     required this.inTrip,
     required this.isSelected,
     required this.onTap,
@@ -127,6 +133,9 @@ class _HolidayDayCell extends StatelessWidget {
   final DateTime date;
   final bool isWeekend;
   final bool isHoliday;
+
+  /// Whether a study session falls on the day.
+  final bool hasStudy;
   final bool inTrip;
   final bool isSelected;
   final VoidCallback onTap;
@@ -167,14 +176,23 @@ class _HolidayDayCell extends StatelessWidget {
                     isHoliday || isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
-            if (isHoliday)
-              Container(
-                width: 4,
-                height: 4,
-                margin: const EdgeInsets.only(top: 2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.black : kHolidayRed,
-                  shape: BoxShape.circle,
+            if (isHoliday || hasStudy)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isHoliday)
+                      _dot(isSelected ? Colors.black : kHolidayRed),
+                    if (isHoliday && hasStudy) const SizedBox(width: 2),
+                    if (hasStudy)
+                      _dot(
+                        isSelected ? Colors.black : AppColors.mintGreen,
+                        key: ValueKey<String>(
+                          'study-dot-${date.year}-${date.month}-${date.day}',
+                        ),
+                      ),
+                  ],
                 ),
               ),
           ],
@@ -182,6 +200,13 @@ class _HolidayDayCell extends StatelessWidget {
       ),
     );
   }
+
+  static Widget _dot(Color color, {Key? key}) => Container(
+        key: key,
+        width: 4,
+        height: 4,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }
 
 /// All twelve months at a glance. Tapping a month opens it in the month view.

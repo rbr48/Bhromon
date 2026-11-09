@@ -63,6 +63,15 @@ class _FakeSubjectRepo extends TourGroupRepository {
     calls.add('list $subjectId');
   }
 
+  @override
+  Future<void> setStudySubjectArchived(
+    String tourId,
+    String subjectId, {
+    required bool archived,
+  }) async {
+    calls.add('archive $subjectId $archived');
+  }
+
   // The Today card of a subject reads these. They are empty here, so the card says that nothing is due.
   @override
   Stream<StudyChallenge?> watchStudyChallenge(
@@ -155,6 +164,15 @@ const _chemistry = StudySubject(
   createdByEmail: 'other@x.com',
 );
 
+/// A subject an admin archived. Members do not see it.
+const _biology = StudySubject(
+  id: 'bio',
+  title: 'Biology',
+  code: 'BIO 101',
+  archived: true,
+  createdByEmail: 'admin@x.com',
+);
+
 const _tipsOn = StudyModuleSettings(
   key: StudyModuleKey.tips,
   enabled: true,
@@ -195,6 +213,50 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repo.calls, ['list chem']);
+    });
+
+    testWidgets(
+        'a member does not see an archived subject, and has no archive action',
+        (tester) async {
+      final repo = _FakeSubjectRepo(subjects: [_physics, _biology]);
+      await _pump(tester, StudySubjectsScreen(tourId: 'T', repository: repo));
+
+      expect(find.text('Physics 101'), findsOneWidget);
+      expect(find.text('Biology'), findsNothing);
+      expect(find.text('Archived'), findsNothing);
+      expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
+    });
+
+    testWidgets('an admin sees the archive, and restores a subject from it',
+        (tester) async {
+      final repo = _FakeSubjectRepo(
+        subjects: [_physics, _biology],
+        role: TourRole.admin,
+      );
+      await _pump(tester, StudySubjectsScreen(tourId: 'T', repository: repo));
+
+      expect(find.text('Archived'), findsOneWidget);
+      expect(find.text('Biology'), findsOneWidget);
+      await tester.tap(find.text('Restore'));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls, ['archive bio false']);
+    });
+
+    testWidgets('an admin archives a listed subject from its menu',
+        (tester) async {
+      final repo = _FakeSubjectRepo(
+        subjects: [_physics],
+        role: TourRole.admin,
+      );
+      await _pump(tester, StudySubjectsScreen(tourId: 'T', repository: repo));
+
+      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Archive subject'));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls, ['archive phy true']);
     });
   });
 

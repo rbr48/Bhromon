@@ -117,6 +117,58 @@ void main() {
       expect(shown.revision, isNull);
     });
 
+    test(
+        'a hidden revision is never shown to the group, even when it is pinned or the newest',
+        () {
+      final hiddenNewest = StudySummaryRevision(
+        id: 'r3',
+        text: 'Hidden',
+        editorEmail: 'c@x.com',
+        createdAt: DateTime(2026, 4, 1),
+        hidden: true,
+      );
+      expect(
+          summaryShownToGroup([older, newer, hiddenNewest]).revision?.id, 'r2');
+      final pinnedHidden = summaryShownToGroup(
+        [older, newer, hiddenNewest],
+        pinnedId: 'r3',
+      );
+      expect(pinnedHidden.revision?.id, 'r2');
+      expect(pinnedHidden.pinned, isFalse);
+      expect(summaryShownToGroup([hiddenNewest]).revision, isNull);
+    });
+
+    test(
+        'a revision reads as reported with its count, and as not reported without a report time',
+        () {
+      final reported = StudySummaryRevision.fromMap('r4', {
+        'text': 'Reported',
+        'editorEmail': 'a@x.com',
+        'hidden': false,
+        'reportCount': 2,
+        'reportedAt': DateTime(2026, 4, 2),
+      })!;
+      final plain = StudySummaryRevision.fromMap('r5', {
+        'text': 'Plain',
+        'editorEmail': 'a@x.com',
+      })!;
+      expect(reported.isReported, isTrue);
+      expect(reported.reportCount, 2);
+      expect(plain.isReported, isFalse);
+      expect(plain.hidden, isFalse);
+      expect(plain.reportCount, 0);
+    });
+
+    test('a new revision is written visible and unreported', () {
+      final fields = const StudySummaryRevision(
+        id: '',
+        text: 'New',
+        editorEmail: 'a@x.com',
+      ).toFields();
+      expect(fields['hidden'], isFalse);
+      expect(fields['reportCount'], 0);
+    });
+
     test('revisions are listed newest first, and one with no time sorts last',
         () {
       const undated = StudySummaryRevision(

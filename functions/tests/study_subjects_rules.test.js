@@ -198,6 +198,50 @@ describe('study subjects, modules and posts', () => {
     });
   });
 
+  describe('archiving a subject', () => {
+    test('an admin archives a listed subject, and restores it', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: true }));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: false }));
+    });
+
+    test('a member cannot archive a subject, nor restore one', async () => {
+      await assertFails(updateDoc(subjectRef(db('member')), { archived: true }));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: true }));
+      await assertFails(updateDoc(subjectRef(db('member')), { archived: false }));
+    });
+
+    test('the member who proposed a subject cannot archive it once an admin lists it', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin'), PROPOSED), { approval: 'listed', declineNote: deleteField() }));
+      await assertFails(updateDoc(subjectRef(db('member'), PROPOSED), { archived: true }));
+    });
+
+    test('only a listed subject can be archived', async () => {
+      await assertFails(updateDoc(subjectRef(db('admin'), PROPOSED), { archived: true }));
+      await assertFails(
+        updateDoc(subjectRef(db('admin'), PROPOSED), { approval: 'declined', declineNote: 'Not this course', archived: true })
+      );
+    });
+
+    test('the archived flag is true or false, and a subject is never created archived', async () => {
+      await assertFails(updateDoc(subjectRef(db('admin')), { archived: 'yes' }));
+      await assertFails(setDoc(subjectRef(db('admin'), 'arch'), subject(people.admin.email, { archived: true })));
+      await assertSucceeds(setDoc(subjectRef(db('admin'), 'live'), subject(people.admin.email, { archived: false })));
+    });
+
+    test('an archived subject takes no new post, from a member or an admin, and a restored one takes posts again', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: true }));
+      await assertFails(setDoc(postRef(db('member'), 'tips', 'late'), newPost(people.member.email)));
+      await assertFails(setDoc(postRef(db('admin'), 'tips', 'late-admin'), newPost(people.admin.email)));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: false }));
+      await assertSucceeds(setDoc(postRef(db('member'), 'tips', 'late'), newPost(people.member.email)));
+    });
+
+    test('an archived subject keeps its content, which members still read', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: true }));
+      await assertSucceeds(getDoc(postRef(db('member'), 'tips', MEMBER_TIP)));
+    });
+  });
+
   describe('the modules of a subject', () => {
     test('only an admin turns a live module on, and a member cannot', async () => {
       await assertFails(setDoc(moduleRef(db('member'), 'tips'), moduleSettings({ enabled: false })));

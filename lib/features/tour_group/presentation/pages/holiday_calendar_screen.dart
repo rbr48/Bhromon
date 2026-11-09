@@ -86,11 +86,12 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
               _studySessionCard(context),
             ],
             const SizedBox(height: 12),
-            _buildLegend(context),
+            _buildLegend(context, isStudy: group != null && group.isStudy),
             const SizedBox(height: 10),
             _buildExports(context, calendar),
             const SizedBox(height: 16),
-            _buildView(context, calendar, trip),
+            _buildView(context, calendar, trip,
+                isStudy: group != null && group.isStudy),
           ],
         );
       },
@@ -373,7 +374,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
     );
   }
 
-  Widget _buildLegend(BuildContext context) {
+  Widget _buildLegend(BuildContext context, {bool isStudy = false}) {
     final l10n = context.l10n;
     Widget swatch(Color color, String label, {bool outline = false}) => Row(
           mainAxisSize: MainAxisSize.min,
@@ -398,6 +399,8 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       children: [
         swatch(kHolidayRed, l10n.translate('hol_legend_holiday')),
         swatch(context.forest.text38, l10n.translate('hol_legend_weekend')),
+        if (isStudy)
+          swatch(AppColors.mintGreen, l10n.translate('study_calendar_legend')),
         swatch(AppColors.mintGreen, l10n.translate('hol_legend_trip'),
             outline: true),
       ],
@@ -437,11 +440,41 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
     );
   }
 
+  /// The month view. A study group's days carry a mark for each session the calendar lists, so this reads the
+  /// sessions. Any other group has none, and does not read them.
+  Widget _monthView(
+    HolidayCalendar calendar,
+    TripSummary? trip, {
+    required bool isStudy,
+    required ValueChanged<DateTime> onDayTap,
+  }) {
+    Widget month(Set<DateTime> studyDays) => HolidayMonthView(
+          calendar: calendar,
+          month: _month,
+          trip: trip,
+          selected: _selected,
+          onMonthChanged: (m) => setState(() {
+            _month = m;
+            _selected = null;
+          }),
+          onDayTap: onDayTap,
+          studyDays: studyDays,
+        );
+    if (!isStudy) return month(const {});
+    return StreamBuilder<List<ReadingSession>>(
+      stream: _sessionsOf(widget.tourId),
+      builder: (context, snap) => month(
+        calendarSessionDays(snap.data ?? const [], now: DateTime.now()),
+      ),
+    );
+  }
+
   Widget _buildView(
     BuildContext context,
     HolidayCalendar calendar,
-    TripSummary? trip,
-  ) {
+    TripSummary? trip, {
+    bool isStudy = false,
+  }) {
     void openDay(DateTime date) {
       setState(() => _selected = date);
       showHolidayDaySheet(
@@ -454,17 +487,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
 
     switch (_view) {
       case HolidayView.month:
-        return HolidayMonthView(
-          calendar: calendar,
-          month: _month,
-          trip: trip,
-          selected: _selected,
-          onMonthChanged: (m) => setState(() {
-            _month = m;
-            _selected = null;
-          }),
-          onDayTap: openDay,
-        );
+        return _monthView(calendar, trip, isStudy: isStudy, onDayTap: openDay);
       case HolidayView.year:
         return HolidayYearView(
           calendar: calendar,

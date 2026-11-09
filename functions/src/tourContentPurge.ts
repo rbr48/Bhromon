@@ -597,8 +597,11 @@ export async function purgeMemberContent(
     for (const chapter of chapters.docs) {
       const read = chapter.ref.collection('reads').doc(email);
       if ((await read.get()).exists) await read.delete();
-      // Summary revisions keep their words under the stand-in, so the group's history stays whole.
+      // Summary revisions keep their words under the stand-in, so the group's history stays whole. The person's
+      // reports on them come out, and each count drops by one.
       await applyToQuery(db, chapter.ref.collection('summaries'), anonymize(STUDY_SUMMARY, email, standIn));
+      const revisions = await chapter.ref.collection('summaries').get();
+      for (const revision of revisions.docs) await removeReport(db, revision.ref, email);
     }
   }
 

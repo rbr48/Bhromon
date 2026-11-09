@@ -65,6 +65,16 @@ List<StudySubject> studySubjectsByTitle(Iterable<StudySubject> subjects) =>
     subjects.toList()
       ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
 
+/// The subjects the group studies: listed and not archived. Members see only these, and so
+/// does the exam countdown on the Today card. A proposal waits for an admin, and an archived
+/// subject is hidden until an admin restores it.
+List<StudySubject> activeStudySubjects(Iterable<StudySubject> subjects) =>
+    subjects.where((subject) => subject.isListed && !subject.archived).toList();
+
+/// The subjects an admin has archived, by title. Only an admin sees them, to restore them.
+List<StudySubject> archivedStudySubjects(Iterable<StudySubject> subjects) =>
+    studySubjectsByTitle(subjects.where((subject) => subject.archived));
+
 /// Whole calendar days from [today] to [examDate], counted on dates only. Negative when the
 /// exam has already passed, and zero on the day itself.
 int daysUntilExam(DateTime examDate, DateTime today) {

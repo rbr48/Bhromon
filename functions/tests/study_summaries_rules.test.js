@@ -17,6 +17,8 @@ const {
   deleteField,
   serverTimestamp,
   Timestamp,
+  writeBatch,
+  increment,
 } = require('firebase/firestore');
 
 // Starting the emulator and loading the rules can take longer than Jest's default five-second hook timeout.
@@ -52,11 +54,17 @@ const chapterFields = (extra = {}) => ({
   ...extra,
 });
 
+const reportRef = (f, id, email, chapterId = CHAPTER) =>
+  doc(f, 'tours', STUDY, 'study_books', BOOK, 'chapters', chapterId, 'summaries', id, 'reports', email);
+
+// A new revision is shown and has no reports, as firestore.rules requires of a create.
 const revisionFields = (by, extra = {}) => ({
   text: 'Anna and Vronsky meet at the station.',
   editorEmail: by,
   editorName: 'Name',
   createdAt: serverTimestamp(),
+  hidden: false,
+  reportCount: 0,
   ...extra,
 });
 
@@ -184,9 +192,10 @@ describe('chapter summaries: revisions and the pinned revision', () => {
   });
 
   describe('keeping revisions', () => {
-    test('a revision is never changed, not even by an admin', async () => {
+    test('the words of a revision are never changed, by anyone and even when an admin hides it', async () => {
       await assertFails(updateDoc(revisionRef(db('admin'), REVISION), { text: 'Changed' }));
       await assertFails(updateDoc(revisionRef(db('member'), REVISION), { text: 'Changed' }));
+      await assertFails(updateDoc(revisionRef(db('admin'), REVISION), { hidden: true, text: 'Changed' }));
     });
 
     test('only an admin removes a revision', async () => {
@@ -197,6 +206,84 @@ describe('chapter summaries: revisions and the pinned revision', () => {
     test('a member reads the revisions; an outsider does not', async () => {
       await assertSucceeds(getDoc(revisionRef(db('member'), REVISION)));
       await assertFails(getDoc(revisionRef(db('outsider'), REVISION)));
+    });
+  });
+
+  describe('reporting and hiding a revision', () => {
+    // A member reports a revision: the report, the count and the first report time move in one batch.
+    const reportBatch = (who, id, { firstReport = true, count = 1 } = {}) => {
+      const f = db(who);
+      const batch = writeBatch(f);
+      batch.set(reportRef(f, id, people[who].email), { reason: 'wrong', createdAt: serverTimestamp() });
+      batch.update(revisionRef(f, id), {
+        reportCount: increment(count),
+        ...(firstReport ? { reportedAt: serverTimestamp() } : {}),
+      });
+      return batch.commit();
+    };
+
+    // The stored revision, read with the rules off, since the rules are checked on the other calls.
+    const stored = async (id) => {
+      let data;
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        data = (await getDoc(revisionRef(ctx.firestore(), id))).data();
+      });
+      return data;
+    };
+
+    test('a member reports another member’s revision: it is counted and its first report time is set', async () => {
+      await assertSucceeds(reportBatch('member', REVISION));
+      const data = await stored(REVISION);
+      expect(data.reportCount).toBe(1);
+      expect(data.reportedAt).toBeTruthy();
+    });
+
+    test('a second report moves only the count, and keeps the first report time', async () => {
+      await assertSucceeds(reportBatch('member', REVISION));
+      const first = (await stored(REVISION)).reportedAt;
+      await assertSucceeds(reportBatch('owner', REVISION, { firstReport: false }));
+      const data = await stored(REVISION);
+      expect(data.reportCount).toBe(2);
+      expect(data.reportedAt.isEqual(first)).toBe(true);
+    });
+
+    test('a member cannot report their own revision', async () => {
+      await assertSucceeds(setDoc(revisionRef(db('member'), 'mine'), revisionFields(people.member.email)));
+      await assertFails(reportBatch('member', 'mine'));
+    });
+
+    test('a report moves the count by exactly one, and a report alone is refused', async () => {
+      await assertFails(reportBatch('member', REVISION, { count: 2 }));
+      await assertFails(setDoc(reportRef(db('member'), REVISION, people.member.email), {
+        reason: 'wrong',
+        createdAt: serverTimestamp(),
+      }));
+    });
+
+    test('a new revision cannot start hidden or already reported', async () => {
+      await assertFails(setDoc(revisionRef(db('member'), 'h1'), revisionFields(people.member.email, { hidden: true })));
+      await assertFails(setDoc(revisionRef(db('member'), 'h2'), revisionFields(people.member.email, { reportCount: 1 })));
+    });
+
+    test('an admin hides a revision, and shows it again, which clears its report time', async () => {
+      await assertSucceeds(reportBatch('member', REVISION));
+      await assertSucceeds(updateDoc(revisionRef(db('admin'), REVISION), { hidden: true }));
+      expect((await stored(REVISION)).hidden).toBe(true);
+      await assertSucceeds(updateDoc(revisionRef(db('admin'), REVISION), { hidden: false, reportedAt: deleteField() }));
+      const data = await stored(REVISION);
+      expect(data.hidden).toBe(false);
+      expect(data.reportedAt).toBeUndefined();
+    });
+
+    test('a member cannot hide or show a revision', async () => {
+      await assertFails(updateDoc(revisionRef(db('member'), REVISION), { hidden: true }));
+    });
+
+    test('the reporter and the admins read a report; another member does not', async () => {
+      await assertSucceeds(reportBatch('owner', REVISION));
+      await assertSucceeds(getDoc(reportRef(db('owner'), REVISION, people.owner.email)));
+      await assertSucceeds(getDoc(reportRef(db('admin'), REVISION, people.owner.email)));
+      await assertFails(getDoc(reportRef(db('member'), REVISION, people.owner.email)));
     });
   });
 

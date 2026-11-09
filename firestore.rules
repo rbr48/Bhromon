@@ -794,13 +794,14 @@ service cloud.firestore {
     // A study subject: a name, an optional course code, description and exam date, and an
     // approval like a book's.
     function validStudySubject(d) {
-      return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail']) &&
+      return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail', 'archived']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 80 &&
              (d.get('code', null) == null || (d.code is string && d.code.size() <= 20)) &&
              (d.get('description', null) == null || (d.description is string && d.description.size() <= 300)) &&
              (d.get('examDate', null) == null || d.examDate is timestamp) &&
              (d.get('approval', null) == null || d.approval in ['proposed', 'listed', 'declined']) &&
              (d.get('declineNote', null) == null || (d.declineNote is string && d.declineNote.size() <= 300)) &&
+             (d.get('archived', null) == null || d.archived is bool) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
     }
     // The modules a study subject can turn on. Only these are live; the rest are coming.
@@ -836,12 +837,14 @@ service cloud.firestore {
              d.helpfulCount is int && d.helpfulCount >= 0 &&
              d.shown is bool && d.pinned is bool;
     }
-    // Whether an update to a subject is allowed. Only an admin changes whether it is listed;
-    // its creator or an admin changes the details.
+    // Whether an update to a subject is allowed. Only an admin changes whether it is listed, or archives or restores
+    // it, and only a listed subject can be archived; its creator or an admin changes the details.
     function studySubjectUpdateAllowed(tourId, newData, oldData) {
       let byAdmin = isTourAdmin(tourId);
       return (byAdmin || newData.get('approval', 'listed') == oldData.get('approval', 'listed')) &&
              (newData.get('declineNote', null) == null || newData.get('approval', null) == 'declined') &&
+             (byAdmin || newData.get('archived', false) == oldData.get('archived', false)) &&
+             (newData.get('archived', false) == false || newData.get('approval', 'listed') == 'listed') &&
              (byAdmin || oldData.get('createdByEmail', '') == tourUserEmail());
     }
     // Whether a module of a subject is on: its settings exist and say so.
@@ -849,9 +852,11 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/$(moduleKey)) &&
              get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/$(moduleKey)).data.enabled == true;
     }
-    // Whether a subject is listed, so that its modules can be used.
+    // Whether a subject is listed and not archived, so that its modules can be used and nothing new is added to it.
+    // An archived subject is read-only until an admin restores it.
     function studySubjectListed(tourId, subjectId) {
-      return get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)).data.get('approval', 'listed') == 'listed';
+      let subject = get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)).data;
+      return subject.get('approval', 'listed') == 'listed' && subject.get('archived', false) == false;
     }
     // Whether a member may add a post to a module of a listed subject, and how it is shown: an
     // admin's post always is; a member's post is shown when the module lets members post directly.
@@ -1158,12 +1163,15 @@ service cloud.firestore {
     // A revision of a chapter summary: its text up to 4,000 characters, who wrote it, when, and the revision it
     // restores when it is a restore.
     function validStudySummary(d) {
-      return d.keys().hasOnly(['text', 'editorEmail', 'editorName', 'createdAt', 'restoredFromId']) &&
+      return d.keys().hasOnly(['text', 'editorEmail', 'editorName', 'createdAt', 'restoredFromId', 'hidden', 'reportCount', 'reportedAt']) &&
              d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
              d.editorEmail is string && d.editorEmail.size() >= 1 && d.editorEmail.size() <= 254 &&
              d.editorName is string && d.editorName.size() <= 80 &&
              d.createdAt is timestamp &&
-             (d.get('restoredFromId', null) == null || (d.restoredFromId is string && d.restoredFromId.size() >= 1 && d.restoredFromId.size() <= 40));
+             (d.get('restoredFromId', null) == null || (d.restoredFromId is string && d.restoredFromId.size() >= 1 && d.restoredFromId.size() <= 40)) &&
+             d.get('hidden', false) is bool &&
+             d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
     }
     // A thread on a book: a title, a body, an optional page reference and chapter, whether an admin has
     // pinned or locked it, and which reply is the accepted answer.
@@ -1676,9 +1684,38 @@ service cloud.firestore {
             allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
                              request.resource.data.editorEmail == tourUserEmail() &&
                              request.resource.data.createdAt == request.time &&
+                             request.resource.data.hidden == false &&
+                             request.resource.data.reportCount == 0 &&
+                             request.resource.data.get('reportedAt', null) == null &&
                              validStudySummary(request.resource.data) &&
                              studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+            // A member reports someone else's revision, once. The count and the first report time move in the same batch
+            // as the report (the reports subcollection below). The words never change.
+            allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             resource.data.editorEmail != tourUserEmail() &&
+                             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount', 'reportedAt']) &&
+                             request.resource.data.reportCount == resource.data.get('reportCount', 0) + 1 &&
+                             ((resource.data.get('reportedAt', null) == null && request.resource.data.reportedAt == request.time) ||
+                              (resource.data.get('reportedAt', null) != null && request.resource.data.reportedAt == resource.data.reportedAt)) &&
+                             existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/chapters/$(chapterId)/summaries/$(revisionId)/reports/$(tourUserEmail()));
+            // An admin hides a revision or shows it again. Showing it again clears its report time. The words never change.
+            allow update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                             request.resource.data.hidden is bool &&
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden']) ||
+                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden', 'reportedAt']) &&
+                               request.resource.data.get('reportedAt', null) == null));
             allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+
+            // One report per member, never on their own revision. The report and the count move in one batch. The
+            // reporter and an admin read the reports.
+            match /reports/{reporter} {
+              allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || reporter == tourUserEmail());
+              allow create: if isStudyTour(tourId) && isActiveMember(tourId) && reporter == tourUserEmail() &&
+                               validStudyReport(request.resource.data) &&
+                               request.resource.data.createdAt == request.time &&
+                               get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/chapters/$(chapterId)/summaries/$(revisionId)).data.editorEmail != tourUserEmail() &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/chapters/$(chapterId)/summaries/$(revisionId)).data.get('reportCount', 0) == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/chapters/$(chapterId)/summaries/$(revisionId)).data.get('reportCount', 0) + 1;
+            }
           }
         }
 
@@ -1858,6 +1895,7 @@ service cloud.firestore {
                          ((isTourAdmin(tourId) && request.resource.data.get('approval', 'listed') == 'listed') ||
                           request.resource.data.get('approval', null) == 'proposed') &&
                          request.resource.data.get('declineNote', null) == null &&
+                         request.resource.data.get('archived', false) == false &&
                          validStudySubject(request.resource.data);
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
