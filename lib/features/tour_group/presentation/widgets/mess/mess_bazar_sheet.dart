@@ -63,7 +63,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
   void initState() {
     super.initState();
     if (widget.initialDateKey != null) {
-      _selectedDate = DateTime.tryParse(widget.initialDateKey!) ?? DateTime.now();
+      _selectedDate =
+          DateTime.tryParse(widget.initialDateKey!) ?? DateTime.now();
     } else {
       _selectedDate = DateTime.now();
     }
@@ -102,7 +103,9 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
     final clean = normalizeEmail(email);
     for (final m in widget.members) {
       if (normalizeEmail(m.email) == clean) {
-        return m.displayName.isNotEmpty ? m.displayName : m.email.split('@').first;
+        return m.displayName.isNotEmpty
+            ? m.displayName
+            : m.email.split('@').first;
       }
     }
     return email.split('@').first;
@@ -161,8 +164,10 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    localizedDateFormat('EEEE, d MMMM yyyy').format(_selectedDate),
-                    style: TextStyle(color: ctx.forest.accentText, fontSize: 13),
+                    localizedDateFormat('EEEE, d MMMM yyyy')
+                        .format(_selectedDate),
+                    style:
+                        TextStyle(color: ctx.forest.accentText, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -180,9 +185,12 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                     children: [
                       for (final member in widget.members)
                         FilterChip(
-                          selected: selectedEmails.contains(normalizeEmail(member.email)),
+                          selected: selectedEmails
+                              .contains(normalizeEmail(member.email)),
                           label: Text(
-                            member.displayName.isNotEmpty ? member.displayName : member.email.split('@').first,
+                            member.displayName.isNotEmpty
+                                ? member.displayName
+                                : member.email.split('@').first,
                             style: const TextStyle(fontSize: 12),
                           ),
                           selectedColor: AppColors.mintGreen,
@@ -229,20 +237,24 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('বাতিল', style: TextStyle(color: Colors.grey)),
+                child:
+                    const Text('বাতিল', style: TextStyle(color: Colors.grey)),
               ),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.mintGreen),
                 onPressed: () {
                   if (selectedEmails.isEmpty) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('কমপক্ষে একজন সদস্য নির্বাচন করুন')),
+                      const SnackBar(
+                          content: Text('কমপক্ষে একজন সদস্য নির্বাচন করুন')),
                     );
                     return;
                   }
                   Navigator.pop(ctx, true);
                 },
-                child: const Text('সংরক্ষণ করুন', style: TextStyle(color: AppColors.darkGreen)),
+                child: const Text('সংরক্ষণ করুন',
+                    style: TextStyle(color: AppColors.darkGreen)),
               ),
             ],
           );
@@ -252,7 +264,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
 
     if (result == true && mounted) {
       final budgetTaka = int.tryParse(budgetCtrl.text.trim());
-      final budgetPaisa = budgetTaka != null && budgetTaka > 0 ? budgetTaka * 100 : null;
+      final budgetPaisa =
+          budgetTaka != null && budgetTaka > 0 ? budgetTaka * 100 : null;
       final assignedNames = selectedEmails.map(_nameForEmail).toList();
 
       final schedule = MessBazarSchedule(
@@ -314,7 +327,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Icon(Icons.storefront_rounded, color: context.forest.accentText, size: 22),
+                  Icon(Icons.storefront_rounded,
+                      color: context.forest.accentText, size: 22),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -357,22 +371,27 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  localizedDateFormat('EEE, d MMM yyyy').format(_selectedDate),
+                                  localizedDateFormat('EEE, d MMM yyyy')
+                                      .format(_selectedDate),
                                   style: TextStyle(
-                                    color: isToday ? AppColors.mintGreen : context.forest.text,
+                                    color: isToday
+                                        ? AppColors.mintGreen
+                                        : context.forest.text,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey),
+                                const Icon(Icons.calendar_today_rounded,
+                                    size: 14, color: Colors.grey),
                               ],
                             ),
                             if (isToday)
                               Text(
                                 'আজকের দিন',
                                 style: TextStyle(
-                                  color: AppColors.mintGreen.withValues(alpha: 0.8),
+                                  color: AppColors.mintGreen
+                                      .withValues(alpha: 0.8),
                                   fontSize: 11,
                                 ),
                               ),
@@ -402,11 +421,13 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        Icon(Icons.event_busy_rounded, size: 48, color: context.forest.text38),
+                        Icon(Icons.event_busy_rounded,
+                            size: 48, color: context.forest.text38),
                         const SizedBox(height: 12),
                         Text(
                           l10n.translate('mess_bazar_no_duty'),
-                          style: TextStyle(color: context.forest.text70, fontSize: 14),
+                          style: TextStyle(
+                              color: context.forest.text70, fontSize: 14),
                           textAlign: TextAlign.center,
                         ),
                         if (widget.isAdmin) ...[
@@ -418,7 +439,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                             ),
                             onPressed: () => _openAssignDialog(),
                             icon: const Icon(Icons.add_task_rounded, size: 18),
-                            label: Text(l10n.translate('mess_bazar_assign_btn')),
+                            label:
+                                Text(l10n.translate('mess_bazar_assign_btn')),
                           ),
                         ],
                       ],
@@ -447,7 +469,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: schedule.isCompleted
                                     ? AppColors.darkGreen
@@ -496,7 +519,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                         // Assigned members
                         Text(
                           l10n.translate('mess_bazar_assigned_to'),
-                          style: TextStyle(color: context.forest.text54, fontSize: 12),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 12),
                         ),
                         const SizedBox(height: 6),
                         Wrap(
@@ -508,7 +532,10 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                                 avatar: CircleAvatar(
                                   backgroundColor: AppColors.mintGreen,
                                   child: Text(
-                                    _nameForEmail(email).characters.first.toUpperCase(),
+                                    _nameForEmail(email)
+                                        .characters
+                                        .first
+                                        .toUpperCase(),
                                     style: const TextStyle(
                                       color: AppColors.darkGreen,
                                       fontSize: 10,
@@ -522,13 +549,15 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                                     color: normalizeEmail(email) == _myEmail
                                         ? AppColors.mintGreen
                                         : context.forest.text,
-                                    fontWeight: normalizeEmail(email) == _myEmail
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                                    fontWeight:
+                                        normalizeEmail(email) == _myEmail
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
                                     fontSize: 12,
                                   ),
                                 ),
-                                backgroundColor: context.forest.surfaceFor(_sheetBg),
+                                backgroundColor:
+                                    context.forest.surfaceFor(_sheetBg),
                               ),
                           ],
                         ),
@@ -550,7 +579,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                             ],
                           ),
                         ],
-                        if (schedule.note != null && schedule.note!.isNotEmpty) ...[
+                        if (schedule.note != null &&
+                            schedule.note!.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,7 +591,9 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                               Expanded(
                                 child: Text(
                                   schedule.note!,
-                                  style: TextStyle(color: context.forest.text70, fontSize: 12),
+                                  style: TextStyle(
+                                      color: context.forest.text70,
+                                      fontSize: 12),
                                 ),
                               ),
                             ],
@@ -591,7 +623,8 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                               label: Text(
                                 schedule.isCompleted
                                     ? 'অসম্পূর্ণ চিহ্নিত করুন'
-                                    : l10n.translate('mess_bazar_mark_completed'),
+                                    : l10n
+                                        .translate('mess_bazar_mark_completed'),
                               ),
                             ),
                           ),

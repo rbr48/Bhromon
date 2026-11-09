@@ -160,8 +160,8 @@ class _MealsScreenState extends State<MealsScreen> {
         _dayStrip(),
         const SizedBox(height: 8),
         StreamBuilder<MessBazarSchedule?>(
-          stream: _repository.watchBazarScheduleForDay(
-              widget.tourId, _selectedKey),
+          stream:
+              _repository.watchBazarScheduleForDay(widget.tourId, _selectedKey),
           builder: (context, snap) {
             final sched = snap.data;
             if (sched == null || sched.assignedNames.isEmpty) {

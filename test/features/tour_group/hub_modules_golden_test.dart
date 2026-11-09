@@ -61,8 +61,9 @@ class _Repo extends TourGroupRepository {
   Stream<List<MealLog>> watchMealsForMonth(String tourId, DateTime month) =>
       Stream.value(const []);
   @override
-  Stream<MessBazarSchedule?> watchBazarScheduleForDay(String tourId, String dateKey) => Stream.value(null);
-
+  Stream<MessBazarSchedule?> watchBazarScheduleForDay(
+          String tourId, String dateKey) =>
+      Stream.value(null);
 
   @override
   Stream<List<ServiceRequest>> watchServiceRequests(String tourId) =>

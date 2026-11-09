@@ -37,7 +37,8 @@ void main() {
       final reconstructed = MessBazarSchedule.fromDoc('2026-11-09', map);
       expect(reconstructed, isNotNull);
       expect(reconstructed!.dateKey, '2026-11-09');
-      expect(reconstructed.assignedEmails, ['alice@example.com', 'bob@test.com']);
+      expect(
+          reconstructed.assignedEmails, ['alice@example.com', 'bob@test.com']);
       expect(reconstructed.assignedNames, ['Alice', 'Bob']);
       expect(reconstructed.note, 'Fresh fish and vegetables');
       expect(reconstructed.estimatedBudgetPaisa, 50000);
