@@ -1,10 +1,9 @@
 """Tests for media_utils: video poster thumbnail generation and edge-case handling."""
 
+import asyncio
 from pathlib import Path
 import subprocess
 from unittest.mock import MagicMock
-
-import pytest
 
 import media_utils
 
@@ -80,8 +79,7 @@ def test_generate_video_poster_success(tmp_path, monkeypatch):
     assert output_poster.stat().st_size > 0
 
 
-@pytest.mark.asyncio
-async def test_async_generate_video_poster(tmp_path, monkeypatch):
+def test_async_generate_video_poster(tmp_path, monkeypatch):
     video = tmp_path / "sample.mp4"
     video.write_bytes(b"dummy video data")
     output_poster = tmp_path / "poster.webp"
@@ -94,6 +92,6 @@ async def test_async_generate_video_poster(tmp_path, monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    result = await media_utils.async_generate_video_poster(video, output_poster)
+    result = asyncio.run(media_utils.async_generate_video_poster(video, output_poster))
     assert result is True
     assert output_poster.exists()
