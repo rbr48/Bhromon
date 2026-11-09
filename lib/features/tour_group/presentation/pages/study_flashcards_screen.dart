@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -25,6 +26,7 @@ class StudyFlashcardsScreen extends StatefulWidget {
   const StudyFlashcardsScreen({
     super.key,
     required this.book,
+    this.tourId = '',
     this.store,
     this.today,
     this.activity,
@@ -34,6 +36,8 @@ class StudyFlashcardsScreen extends StatefulWidget {
   final StudyActivityLog? activity;
 
   final StudyBook book;
+
+  final String tourId;
 
   /// The device's flashcards. Null in the app, where the screen makes its own; tests pass one.
   final StudyFlashcardStore? store;
@@ -138,6 +142,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => StudyFlashcardReviewScreen(
         cards: due,
+        tourId: widget.tourId,
         store: _store,
         today: widget.today,
         activity: widget.activity,
@@ -247,46 +252,50 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_flashcards_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-        actions: [
-          PopupMenuButton<_DeckAction>(
-            tooltip: l10n.translate('study_flashcard_menu'),
-            icon: Icon(Icons.more_vert_rounded, color: palette.text),
-            onSelected: _onAction,
-            itemBuilder: (_) => [
-              PopupMenuItem<_DeckAction>(
-                value: _DeckAction.exportDeck,
-                child: Text(l10n.translate('study_flashcard_export_json')),
-              ),
-              PopupMenuItem<_DeckAction>(
-                value: _DeckAction.exportAnki,
-                child: Text(l10n.translate('study_flashcard_export_anki')),
-              ),
-              PopupMenuItem<_DeckAction>(
-                value: _DeckAction.importDeck,
-                child: Text(l10n.translate('study_flashcard_import')),
-              ),
-            ],
-          ),
-        ],
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_flashcards_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+          actions: [
+            PopupMenuButton<_DeckAction>(
+              tooltip: l10n.translate('study_flashcard_menu'),
+              icon: Icon(Icons.more_vert_rounded, color: palette.text),
+              onSelected: _onAction,
+              itemBuilder: (_) => [
+                PopupMenuItem<_DeckAction>(
+                  value: _DeckAction.exportDeck,
+                  child: Text(l10n.translate('study_flashcard_export_json')),
+                ),
+                PopupMenuItem<_DeckAction>(
+                  value: _DeckAction.exportAnki,
+                  child: Text(l10n.translate('study_flashcard_export_anki')),
+                ),
+                PopupMenuItem<_DeckAction>(
+                  value: _DeckAction.importDeck,
+                  child: Text(l10n.translate('study_flashcard_import')),
+                ),
+              ],
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _addCard,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate('study_flashcard_add')),
+        ),
+        body: _body(),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addCard,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('study_flashcard_add')),
-      ),
-      body: _body(),
     );
   }
 

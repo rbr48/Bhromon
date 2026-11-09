@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -251,65 +252,69 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final shown = searchStudyThreads(_threads, _query);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_discussion_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: l10n.translate('study_discussion_search'),
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () => setState(() {
-              _searching = !_searching;
-              if (!_searching) _query = '';
-            }),
-          ),
-          if (_place != null)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded, color: palette.text54),
-              tooltip: l10n.translate('study_discussion_menu'),
-              onSelected: (_) => _toggleFence(),
-              itemBuilder: (_) => [
-                PopupMenuItem<String>(
-                  value: 'fence',
-                  child: Text(l10n.translate(_fenceOn
-                      ? 'study_fence_show_all'
-                      : 'study_fence_hide_later')),
-                ),
-              ],
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_discussion_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+          actions: [
+            IconButton(
+              tooltip: l10n.translate('study_discussion_search'),
+              icon: const Icon(Icons.search_rounded),
+              onPressed: () => setState(() {
+                _searching = !_searching;
+                if (!_searching) _query = '';
+              }),
             ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _startThread,
-        icon: const Icon(Icons.add_comment_rounded),
-        label: Text(l10n.translate('study_thread_start')),
-      ),
-      body: Column(
-        children: [
-          if (_searching)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: TextField(
-                autofocus: true,
-                style: TextStyle(color: palette.text),
-                decoration: InputDecoration(
-                  hintText: l10n.translate('study_discussion_search_hint'),
-                  prefixIcon: const Icon(Icons.search_rounded),
-                ),
-                onChanged: (value) => setState(() => _query = value),
+            if (_place != null)
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded, color: palette.text54),
+                tooltip: l10n.translate('study_discussion_menu'),
+                onSelected: (_) => _toggleFence(),
+                itemBuilder: (_) => [
+                  PopupMenuItem<String>(
+                    value: 'fence',
+                    child: Text(l10n.translate(_fenceOn
+                        ? 'study_fence_show_all'
+                        : 'study_fence_hide_later')),
+                  ),
+                ],
               ),
-            ),
-          Expanded(child: _list(shown)),
-        ],
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _startThread,
+          icon: const Icon(Icons.add_comment_rounded),
+          label: Text(l10n.translate('study_thread_start')),
+        ),
+        body: Column(
+          children: [
+            if (_searching)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  autofocus: true,
+                  style: TextStyle(color: palette.text),
+                  decoration: InputDecoration(
+                    hintText: l10n.translate('study_discussion_search_hint'),
+                    prefixIcon: const Icon(Icons.search_rounded),
+                  ),
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+              ),
+            Expanded(child: _list(shown)),
+          ],
+        ),
       ),
     );
   }

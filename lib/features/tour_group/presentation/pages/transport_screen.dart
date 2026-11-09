@@ -1,9 +1,9 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -17,7 +17,6 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/models/vehicle_models.dart';
 import '../../domain/services/seat_layout_engine.dart';
 import '../../domain/services/seat_planner.dart';
-import '../tour_routes.dart';
 import '../widgets/transport/local_fare_guide_sheet.dart';
 import '../widgets/transport/vehicle_editor_sheet.dart';
 import '../widgets/transport/vehicle_seat_map.dart';
@@ -454,28 +453,22 @@ class _TransportScreenState extends State<TransportScreen> {
             ],
           );
     if (widget.embedded) return body;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-      appBar: AppBar(
-        leading: BackButton(
-          color: context.forest.text,
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(tourHubPath(widget.tourId));
-            }
-          },
-        ),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-        elevation: 0,
-        title: Text(l10n.translate('veh_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          elevation: 0,
+          title: Text(l10n.translate('veh_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+        ),
+        body: body,
       ),
-      body: body,
     );
   }
 

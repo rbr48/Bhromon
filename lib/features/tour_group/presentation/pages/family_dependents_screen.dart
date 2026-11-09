@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -93,42 +94,46 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        title: Text(l10n.translate('dp_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: AppColors.darkGreen,
-        icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: Text(l10n.translate('dp_add')),
-        onPressed: _add,
-      ),
-      body: StreamBuilder<List<TourMember>>(
-        stream: _members,
-        builder: (context, memberSnap) {
-          final members = memberSnap.data;
-          if (members == null) return _spinner();
-          return StreamBuilder<List<Dependent>>(
-            stream: _dependents,
-            builder: (context, depSnap) {
-              if (depSnap.hasError) {
-                return _message(l10n.translate('dp_load_failed'));
-              }
-              final dependents = depSnap.data;
-              if (dependents == null) return _spinner();
-              return _list(members, dependents, l10n);
-            },
-          );
-        },
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('dp_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: AppColors.darkGreen,
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: Text(l10n.translate('dp_add')),
+          onPressed: _add,
+        ),
+        body: StreamBuilder<List<TourMember>>(
+          stream: _members,
+          builder: (context, memberSnap) {
+            final members = memberSnap.data;
+            if (members == null) return _spinner();
+            return StreamBuilder<List<Dependent>>(
+              stream: _dependents,
+              builder: (context, depSnap) {
+                if (depSnap.hasError) {
+                  return _message(l10n.translate('dp_load_failed'));
+                }
+                final dependents = depSnap.data;
+                if (dependents == null) return _spinner();
+                return _list(members, dependents, l10n);
+              },
+            );
+          },
+        ),
       ),
     );
   }

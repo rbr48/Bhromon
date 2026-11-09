@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -157,94 +158,98 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       now: now,
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_session.title),
-        actions: [
-          if (canManage)
-            IconButton(
-              tooltip: l10n.translate('study_session_edit_details'),
-              icon: const Icon(Icons.edit_note_rounded),
-              onPressed: _editDetails,
-            ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            localizedDateFormat('d MMM y, h:mm a').format(_session.startsAt),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          if (_session.place.isNotEmpty)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.place_rounded),
-              title: Text(_session.place),
-            ),
-          if (_session.link.isNotEmpty)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.link_rounded),
-              title: Text(_session.link),
-            ),
-          if (_session.agenda.isNotEmpty) ...[
-            const SizedBox(height: 8),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(_session.title),
+          actions: [
+            if (canManage)
+              IconButton(
+                tooltip: l10n.translate('study_session_edit_details'),
+                icon: const Icon(Icons.edit_note_rounded),
+                onPressed: _editDetails,
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
             Text(
-              l10n.translate('study_session_agenda_heading'),
+              localizedDateFormat('d MMM y, h:mm a').format(_session.startsAt),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (_session.place.isNotEmpty)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.place_rounded),
+                title: Text(_session.place),
+              ),
+            if (_session.link.isNotEmpty)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.link_rounded),
+                title: Text(_session.link),
+              ),
+            if (_session.agenda.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.translate('study_session_agenda_heading'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Text(_session.agenda),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              l10n.translate('study_session_answer_heading'),
               style: Theme.of(context).textTheme.titleSmall,
             ),
-            Text(_session.agenda),
-          ],
-          const SizedBox(height: 16),
-          Text(
-            l10n.translate('study_session_answer_heading'),
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final response in StudySessionResponse.values)
-                ChoiceChip(
-                  label: Text(
-                    '${l10n.translate('study_session_${response.name}')} '
-                    '(${l10n.number(_countFor(tally, response))})',
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final response in StudySessionResponse.values)
+                  ChoiceChip(
+                    label: Text(
+                      '${l10n.translate('study_session_${response.name}')} '
+                      '(${l10n.number(_countFor(tally, response))})',
+                    ),
+                    selected: mine?.response == response,
+                    onSelected: (_) => _answer(response),
                   ),
-                  selected: mine?.response == response,
-                  onSelected: (_) => _answer(response),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (!started)
-            Text(l10n.translate('study_session_not_started'))
-          else if (mine?.isCheckedIn ?? false)
-            Text(l10n.translate('study_session_checked_in_done'))
-          else
-            FilledButton.icon(
-              onPressed: canCheckIn(_session, answer: mine, now: now)
-                  ? _checkIn
-                  : null,
-              icon: const Icon(Icons.how_to_reg_rounded),
-              label: Text(l10n.translate('study_session_checkin')),
+              ],
             ),
-          if (started)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l10n.translate(
-                  'study_session_checked_in_count',
-                  args: {'count': l10n.number(tally.checkedIn)},
+            const SizedBox(height: 12),
+            if (!started)
+              Text(l10n.translate('study_session_not_started'))
+            else if (mine?.isCheckedIn ?? false)
+              Text(l10n.translate('study_session_checked_in_done'))
+            else
+              FilledButton.icon(
+                onPressed: canCheckIn(_session, answer: mine, now: now)
+                    ? _checkIn
+                    : null,
+                icon: const Icon(Icons.how_to_reg_rounded),
+                label: Text(l10n.translate('study_session_checkin')),
+              ),
+            if (started)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.translate(
+                    'study_session_checked_in_count',
+                    args: {'count': l10n.number(tally.checkedIn)},
+                  ),
                 ),
               ),
-            ),
-          ..._roomSection(context),
-          ..._timerSection(context, canManage),
-          if (recap != null && !recap.isEmpty || canRecap)
-            _recapSection(context, recap, canRecap),
-        ],
+            ..._roomSection(context),
+            ..._timerSection(context, canManage),
+            if (recap != null && !recap.isEmpty || canRecap)
+              _recapSection(context, recap, canRecap),
+          ],
+        ),
       ),
     );
   }

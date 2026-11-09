@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -124,50 +125,54 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
-      appBar: AppBar(
-        title: Text(l10n.translate('scrap_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: l10n.translate('scrap_share'),
-            onPressed: _shareScrapbookSummary,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFE8B04B)))
-          : _loadFailed
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(l10n.translate('scrap_load_failed'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: context.forest.text70)),
-                  ),
-                )
-              : ScrapbookMagazine(
-                  issue: ScrapbookIssue.build(
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('scrap_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF15110D)),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.share),
+              tooltip: l10n.translate('scrap_share'),
+              onPressed: _shareScrapbookSummary,
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFFE8B04B)))
+            : _loadFailed
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(l10n.translate('scrap_load_failed'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: context.forest.text70)),
+                    ),
+                  )
+                : ScrapbookMagazine(
+                    issue: ScrapbookIssue.build(
+                      posts: _posts,
+                      members: _members,
+                      expenses: _expenses,
+                      days: _tourGroup?.daysList ?? const [],
+                    ),
                     posts: _posts,
-                    members: _members,
-                    expenses: _expenses,
-                    days: _tourGroup?.daysList ?? const [],
+                    group: _tourGroup,
+                    travellers: _members.length,
+                    myEmail: _repository.currentEmail,
+                    onShareText: _shareScrapbookSummary,
                   ),
-                  posts: _posts,
-                  group: _tourGroup,
-                  travellers: _members.length,
-                  myEmail: _repository.currentEmail,
-                  onShareText: _shareScrapbookSummary,
-                ),
+      ),
     );
   }
 }

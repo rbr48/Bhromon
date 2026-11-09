@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -135,70 +136,75 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final subject = widget.subject;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(subject.title,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-        actions: [
-          if (_isAdmin)
-            IconButton(
-              tooltip: l10n.translate('study_subject_customise'),
-              icon: const Icon(Icons.tune_rounded),
-              onPressed: _customise,
-            ),
-        ],
-      ),
-      body: StreamBuilder<Map<StudyModuleKey, StudyModuleSettings>>(
-        stream: _modules,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(l10n.translate('study_failed'),
-                  style: TextStyle(color: palette.text70)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final settings = snap.data!;
-          final keys =
-              visibleStudyModules(settings: settings, isAdmin: _isAdmin);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _overview(),
-              StudyTodayCard(
-                tourId: widget.tourId,
-                subject: widget.subject,
-                repository: _repository,
-                findingsModule: _liveModule(settings, StudyModuleKey.findings),
-                challengeModule:
-                    _liveModule(settings, StudyModuleKey.challenges),
-                onOpenModule: _open,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(subject.title,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+          actions: [
+            if (_isAdmin)
+              IconButton(
+                tooltip: l10n.translate('study_subject_customise'),
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: _customise,
               ),
-              if (keys.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    l10n.translate(_isAdmin
-                        ? 'study_subject_no_modules_admin'
-                        : 'study_subject_no_modules'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text70),
-                  ),
+          ],
+        ),
+        body: StreamBuilder<Map<StudyModuleKey, StudyModuleSettings>>(
+          stream: _modules,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                child: Text(l10n.translate('study_failed'),
+                    style: TextStyle(color: palette.text70)),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final settings = snap.data!;
+            final keys =
+                visibleStudyModules(settings: settings, isAdmin: _isAdmin);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                _overview(),
+                StudyTodayCard(
+                  tourId: widget.tourId,
+                  subject: widget.subject,
+                  repository: _repository,
+                  findingsModule:
+                      _liveModule(settings, StudyModuleKey.findings),
+                  challengeModule:
+                      _liveModule(settings, StudyModuleKey.challenges),
+                  onOpenModule: _open,
                 ),
-              for (final key in keys) _moduleTile(key, settings[key]),
-            ],
-          );
-        },
+                if (keys.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      l10n.translate(_isAdmin
+                          ? 'study_subject_no_modules_admin'
+                          : 'study_subject_no_modules'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: palette.text70),
+                    ),
+                  ),
+                for (final key in keys) _moduleTile(key, settings[key]),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -16,6 +17,7 @@ class StudyFlashcardReviewScreen extends StatefulWidget {
     super.key,
     required this.cards,
     required this.store,
+    this.tourId = '',
     this.today,
     this.activity,
   });
@@ -27,6 +29,8 @@ class StudyFlashcardReviewScreen extends StatefulWidget {
   final List<StudyFlashcard> cards;
 
   final StudyFlashcardStore store;
+
+  final String tourId;
 
   /// The day the cards are judged against. Null in the app, where it is today; tests pass one.
   final DateTime? today;
@@ -95,20 +99,24 @@ class _StudyFlashcardReviewScreenState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_flashcards_review'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_flashcards_review'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        body: SafeArea(child: _finished ? _doneView() : _cardView()),
       ),
-      body: SafeArea(child: _finished ? _doneView() : _cardView()),
     );
   }
 

@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:bhromon/features/chat/presentation/widgets/packet_loss_meter.dart';
 import 'dart:async';
 
@@ -37,7 +38,6 @@ import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
 import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/media_rules.dart';
-import '../tour_routes.dart';
 import '../../domain/services/presence_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/channel_composer.dart';
@@ -519,12 +519,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final canPost = !selected.adminOnly || _isAdmin;
 
     return PopScope(
-        canPop: !_searching,
+        canPop: false,
         onPopInvokedWithResult: (didPop, _) {
           if (didPop) return;
           if (_searching) {
             _toggleSearch();
+            return;
           }
+          navigateBackOrToGroup(context, widget.tourId);
         },
         child: Scaffold(
           backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
@@ -538,11 +540,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   _toggleSearch();
                   return;
                 }
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(tourHubPath(widget.tourId));
-                }
+                navigateBackOrToGroup(context, widget.tourId);
               },
             ),
             title: _searching

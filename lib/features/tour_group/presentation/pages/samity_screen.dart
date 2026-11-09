@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -143,39 +144,43 @@ class _SamityScreenState extends State<SamityScreen> {
     final l10n = context.l10n;
     final group = _group;
     final samityOn = group != null && group.isSamity;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        title: Text(l10n.translate('samity_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-        actions: [
-          if (samityOn && group.samity.isSetUp)
-            IconButton(
-              tooltip: l10n.translate('samity_export_pdf'),
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              onPressed: () => exportSamityPdf(
-                context,
-                group: group,
-                members: _members,
-                payments: _payments,
-                payouts: _payouts,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('samity_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+          actions: [
+            if (samityOn && group.samity.isSetUp)
+              IconButton(
+                tooltip: l10n.translate('samity_export_pdf'),
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                onPressed: () => exportSamityPdf(
+                  context,
+                  group: group,
+                  members: _members,
+                  payments: _payments,
+                  payouts: _payouts,
+                ),
               ),
-            ),
-          if (_isAdmin && samityOn)
-            IconButton(
-              tooltip: l10n.translate('samity_setup'),
-              icon: const Icon(Icons.tune_rounded),
-              onPressed: _openSetup,
-            ),
-        ],
+            if (_isAdmin && samityOn)
+              IconButton(
+                tooltip: l10n.translate('samity_setup'),
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: _openSetup,
+              ),
+          ],
+        ),
+        body: _body(l10n, group, samityOn),
       ),
-      body: _body(l10n, group, samityOn),
     );
   }
 

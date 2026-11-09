@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -336,470 +337,479 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
     final hasGroupName = _groupName != null && _groupName!.trim().isNotEmpty;
     final targetTourId = _joinedGroup?.id ?? _preview?.tourId;
 
-    return Scaffold(
-      backgroundColor: context.forest.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.close_rounded, color: context.forest.text70),
-          onPressed: () {
-            try {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/group-hub');
+    return GroupPopScope(
+      tourId: targetTourId ?? '',
+      child: Scaffold(
+        backgroundColor: context.forest.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.close_rounded, color: context.forest.text70),
+            onPressed: () {
+              try {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/group-hub');
+                }
+              } catch (_) {
+                // Safe fallback when GoRouter is not attached.
+                Navigator.of(context).maybePop();
               }
-            } catch (_) {
-              // Safe fallback when GoRouter is not attached.
-              Navigator.of(context).maybePop();
-            }
-          },
+            },
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Brand Header with accurate logo
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF1B4332),
-                          border: Border.all(
-                            color: AppColors.mintGreen.withValues(alpha: 0.5),
-                            width: 1.5,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // App Brand Header with accurate logo
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF1B4332),
+                            border: Border.all(
+                              color: AppColors.mintGreen.withValues(alpha: 0.5),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.explore,
-                              color: AppColors.mintGreen,
-                              size: 24,
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.explore,
+                                color: AppColors.mintGreen,
+                                size: 24,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Bhromon',
-                            style: TextStyle(
-                              color: context.forest.text,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bhromon',
+                              style: TextStyle(
+                                color: context.forest.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
                             ),
-                          ),
-                          Text(
-                            'Travel with life',
-                            style: TextStyle(
-                              color: context.forest.text54,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                            Text(
+                              'Travel with life',
+                              style: TextStyle(
+                                color: context.forest.text54,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Main Invitation Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: context.forest.card,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _joinedGroup != null
-                            ? AppColors.mintGreen
-                            : context.forest.divider10,
-                        width: _joinedGroup != null ? 1.5 : 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          ],
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        // Group Avatar / Icon
-                        _buildGroupAvatar(),
-                        const SizedBox(height: 18),
+                    const SizedBox(height: 28),
 
-                        // Group Title or Invitation Header
-                        Text(
-                          _joinedGroup != null
-                              ? l10n.translate('hub_join_success_title')
-                              : (hasGroupName
-                                  ? _groupName!
-                                  : l10n
-                                      .translate('hub_join_invitation_title')),
-                          style: TextStyle(
-                            color: context.forest.text,
-                            fontSize: hasGroupName ? 21 : 19,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                    // Main Invitation Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: context.forest.card,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: _joinedGroup != null
+                              ? AppColors.mintGreen
+                              : context.forest.divider10,
+                          width: _joinedGroup != null ? 1.5 : 1.0,
                         ),
-
-                        // Preset Badge (if available)
-                        if (_preview?.preset != null &&
-                            _joinedGroup == null) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.mintGreen.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color:
-                                    AppColors.mintGreen.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Text(
-                              _presetBadgeTitle(context, _preview!.preset),
-                              style: const TextStyle(
-                                color: AppColors.mintGreen,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
                         ],
-                        const SizedBox(height: 8),
+                      ),
+                      child: Column(
+                        children: [
+                          // Group Avatar / Icon
+                          _buildGroupAvatar(),
+                          const SizedBox(height: 18),
 
-                        // Subtitle
-                        Text(
-                          _joinedGroup != null
-                              ? l10n.translate('hub_join_success_subtitle',
-                                  args: {'name': _joinedGroup!.name})
-                              : _isAlreadyMember
-                                  ? l10n.translate('hub_join_already_member')
-                                  : (hasGroupName
-                                      ? l10n.translate('hub_join_invite_to',
-                                          args: {'name': _groupName!})
-                                      : l10n.translate(
-                                          'hub_join_invitation_subtitle')),
-                          style: TextStyle(
-                            color: context.forest.text70,
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Invite Code Container
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: context.forest
-                                .surfaceFor(const Color(0xFF102117)),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: context.forest.divider10),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n.translate('hub_join_code_label'),
-                                    style: TextStyle(
-                                      color: context.forest.text54,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _normalizedCode.isNotEmpty
-                                        ? _normalizedCode
-                                        : '--------',
-                                    style: TextStyle(
-                                      color: _isCodeFormatValid
-                                          ? AppColors.mintGreen
-                                          : Colors.redAccent,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 2.5,
-                                      fontFamily: 'monospace',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.copy_rounded,
-                                        size: 18, color: context.forest.text70),
-                                    tooltip:
-                                        isBn ? 'কোড কপি করুন' : 'Copy Code',
-                                    onPressed: _normalizedCode.isNotEmpty
-                                        ? _copyCode
-                                        : null,
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.link_rounded,
-                                        size: 20, color: context.forest.text70),
-                                    tooltip: isBn
-                                        ? 'ইনভাইট লিংক কপি করুন'
-                                        : 'Copy Invite Link',
-                                    onPressed: _normalizedCode.isNotEmpty
-                                        ? _copyInviteLink
-                                        : null,
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // User account state badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: isAuthenticated
-                                ? AppColors.mintGreen.withValues(alpha: 0.08)
-                                : Colors.amber.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isAuthenticated
-                                  ? AppColors.mintGreen.withValues(alpha: 0.25)
-                                  : Colors.amber.withValues(alpha: 0.3),
+                          // Group Title or Invitation Header
+                          Text(
+                            _joinedGroup != null
+                                ? l10n.translate('hub_join_success_title')
+                                : (hasGroupName
+                                    ? _groupName!
+                                    : l10n.translate(
+                                        'hub_join_invitation_title')),
+                            style: TextStyle(
+                              color: context.forest.text,
+                              fontSize: hasGroupName ? 21 : 19,
+                              fontWeight: FontWeight.bold,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isAuthenticated
-                                    ? Icons.account_circle_rounded
-                                    : Icons.info_outline_rounded,
-                                size: 15,
-                                color: isAuthenticated
-                                    ? AppColors.mintGreen
-                                    : Colors.amberAccent,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  isAuthenticated
-                                      ? (isBn
-                                          ? 'লগইন আছেন: ${_repo.currentEmail}'
-                                          : 'Signed in: ${_repo.currentEmail}')
-                                      : l10n.translate(
-                                          'hub_join_sign_in_required'),
-                                  style: TextStyle(
-                                    color: isAuthenticated
-                                        ? context.forest.text
-                                        : Colors.amberAccent,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+
+                          // Preset Badge (if available)
+                          if (_preview?.preset != null &&
+                              _joinedGroup == null) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.mintGreen
+                                      .withValues(alpha: 0.3),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                              child: Text(
+                                _presetBadgeTitle(context, _preview!.preset),
+                                style: const TextStyle(
+                                  color: AppColors.mintGreen,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
 
-                        // Error message
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 14),
+                          // Subtitle
+                          Text(
+                            _joinedGroup != null
+                                ? l10n.translate('hub_join_success_subtitle',
+                                    args: {'name': _joinedGroup!.name})
+                                : _isAlreadyMember
+                                    ? l10n.translate('hub_join_already_member')
+                                    : (hasGroupName
+                                        ? l10n.translate('hub_join_invite_to',
+                                            args: {'name': _groupName!})
+                                        : l10n.translate(
+                                            'hub_join_invitation_subtitle')),
+                            style: TextStyle(
+                              color: context.forest.text70,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Invite Code Container
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.12),
+                              color: context.forest
+                                  .surfaceFor(const Color(0xFF102117)),
+                              borderRadius: BorderRadius.circular(14),
+                              border:
+                                  Border.all(color: context.forest.divider10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.translate('hub_join_code_label'),
+                                      style: TextStyle(
+                                        color: context.forest.text54,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _normalizedCode.isNotEmpty
+                                          ? _normalizedCode
+                                          : '--------',
+                                      style: TextStyle(
+                                        color: _isCodeFormatValid
+                                            ? AppColors.mintGreen
+                                            : Colors.redAccent,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 2.5,
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.copy_rounded,
+                                          size: 18,
+                                          color: context.forest.text70),
+                                      tooltip:
+                                          isBn ? 'কোড কপি করুন' : 'Copy Code',
+                                      onPressed: _normalizedCode.isNotEmpty
+                                          ? _copyCode
+                                          : null,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.link_rounded,
+                                          size: 20,
+                                          color: context.forest.text70),
+                                      tooltip: isBn
+                                          ? 'ইনভাইট লিংক কপি করুন'
+                                          : 'Copy Invite Link',
+                                      onPressed: _normalizedCode.isNotEmpty
+                                          ? _copyInviteLink
+                                          : null,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // User account state badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isAuthenticated
+                                  ? AppColors.mintGreen.withValues(alpha: 0.08)
+                                  : Colors.amber.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: Colors.redAccent.withValues(alpha: 0.4),
+                                color: isAuthenticated
+                                    ? AppColors.mintGreen
+                                        .withValues(alpha: 0.25)
+                                    : Colors.amber.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.error_outline_rounded,
-                                    size: 18, color: Colors.redAccent),
-                                const SizedBox(width: 8),
-                                Expanded(
+                                Icon(
+                                  isAuthenticated
+                                      ? Icons.account_circle_rounded
+                                      : Icons.info_outline_rounded,
+                                  size: 15,
+                                  color: isAuthenticated
+                                      ? AppColors.mintGreen
+                                      : Colors.amberAccent,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
                                   child: Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(
-                                      color: Colors.redAccent,
+                                    isAuthenticated
+                                        ? (isBn
+                                            ? 'লগইন আছেন: ${_repo.currentEmail}'
+                                            : 'Signed in: ${_repo.currentEmail}')
+                                        : l10n.translate(
+                                            'hub_join_sign_in_required'),
+                                    style: TextStyle(
+                                      color: isAuthenticated
+                                          ? context.forest.text
+                                          : Colors.amberAccent,
                                       fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
 
-                        const SizedBox(height: 24),
-
-                        // Action Buttons
-                        if (_joinedGroup != null ||
-                            (_isAlreadyMember && targetTourId != null)) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            height: 46,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.mintGreen,
-                                foregroundColor: Colors.black,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          // Error message
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 14),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color:
+                                      Colors.redAccent.withValues(alpha: 0.4),
                                 ),
                               ),
-                              icon: const Icon(Icons.arrow_forward_rounded,
-                                  size: 18),
-                              label: Text(
-                                l10n.translate('hub_join_enter_group'),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              onPressed: () {
-                                try {
-                                  context.go(
-                                      '/group/${_joinedGroup?.id ?? targetTourId}/channels');
-                                } catch (_) {
-                                  // Safe fallback if navigation route is detached.
-                                }
-                              },
-                            ),
-                          ),
-                        ] else if (!isAuthenticated) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            height: 46,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.midGreen,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: const Icon(Icons.login_rounded, size: 18),
-                              label: Text(
-                                l10n.translate('hub_join_sign_in_button'),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              onPressed: () {
-                                final encodedName = _groupName != null &&
-                                        _groupName!.isNotEmpty
-                                    ? '&name=${Uri.encodeComponent(_groupName!)}'
-                                    : '';
-                                final target =
-                                    '/join/$_normalizedCode?auto=true$encodedName';
-                                try {
-                                  context.go(
-                                      '/login?redirect=${Uri.encodeComponent(target)}');
-                                } catch (_) {
-                                  // Safe fallback if navigation route is detached.
-                                }
-                              },
-                            ),
-                          ),
-                        ] else ...[
-                          SizedBox(
-                            width: double.infinity,
-                            height: 46,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.mintGreen,
-                                foregroundColor: Colors.black,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: _isLoading
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.black,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline_rounded,
+                                      size: 18, color: Colors.redAccent),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: const TextStyle(
+                                        color: Colors.redAccent,
+                                        fontSize: 11.5,
                                       ),
-                                    )
-                                  : const Icon(Icons.check_circle_rounded,
-                                      size: 18),
-                              label: Text(
-                                _isLoading
-                                    ? l10n.translate('hub_join_joining')
-                                    : l10n.translate('hub_join_confirm_button'),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              onPressed: _isLoading ? null : _handleJoin,
+                            ),
+                          ],
+
+                          const SizedBox(height: 24),
+
+                          // Action Buttons
+                          if (_joinedGroup != null ||
+                              (_isAlreadyMember && targetTourId != null)) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.mintGreen,
+                                  foregroundColor: Colors.black,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.arrow_forward_rounded,
+                                    size: 18),
+                                label: Text(
+                                  l10n.translate('hub_join_enter_group'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  try {
+                                    context.go(
+                                        '/group/${_joinedGroup?.id ?? targetTourId}/channels');
+                                  } catch (_) {
+                                    // Safe fallback if navigation route is detached.
+                                  }
+                                },
+                              ),
+                            ),
+                          ] else if (!isAuthenticated) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.midGreen,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.login_rounded, size: 18),
+                                label: Text(
+                                  l10n.translate('hub_join_sign_in_button'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  final encodedName = _groupName != null &&
+                                          _groupName!.isNotEmpty
+                                      ? '&name=${Uri.encodeComponent(_groupName!)}'
+                                      : '';
+                                  final target =
+                                      '/join/$_normalizedCode?auto=true$encodedName';
+                                  try {
+                                    context.go(
+                                        '/login?redirect=${Uri.encodeComponent(target)}');
+                                  } catch (_) {
+                                    // Safe fallback if navigation route is detached.
+                                  }
+                                },
+                              ),
+                            ),
+                          ] else ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.mintGreen,
+                                  foregroundColor: Colors.black,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: _isLoading
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.black,
+                                        ),
+                                      )
+                                    : const Icon(Icons.check_circle_rounded,
+                                        size: 18),
+                                label: Text(
+                                  _isLoading
+                                      ? l10n.translate('hub_join_joining')
+                                      : l10n
+                                          .translate('hub_join_confirm_button'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                onPressed: _isLoading ? null : _handleJoin,
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 12),
+
+                          // Secondary Action: Go to Hub
+                          TextButton(
+                            onPressed: () {
+                              try {
+                                context.go('/group-hub');
+                              } catch (_) {
+                                // Safe fallback when GoRouter is not attached.
+                                Navigator.of(context).maybePop();
+                              }
+                            },
+                            child: Text(
+                              l10n.translate('hub_join_back_to_hub'),
+                              style: TextStyle(
+                                color: context.forest.text54,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
-
-                        const SizedBox(height: 12),
-
-                        // Secondary Action: Go to Hub
-                        TextButton(
-                          onPressed: () {
-                            try {
-                              context.go('/group-hub');
-                            } catch (_) {
-                              // Safe fallback when GoRouter is not attached.
-                              Navigator.of(context).maybePop();
-                            }
-                          },
-                          child: Text(
-                            l10n.translate('hub_join_back_to_hub'),
-                            style: TextStyle(
-                              color: context.forest.text54,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

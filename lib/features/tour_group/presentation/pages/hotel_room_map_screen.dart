@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
@@ -107,18 +108,22 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     );
 
     if (widget.embedded) return body;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-      appBar: AppBar(
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-        elevation: 0,
-        title: Text(l10n.translate('room_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          elevation: 0,
+          title: Text(l10n.translate('room_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+        ),
+        body: body,
       ),
-      body: body,
     );
   }
 

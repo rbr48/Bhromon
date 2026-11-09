@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:convert';
@@ -5,7 +6,6 @@ import 'dart:convert';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,7 +26,6 @@ import '../../data/monthly_ledger_pdf.dart';
 import '../../domain/services/bangla_qr_engine.dart';
 import '../../domain/services/payment_profile_service.dart';
 import '../monthly_ledger_pdf_export.dart';
-import '../tour_routes.dart';
 import '../widgets/bangla_qr_view.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
@@ -199,85 +198,79 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             transfers: allTransfers,
           );
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        leading: BackButton(
-          color: context.forest.text,
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(tourHubPath(widget.tourId));
-            }
-          },
-        ),
-        elevation: 0,
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        title: Text(l10n.translate('fund_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        actions: [
-          if (_isAdmin && group != null)
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          elevation: 0,
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          title: Text(l10n.translate('fund_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          actions: [
+            if (_isAdmin && group != null)
+              IconButton(
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                tooltip: l10n.translate('fund_budget_title'),
+                onPressed: () => _editBudget(group),
+              ),
             IconButton(
-              icon: const Icon(Icons.account_balance_wallet_outlined),
-              tooltip: l10n.translate('fund_budget_title'),
-              onPressed: () => _editBudget(group),
+              icon: const Icon(Icons.picture_as_pdf_rounded),
+              tooltip: l10n.translate('fund_export_pdf'),
+              onPressed: _exportMonthlyPdf,
             ),
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            tooltip: l10n.translate('fund_export_pdf'),
-            onPressed: _exportMonthlyPdf,
-          ),
-          IconButton(
-            icon: const Icon(Icons.table_view_rounded),
-            tooltip: l10n.translate('fund_export_csv'),
-            onPressed: () => _exportCsv(summary, report),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: AppColors.mintGreen,
-          labelColor: AppColors.mintGreen,
-          unselectedLabelColor: context.forest.text60,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: [
-            Tab(text: l10n.translate('fund_tab_overview')),
-            Tab(text: l10n.translate('fund_tab_expenses')),
-            Tab(
-                text: summary.settlements.isEmpty
-                    ? l10n.translate('fund_tab_settle')
-                    : '${l10n.translate('fund_tab_settle')} '
-                        '(${l10n.number(summary.settlements.length)})'),
-            Tab(text: l10n.translate('fund_tab_people')),
-            Tab(text: l10n.translate('fund_tab_deposits')),
+            IconButton(
+              icon: const Icon(Icons.table_view_rounded),
+              tooltip: l10n.translate('fund_export_csv'),
+              onPressed: () => _exportCsv(summary, report),
+            ),
           ],
+          bottom: TabBar(
+            controller: _tabs,
+            indicatorColor: AppColors.mintGreen,
+            labelColor: AppColors.mintGreen,
+            unselectedLabelColor: context.forest.text60,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              Tab(text: l10n.translate('fund_tab_overview')),
+              Tab(text: l10n.translate('fund_tab_expenses')),
+              Tab(
+                  text: summary.settlements.isEmpty
+                      ? l10n.translate('fund_tab_settle')
+                      : '${l10n.translate('fund_tab_settle')} '
+                          '(${l10n.number(summary.settlements.length)})'),
+              Tab(text: l10n.translate('fund_tab_people')),
+              Tab(text: l10n.translate('fund_tab_deposits')),
+            ],
+          ),
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: AppColors.darkGreen,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate('fund_add')),
+          onPressed: () => _addMenu(group),
+        ),
+        body: !_loaded
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.mintGreen))
+            : TabBarView(
+                controller: _tabs,
+                children: [
+                  _overview(l10n, summary, report),
+                  _expensesTab(l10n),
+                  _settleTab(l10n, summary),
+                  _peopleTab(l10n, summary, report),
+                  _depositsTab(l10n),
+                ],
+              ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: AppColors.darkGreen,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('fund_add')),
-        onPressed: () => _addMenu(group),
-      ),
-      body: !_loaded
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.mintGreen))
-          : TabBarView(
-              controller: _tabs,
-              children: [
-                _overview(l10n, summary, report),
-                _expensesTab(l10n),
-                _settleTab(l10n, summary),
-                _peopleTab(l10n, summary, report),
-                _depositsTab(l10n),
-              ],
-            ),
     );
   }
 

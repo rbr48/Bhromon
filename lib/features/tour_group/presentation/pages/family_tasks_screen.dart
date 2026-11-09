@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -159,51 +160,55 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
       stream: _members,
       builder: (context, memberSnap) {
         final members = memberSnap.data ?? const <TourMember>[];
-        return Scaffold(
-          backgroundColor: context.forest.surfaceFor(_bg),
-          appBar: AppBar(
-            title: Text(l10n.translate('ft_title'),
-                style: TextStyle(
-                    color: context.forest.text,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18)),
-            backgroundColor: context.forest.surfaceFor(_card),
-            foregroundColor: context.forest.text,
-            iconTheme: IconThemeData(color: context.forest.text),
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.info_outline_rounded,
-                    color: context.forest.accentText),
-                tooltip: l10n.isBn ? 'কার্যপরিধি ও সহায়তা' : 'Scope & Help',
-                onPressed: () => _showScopeInfo(context, l10n),
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              Expanded(
-                child: StreamBuilder<List<FamilyTask>>(
-                  stream: _tasks,
-                  builder: (context, snap) {
-                    if (snap.hasError) {
-                      return _message(l10n.translate('ft_load_failed'));
-                    }
-                    final tasks = snap.data;
-                    if (tasks == null) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.mintGreen));
-                    }
-                    if (tasks.isEmpty) {
-                      return _message(l10n.translate('ft_empty'));
-                    }
-                    return _kindPages(tasks, members, l10n);
-                  },
+        return GroupPopScope(
+          tourId: widget.tourId,
+          child: Scaffold(
+            backgroundColor: context.forest.surfaceFor(_bg),
+            appBar: AppBar(
+              leading: GroupBackButton(tourId: widget.tourId),
+              title: Text(l10n.translate('ft_title'),
+                  style: TextStyle(
+                      color: context.forest.text,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18)),
+              backgroundColor: context.forest.surfaceFor(_card),
+              foregroundColor: context.forest.text,
+              iconTheme: IconThemeData(color: context.forest.text),
+              elevation: 0,
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.info_outline_rounded,
+                      color: context.forest.accentText),
+                  tooltip: l10n.isBn ? 'কার্যপরিধি ও সহায়তা' : 'Scope & Help',
+                  onPressed: () => _showScopeInfo(context, l10n),
                 ),
-              ),
-              _inputBar(l10n, members),
-            ],
+              ],
+            ),
+            body: Column(
+              children: [
+                Expanded(
+                  child: StreamBuilder<List<FamilyTask>>(
+                    stream: _tasks,
+                    builder: (context, snap) {
+                      if (snap.hasError) {
+                        return _message(l10n.translate('ft_load_failed'));
+                      }
+                      final tasks = snap.data;
+                      if (tasks == null) {
+                        return const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.mintGreen));
+                      }
+                      if (tasks.isEmpty) {
+                        return _message(l10n.translate('ft_empty'));
+                      }
+                      return _kindPages(tasks, members, l10n);
+                    },
+                  ),
+                ),
+                _inputBar(l10n, members),
+              ],
+            ),
           ),
         );
       },

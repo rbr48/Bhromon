@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
@@ -187,20 +188,24 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
 
     if (widget.embedded) return content;
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
-      appBar: AppBar(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
-        foregroundColor: context.forest.text,
-        title: Text(
-          l10n.translate('luggage_title'),
-          style: TextStyle(
-              color: context.forest.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 16),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          foregroundColor: context.forest.text,
+          title: Text(
+            l10n.translate('luggage_title'),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16),
+          ),
         ),
+        body: content,
       ),
-      body: content,
     );
   }
 

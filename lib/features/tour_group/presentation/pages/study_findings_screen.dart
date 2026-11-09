@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -243,61 +244,65 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
     final palette = context.forest;
     final canPost =
         canPostInStudyModule(settings: widget.settings, isAdmin: _isAdmin);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(widget.settings.name,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      floatingActionButton: canPost
-          ? FloatingActionButton.extended(
-              onPressed: _add,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.translate('study_finding_add')),
-            )
-          : null,
-      body: StreamBuilder<List<StudyFinding>>(
-        stream: _findings,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(l10n.translate('study_failed'),
-                  style: TextStyle(color: palette.text70)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final shown = sortStudyFindings(visibleStudyFindings(
-            findings: snap.data!,
-            viewerEmail: _me,
-            isAdmin: _isAdmin,
-          ));
-          _askChecks([for (final finding in shown) finding.id]);
-          if (shown.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.translate('study_finding_empty'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: palette.text70),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(widget.settings.name,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: canPost
+            ? FloatingActionButton.extended(
+                onPressed: _add,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.translate('study_finding_add')),
+              )
+            : null,
+        body: StreamBuilder<List<StudyFinding>>(
+          stream: _findings,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                child: Text(l10n.translate('study_failed'),
+                    style: TextStyle(color: palette.text70)),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final shown = sortStudyFindings(visibleStudyFindings(
+              findings: snap.data!,
+              viewerEmail: _me,
+              isAdmin: _isAdmin,
+            ));
+            _askChecks([for (final finding in shown) finding.id]);
+            if (shown.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    l10n.translate('study_finding_empty'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: palette.text70),
+                  ),
                 ),
-              ),
+              );
+            }
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [for (final finding in shown) _findingCard(finding)],
             );
-          }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [for (final finding in shown) _findingCard(finding)],
-          );
-        },
+          },
+        ),
       ),
     );
   }
