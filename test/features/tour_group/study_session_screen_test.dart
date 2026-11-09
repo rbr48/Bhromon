@@ -64,7 +64,10 @@ class _FakeSessionRepo extends TourGroupRepository {
 }
 
 Future<void> _pump(WidgetTester tester, Widget page) async {
+  // A new key gives each page its own app. Without it, a second page in the same test keeps the first page's
+  // route, because the navigator only reads `home` when it is first built.
   await tester.pumpWidget(MaterialApp(
+    key: UniqueKey(),
     locale: const Locale('en'),
     supportedLocales: const [Locale('en'), Locale('bn')],
     localizationsDelegates: const [
