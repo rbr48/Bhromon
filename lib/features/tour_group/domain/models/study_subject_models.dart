@@ -98,7 +98,8 @@ class StudyModuleSettings {
   }
 }
 
-/// A subject the group studies.
+/// A subject the group studies. An admin archives a listed subject to hide it from members; its
+/// content stays, and an admin restores it.
 class StudySubject {
   const StudySubject({
     required this.id,
@@ -109,6 +110,7 @@ class StudySubject {
     this.approval = StudyBookApproval.listed,
     this.declineNote = '',
     this.createdByEmail = '',
+    this.archived = false,
   });
 
   final String id;
@@ -131,6 +133,10 @@ class StudySubject {
 
   /// The member who added or proposed the subject.
   final String createdByEmail;
+
+  /// Whether an admin has archived the subject. Only a listed subject can be archived. Members
+  /// do not see an archived subject, and nobody adds to it until an admin restores it.
+  final bool archived;
 
   bool get isListed => approval == StudyBookApproval.listed;
   bool get isProposed => approval == StudyBookApproval.proposed;
@@ -162,6 +168,7 @@ class StudySubject {
       approval: StudyBookApproval.fromName(map['approval']),
       declineNote: (map['declineNote'] as String?)?.trim() ?? '',
       createdByEmail: (map['createdByEmail'] as String?) ?? '',
+      archived: map['archived'] == true,
     );
   }
 }

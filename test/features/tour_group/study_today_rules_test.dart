@@ -1,6 +1,8 @@
 import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
+import 'package:bhromon/features/tour_group/domain/services/study_subject_rules.dart';
 import 'package:bhromon/features/tour_group/domain/services/study_today_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -158,6 +160,32 @@ void main() {
             id: 's1', title: 'Today', examDate: DateTime(2026, 11, 10)),
       ], today);
       expect(nearest?.id, 's1');
+    });
+
+    // The Today card counts only the subjects the group studies, so a proposal and an archived
+    // subject never put their exam on the card.
+    test('a proposed, declined or archived subject has no countdown', () {
+      final subjects = [
+        StudySubject(
+            id: 'p',
+            title: 'Proposed',
+            examDate: DateTime(2026, 11, 11),
+            approval: StudyBookApproval.proposed),
+        StudySubject(
+            id: 'd',
+            title: 'Declined',
+            examDate: DateTime(2026, 11, 11),
+            approval: StudyBookApproval.declined),
+        StudySubject(
+            id: 'a',
+            title: 'Archived',
+            examDate: DateTime(2026, 11, 11),
+            archived: true),
+        StudySubject(
+            id: 'l', title: 'Listed', examDate: DateTime(2026, 11, 20)),
+      ];
+      expect(nearestExam(activeStudySubjects(subjects), today)?.id, 'l');
+      expect(nearestExam(activeStudySubjects(subjects.take(3)), today), isNull);
     });
   });
 

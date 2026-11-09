@@ -387,7 +387,8 @@ class _StudyGroupTodayCardState extends State<StudyGroupTodayCard> {
     final palette = context.forest;
     final lines = <_TodayLine>[];
 
-    final exam = nearestExam(_allSubjects, _today);
+    // Only the subjects the group studies count: a proposal or an archived subject has no countdown.
+    final exam = nearestExam(activeStudySubjects(_allSubjects), _today);
     if (exam != null) {
       final days = daysUntilExam(exam.examDate!, _today);
       lines.add(_TodayLine(

@@ -794,13 +794,14 @@ service cloud.firestore {
     // A study subject: a name, an optional course code, description and exam date, and an
     // approval like a book's.
     function validStudySubject(d) {
-      return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail']) &&
+      return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail', 'archived']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 80 &&
              (d.get('code', null) == null || (d.code is string && d.code.size() <= 20)) &&
              (d.get('description', null) == null || (d.description is string && d.description.size() <= 300)) &&
              (d.get('examDate', null) == null || d.examDate is timestamp) &&
              (d.get('approval', null) == null || d.approval in ['proposed', 'listed', 'declined']) &&
              (d.get('declineNote', null) == null || (d.declineNote is string && d.declineNote.size() <= 300)) &&
+             (d.get('archived', null) == null || d.archived is bool) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
     }
     // The modules a study subject can turn on. Only these are live; the rest are coming.
@@ -836,12 +837,14 @@ service cloud.firestore {
              d.helpfulCount is int && d.helpfulCount >= 0 &&
              d.shown is bool && d.pinned is bool;
     }
-    // Whether an update to a subject is allowed. Only an admin changes whether it is listed;
-    // its creator or an admin changes the details.
+    // Whether an update to a subject is allowed. Only an admin changes whether it is listed, or archives or restores
+    // it, and only a listed subject can be archived; its creator or an admin changes the details.
     function studySubjectUpdateAllowed(tourId, newData, oldData) {
       let byAdmin = isTourAdmin(tourId);
       return (byAdmin || newData.get('approval', 'listed') == oldData.get('approval', 'listed')) &&
              (newData.get('declineNote', null) == null || newData.get('approval', null) == 'declined') &&
+             (byAdmin || newData.get('archived', false) == oldData.get('archived', false)) &&
+             (newData.get('archived', false) == false || newData.get('approval', 'listed') == 'listed') &&
              (byAdmin || oldData.get('createdByEmail', '') == tourUserEmail());
     }
     // Whether a module of a subject is on: its settings exist and say so.
@@ -849,9 +852,11 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/$(moduleKey)) &&
              get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/$(moduleKey)).data.enabled == true;
     }
-    // Whether a subject is listed, so that its modules can be used.
+    // Whether a subject is listed and not archived, so that its modules can be used and nothing new is added to it.
+    // An archived subject is read-only until an admin restores it.
     function studySubjectListed(tourId, subjectId) {
-      return get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)).data.get('approval', 'listed') == 'listed';
+      let subject = get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)).data;
+      return subject.get('approval', 'listed') == 'listed' && subject.get('archived', false) == false;
     }
     // Whether a member may add a post to a module of a listed subject, and how it is shown: an
     // admin's post always is; a member's post is shown when the module lets members post directly.
@@ -1890,6 +1895,7 @@ service cloud.firestore {
                          ((isTourAdmin(tourId) && request.resource.data.get('approval', 'listed') == 'listed') ||
                           request.resource.data.get('approval', null) == 'proposed') &&
                          request.resource.data.get('declineNote', null) == null &&
+                         request.resource.data.get('archived', false) == false &&
                          validStudySubject(request.resource.data);
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&

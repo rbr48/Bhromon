@@ -106,6 +106,24 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
     );
   }
 
+  /// Hides a listed subject from members. Its content stays, and an admin restores it from the
+  /// archive section.
+  Future<void> _archive(StudySubject subject) async {
+    await _run(
+      () => _repository.setStudySubjectArchived(widget.tourId, subject.id,
+          archived: true),
+      'study_subject_archived_done',
+    );
+  }
+
+  Future<void> _restore(StudySubject subject) async {
+    await _run(
+      () => _repository.setStudySubjectArchived(widget.tourId, subject.id,
+          archived: false),
+      'study_subject_restored_done',
+    );
+  }
+
   /// Runs one change and says how it went. A failure is logged and shown, and the list keeps
   /// what it had.
   Future<void> _run(Future<void> Function() change, String doneKey) async {
@@ -182,7 +200,19 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             final subjects = snap.data!;
-            if (subjects.isEmpty) {
+            // A member sees only the subjects the group studies. An admin also sees the archive.
+            final listed = studySubjectsByTitle(activeStudySubjects(subjects));
+            final proposed =
+                studySubjectsByTitle(subjects.where((s) => s.isProposed));
+            final declined =
+                studySubjectsByTitle(subjects.where((s) => s.isDeclined));
+            final archived = _isAdmin
+                ? archivedStudySubjects(subjects)
+                : const <StudySubject>[];
+            if (listed.isEmpty &&
+                proposed.isEmpty &&
+                declined.isEmpty &&
+                archived.isEmpty) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -196,12 +226,6 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
                 ),
               );
             }
-            final listed =
-                studySubjectsByTitle(subjects.where((s) => s.isListed));
-            final proposed =
-                studySubjectsByTitle(subjects.where((s) => s.isProposed));
-            final declined =
-                studySubjectsByTitle(subjects.where((s) => s.isDeclined));
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
@@ -226,6 +250,10 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
                           : l10n.translate('study_book_declined_with_note',
                               args: {'note': subject.declineNote}),
                     ),
+                ],
+                if (archived.isNotEmpty) ...[
+                  _header(l10n.translate('study_subjects_archived_section')),
+                  for (final subject in archived) _archivedTile(subject),
                 ],
               ],
             );
@@ -268,19 +296,51 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
         subtitle: subtitle == null
             ? null
             : Text(subtitle, style: TextStyle(color: palette.text54)),
-        trailing: _canEdit(subject)
+        trailing: _canEdit(subject) || _isAdmin
             ? PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert_rounded, color: palette.text54),
                 tooltip: l10n.translate('study_subject_menu'),
-                onSelected: (_) => _edit(subject),
+                onSelected: (choice) =>
+                    choice == 'archive' ? _archive(subject) : _edit(subject),
                 itemBuilder: (_) => [
-                  PopupMenuItem<String>(
-                    value: 'edit',
-                    child: Text(l10n.translate('study_edit')),
-                  ),
+                  if (_canEdit(subject))
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Text(l10n.translate('study_edit')),
+                    ),
+                  if (_isAdmin)
+                    PopupMenuItem<String>(
+                      value: 'archive',
+                      child: Text(l10n.translate('study_subject_archive')),
+                    ),
                 ],
               )
             : Icon(Icons.chevron_right_rounded, color: palette.text54),
+      ),
+    );
+  }
+
+  /// A subject an admin archived. Members do not see it; an admin restores it from here.
+  Widget _archivedTile(StudySubject subject) {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    return Card(
+      color: palette.card,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        title: Text(subject.title,
+            style: TextStyle(color: palette.text, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          [
+            if (subject.code.isNotEmpty) subject.code,
+            l10n.translate('study_subject_archived_note'),
+          ].join(' · '),
+          style: TextStyle(color: palette.text54),
+        ),
+        trailing: TextButton(
+          onPressed: () => _restore(subject),
+          child: Text(l10n.translate('study_subject_restore')),
+        ),
       ),
     );
   }

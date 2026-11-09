@@ -1,3 +1,4 @@
+import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/study_subject_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -234,6 +235,44 @@ void main() {
             ?.examDate,
         isNull,
       );
+    });
+  });
+
+  group('archiving a subject', () {
+    test('the archived flag is read only when it is true', () {
+      expect(
+          StudySubject.fromMap('x', {'title': 'Physics'})?.archived, isFalse);
+      expect(
+        StudySubject.fromMap('x', {'title': 'Physics', 'archived': true})
+            ?.archived,
+        isTrue,
+      );
+      expect(
+        StudySubject.fromMap('x', {'title': 'Physics', 'archived': 'yes'})
+            ?.archived,
+        isFalse,
+      );
+    });
+
+    test('members see only the listed subjects that are not archived', () {
+      final subjects = [
+        _subject('a', 'Physics'),
+        const StudySubject(id: 'b', title: 'Biology', archived: true),
+        const StudySubject(
+            id: 'c', title: 'Chemistry', approval: StudyBookApproval.proposed),
+        const StudySubject(
+            id: 'd', title: 'Music', approval: StudyBookApproval.declined),
+      ];
+      expect(activeStudySubjects(subjects).map((s) => s.id), ['a']);
+    });
+
+    test('an admin finds the archived subjects by title, to restore them', () {
+      final archived = archivedStudySubjects([
+        const StudySubject(id: '1', title: 'physics', archived: true),
+        const StudySubject(id: '2', title: 'Biology', archived: true),
+        _subject('3', 'Music'),
+      ]);
+      expect(archived.map((s) => s.id), ['2', '1']);
     });
   });
 

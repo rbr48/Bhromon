@@ -2575,6 +2575,19 @@ class TourGroupRepository {
     });
   }
 
+  /// Archives a listed subject, which hides it from members, or restores it. Its content stays
+  /// either way. Only an admin does this; the rules refuse anyone else.
+  Future<void> setStudySubjectArchived(
+    String tourId,
+    String subjectId, {
+    required bool archived,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects').doc(subjectId).update({
+      'archived': archived,
+    });
+  }
+
   /// The modules of a subject, by key. A module with no stored settings is off.
   Stream<Map<StudyModuleKey, StudyModuleSettings>> watchStudyModules(
     String tourId,
