@@ -21,6 +21,8 @@ class _FakeProblemRepo extends TourGroupRepository {
     this.myWork = const {},
     this.reference,
     this.workList = const [],
+    this.problemList = const [],
+    this.setList = const [],
   });
 
   final TourRole? role;
@@ -31,6 +33,10 @@ class _FakeProblemRepo extends TourGroupRepository {
 
   /// Everyone's working on the problem, as the stream reports it.
   final List<StudyProblemSolution> workList;
+
+  /// The problems of the subject, and its problem sets, as the streams report them.
+  final List<StudyProblem> problemList;
+  final List<StudyProblemSet> setList;
 
   /// The signed-in member's review of each working, by the solver's email.
   final Map<String, StudyWorkReview> reviews = const {};
@@ -62,13 +68,6 @@ class _FakeProblemRepo extends TourGroupRepository {
     calls.add('reference');
     return reference;
   }
-
-  @override
-  Stream<List<StudyProblem>> watchStudyProblems(
-    String tourId,
-    String subjectId,
-  ) =>
-      Stream.value(const []);
 
   @override
   Stream<List<StudyProblemSolution>> watchStudyWork(
@@ -142,6 +141,30 @@ class _FakeProblemRepo extends TourGroupRepository {
   ) async {
     calls.add('restore work $solverEmail');
   }
+
+  @override
+  Stream<List<StudyProblem>> watchStudyProblems(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(problemList);
+
+  @override
+  Stream<List<StudyProblemSet>> watchStudyProblemSets(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(setList);
+
+  @override
+  Future<void> setStudyProblemSet(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String? setId,
+  ) async {
+    calls.add('set problem $problemId ${setId ?? 'none'}');
+  }
 }
 
 const _subject = StudySubject(id: 's1', title: 'Statistics 101');
@@ -213,6 +236,17 @@ StudyProblemScreen _screen(_FakeProblemRepo repo, StudyProblem problem) =>
       settings: _module,
       problem: problem,
       repository: repo,
+    );
+
+/// Pumps the problems list of the subject, the screen a member opens from the problem solving module.
+Future<void> _pumpList(WidgetTester tester, _FakeProblemRepo repo) => _pump(
+      tester,
+      StudyProblemsScreen(
+        tourId: 't1',
+        subject: _subject,
+        settings: _module,
+        repository: repo,
+      ),
     );
 
 void main() {
@@ -425,38 +459,120 @@ void main() {
   });
 
   testWidgets(
+      'the problems list groups problems under their sets, nearest due first, and lists the rest under other problems',
+      (tester) async {
+    final repo = _FakeProblemRepo(
+      role: TourRole.member,
+      setList: [
+        StudyProblemSet(
+            id: 's-one', title: 'Week one', dueAt: DateTime(2999, 1, 1)),
+        StudyProblemSet(
+            id: 's-zero', title: 'Week zero', dueAt: DateTime(2020, 1, 1)),
+      ],
+      problemList: [
+        StudyProblem(
+          id: 'pa',
+          text: 'A problem in week one',
+          createdByEmail: 'admin@x.com',
+          createdAt: DateTime(2026, 11, 1),
+          releaseAt: DateTime(2020, 1, 1),
+          setId: 's-one',
+        ),
+        StudyProblem(
+          id: 'pb',
+          text: 'A problem in week zero',
+          createdByEmail: 'admin@x.com',
+          createdAt: DateTime(2026, 11, 1),
+          releaseAt: DateTime(2020, 1, 1),
+          setId: 's-zero',
+        ),
+        StudyProblem(
+          id: 'pc',
+          text: 'A loose problem',
+          createdByEmail: 'admin@x.com',
+          createdAt: DateTime(2026, 11, 1),
+          releaseAt: DateTime(2020, 1, 1),
+        ),
+      ],
+    );
+    await _pumpList(tester, repo);
+
+    expect(find.text('Week zero'), findsOneWidget);
+    expect(find.text('Week one'), findsOneWidget);
+    expect(find.textContaining('Overdue'), findsOneWidget);
+    expect(find.text('0 of 1 worked'), findsNWidgets(2));
+    expect(find.text('Other problems'), findsOneWidget);
+    expect(find.text('A loose problem'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Week zero')).dy,
+      lessThan(tester.getTopLeft(find.text('Week one')).dy),
+    );
+  });
+
+  testWidgets(
+      'a set with no problems yet says so, even when the group has no problems',
+      (tester) async {
+    final repo = _FakeProblemRepo(
+      role: TourRole.member,
+      setList: [const StudyProblemSet(id: 's-empty', title: 'Empty set')],
+    );
+    await _pumpList(tester, repo);
+
+    expect(find.text('Empty set'), findsOneWidget);
+    expect(find.text('No problems in this set yet.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'an admin opens the problem sets from the list, and sees the sets there',
+      (tester) async {
+    final repo = _FakeProblemRepo(
+      role: TourRole.admin,
+      setList: [
+        StudyProblemSet(
+            id: 's-one', title: 'Week one', dueAt: DateTime(2999, 1, 1))
+      ],
+    );
+    await _pumpList(tester, repo);
+
+    await tester.tap(find.byIcon(Icons.library_books_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add a set'), findsOneWidget);
+    expect(find.text('Week one'), findsWidgets);
+  });
+
+  testWidgets(
+      'an admin puts a problem into a set from its menu, and the page then names the set',
+      (tester) async {
+    final repo = _FakeProblemRepo(
+      role: TourRole.admin,
+      setList: [const StudyProblemSet(id: 's-one', title: 'Week one')],
+    );
+    await _pump(tester, _screen(repo, _released));
+
+    await tester.tap(find.byIcon(Icons.more_vert_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Put this problem in a set'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Week one'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, contains('set problem p1 s-one'));
+    expect(find.text('Set: Week one'), findsOneWidget);
+  });
+
+  testWidgets(
       'StudyProblemsScreen and StudyProblemScreen have GroupPopScope and GroupBackButton',
       (tester) async {
     final repo = _FakeProblemRepo(role: TourRole.member);
     await _pump(tester, _screen(repo, _released));
 
-    // Verify StudyProblemScreen has GroupPopScope and GroupBackButton
+    // The problem page has the pop scope and the back button.
     expect(find.byType(GroupPopScope), findsOneWidget);
     expect(find.byType(GroupBackButton), findsOneWidget);
 
-    // Verify StudyProblemsScreen has GroupPopScope and GroupBackButton
-    await _pump(
-      tester,
-      MaterialApp(
-        supportedLocales: const [Locale('en'), Locale('bn')],
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-        ],
-        home: StudyProblemsScreen(
-          tourId: 't1',
-          subject: const StudySubject(id: 'sub1', title: 'Math'),
-          settings: const StudyModuleSettings(
-            key: StudyModuleKey.problems,
-            name: 'Problems',
-            enabled: true,
-            postPolicy: StudyPostPolicy.members,
-          ),
-          repository: repo,
-        ),
-      ),
-    );
+    // The problems list has them too.
+    await _pumpList(tester, repo);
 
     expect(find.byType(GroupPopScope), findsOneWidget);
     expect(find.byType(GroupBackButton), findsOneWidget);

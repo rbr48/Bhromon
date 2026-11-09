@@ -12,6 +12,7 @@ import '../../domain/services/study_problem_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_problem_composer.dart';
+import '../widgets/study/study_problem_set_sheets.dart';
 import 'study_problem_screen.dart';
 
 /// The problems of one subject. Members open a problem to submit their own working; an admin posts
@@ -41,6 +42,8 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
       widget.repository ?? TourGroupRepository();
   late final Stream<List<StudyProblem>> _problems =
       _repository.watchStudyProblems(widget.tourId, widget.subject.id);
+  late final Stream<List<StudyProblemSet>> _sets =
+      _repository.watchStudyProblemSets(widget.tourId, widget.subject.id);
   TourRole? _myRole;
 
   /// The signed-in member's working, by problem id, and the problems whose working was asked for.
@@ -78,7 +81,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
 
   /// Opens a problem. When the member comes back, their working is read again, since they may have
   /// submitted it on the problem's page.
-  Future<void> _open(StudyProblem problem) async {
+  Future<void> _open(StudyProblem problem, {String? setTitle}) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => StudyProblemScreen(
         tourId: widget.tourId,
@@ -86,6 +89,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
         settings: widget.settings,
         problem: problem,
         repository: _repository,
+        setTitle: setTitle,
       ),
     ));
     if (!mounted) return;
@@ -142,6 +146,19 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
           foregroundColor: palette.text,
           iconTheme: IconThemeData(color: palette.text),
           elevation: 0,
+          actions: [
+            if (_isAdmin)
+              IconButton(
+                icon: Icon(Icons.library_books_outlined, color: palette.text),
+                tooltip: l10n.translate('study_set_manage'),
+                onPressed: () => showStudyProblemSetsManager(
+                  context,
+                  repository: _repository,
+                  tourId: widget.tourId,
+                  subjectId: widget.subject.id,
+                ),
+              ),
+          ],
         ),
         floatingActionButton: canPost
             ? FloatingActionButton.extended(
@@ -168,18 +185,6 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
               isAdmin: _isAdmin,
             ));
             _askWork([for (final problem in shown) problem.id]);
-            if (shown.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    l10n.translate('study_problem_empty'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text70),
-                  ),
-                ),
-              );
-            }
             // An admin decides the reported problems first, the oldest report first. Each is listed once.
             final queue = _isAdmin
                 ? reportedProblemsForReview(shown)
@@ -188,25 +193,73 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
               for (final problem in shown)
                 if (!queue.contains(problem)) problem,
             ];
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              children: [
-                if (queue.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      l10n.translate('study_problem_queue_title'),
-                      style: TextStyle(
-                          color: palette.text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15),
+            return StreamBuilder<List<StudyProblemSet>>(
+              stream: _sets,
+              builder: (context, setSnap) {
+                // Until the sets arrive, the problems are listed flat, as they were before sets existed.
+                final sets = setSnap.data ?? const <StudyProblemSet>[];
+                // Nothing to list at all: say so, unless a set is there to show.
+                if (shown.isEmpty && sets.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        l10n.translate('study_problem_empty'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: palette.text70),
+                      ),
                     ),
-                  ),
-                  for (final problem in queue) _problemCard(problem),
-                  const SizedBox(height: 8),
-                ],
-                for (final problem in rest) _problemCard(problem),
-              ],
+                  );
+                }
+                final titles = {for (final set in sets) set.id: set.title};
+                String? titleOf(StudyProblem problem) =>
+                    problem.setId == null ? null : titles[problem.setId];
+                final grouping = groupProblemsBySet(problems: rest, sets: sets);
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  children: [
+                    if (queue.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          l10n.translate('study_problem_queue_title'),
+                          style: TextStyle(
+                              color: palette.text,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15),
+                        ),
+                      ),
+                      for (final problem in queue)
+                        _problemCard(problem, setTitle: titleOf(problem)),
+                      const SizedBox(height: 8),
+                    ],
+                    if (sets.isEmpty)
+                      for (final problem in rest) _problemCard(problem)
+                    else ...[
+                      for (final section in grouping.sections) ...[
+                        _setHeader(section),
+                        for (final problem in section.problems)
+                          _problemCard(problem, setTitle: section.set.title),
+                        const SizedBox(height: 8),
+                      ],
+                      if (grouping.unset.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 8),
+                          child: Text(
+                            l10n.translate('study_set_other_heading'),
+                            style: TextStyle(
+                                color: palette.text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15),
+                          ),
+                        ),
+                        for (final problem in grouping.unset)
+                          _problemCard(problem, setTitle: titleOf(problem)),
+                      ],
+                    ],
+                  ],
+                );
+              },
             );
           },
         ),
@@ -214,7 +267,49 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
     );
   }
 
-  Widget _problemCard(StudyProblem problem) {
+  /// The header of a set's section: its name, its due line, and how many of its problems the viewer has worked.
+  Widget _setHeader(ProblemSetSection section) {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    final total = section.problems.length;
+    final worked = workedCount(
+      problems: section.problems,
+      workedIds: _myWork.keys.toSet(),
+    );
+    return Card(
+      color: palette.card,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(section.set.title,
+                style: TextStyle(
+                    color: palette.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+            const SizedBox(height: 4),
+            Text(problemSetDueLabel(context, section.set),
+                style: TextStyle(color: palette.text70)),
+            const SizedBox(height: 4),
+            Text(
+              total == 0
+                  ? l10n.translate('study_set_empty')
+                  : l10n.translate('study_set_progress', args: {
+                      'done': l10n.number(worked),
+                      'total': l10n.number(total),
+                    }),
+              style: TextStyle(
+                  color: palette.accentText, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _problemCard(StudyProblem problem, {String? setTitle}) {
     final l10n = context.l10n;
     final palette = context.forest;
     final now = DateTime.now();
@@ -225,7 +320,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _open(problem),
+        onTap: () => _open(problem, setTitle: setTitle),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(

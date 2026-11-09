@@ -126,3 +126,86 @@ List<StudyProblem> reportedProblemsForReview(Iterable<StudyProblem> problems) {
   });
   return reported;
 }
+
+/// How near a problem set's due date is at a given time. A set with no due date has none. A set is due soon in
+/// the days before its due day, and overdue from the start of the day after it.
+enum ProblemSetDue { none, upcoming, dueSoon, overdue }
+
+/// How many days before its due day a set counts as due soon.
+const int kProblemSetDueSoonDays = 3;
+
+/// The due state of a set with [dueAt] at [now]. A due date is the start of its day, so the set stays open through
+/// that whole day and is overdue once the next day has begun.
+ProblemSetDue problemSetDueState({
+  required DateTime? dueAt,
+  required DateTime now,
+}) {
+  if (dueAt == null) return ProblemSetDue.none;
+  final dueDay = DateTime(dueAt.year, dueAt.month, dueAt.day);
+  final dayAfter = DateTime(dueDay.year, dueDay.month, dueDay.day + 1);
+  if (!now.isBefore(dayAfter)) return ProblemSetDue.overdue;
+  final soonFrom = DateTime(
+    dueDay.year,
+    dueDay.month,
+    dueDay.day - kProblemSetDueSoonDays,
+  );
+  return now.isBefore(soonFrom)
+      ? ProblemSetDue.upcoming
+      : ProblemSetDue.dueSoon;
+}
+
+/// One set and its problems, kept in the order they were given.
+class ProblemSetSection {
+  const ProblemSetSection({required this.set, required this.problems});
+
+  final StudyProblemSet set;
+  final List<StudyProblem> problems;
+}
+
+/// The problems grouped by set. [sections] has one entry for each set, the nearest due date first, undated sets
+/// last, then by name. [unset] holds the problems in no set, and those whose set no longer exists.
+({List<ProblemSetSection> sections, List<StudyProblem> unset})
+    groupProblemsBySet({
+  required List<StudyProblem> problems,
+  required List<StudyProblemSet> sets,
+}) {
+  final known = {for (final set in sets) set.id};
+  final members = <String, List<StudyProblem>>{};
+  final unset = <StudyProblem>[];
+  for (final problem in problems) {
+    final setId = problem.setId;
+    if (setId != null && known.contains(setId)) {
+      members.putIfAbsent(setId, () => <StudyProblem>[]).add(problem);
+    } else {
+      unset.add(problem);
+    }
+  }
+  final sections = [
+    for (final set in sets)
+      ProblemSetSection(set: set, problems: members[set.id] ?? const []),
+  ];
+  sections.sort((a, b) {
+    final da = a.set.dueAt;
+    final db = b.set.dueAt;
+    if (da != null && db != null) {
+      final byDue = da.compareTo(db);
+      if (byDue != 0) return byDue;
+    } else if (da != null) {
+      return -1;
+    } else if (db != null) {
+      return 1;
+    }
+    return a.set.title.toLowerCase().compareTo(b.set.title.toLowerCase());
+  });
+  return (sections: sections, unset: unset);
+}
+
+/// How many of [problems] the viewer has submitted a working for, given the ids of the problems they have worked.
+int workedCount({
+  required List<StudyProblem> problems,
+  required Set<String> workedIds,
+}) =>
+    [
+      for (final problem in problems)
+        if (workedIds.contains(problem.id)) problem,
+    ].length;

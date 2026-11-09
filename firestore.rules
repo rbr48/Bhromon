@@ -967,7 +967,7 @@ service cloud.firestore {
     // A problem's report fields are optional: a problem written before reports existed has neither, which reads
     // as no reports.
     function validStudyProblem(d) {
-      return d.keys().hasOnly(['text', 'title', 'createdByEmail', 'createdAt', 'releaseAt', 'shown', 'pinned', 'reportCount', 'reportedAt']) &&
+      return d.keys().hasOnly(['text', 'title', 'createdByEmail', 'createdAt', 'releaseAt', 'shown', 'pinned', 'reportCount', 'reportedAt', 'setId']) &&
              d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
              (d.get('title', null) == null || (d.title is string && d.title.size() <= 120)) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
@@ -975,7 +975,16 @@ service cloud.firestore {
              (d.get('releaseAt', null) == null || d.releaseAt is timestamp) &&
              d.shown is bool && d.pinned is bool &&
              d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
-             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp) &&
+             (d.get('setId', null) == null || (d.setId is string && d.setId.size() >= 1 && d.setId.size() <= 40));
+    }
+    // A problem set: a name of up to 120 characters, an optional due date (the start of its day), and who made it and when.
+    function validStudyProblemSet(d) {
+      return d.keys().hasOnly(['title', 'dueAt', 'createdByEmail', 'createdAt', 'updatedAt']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             (d.get('dueAt', null) == null || d.dueAt is timestamp) &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp && d.updatedAt is timestamp;
     }
     // Whether a member may add a problem: the same rule as a finding's (the module's post policy).
     function studyProblemCreateAllowed(tourId, subjectId, d) {
@@ -984,14 +993,14 @@ service cloud.firestore {
              d.createdByEmail == tourUserEmail() &&
              d.pinned == false &&
              d.createdAt == request.time &&
-             d.get('reportCount', 0) == 0 && d.get('reportedAt', null) == null &&
+             d.get('reportCount', 0) == 0 && d.get('reportedAt', null) == null && d.get('setId', null) == null &&
              validStudyProblem(d) &&
              studySubjectListed(tourId, subjectId) &&
              studyModuleOn(tourId, subjectId, 'problems') &&
              (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/problems).data.postPolicy != 'admins') &&
              d.shown == (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/problems).data.postPolicy == 'members');
     }
-    // Whether an update to a problem is allowed. An admin shows, pins, schedules or edits it, and an admin's
+    // Whether an update to a problem is allowed. An admin shows, pins, schedules, edits or sets it into a problem set, and an admin's
     // restore of a reported problem shows it again and clears its report time. Its author changes the words
     // and the title only, never the release time or the flags. Any other member who can see the problem may
     // report it: the report hides it at once, its count rises by one, and the report is written in the same batch.
@@ -1000,8 +1009,11 @@ service cloud.firestore {
       let changed = newData.diff(oldData).affectedKeys();
       return newData.createdByEmail == oldData.createdByEmail &&
              validStudyProblem(newData) &&
-             ((byAdmin && changed.hasOnly(['text', 'title', 'releaseAt', 'shown', 'pinned', 'reportedAt']) &&
-               (!changed.hasAny(['reportedAt']) || newData.get('reportedAt', null) == null)) ||
+             ((byAdmin && changed.hasOnly(['text', 'title', 'releaseAt', 'shown', 'pinned', 'reportedAt', 'setId']) &&
+               (!changed.hasAny(['reportedAt']) || newData.get('reportedAt', null) == null) &&
+               // A problem goes into a set only if that set exists in this subject.
+               (!changed.hasAny(['setId']) || newData.get('setId', null) == null ||
+                exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problem_sets/$(newData.setId)))) ||
               (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'title'])) ||
               (oldData.createdByEmail != tourUserEmail() && oldData.shown == true &&
                changed.hasOnly(['shown', 'reportCount', 'reportedAt']) &&
@@ -1948,6 +1960,27 @@ service cloud.firestore {
                              exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/challenges/$(weekKey));
             allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && email == tourUserEmail();
           }
+        }
+
+        // The problem sets of a subject: named groups of its problems, with an optional due date. An admin makes, renames
+        // and deletes them, in a listed subject whose problems module is on. A problem names one of these by its setId.
+        match /problem_sets/{setId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                           studySubjectListed(tourId, subjectId) &&
+                           studyModuleOn(tourId, subjectId, 'problems') &&
+                           request.resource.data.createdByEmail == tourUserEmail() &&
+                           request.resource.data.createdAt == request.time &&
+                           request.resource.data.updatedAt == request.time &&
+                           validStudyProblemSet(request.resource.data);
+          allow update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                           studySubjectListed(tourId, subjectId) &&
+                           studyModuleOn(tourId, subjectId, 'problems') &&
+                           request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                           request.resource.data.createdAt == resource.data.createdAt &&
+                           request.resource.data.updatedAt == request.time &&
+                           validStudyProblemSet(request.resource.data);
+          allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
         }
 
         // Problems a group works through. A member submits their own working; the reference solution is written by
