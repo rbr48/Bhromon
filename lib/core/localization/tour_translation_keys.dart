@@ -2968,6 +2968,11 @@ class TourTranslationKeys {
       'study_work_reported_notice':
           'Reported. Other members cannot see this working until an admin decides.',
       'study_problem_restore': 'Restore',
+      'study_finding_report': 'Report this finding',
+      'study_finding_report_title': 'Why are you reporting this finding?',
+      'study_finding_reported_notice':
+          'Reported. It is hidden from members until an admin decides.',
+      'study_finding_restored': 'Shown again.',
       'study_problem_restored': 'Restored.',
       'study_problem_queue_title': 'Reported problems',
       'study_set_title_required': 'A set needs a name.',
@@ -6435,6 +6440,11 @@ class TourTranslationKeys {
       'study_work_reported_notice':
           'রিপোর্ট করা হয়েছে। অ্যাডমিন সিদ্ধান্ত না নেওয়া পর্যন্ত অন্য সদস্যরা এই সমাধানটি দেখতে পাবেন না।',
       'study_problem_restore': 'ফিরিয়ে আনুন',
+      'study_finding_report': 'এই আবিষ্কারটি রিপোর্ট করুন',
+      'study_finding_report_title': 'কেন এই আবিষ্কারটি রিপোর্ট করছেন?',
+      'study_finding_reported_notice':
+          'রিপোর্ট করা হয়েছে। অ্যাডমিন সিদ্ধান্ত না নেওয়া পর্যন্ত সদস্যদের কাছে লুকানো থাকবে।',
+      'study_finding_restored': 'আবার দেখানো হচ্ছে।',
       'study_problem_restored': 'ফিরিয়ে আনা হয়েছে।',
       'study_problem_queue_title': 'রিপোর্ট করা সমস্যা',
       'study_set_title_required': 'সেটের একটি নাম লাগবে।',

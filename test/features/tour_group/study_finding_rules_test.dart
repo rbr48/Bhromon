@@ -159,4 +159,69 @@ void main() {
           StudyFindingCheck.fromMap('b@x.com', {'verdict': 'maybe'}), isNull);
     });
   });
+
+  group('reporting a finding', () {
+    test(
+        'a shown finding someone else wrote can be reported; one\'s own cannot',
+        () {
+      final theirs = _finding('t', by: 'other@x.com');
+      final mine = _finding('m', by: 'me@x.com');
+
+      expect(
+          canReportFinding(finding: theirs, viewerEmail: 'me@x.com'), isTrue);
+      expect(canReportFinding(finding: mine, viewerEmail: 'me@x.com'), isFalse);
+    });
+
+    test('a finding already hidden cannot be reported again by a member', () {
+      final hidden = _finding('h', by: 'other@x.com', shown: false);
+
+      expect(
+          canReportFinding(finding: hidden, viewerEmail: 'me@x.com'), isFalse);
+    });
+
+    test('reported findings for review are hidden ones, oldest report first',
+        () {
+      final later = StudyFinding(
+        id: 'later',
+        text: 'Later',
+        method: 'm',
+        shown: false,
+        reportedAt: DateTime(2026, 11, 3),
+        reportCount: 1,
+      );
+      final earlier = StudyFinding(
+        id: 'earlier',
+        text: 'Earlier',
+        method: 'm',
+        shown: false,
+        reportedAt: DateTime(2026, 11, 1),
+        reportCount: 2,
+      );
+      final visible = _finding('shown');
+
+      expect(
+        reportedFindingsForReview([later, visible, earlier]).map((f) => f.id),
+        ['earlier', 'later'],
+      );
+    });
+
+    test(
+        'the report fields are read, and a finding without them is not reported',
+        () {
+      final reported = StudyFinding.fromMap('r', {
+        'text': 'A result',
+        'method': 'A method',
+        'shown': false,
+        'reportCount': 2,
+        'reportedAt': DateTime(2026, 11, 2),
+      })!;
+      final plain = StudyFinding.fromMap(
+          'p', {'text': 'A result', 'method': 'A method'})!;
+
+      expect(reported.isReported, isTrue);
+      expect(reported.reportCount, 2);
+      expect(plain.isReported, isFalse);
+      expect(plain.reportCount, 0);
+    });
+  });
 }

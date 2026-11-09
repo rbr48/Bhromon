@@ -43,6 +43,8 @@ class StudyFinding {
     this.challengeCount = 0,
     this.shown = true,
     this.pinned = false,
+    this.reportCount = 0,
+    this.reportedAt,
   });
 
   final String id;
@@ -64,11 +66,22 @@ class StudyFinding {
   /// How many members challenged it.
   final int challengeCount;
 
-  /// Whether members can see it. A finding waiting for an admin is not shown yet.
+  /// Whether members can see it. A finding waiting for an admin is not shown yet, and a reported one is
+  /// hidden until an admin restores it.
   final bool shown;
 
   /// Whether an admin has pinned it to the top.
   final bool pinned;
+
+  /// How many members have reported the finding.
+  final int reportCount;
+
+  /// When the first report was made, and the finding was hidden. Null when it has never been reported
+  /// or an admin has restored it.
+  final DateTime? reportedAt;
+
+  /// Whether the finding is reported and waiting for an admin's decision.
+  bool get isReported => reportedAt != null;
 
   /// How many members have checked it, either way.
   int get checkCount => confirmCount + challengeCount;
@@ -80,6 +93,7 @@ class StudyFinding {
     final method = (map['method'] as String?)?.trim() ?? '';
     if (text.isEmpty || method.isEmpty) return null;
     final created = map['createdAt'];
+    final reported = map['reportedAt'];
     return StudyFinding(
       id: id,
       text: text,
@@ -90,6 +104,8 @@ class StudyFinding {
       challengeCount: _count(map['challengeCount']),
       shown: map['shown'] != false,
       pinned: map['pinned'] == true,
+      reportCount: _count(map['reportCount']),
+      reportedAt: reported is DateTime ? reported : null,
     );
   }
 

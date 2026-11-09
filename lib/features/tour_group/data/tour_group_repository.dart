@@ -2858,6 +2858,44 @@ class TourGroupRepository {
     await _findingRef(tourId, subjectId, findingId).delete();
   }
 
+  /// Reports a finding to the admins. It is hidden at once from everyone but its author and the admins,
+  /// and its report count rises by one. The report and the count move in one batch, as a problem's do.
+  Future<void> reportStudyFinding(
+    String tourId,
+    String subjectId,
+    String findingId, {
+    required StudyReportReason reason,
+  }) async {
+    final email = _requireEmail();
+    final finding = _findingRef(tourId, subjectId, findingId);
+    final snap = await finding.get();
+    final alreadyReported = snap.data()?['reportedAt'] != null;
+    final batch = _firestore.batch();
+    batch.set(finding.collection('reports').doc(email), {
+      'reason': reason.name,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(finding, {
+      'shown': false,
+      'reportCount': FieldValue.increment(1),
+      if (!alreadyReported) 'reportedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  /// Shows a reported finding to the members again, and clears its report time. Only an admin does this.
+  Future<void> restoreStudyFinding(
+    String tourId,
+    String subjectId,
+    String findingId,
+  ) async {
+    _requireEmail();
+    await _findingRef(tourId, subjectId, findingId).update({
+      'shown': true,
+      'reportedAt': FieldValue.delete(),
+    });
+  }
+
   /// Confirms or challenges a finding, once per member. The check and the count it moves are
   /// written in one batch. The note is optional and is kept only when it has words.
   Future<void> checkStudyFinding(

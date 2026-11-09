@@ -75,6 +75,8 @@ const moduleRef = (f, id = SUBJECT) => doc(f, 'tours', STUDY, 'study_subjects', 
 const findingRef = (f, id, subjectId = SUBJECT) => doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'findings', id);
 const checkRef = (f, id, email, subjectId = SUBJECT) =>
   doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'findings', id, 'checks', email);
+const reportRef = (f, id, email, subjectId = SUBJECT) =>
+  doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'findings', id, 'reports', email);
 
 describe('shared findings and the checks on them', () => {
   let env;
@@ -106,6 +108,19 @@ describe('shared findings and the checks on them', () => {
       findingRef(f, id, subjectId),
       verdict === 'confirm' ? { confirmCount: increment(-1) } : { challengeCount: increment(-1) },
     );
+    return batch.commit();
+  };
+
+  // A member reports a finding: the report, the hiding and the count move in one batch, as the app writes them.
+  const reportBatch = (who, id, { firstReport = true, reason = 'wrong', count = 1, shown = false } = {}) => {
+    const f = db(who);
+    const batch = writeBatch(f);
+    batch.set(reportRef(f, id, people[who].email), { reason, createdAt: serverTimestamp() });
+    batch.update(findingRef(f, id), {
+      shown,
+      reportCount: increment(count),
+      ...(firstReport ? { reportedAt: serverTimestamp() } : {}),
+    });
     return batch.commit();
   };
 
@@ -324,6 +339,85 @@ describe('shared findings and the checks on them', () => {
       await assertSucceeds(deleteDoc(findingRef(db('member'), F_MEMBER)));
       await assertFails(deleteDoc(findingRef(db('other'), F_ADMIN)));
       await assertSucceeds(deleteDoc(findingRef(db('admin'), F_ADMIN)));
+    });
+  });
+
+  describe('reporting a finding', () => {
+    test('a member reports someone else\'s shown finding: it is hidden and its count rises with the report', async () => {
+      await assertSucceeds(reportBatch('other', F_MEMBER));
+      // withSecurityRulesDisabled returns nothing, so the document is read inside the callback.
+      let stored;
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        stored = (await getDoc(findingRef(ctx.firestore(), F_MEMBER))).data();
+      });
+      expect(stored.shown).toBe(false);
+      expect(stored.reportCount).toBe(1);
+      expect(stored.reportedAt).toBeTruthy();
+    });
+
+    test('a second member\'s report keeps the first report time', async () => {
+      await assertSucceeds(reportBatch('other', F_ADMIN));
+      // The finding is hidden now; a later report keeps it hidden and moves only the count.
+      await env.withSecurityRulesDisabled(async (ctx) =>
+        updateDoc(findingRef(ctx.firestore(), F_ADMIN), { shown: true }));
+      await assertSucceeds(reportBatch('member', F_ADMIN, { firstReport: false }));
+    });
+
+    test('nobody reports their own finding, or one an admin has not shown', async () => {
+      await assertFails(reportBatch('member', F_MEMBER));
+      await assertFails(reportBatch('other', F_WAITING));
+    });
+
+    test('a report must hide the finding and move the count by exactly one', async () => {
+      await assertFails(reportBatch('other', F_MEMBER, { shown: true }));
+      await assertFails(reportBatch('other', F_MEMBER, { count: 2 }));
+    });
+
+    test('a report needs its count, and a count needs its report', async () => {
+      await assertFails(setDoc(reportRef(db('other'), F_MEMBER, people.other.email), { reason: 'wrong', createdAt: serverTimestamp() }));
+      await assertFails(updateDoc(findingRef(db('other'), F_MEMBER), {
+        shown: false, reportCount: increment(1), reportedAt: serverTimestamp(),
+      }));
+    });
+
+    test('a report is the member\'s own and gives a known reason', async () => {
+      const f = db('other');
+      const batch = writeBatch(f);
+      batch.set(reportRef(f, F_MEMBER, people.member.email), { reason: 'wrong', createdAt: serverTimestamp() });
+      batch.update(findingRef(f, F_MEMBER), { shown: false, reportCount: increment(1), reportedAt: serverTimestamp() });
+      await assertFails(batch.commit());
+      await assertFails(reportBatch('other', F_MEMBER, { reason: 'boring' }));
+    });
+
+    test('an outsider cannot report', async () => {
+      await assertFails(reportBatch('outsider', F_MEMBER));
+    });
+
+    test('a hidden reported finding takes no checks', async () => {
+      await assertSucceeds(reportBatch('other', F_MEMBER));
+      await assertFails(checkBatch('admin', F_MEMBER, 'confirm'));
+    });
+
+    test('an admin restores a reported finding, which clears its report time', async () => {
+      await assertSucceeds(reportBatch('other', F_MEMBER));
+      await assertFails(updateDoc(findingRef(db('member'), F_MEMBER), { shown: true, reportedAt: null }));
+      await assertSucceeds(updateDoc(findingRef(db('admin'), F_MEMBER), { shown: true, reportedAt: null }));
+    });
+
+    test('an admin cannot set a report time by hand', async () => {
+      await assertFails(updateDoc(findingRef(db('admin'), F_MEMBER), { reportedAt: serverTimestamp() }));
+    });
+
+    test('a new finding carries no reports', async () => {
+      await assertFails(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { reportCount: 1 })));
+      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email)));
+    });
+
+    test('the reporter and the admins read a report; the author does not', async () => {
+      await assertSucceeds(reportBatch('other', F_MEMBER));
+      await assertSucceeds(getDoc(reportRef(db('other'), F_MEMBER, people.other.email)));
+      await assertSucceeds(getDoc(reportRef(db('admin'), F_MEMBER, people.other.email)));
+      await assertFails(getDoc(reportRef(db('member'), F_MEMBER, people.other.email)));
     });
   });
 });

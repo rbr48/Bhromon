@@ -9,6 +9,7 @@ import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_finding_models.dart';
 import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/models/study_thread_models.dart';
 import '../../domain/services/study_finding_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_finding_composer.dart';
@@ -133,6 +134,49 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
       'study_post_deleted',
     );
   }
+
+  /// Asks why a finding is reported. Returns null when the member cancels.
+  Future<StudyReportReason?> _askReportReason() {
+    final l10n = context.l10n;
+    return showDialog<StudyReportReason>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l10n.translate('study_finding_report_title')),
+        children: [
+          for (final reason in StudyReportReason.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(reason),
+              child: Text(l10n.translate('study_thread_reason_${reason.name}')),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Reports a finding to the admins. Its members stop seeing it at once.
+  Future<void> _report(StudyFinding finding) async {
+    final reason = await _askReportReason();
+    if (reason == null || !mounted) return;
+    await _run(
+      () => _repository.reportStudyFinding(
+        widget.tourId,
+        widget.subject.id,
+        finding.id,
+        reason: reason,
+      ),
+      'study_report_thanks',
+    );
+  }
+
+  /// An admin shows a reported finding again, which clears its report time.
+  Future<void> _restore(StudyFinding finding) => _run(
+        () => _repository.restoreStudyFinding(
+          widget.tourId,
+          widget.subject.id,
+          finding.id,
+        ),
+        'study_finding_restored',
+      );
 
   Future<void> _setFlags(StudyFinding finding,
       {bool? shown, bool? pinned}) async {
@@ -349,7 +393,12 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
               }),
               style: TextStyle(color: palette.text54),
             ),
-            if (!finding.shown) ...[
+            if (finding.isReported) ...[
+              const SizedBox(height: 6),
+              Text(l10n.translate('study_finding_reported_notice'),
+                  style: TextStyle(
+                      color: palette.text54, fontStyle: FontStyle.italic)),
+            ] else if (!finding.shown) ...[
               const SizedBox(height: 6),
               Text(l10n.translate('study_post_waiting_label'),
                   style: TextStyle(
@@ -393,7 +442,9 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                 ],
               ],
             ),
-            if (mine || _isAdmin)
+            if (mine ||
+                _isAdmin ||
+                canReportFinding(finding: finding, viewerEmail: _me))
               Align(
                 alignment: Alignment.centerRight,
                 child: PopupMenuButton<String>(
@@ -407,6 +458,10 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                         _setFlags(finding, shown: true);
                       case 'pin':
                         _setFlags(finding, pinned: !finding.pinned);
+                      case 'report':
+                        _report(finding);
+                      case 'restore':
+                        _restore(finding);
                       default:
                         _remove(finding);
                     }
@@ -417,7 +472,17 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                         value: 'edit',
                         child: Text(l10n.translate('study_edit')),
                       ),
-                    if (_isAdmin && !finding.shown)
+                    if (canReportFinding(finding: finding, viewerEmail: _me))
+                      PopupMenuItem<String>(
+                        value: 'report',
+                        child: Text(l10n.translate('study_finding_report')),
+                      ),
+                    if (_isAdmin && finding.isReported)
+                      PopupMenuItem<String>(
+                        value: 'restore',
+                        child: Text(l10n.translate('study_problem_restore')),
+                      ),
+                    if (_isAdmin && !finding.shown && !finding.isReported)
                       PopupMenuItem<String>(
                         value: 'show',
                         child: Text(l10n.translate('study_post_show')),
@@ -429,10 +494,11 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                             ? 'study_post_unpin'
                             : 'study_post_pin')),
                       ),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Text(l10n.translate('study_remove')),
-                    ),
+                    if (mine || _isAdmin)
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text(l10n.translate('study_remove')),
+                      ),
                   ],
                 ),
               ),

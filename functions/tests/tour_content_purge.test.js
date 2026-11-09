@@ -244,6 +244,22 @@ async function seed() {
     note: 'The answer key is out of date.',
     createdAt: new Date('2026-11-02T10:00:00Z'),
   });
+  // Reports the leaver made, on a finding, a problem and a working. Each comes out with its count; another
+  // member's report on the same finding stays.
+  const report = { reason: 'wrong', createdAt: new Date('2026-11-02T11:00:00Z') };
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported`, {
+    text: 'A result two members reported.',
+    method: 'Read off the chart.',
+    createdByEmail: OTHER,
+    confirmCount: 0,
+    challengeCount: 0,
+    shown: false,
+    pinned: false,
+    reportCount: 2,
+    reportedAt: new Date('2026-11-02T11:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported/reports/${LEAVER}`, report);
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported/reports/third@x.com`, report);
   // Problems in the same subject: one the leaver posted, and another member's with a reference solution the
   // leaver reviewed. The leaver's own working goes with the reviews of it; their review of another member's
   // working comes out, and that working's count follows it.
@@ -260,7 +276,9 @@ async function seed() {
     shown: true,
     pinned: false,
     createdAt: new Date('2026-11-02T09:30:00Z'),
+    reportCount: 1,
   });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/reports/${LEAVER}`, report);
   await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/reference/solution`, {
     text: 'The area is 4.',
     reviewedByEmail: LEAVER,
@@ -283,7 +301,9 @@ async function seed() {
     updatedAt: new Date('2026-11-02T09:55:00Z'),
     rightCount: 1,
     gapCount: 0,
+    reportCount: 1,
   });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reports/${LEAVER}`, report);
   await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reviews/${LEAVER}`, {
     verdict: 'right',
     createdAt: new Date('2026-11-02T10:00:00Z'),
@@ -808,7 +828,19 @@ describe('tour content purge', () => {
       text: 'The working that the leaver reviewed.',
       rightCount: 0,
       gapCount: 0,
+      reportCount: 0,
     });
+    // Their reports come out, and each count falls by one. A reported item stays hidden for an admin to decide,
+    // and another member's report stays.
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported/reports/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported/reports/third@x.com`)).toBe(true);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported`)).toMatchObject({
+      reportCount: 1,
+      shown: false,
+    });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/reports/${LEAVER}`)).toBe(false);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other`)).toMatchObject({ reportCount: 0 });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reports/${LEAVER}`)).toBe(false);
     // A week's challenge keeps its kind and target under the stand-in. The leaver's join comes out, and another
     // member's stays.
     expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09`)).toMatchObject({
