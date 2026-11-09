@@ -69,10 +69,12 @@ Formulas: meal rate = total bazar ÷ total logged meals; member owed = member's 
 
 ### Sprint 8 — Calls and chat
 
-- **8.1 Quality HUD.** Verify the gap first, then build only what is missing: round-trip time, loss and bitrate.
-- **8.2 Reconnect.** ICE restart and reoffer exist. Decide whether the new 10-second window replaces or adds to the rebuild budget. Picture-in-picture is already done.
-- **8.3 Speaking indicator.** New. Audio-level detection for voice-room participants, shown as a ring on the avatar in the voice room and the docked bar.
-- **8.4 Chat search.** Blocked on the index decision (decision 5). Voice-note speed is already done.
+Audited against the code. Most of this sprint is built; the open item needs a decision.
+
+- **8.1 Quality HUD.** Built. The call HUD shows round-trip time, loss and outbound rate (`CallQualityHud` in `packet_loss_meter.dart`). The voice room collects round-trip and loss (`voice_room_service.dart`), but I found no HUD for it.
+- **8.2 Reconnect.** Built. The 10-second window (`_reconnectTimeout` in `call_signaling_service.dart`) sits beside the rebuild budget, which is unchanged. Picture-in-picture is already done.
+- **8.3 Speaking indicator.** Built. Voice-room tiles and the docked voice bar show a ring on a speaking member's avatar (`group_channels_screen.dart`, `voice_room_service.dart`).
+- **8.4 Chat search.** Blocked on decision 5 (where the index lives). Voice-note speed is already done.
 
 ### Sprint 9 — Travel and Live Journey
 
