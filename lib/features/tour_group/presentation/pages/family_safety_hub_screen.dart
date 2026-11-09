@@ -3,6 +3,7 @@ import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/models/safety_alert_models.dart';
@@ -564,59 +565,63 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1B1E)),
-      appBar: AppBar(
-        title: Text(context.l10n.translate('fsh_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
-        foregroundColor: context.forest.text,
-        iconTheme: IconThemeData(color: context.forest.text),
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // SOS Emergency Beacon
-            _buildSosBeacon(),
-
-            const SizedBox(height: 16),
-
-            // Alerts raised by the group, until someone resolves them.
-            _buildGroupAlerts(),
-
-            // Everyone can say they are safe. Place sharing is the member's choice.
-            _buildCheckInCard(),
-            _buildLocationSharingCard(),
-            _buildFamilyStatus(),
-
-            // The family's own numbers, then the national helplines.
-            _buildFamilyNumbersSection(),
-            _buildEmergencyContactsSection(),
-
-            const SizedBox(height: 20),
-
-            // Live Landmark Direction Cards
-            Text(
-              context.l10n.translate('fsh_important_points'),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1B1E)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(context.l10n.translate('fsh_title'),
               style: TextStyle(
                   color: context.forest.text,
                   fontWeight: FontWeight.bold,
-                  fontSize: 15),
-            ),
-            const SizedBox(height: 10),
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          foregroundColor: context.forest.text,
+          iconTheme: IconThemeData(color: context.forest.text),
+          elevation: 0,
+        ),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // SOS Emergency Beacon
+              _buildSosBeacon(),
 
-            ..._landmarks.map((l) => _buildLandmarkCard(l)),
+              const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
+              // Alerts raised by the group, until someone resolves them.
+              _buildGroupAlerts(),
 
-            // Safety Guidelines
-            _buildSafetyGuidelines(),
-          ],
+              // Everyone can say they are safe. Place sharing is the member's choice.
+              _buildCheckInCard(),
+              _buildLocationSharingCard(),
+              _buildFamilyStatus(),
+
+              // The family's own numbers, then the national helplines.
+              _buildFamilyNumbersSection(),
+              _buildEmergencyContactsSection(),
+
+              const SizedBox(height: 20),
+
+              // Live Landmark Direction Cards
+              Text(
+                context.l10n.translate('fsh_important_points'),
+                style: TextStyle(
+                    color: context.forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+
+              ..._landmarks.map((l) => _buildLandmarkCard(l)),
+
+              const SizedBox(height: 20),
+
+              // Safety Guidelines
+              _buildSafetyGuidelines(),
+            ],
+          ),
         ),
       ),
     );

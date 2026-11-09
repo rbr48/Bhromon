@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -744,54 +745,58 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         : notices.where((n) => NoticeEngine.needsMe(n, _me, _now)).length;
     final next = notices == null ? null : NoticeEngine.nextUp(notices, _now);
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        title: Text(l10n.translate('tour_notice_board_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        iconTheme: IconThemeData(color: context.forest.text),
-        elevation: 0,
-        actions: [
-          if (today.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.ios_share_rounded),
-              tooltip: l10n.translate('notice_share_today'),
-              onPressed: () => _shareSchedule(today),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('tour_notice_board_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          iconTheme: IconThemeData(color: context.forest.text),
+          elevation: 0,
+          actions: [
+            if (today.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.ios_share_rounded),
+                tooltip: l10n.translate('notice_share_today'),
+                onPressed: () => _shareSchedule(today),
+              ),
+          ],
+        ),
+        floatingActionButton: _isAdmin || _membersPost
+            ? FloatingActionButton.extended(
+                backgroundColor: AppColors.mintGreen,
+                foregroundColor: AppColors.darkGreen,
+                icon: const Icon(Icons.add_alert_rounded),
+                label: Text(l10n.translate('tour_notice_new')),
+                onPressed: () => _compose(),
+              )
+            : null,
+        body: SafeArea(
+          // A swipe moves to the next or previous filter. It only changes which
+          // notices of the stream already on screen are shown.
+          child: SwipeStep(
+            onStep: _stepFilter,
+            nextLabel: l10n.translate('notice_next_filter'),
+            previousLabel: l10n.translate('notice_previous_filter'),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              children: [
+                if (next != null) _nextUp(l10n, next),
+                _meetingPoint(l10n),
+                if (today.isNotEmpty) _todaySchedule(l10n, today),
+                const SizedBox(height: 4),
+                _filters(l10n, needsMe),
+                const SizedBox(height: 8),
+                ..._list(l10n),
+              ],
             ),
-        ],
-      ),
-      floatingActionButton: _isAdmin || _membersPost
-          ? FloatingActionButton.extended(
-              backgroundColor: AppColors.mintGreen,
-              foregroundColor: AppColors.darkGreen,
-              icon: const Icon(Icons.add_alert_rounded),
-              label: Text(l10n.translate('tour_notice_new')),
-              onPressed: () => _compose(),
-            )
-          : null,
-      body: SafeArea(
-        // A swipe moves to the next or previous filter. It only changes which
-        // notices of the stream already on screen are shown.
-        child: SwipeStep(
-          onStep: _stepFilter,
-          nextLabel: l10n.translate('notice_next_filter'),
-          previousLabel: l10n.translate('notice_previous_filter'),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            children: [
-              if (next != null) _nextUp(l10n, next),
-              _meetingPoint(l10n),
-              if (today.isNotEmpty) _todaySchedule(l10n, today),
-              const SizedBox(height: 4),
-              _filters(l10n, needsMe),
-              const SizedBox(height: 8),
-              ..._list(l10n),
-            ],
           ),
         ),
       ),

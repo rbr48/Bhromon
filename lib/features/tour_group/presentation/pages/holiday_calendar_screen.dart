@@ -3,6 +3,7 @@ import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -95,21 +96,25 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       },
     );
     if (widget.embedded) return body;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-      appBar: AppBar(
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-        elevation: 0,
-        title: Text(
-          context.l10n.translate('hol_title'),
-          style: TextStyle(
-            color: context.forest.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          elevation: 0,
+          title: Text(
+            context.l10n.translate('hol_title'),
+            style: TextStyle(
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
         ),
+        body: body,
       ),
-      body: body,
     );
   }
 

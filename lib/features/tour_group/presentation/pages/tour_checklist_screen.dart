@@ -1,8 +1,8 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
@@ -11,7 +11,6 @@ import '../../domain/models/tour_activity_models.dart';
 export '../../domain/models/tour_activity_models.dart'
     show checklistDefaultItems;
 import '../../domain/models/tour_group.dart';
-import '../tour_routes.dart';
 
 class TourChecklistScreen extends StatefulWidget {
   final String tourId;
@@ -109,138 +108,133 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     final l10n = context.l10n;
     final me = _repository.currentEmail;
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-      appBar: AppBar(
-        leading: BackButton(
-          color: context.forest.text,
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(tourHubPath(widget.tourId));
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          elevation: 0,
+          title: Text(
+            l10n.translate('check_title'),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 18),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.add_task_rounded,
+                  color: context.forest.accentText),
+              tooltip: l10n.translate('check_add_item'),
+              onPressed: () => _showAddItemDialog(context),
+            ),
+          ],
+        ),
+        body: StreamBuilder<List<ChecklistItem>>(
+          stream: _items,
+          builder: (context, snapshot) {
+            if (snapshot.hasError && !snapshot.hasData) {
+              return Center(
+                child: Text(l10n.translate('check_load_failed'),
+                    style: TextStyle(color: context.forest.text54)),
+              );
             }
+            final saved = snapshot.data ?? const <ChecklistItem>[];
+            final byId = {for (final item in saved) item.id: item};
+            final defaults = _visibleDefaults;
+            final custom =
+                saved.where((i) => i.id.startsWith('custom_')).toList();
+
+            final packedCount = defaults
+                    .where((d) => byId[d.id]?.isCheckedBy(me) ?? false)
+                    .length +
+                custom.where((c) => c.isCheckedBy(me)).length;
+            final totalCount = defaults.length + custom.length;
+
+            final categories = <String>[];
+            for (final d in defaults) {
+              if (!categories.contains(d.category)) categories.add(d.category);
+            }
+            if (custom.isNotEmpty) categories.add(_customCategory);
+
+            return Column(
+              children: [
+                // Progress for the signed-in person only
+                Container(
+                  margin: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.forest.surfaceFor(const Color(0xFF14241B)),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.forest.divider10),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(l10n.translate('check_my_progress'),
+                              style: TextStyle(
+                                  color: context.forest.text,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
+                          Text(
+                              '${l10n.number(packedCount)} / ${l10n.number(totalCount)}',
+                              style: TextStyle(
+                                  color: context.forest.accentText,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: totalCount > 0
+                              ? (packedCount / totalCount).clamp(0.0, 1.0)
+                              : 0,
+                          backgroundColor: context.forest.divider12,
+                          valueColor:
+                              const AlwaysStoppedAnimation(AppColors.mintGreen),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.translate('check_tick_own'),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    children: [
+                      for (final category in categories)
+                        _buildSection(
+                          category: category,
+                          defaults: defaults
+                              .where((d) => d.category == category)
+                              .toList(),
+                          custom:
+                              category == _customCategory ? custom : const [],
+                          byId: byId,
+                          me: me,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            );
           },
         ),
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-        elevation: 0,
-        title: Text(
-          l10n.translate('check_title'),
-          style: TextStyle(
-              color: context.forest.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 18),
-        ),
-        actions: [
-          IconButton(
-            icon:
-                Icon(Icons.add_task_rounded, color: context.forest.accentText),
-            tooltip: l10n.translate('check_add_item'),
-            onPressed: () => _showAddItemDialog(context),
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<ChecklistItem>>(
-        stream: _items,
-        builder: (context, snapshot) {
-          if (snapshot.hasError && !snapshot.hasData) {
-            return Center(
-              child: Text(l10n.translate('check_load_failed'),
-                  style: TextStyle(color: context.forest.text54)),
-            );
-          }
-          final saved = snapshot.data ?? const <ChecklistItem>[];
-          final byId = {for (final item in saved) item.id: item};
-          final defaults = _visibleDefaults;
-          final custom =
-              saved.where((i) => i.id.startsWith('custom_')).toList();
-
-          final packedCount = defaults
-                  .where((d) => byId[d.id]?.isCheckedBy(me) ?? false)
-                  .length +
-              custom.where((c) => c.isCheckedBy(me)).length;
-          final totalCount = defaults.length + custom.length;
-
-          final categories = <String>[];
-          for (final d in defaults) {
-            if (!categories.contains(d.category)) categories.add(d.category);
-          }
-          if (custom.isNotEmpty) categories.add(_customCategory);
-
-          return Column(
-            children: [
-              // Progress for the signed-in person only
-              Container(
-                margin: const EdgeInsets.all(14),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: context.forest.surfaceFor(const Color(0xFF14241B)),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: context.forest.divider10),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(l10n.translate('check_my_progress'),
-                            style: TextStyle(
-                                color: context.forest.text,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13)),
-                        Text(
-                            '${l10n.number(packedCount)} / ${l10n.number(totalCount)}',
-                            style: TextStyle(
-                                color: context.forest.accentText,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: totalCount > 0
-                            ? (packedCount / totalCount).clamp(0.0, 1.0)
-                            : 0,
-                        backgroundColor: context.forest.divider12,
-                        valueColor:
-                            const AlwaysStoppedAnimation(AppColors.mintGreen),
-                        minHeight: 8,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.translate('check_tick_own'),
-                        style: TextStyle(
-                            color: context.forest.text54, fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  children: [
-                    for (final category in categories)
-                      _buildSection(
-                        category: category,
-                        defaults: defaults
-                            .where((d) => d.category == category)
-                            .toList(),
-                        custom: category == _customCategory ? custom : const [],
-                        byId: byId,
-                        me: me,
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

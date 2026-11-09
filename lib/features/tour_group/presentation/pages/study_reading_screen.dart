@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -153,70 +154,74 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_reading_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _add,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('study_reading_add')),
-      ),
-      body: StreamBuilder<List<StudyBook>>(
-        stream: _books,
-        builder: (context, bookSnap) {
-          final books = bookSnap.data ?? const <StudyBook>[];
-          final titles = {for (final b in books) b.id: b.title};
-          return StreamBuilder<List<ReadingSession>>(
-            stream: _sessions,
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return Center(
-                  child: Text(l10n.translate('study_failed'),
-                      style: TextStyle(color: palette.text70)),
-                );
-              }
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final split = splitSessions(snap.data!, DateTime.now());
-              if (split.upcoming.isEmpty && split.past.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      l10n.translate('study_reading_empty'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: palette.text70),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_reading_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _add,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate('study_reading_add')),
+        ),
+        body: StreamBuilder<List<StudyBook>>(
+          stream: _books,
+          builder: (context, bookSnap) {
+            final books = bookSnap.data ?? const <StudyBook>[];
+            final titles = {for (final b in books) b.id: b.title};
+            return StreamBuilder<List<ReadingSession>>(
+              stream: _sessions,
+              builder: (context, snap) {
+                if (snap.hasError) {
+                  return Center(
+                    child: Text(l10n.translate('study_failed'),
+                        style: TextStyle(color: palette.text70)),
+                  );
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final split = splitSessions(snap.data!, DateTime.now());
+                if (split.upcoming.isEmpty && split.past.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        l10n.translate('study_reading_empty'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: palette.text70),
+                      ),
                     ),
-                  ),
+                  );
+                }
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  children: [
+                    if (split.upcoming.isNotEmpty) ...[
+                      _header(l10n.translate('study_reading_upcoming')),
+                      for (final s in split.upcoming) _tile(s, books, titles),
+                    ],
+                    if (split.past.isNotEmpty) ...[
+                      _header(l10n.translate('study_reading_past')),
+                      for (final s in split.past) _tile(s, books, titles),
+                    ],
+                  ],
                 );
-              }
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                children: [
-                  if (split.upcoming.isNotEmpty) ...[
-                    _header(l10n.translate('study_reading_upcoming')),
-                    for (final s in split.upcoming) _tile(s, books, titles),
-                  ],
-                  if (split.past.isNotEmpty) ...[
-                    _header(l10n.translate('study_reading_past')),
-                    for (final s in split.past) _tile(s, books, titles),
-                  ],
-                ],
-              );
-            },
-          );
-        },
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,10 +1,10 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,7 +28,6 @@ import '../../domain/services/journey_audio_guide_service.dart';
 import '../journey_access_flow.dart';
 import '../itinerary_pdf_export.dart';
 import '../live_journey_runtime.dart';
-import '../tour_routes.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
 import '../widgets/journey/journey_alarm_settings_sheet.dart';
 import '../widgets/journey/journey_live_card.dart';
@@ -532,64 +531,58 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final g = _group;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
-      appBar: AppBar(
-        leading: BackButton(
-          color: context.forest.text,
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(tourHubPath(widget.tourId));
-            }
-          },
-        ),
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-        title: Text(l10n.translate('route_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        actions: [
-          if (g != null)
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+          title: Text(l10n.translate('route_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          actions: [
+            if (g != null)
+              IconButton(
+                tooltip: l10n.locale.languageCode == 'bn'
+                    ? 'পরিকল্পনা PDF ডাউনলোড'
+                    : 'Export Itinerary PDF',
+                icon: const Icon(Icons.picture_as_pdf_rounded),
+                onPressed: () => exportItineraryPdf(
+                  context,
+                  group: g,
+                  checkpoints: _checkpoints,
+                ),
+              ),
+            if (_isAdmin && g != null)
+              IconButton(
+                tooltip: l10n.translate('route_edit_itinerary'),
+                icon: const Icon(Icons.edit_road_rounded),
+                onPressed: () => _editItinerary(g),
+              ),
             IconButton(
               tooltip: l10n.locale.languageCode == 'bn'
-                  ? 'পরিকল্পনা PDF ডাউনলোড'
-                  : 'Export Itinerary PDF',
-              icon: const Icon(Icons.picture_as_pdf_rounded),
-              onPressed: () => exportItineraryPdf(
-                context,
-                group: g,
-                checkpoints: _checkpoints,
-              ),
+                  ? 'অফলাইন ম্যাপ ও প্যাক'
+                  : 'Offline Maps & Guides',
+              icon: const Icon(Icons.offline_pin_rounded),
+              onPressed: () => OfflineMapPackSheet.show(context),
             ),
-          if (_isAdmin && g != null)
             IconButton(
-              tooltip: l10n.translate('route_edit_itinerary'),
-              icon: const Icon(Icons.edit_road_rounded),
-              onPressed: () => _editItinerary(g),
+              tooltip: l10n.translate('route_refresh_gps'),
+              icon: const Icon(Icons.my_location),
+              onPressed: _fetchGps,
             ),
-          IconButton(
-            tooltip: l10n.locale.languageCode == 'bn'
-                ? 'অফলাইন ম্যাপ ও প্যাক'
-                : 'Offline Maps & Guides',
-            icon: const Icon(Icons.offline_pin_rounded),
-            onPressed: () => OfflineMapPackSheet.show(context),
-          ),
-          IconButton(
-            tooltip: l10n.translate('route_refresh_gps'),
-            icon: const Icon(Icons.my_location),
-            onPressed: _fetchGps,
-          ),
-        ],
+          ],
+        ),
+        body: g == null
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.mintGreen))
+            : _body(l10n, g),
       ),
-      body: g == null
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.mintGreen))
-          : _body(l10n, g),
     );
   }
 

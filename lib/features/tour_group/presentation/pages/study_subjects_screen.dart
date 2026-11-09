@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -146,86 +147,90 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_subjects_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _create(proposal: !_isAdmin),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate(
-            _isAdmin ? 'study_subjects_add' : 'study_subjects_propose')),
-      ),
-      body: StreamBuilder<List<StudySubject>>(
-        stream: _subjects,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(l10n.translate('study_failed'),
-                  style: TextStyle(color: palette.text70)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final subjects = snap.data!;
-          if (subjects.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.translate(_isAdmin
-                      ? 'study_subjects_empty'
-                      : 'study_subjects_empty_member'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: palette.text70),
-                ),
-              ),
-            );
-          }
-          final listed =
-              studySubjectsByTitle(subjects.where((s) => s.isListed));
-          final proposed =
-              studySubjectsByTitle(subjects.where((s) => s.isProposed));
-          final declined =
-              studySubjectsByTitle(subjects.where((s) => s.isDeclined));
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [
-              for (final subject in listed) _subjectTile(subject),
-              if (proposed.isNotEmpty) ...[
-                _header(l10n.translate('study_book_proposed_section')),
-                for (final subject in proposed)
-                  _pendingTile(
-                      subject,
-                      [
-                        if (subject.code.isNotEmpty) subject.code,
-                        l10n.translate('study_book_waiting'),
-                      ].join(' · ')),
-              ],
-              if (declined.isNotEmpty) ...[
-                _header(l10n.translate('study_book_declined_section')),
-                for (final subject in declined)
-                  _pendingTile(
-                    subject,
-                    subject.declineNote.isEmpty
-                        ? l10n.translate('study_book_declined_plain')
-                        : l10n.translate('study_book_declined_with_note',
-                            args: {'note': subject.declineNote}),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_subjects_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _create(proposal: !_isAdmin),
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate(
+              _isAdmin ? 'study_subjects_add' : 'study_subjects_propose')),
+        ),
+        body: StreamBuilder<List<StudySubject>>(
+          stream: _subjects,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                child: Text(l10n.translate('study_failed'),
+                    style: TextStyle(color: palette.text70)),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final subjects = snap.data!;
+            if (subjects.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    l10n.translate(_isAdmin
+                        ? 'study_subjects_empty'
+                        : 'study_subjects_empty_member'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: palette.text70),
                   ),
+                ),
+              );
+            }
+            final listed =
+                studySubjectsByTitle(subjects.where((s) => s.isListed));
+            final proposed =
+                studySubjectsByTitle(subjects.where((s) => s.isProposed));
+            final declined =
+                studySubjectsByTitle(subjects.where((s) => s.isDeclined));
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [
+                for (final subject in listed) _subjectTile(subject),
+                if (proposed.isNotEmpty) ...[
+                  _header(l10n.translate('study_book_proposed_section')),
+                  for (final subject in proposed)
+                    _pendingTile(
+                        subject,
+                        [
+                          if (subject.code.isNotEmpty) subject.code,
+                          l10n.translate('study_book_waiting'),
+                        ].join(' · ')),
+                ],
+                if (declined.isNotEmpty) ...[
+                  _header(l10n.translate('study_book_declined_section')),
+                  for (final subject in declined)
+                    _pendingTile(
+                      subject,
+                      subject.declineNote.isEmpty
+                          ? l10n.translate('study_book_declined_plain')
+                          : l10n.translate('study_book_declined_with_note',
+                              args: {'note': subject.declineNote}),
+                    ),
+                ],
               ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

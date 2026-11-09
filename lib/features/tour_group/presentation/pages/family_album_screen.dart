@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -45,87 +46,91 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        title: Text(l10n.translate('album_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-      ),
-      body: StreamBuilder<List<TourPostItem>>(
-        stream: _posts,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return _message(l10n.translate('album_load_failed'));
-          }
-          final posts = snap.data;
-          if (posts == null) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.mintGreen));
-          }
-          final months = familyAlbumMonths(posts);
-          if (months.isEmpty) return _message(l10n.translate('album_empty'));
-          return CustomScrollView(
-            slivers: [
-              for (final month in months) ...[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            localizedDateFormat('MMMM yyyy')
-                                .format(month.month),
-                            style: TextStyle(
-                                color: context.forest.text,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('album_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+        ),
+        body: StreamBuilder<List<TourPostItem>>(
+          stream: _posts,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return _message(l10n.translate('album_load_failed'));
+            }
+            final posts = snap.data;
+            if (posts == null) {
+              return const Center(
+                  child: CircularProgressIndicator(color: AppColors.mintGreen));
+            }
+            final months = familyAlbumMonths(posts);
+            if (months.isEmpty) return _message(l10n.translate('album_empty'));
+            return CustomScrollView(
+              slivers: [
+                for (final month in months) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              localizedDateFormat('MMMM yyyy')
+                                  .format(month.month),
+                              style: TextStyle(
+                                  color: context.forest.text,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15),
+                            ),
                           ),
-                        ),
-                        Text(
-                          l10n.translate('album_count', args: {
-                            'count': l10n.number(month.photos.length),
-                          }),
-                          style: TextStyle(
-                              color: context.forest.text54, fontSize: 12),
-                        ),
-                      ],
+                          Text(
+                            l10n.translate('album_count', args: {
+                              'count': l10n.number(month.photos.length),
+                            }),
+                            style: TextStyle(
+                                color: context.forest.text54, fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  sliver: SliverGrid.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 4,
-                      crossAxisSpacing: 4,
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    sliver: SliverGrid.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 4,
+                        crossAxisSpacing: 4,
+                      ),
+                      itemCount: month.photos.length,
+                      itemBuilder: (context, i) {
+                        final url = month.photos[i];
+                        return InkWell(
+                          onTap: () => _open(url),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: TourSafeNetworkImage(imageUrl: url),
+                          ),
+                        );
+                      },
                     ),
-                    itemCount: month.photos.length,
-                    itemBuilder: (context, i) {
-                      final url = month.photos[i];
-                      return InkWell(
-                        onTap: () => _open(url),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: TourSafeNetworkImage(imageUrl: url),
-                        ),
-                      );
-                    },
                   ),
-                ),
+                ],
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

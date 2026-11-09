@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -114,60 +115,65 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        title: Text(l10n.translate('society_requests_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: AppColors.darkGreen,
-        onPressed: _raise,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('society_request_new')),
-      ),
-      body: StreamBuilder<List<ServiceRequest>>(
-        stream: _requests,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return _message(l10n.translate('society_load_failed'));
-          }
-          final all = snap.data;
-          if (all == null) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.mintGreen));
-          }
-          final counts = countServiceRequests(all);
-          final shown = filterServiceRequests(all, status: _filter);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
-                child: Text(
-                  l10n.translate('society_requests_summary', args: {
-                    'open': l10n.number(counts.open),
-                    'progress': l10n.number(counts.inProgress),
-                    'done': l10n.number(counts.resolved),
-                  }),
-                  style: TextStyle(color: context.forest.text70, fontSize: 13),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('society_requests_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: AppColors.darkGreen,
+          onPressed: _raise,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate('society_request_new')),
+        ),
+        body: StreamBuilder<List<ServiceRequest>>(
+          stream: _requests,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return _message(l10n.translate('society_load_failed'));
+            }
+            final all = snap.data;
+            if (all == null) {
+              return const Center(
+                  child: CircularProgressIndicator(color: AppColors.mintGreen));
+            }
+            final counts = countServiceRequests(all);
+            final shown = filterServiceRequests(all, status: _filter);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
+                  child: Text(
+                    l10n.translate('society_requests_summary', args: {
+                      'open': l10n.number(counts.open),
+                      'progress': l10n.number(counts.inProgress),
+                      'done': l10n.number(counts.resolved),
+                    }),
+                    style:
+                        TextStyle(color: context.forest.text70, fontSize: 13),
+                  ),
                 ),
-              ),
-              _filters(l10n),
-              const SizedBox(height: 8),
-              if (all.isEmpty)
-                _message(l10n.translate('society_requests_empty')),
-              for (final request in shown) _tile(request, l10n),
-            ],
-          );
-        },
+                _filters(l10n),
+                const SizedBox(height: 8),
+                if (all.isEmpty)
+                  _message(l10n.translate('society_requests_empty')),
+                for (final request in shown) _tile(request, l10n),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
