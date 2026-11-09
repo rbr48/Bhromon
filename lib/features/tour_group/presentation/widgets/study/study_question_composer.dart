@@ -4,6 +4,8 @@ import '../../../../../core/localization/app_localizations.dart';
 import '../../../domain/models/study_quiz_models.dart';
 import '../../../domain/services/study_quiz_rules.dart';
 
+import 'study_text_field.dart';
+
 /// Asks for a quiz question: its kind, its text, its choices or answer, and its explanation. Returns the question
 /// when it passes [questionProblem], or null when the member cancels. The caller saves it.
 Future<StudyQuizQuestion?> showStudyQuestionComposer(
@@ -122,9 +124,8 @@ class _StudyQuestionComposerState extends State<_StudyQuestionComposer> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
+            StudyTextField(
               controller: _text,
-              maxLength: StudyQuizLimits.questionMax,
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_quiz_question_label'),
@@ -153,18 +154,16 @@ class _StudyQuestionComposerState extends State<_StudyQuestionComposer> {
                 ),
               ),
             if (_type == StudyQuestionType.explain)
-              TextField(
+              StudyTextField(
                 controller: _modelAnswer,
                 maxLines: 3,
-                maxLength: StudyQuizLimits.answerMax,
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_quiz_model_label'),
                 ),
               ),
-            TextField(
+            StudyTextField(
               controller: _explanation,
               maxLines: 3,
-              maxLength: StudyQuizLimits.explanationMax,
               decoration: InputDecoration(
                 labelText: l10n.translate('study_quiz_explanation_label'),
               ),

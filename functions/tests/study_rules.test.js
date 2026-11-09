@@ -100,9 +100,6 @@ describe('study group rules', () => {
     const me = people.member.email;
     const bad = [
       { title: '' },
-      { title: 'x'.repeat(121) },
-      { author: 'x'.repeat(121) },
-      { notes: 'x'.repeat(501) },
       { status: 'paused' },
       { statusByEmail: people.owner.email },
       { approval: 'paused' },
@@ -171,7 +168,7 @@ describe('study group rules', () => {
     // Only an admin declines, and a note goes with a declined book.
     await assertFails(updateDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'declined', declineNote: 'Not for us' }));
     await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { approval: 'declined', declineNote: 'Not for us' }));
-    await assertFails(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { declineNote: 'x'.repeat(301) }));
+    await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p1'), { declineNote: 'x'.repeat(301) }));
     // A note on a listed book is refused. Listing a declined book clears its note.
     await assertSucceeds(setDoc(doc(db('member'), 'tours', STUDY, 'study_books', 'p2'), book(me, { approval: 'proposed' })));
     await assertSucceeds(updateDoc(doc(db('admin'), 'tours', STUDY, 'study_books', 'p2'), { approval: 'listed' }));
@@ -196,10 +193,7 @@ describe('study group rules', () => {
     const me = people.member.email;
     const bad = [
       { title: '' },
-      { title: 'x'.repeat(121) },
       { startsAt: '2026-11-20' },
-      { place: 'x'.repeat(121) },
-      { notes: 'x'.repeat(501) },
       { bookId: 'x'.repeat(101) },
       { surprise: true },
     ];

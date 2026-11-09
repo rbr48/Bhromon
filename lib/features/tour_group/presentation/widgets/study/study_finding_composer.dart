@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_finding_models.dart';
+
+import 'study_text_field.dart';
 
 /// What a member entered for a finding.
 class StudyFindingDraft {
@@ -18,13 +21,8 @@ Future<StudyFindingDraft?> showStudyFindingEditor(
   BuildContext context, {
   StudyFinding? existing,
 }) {
-  return showModalBottomSheet<StudyFindingDraft>(
+  return showStudyModal<StudyFindingDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyFindingEditor(existing: existing),
   );
 }
@@ -102,24 +100,20 @@ class _StudyFindingEditorState extends State<StudyFindingEditor> {
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              TextField(
+              StudyTextField(
                 controller: _text,
                 autofocus: _isNew,
-                maxLength: StudyFindingLimits.textMax,
                 minLines: 2,
                 maxLines: 6,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_finding_text_label'),
                   errorText: textError,
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _method,
-                maxLength: StudyFindingLimits.methodMax,
                 minLines: 2,
                 maxLines: 4,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_finding_method_label'),
                   errorText: methodError,
@@ -165,7 +159,6 @@ class _StudyChallengeDialogState extends State<_StudyChallengeDialog> {
       content: TextField(
         controller: _note,
         autofocus: true,
-        maxLength: StudyFindingLimits.noteMax,
         minLines: 1,
         maxLines: 4,
         decoration: InputDecoration(

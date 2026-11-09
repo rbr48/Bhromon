@@ -14,6 +14,9 @@ import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_progress_rules.dart';
 
+import '../widgets/study/study_text_field.dart';
+import '../widgets/study/study_rich_text.dart';
+
 /// The shared summary of one chapter. The group reads the revision an admin pinned, or the newest when none is
 /// pinned. A member adds a revision, or restores an earlier one as a new revision: nothing is overwritten, so every
 /// earlier version stays on the page. An admin pins the revision the group should read.
@@ -243,7 +246,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(_byline(revision)),
-        content: SingleChildScrollView(child: Text(revision.text)),
+        content: SingleChildScrollView(child: StudyRichText(revision.text)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -403,7 +406,8 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
                         fontSize: 12),
                   ),
                   const SizedBox(height: 8),
-                  Text(revision.text, style: TextStyle(color: palette.text)),
+                  StudyRichText(revision.text,
+                      style: TextStyle(color: palette.text)),
                   const SizedBox(height: 8),
                   Text(
                     _byline(revision),
@@ -500,10 +504,6 @@ class _SummaryComposerState extends State<_SummaryComposer> {
       setState(() => _error = l10n.translate('study_summary_text_required'));
       return;
     }
-    if (text.length > StudySummaryLimits.textMax) {
-      setState(() => _error = l10n.translate('study_summary_text_long'));
-      return;
-    }
     Navigator.of(context).pop(text);
   }
 
@@ -513,10 +513,9 @@ class _SummaryComposerState extends State<_SummaryComposer> {
     return AlertDialog(
       title: Text(l10n.translate('study_summary_add')),
       content: SingleChildScrollView(
-        child: TextField(
+        child: StudyTextField(
           controller: _text,
           maxLines: 8,
-          maxLength: StudySummaryLimits.textMax,
           decoration: InputDecoration(
             labelText: l10n.translate('study_summary_text_label'),
             errorText: _error,

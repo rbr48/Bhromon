@@ -196,9 +196,9 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertFails(setDoc(materialRef(db('other'), 'new9'), { ...linkFields(people.other.email), createdAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')) }));
     });
 
-    test('a link is an http or https address of at most 2000 characters', async () => {
+    test('a link is an http or https address of any length', async () => {
       await assertFails(setDoc(materialRef(db('other'), 'new10'), { ...linkFields(people.other.email, { url: 'ftp://example.com/x' }), createdAt: serverTimestamp() }));
-      await assertFails(setDoc(materialRef(db('other'), 'new11'), { ...linkFields(people.other.email, { url: `https://example.com/${'x'.repeat(2000)}` }), createdAt: serverTimestamp() }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'new11'), { ...linkFields(people.other.email, { url: `https://example.com/${'x'.repeat(2000)}` }), createdAt: serverTimestamp() }));
       await assertSucceeds(setDoc(materialRef(db('other'), 'new12'), { ...linkFields(people.other.email, { url: 'http://example.com/x' }), createdAt: serverTimestamp() }));
     });
 
@@ -220,9 +220,9 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertFails(setDoc(materialRef(db('other'), 'g5'), { ...fileFields(people.other.email, { kind: 'audio', url: `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.mp3`, sizeBytes: 25 * mb + 1 }), createdAt: serverTimestamp() }));
     });
 
-    test('a note is text of 1 to 20000 characters, with no file', async () => {
+    test('a note is text of any length, with no file', async () => {
       await assertSucceeds(setDoc(materialRef(db('other'), 'n1'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), body: 'x'.repeat(20000) }));
-      await assertFails(setDoc(materialRef(db('other'), 'n2'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), body: 'x'.repeat(20001) }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'n2'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), body: 'x'.repeat(20001) }));
       await assertFails(setDoc(materialRef(db('other'), 'n3'), { ...noteFields(people.other.email, { status: 'pending' }), createdAt: serverTimestamp(), url: 'https://example.com/x' }));
     });
   });
@@ -244,6 +244,35 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
     test('an admin publishes a pending material and restores a hidden one', async () => {
       await assertSucceeds(updateDoc(materialRef(db('admin'), PENDING), { status: 'published' }));
       await assertSucceeds(updateDoc(materialRef(db('admin'), HIDDEN), { status: 'published' }));
+    });
+
+    test('an admin\'s publish carries its stamp: the server time, and the admin as the publisher', async () => {
+      await assertSucceeds(updateDoc(materialRef(db('admin'), PENDING), {
+        status: 'published',
+        publishedAt: serverTimestamp(),
+        publishedByEmail: people.admin.email,
+      }));
+      await assertFails(updateDoc(materialRef(db('admin'), HIDDEN), {
+        status: 'published',
+        publishedAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')),
+        publishedByEmail: people.admin.email,
+      }));
+      await assertFails(updateDoc(materialRef(db('admin'), HIDDEN), {
+        status: 'published',
+        publishedAt: serverTimestamp(),
+        publishedByEmail: people.owner.email,
+      }));
+    });
+
+    test('a material filed as published at once carries the same stamp', async () => {
+      await assertSucceeds(setDoc(materialRef(db('admin'), 'new-stamped'), {
+        ...linkFields(people.admin.email, { status: 'published', publishedAt: serverTimestamp(), publishedByEmail: people.admin.email }),
+        createdAt: serverTimestamp(),
+      }));
+      await assertFails(setDoc(materialRef(db('admin'), 'new-stamped-bad'), {
+        ...linkFields(people.admin.email, { status: 'published', publishedAt: serverTimestamp(), publishedByEmail: people.owner.email }),
+        createdAt: serverTimestamp(),
+      }));
     });
 
     test('a material\'s book, kind, address and author do not change after filing', async () => {

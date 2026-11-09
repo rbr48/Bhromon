@@ -6,13 +6,7 @@
 class StudySessionLimits {
   const StudySessionLimits._();
 
-  static const int agendaMax = 500;
-  static const int linkMax = 2000;
-  static const int recapTextMax = 1000;
   static const int openQuestionMax = 10;
-  static const int openQuestionLength = 300;
-  static const int threadTitleMax = 120;
-  static const int threadBodyMax = 2000;
   static const int timerMinSeconds = 60;
   static const int timerMaxSeconds = 14400;
 

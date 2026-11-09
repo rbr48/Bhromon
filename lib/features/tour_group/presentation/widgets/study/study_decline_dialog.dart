@@ -28,7 +28,6 @@ class _StudyDeclineDialogState extends State<StudyDeclineDialog> {
       title: Text(l10n.translate('study_book_decline_title')),
       content: TextField(
         controller: _note,
-        maxLength: 300,
         minLines: 1,
         maxLines: 3,
         decoration: InputDecoration(

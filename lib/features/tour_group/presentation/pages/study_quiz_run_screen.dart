@@ -9,6 +9,8 @@ import '../../domain/models/study_quiz_models.dart';
 import '../../data/study_activity_log.dart';
 import '../../domain/services/study_quiz_rules.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// Takes a quiz one question at a time. A choice or a true-or-false answer is marked as soon as it is picked. An
 /// explain question shows its model answer, and the member marks their own work. At the end the score is saved as
 /// the member's private record, and only if it saves does the screen say so.
@@ -273,7 +275,8 @@ class _StudyQuizRunScreenState extends State<StudyQuizRunScreen> {
                     color: palette.accentText, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
-              Text(question.modelAnswer, style: TextStyle(color: palette.text)),
+              StudyRichText(question.modelAnswer,
+                  style: TextStyle(color: palette.text)),
             ],
           ),
         ),
@@ -348,7 +351,7 @@ class _StudyQuizRunScreenState extends State<StudyQuizRunScreen> {
                       color: palette.accentText, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
-                Text(question.explanation,
+                StudyRichText(question.explanation,
                     style: TextStyle(color: palette.text)),
               ],
             ),

@@ -10,6 +10,8 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_post_editor.dart';
 
+import '../widgets/study/study_rich_text.dart';
+
 /// The posts in one module of a subject: exam tips, or suggestions with a link. Members add
 /// posts where the module lets them, mark posts helpful, and see the most helpful first. An
 /// admin shows posts that wait for approval, and pins the best ones.
@@ -269,7 +271,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
                       fontWeight: FontWeight.w600,
                       fontSize: 16)),
             if (post.title.isNotEmpty) const SizedBox(height: 4),
-            Text(post.text, style: TextStyle(color: palette.text)),
+            StudyRichText(post.text, style: TextStyle(color: palette.text)),
             if (post.url.isNotEmpty) ...[
               const SizedBox(height: 6),
               SelectableText(post.url,

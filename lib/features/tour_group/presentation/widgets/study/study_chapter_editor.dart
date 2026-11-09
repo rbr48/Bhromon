@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
@@ -32,13 +33,8 @@ Future<StudyChapterDraft?> showStudyChapterEditor(
   StudyChapter? existing,
   int suggestedNumber = 1,
 }) {
-  return showModalBottomSheet<StudyChapterDraft>(
+  return showStudyModal<StudyChapterDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyChapterEditor(
       existing: existing,
       suggestedNumber: suggestedNumber,
@@ -100,7 +96,7 @@ class _StudyChapterEditorState extends State<StudyChapterEditor> {
 
   bool get _titleOk {
     final title = _title.text.trim();
-    return title.isNotEmpty && title.length <= 120;
+    return title.isNotEmpty;
   }
 
   /// A page is blank, or a whole number. The pair is checked with the rule for pages.
@@ -201,7 +197,6 @@ class _StudyChapterEditorState extends State<StudyChapterEditor> {
               TextField(
                 controller: _title,
                 autofocus: _isNew,
-                maxLength: 120,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_chapter_title_label'),
@@ -268,7 +263,6 @@ class _StudyChapterEditorState extends State<StudyChapterEditor> {
                     Expanded(
                       child: TextField(
                         controller: _guide[i],
-                        maxLength: 300,
                         style: TextStyle(color: palette.text),
                         decoration: InputDecoration(
                           labelText: l10n.translate('study_chapter_guide_hint'),

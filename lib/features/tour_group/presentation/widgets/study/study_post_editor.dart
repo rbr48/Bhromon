@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_subject_models.dart';
+
+import 'study_text_field.dart';
 
 /// What a member entered for a post.
 class StudyPostDraft {
@@ -25,13 +28,8 @@ Future<StudyPostDraft?> showStudyPostEditor(
   required bool withLink,
   StudyPost? existing,
 }) {
-  return showModalBottomSheet<StudyPostDraft>(
+  return showStudyModal<StudyPostDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyPostEditor(withLink: withLink, existing: existing),
   );
 }
@@ -113,19 +111,16 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
               if (widget.withLink)
                 TextField(
                   controller: _title,
-                  maxLength: 120,
                   style: TextStyle(color: palette.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate('study_post_title_label'),
                   ),
                 ),
-              TextField(
+              StudyTextField(
                 controller: _text,
                 autofocus: _isNew,
-                maxLength: 1000,
                 minLines: 2,
                 maxLines: 6,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate(widget.withLink
                       ? 'study_post_text_label_suggestion'

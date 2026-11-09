@@ -1,8 +1,5 @@
 import '../models/study_models.dart';
 
-/// The longest title a book or a reading session can have.
-const int kStudyTitleMax = 120;
-
 /// The order the book list shows its sections: what is being read, what is to be read,
 /// then what is finished.
 const List<StudyBookStatus> kStudyBookSectionOrder = [
@@ -11,11 +8,10 @@ const List<StudyBookStatus> kStudyBookSectionOrder = [
   StudyBookStatus.finished,
 ];
 
-/// Whether [title] can be saved: it has text, and no more than [kStudyTitleMax]
-/// characters once trimmed.
+/// Whether [title] can be saved: it has text once trimmed. Its length is not limited.
 bool isValidStudyTitle(String title) {
   final trimmed = title.trim();
-  return trimmed.isNotEmpty && trimmed.length <= kStudyTitleMax;
+  return trimmed.isNotEmpty;
 }
 
 /// Whether a member may change or remove an item made by [createdByEmail]: its creator,

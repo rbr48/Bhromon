@@ -173,10 +173,10 @@ describe('study discussions: threads, replies, helpful marks and reports', () =>
       await assertFails(setDoc(threadRef(db('other'), 'new6'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), acceptedReplyId: THEIRS }));
     });
 
-    test('a title is 1 to 120 characters, and a body is 1 to 2000', async () => {
+    test('a title and a body can be any length', async () => {
       await assertFails(setDoc(threadRef(db('other'), 'new7'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), title: '' }));
-      await assertFails(setDoc(threadRef(db('other'), 'new8'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), title: 'x'.repeat(121) }));
-      await assertFails(setDoc(threadRef(db('other'), 'new9'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), body: 'x'.repeat(2001) }));
+      await assertSucceeds(setDoc(threadRef(db('other'), 'new8'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), title: 'x'.repeat(121) }));
+      await assertSucceeds(setDoc(threadRef(db('other'), 'new9'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), body: 'x'.repeat(2001) }));
       await assertSucceeds(setDoc(threadRef(db('other'), 'new10'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), body: 'x'.repeat(2000) }));
     });
 
@@ -240,9 +240,9 @@ describe('study discussions: threads, replies, helpful marks and reports', () =>
       await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), reportCount: 1 }));
     });
 
-    test('a reply is 1 to 1000 characters', async () => {
+    test('a reply is 1 character or more, with no upper limit', async () => {
       await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: '' }));
-      await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1001) }));
+      await assertSucceeds(setDoc(replyRef(db('other'), 'new-reply-long'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1001) }));
       await assertSucceeds(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1000) }));
     });
 

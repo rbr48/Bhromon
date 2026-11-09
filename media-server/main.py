@@ -41,6 +41,7 @@ from chat import chat_db, chat_is_encrypted, chat_router
 from ack_reminders import AckReminderScheduler, PingRefused, run_ack_reminders, send_ack_ping
 from family_dates import FamilyDateReminderScheduler
 from session_reminders import SessionReminderScheduler, run_session_reminders
+from problem_set_reminders import ProblemSetReminderScheduler, run_problem_set_reminders
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from call_cleanup import run_call_cleanup
@@ -112,6 +113,11 @@ session_reminder_scheduler = SessionReminderScheduler(
         backend._client(), notification_engine, datetime.now(timezone.utc)
     )
 )
+problem_set_reminder_scheduler = ProblemSetReminderScheduler(
+    lambda: run_problem_set_reminders(
+        backend._client(), notification_engine, datetime.now(timezone.utc)
+    )
+)
 def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
     """The 04:00 run: expired stories and their files, then old call records."""
     db = backend._client()
@@ -179,6 +185,7 @@ async def lifespan(app: FastAPI):
         story_cleanup_scheduler.start()
         ack_reminder_scheduler.start()
         session_reminder_scheduler.start()
+        problem_set_reminder_scheduler.start()
     # The live relay drops members who have been silent for two minutes.
     live_sweep = asyncio.create_task(live.sweep_forever())
     yield
@@ -186,6 +193,7 @@ async def lifespan(app: FastAPI):
     live_sweep.cancel()
     ack_reminder_scheduler.stop()
     session_reminder_scheduler.stop()
+    problem_set_reminder_scheduler.stop()
     story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
     notification_watcher.stop()

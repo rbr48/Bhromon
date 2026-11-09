@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_models.dart';
-import '../../../domain/models/study_thread_models.dart';
+
+import 'study_text_field.dart';
 
 /// What a member entered for a new thread.
 class StudyThreadDraft {
@@ -31,13 +33,8 @@ Future<StudyThreadDraft?> showStudyThreadComposer(
   String initialTitle = '',
   String? initialChapterId,
 }) {
-  return showModalBottomSheet<StudyThreadDraft>(
+  return showStudyModal<StudyThreadDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyThreadComposer(
       chapters: chapters,
       initialTitle: initialTitle,
@@ -84,19 +81,17 @@ class _StudyThreadComposerState extends State<StudyThreadComposer> {
 
   bool get _titleOk {
     final title = _title.text.trim();
-    return title.isNotEmpty && title.length <= StudyThread.titleMax;
+    return title.isNotEmpty;
   }
 
   bool get _bodyOk {
     final body = _body.text.trim();
-    return body.isNotEmpty && body.length <= StudyThread.bodyMax;
+    return body.isNotEmpty;
   }
-
-  bool get _pageOk => _page.text.trim().length <= StudyThread.pageRefMax;
 
   void _save() {
     setState(() => _tried = true);
-    if (!_titleOk || !_bodyOk || !_pageOk) return;
+    if (!_titleOk || !_bodyOk) return;
     Navigator.of(context).pop(StudyThreadDraft(
       title: _title.text.trim(),
       body: _body.text.trim(),
@@ -135,20 +130,17 @@ class _StudyThreadComposerState extends State<StudyThreadComposer> {
               TextField(
                 controller: _title,
                 autofocus: widget.initialTitle.isEmpty,
-                maxLength: StudyThread.titleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_thread_title_label'),
                   errorText: titleError,
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _body,
                 autofocus: widget.initialTitle.isNotEmpty,
-                maxLength: StudyThread.bodyMax,
                 minLines: 3,
                 maxLines: 8,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_thread_body_label'),
                   errorText: bodyError,
@@ -156,7 +148,6 @@ class _StudyThreadComposerState extends State<StudyThreadComposer> {
               ),
               TextField(
                 controller: _page,
-                maxLength: StudyThread.pageRefMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_thread_page_label'),

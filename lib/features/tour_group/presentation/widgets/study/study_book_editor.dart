@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_models.dart';
 import '../../../domain/services/study_rules.dart';
 import 'study_labels.dart';
+
+import 'study_text_field.dart';
 
 /// What a member entered for a book.
 class StudyBookDraft {
@@ -29,13 +32,8 @@ Future<StudyBookDraft?> showStudyBookEditor(
   StudyBook? existing,
   bool proposal = false,
 }) {
-  return showModalBottomSheet<StudyBookDraft>(
+  return showStudyModal<StudyBookDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyBookEditor(existing: existing, proposal: proposal),
   );
 }
@@ -121,7 +119,6 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
               TextField(
                 controller: _title,
                 autofocus: _isNew,
-                maxLength: kStudyTitleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_book_title_label'),
@@ -130,18 +127,15 @@ class _StudyBookEditorState extends State<StudyBookEditor> {
               ),
               TextField(
                 controller: _author,
-                maxLength: 120,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_book_author_label'),
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _notes,
-                maxLength: 500,
                 minLines: 1,
                 maxLines: 3,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_book_notes_label'),
                 ),

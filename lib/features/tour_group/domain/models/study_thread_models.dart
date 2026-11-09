@@ -18,10 +18,6 @@ class StudyThread {
     this.acceptedReplyId,
   });
 
-  static const int titleMax = 120;
-  static const int bodyMax = 2000;
-  static const int pageRefMax = 20;
-
   final String id;
   final String title;
   final String body;
@@ -94,8 +90,6 @@ class StudyReply {
     this.helpfulCount = 0,
     this.reportCount = 0,
   });
-
-  static const int textMax = 1000;
 
   final String id;
   final String text;

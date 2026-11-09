@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
@@ -51,10 +52,8 @@ Future<StudyProblemSetDraft?> showStudyProblemSetEditor(
   BuildContext context, {
   StudyProblemSet? existing,
 }) {
-  return showModalBottomSheet<StudyProblemSetDraft>(
+  return showStudyModal<StudyProblemSetDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
     builder: (_) => _StudyProblemSetEditor(existing: existing),
   );
 }
@@ -108,10 +107,8 @@ Future<void> showStudyProblemSetsManager(
   required String tourId,
   required String subjectId,
 }) {
-  return showModalBottomSheet<void>(
+  return showStudyModal<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
     builder: (_) => _StudyProblemSetsManager(
       repository: repository,
       tourId: tourId,
@@ -190,7 +187,6 @@ class _StudyProblemSetEditorState extends State<_StudyProblemSetEditor> {
               TextField(
                 controller: _title,
                 autofocus: widget.existing == null,
-                maxLength: StudyProblemSetLimits.titleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_set_title_label'),
@@ -279,6 +275,7 @@ class _StudyProblemSetsManagerState extends State<_StudyProblemSetsManager> {
         set.id,
         title: draft.title,
         dueAt: draft.dueAt,
+        dueChanged: problemSetDueMoved(set.dueAt, draft.dueAt),
       ),
       'study_set_saved',
     );

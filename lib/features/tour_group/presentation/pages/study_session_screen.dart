@@ -16,6 +16,9 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_room_rules.dart';
 import '../../domain/services/study_session_rules.dart';
 
+import '../widgets/study/study_text_field.dart';
+import '../widgets/study/study_rich_text.dart';
+
 /// One reading session: when and where it is, the agenda and the link, each member's answer and check-in,
 /// the shared focus timer, and the recap. Its creator or an admin writes the agenda, runs the timer and
 /// writes the recap.
@@ -198,7 +201,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                 l10n.translate('study_session_agenda_heading'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              Text(_session.agenda),
+              StudyRichText(_session.agenda),
             ],
             const SizedBox(height: 16),
             Text(
@@ -320,15 +323,16 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           ),
           if (recap != null && recap.covered.isNotEmpty) ...[
             Text(l10n.translate('study_session_recap_covered')),
-            Text(recap.covered),
+            StudyRichText(recap.covered),
           ],
           if (recap != null && recap.hard.isNotEmpty) ...[
             Text(l10n.translate('study_session_recap_hard')),
-            Text(recap.hard),
+            StudyRichText(recap.hard),
           ],
           if (recap != null && recap.openQuestions.isNotEmpty) ...[
             Text(l10n.translate('study_session_recap_questions')),
-            for (final question in recap.openQuestions) Text('• $question'),
+            for (final question in recap.openQuestions)
+              StudyRichText('• $question'),
           ],
           if (canRecap)
             Padding(
@@ -548,10 +552,9 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              StudyTextField(
                 controller: agenda,
                 maxLines: 4,
-                maxLength: StudySessionLimits.agendaMax,
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_session_agenda_label'),
                   alignLabelWithHint: true,
@@ -619,18 +622,16 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              StudyTextField(
                 controller: covered,
                 maxLines: 3,
-                maxLength: StudySessionLimits.recapTextMax,
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_session_recap_covered'),
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: hard,
                 maxLines: 3,
-                maxLength: StudySessionLimits.recapTextMax,
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_session_recap_hard'),
                 ),

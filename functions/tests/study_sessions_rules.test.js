@@ -123,9 +123,9 @@ describe('study sessions: agenda, link, timer, recap, RSVPs and check-ins', () =
       await assertSucceeds(updateDoc(sessionRef(db('admin')), { recap: { covered: 'Chapter 1' } }));
     });
 
-    test('the agenda is at most 500 characters', async () => {
+    test('the agenda can be any length', async () => {
       await assertSucceeds(updateDoc(sessionRef(db('member')), { agenda: 'x'.repeat(500) }));
-      await assertFails(updateDoc(sessionRef(db('member')), { agenda: 'x'.repeat(501) }));
+      await assertSucceeds(updateDoc(sessionRef(db('member')), { agenda: 'x'.repeat(501) }));
     });
 
     test('a link is an https address', async () => {

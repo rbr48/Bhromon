@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_problem_models.dart';
+import 'study_text_field.dart';
 
 /// What an admin or a member entered for a problem: its words, an optional title, and, for an admin,
 /// the day the reference solution opens.
@@ -26,13 +28,8 @@ Future<StudyProblemDraft?> showStudyProblemEditor(
   StudyProblem? existing,
   bool withRelease = false,
 }) {
-  return showModalBottomSheet<StudyProblemDraft>(
+  return showStudyModal<StudyProblemDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudyProblemEditor(
       existing: existing,
       withRelease: withRelease,
@@ -46,20 +43,13 @@ Future<String?> showStudyTextEditor(
   BuildContext context, {
   required String titleKey,
   required String labelKey,
-  required int maxLength,
   String initial = '',
 }) {
-  return showModalBottomSheet<String>(
+  return showStudyModal<String>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => _StudyTextSheet(
       titleKey: titleKey,
       labelKey: labelKey,
-      maxLength: maxLength,
       initial: initial,
     ),
   );
@@ -155,19 +145,16 @@ class _StudyProblemEditorState extends State<StudyProblemEditor> {
               const SizedBox(height: 16),
               TextField(
                 controller: _title,
-                maxLength: StudyProblemLimits.titleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_problem_title_label'),
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _text,
                 autofocus: _isNew,
-                maxLength: StudyProblemLimits.textMax,
                 minLines: 3,
                 maxLines: 8,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_problem_text_label'),
                   errorText: textError,
@@ -218,13 +205,11 @@ class _StudyTextSheet extends StatefulWidget {
   const _StudyTextSheet({
     required this.titleKey,
     required this.labelKey,
-    required this.maxLength,
     required this.initial,
   });
 
   final String titleKey;
   final String labelKey;
-  final int maxLength;
   final String initial;
 
   @override
@@ -272,13 +257,11 @@ class _StudyTextSheetState extends State<_StudyTextSheet> {
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              TextField(
+              StudyTextField(
                 controller: _text,
                 autofocus: true,
-                maxLength: widget.maxLength,
                 minLines: 4,
                 maxLines: 12,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate(widget.labelKey),
                   errorText: textError,
@@ -324,7 +307,6 @@ class _StudyGapDialogState extends State<_StudyGapDialog> {
       content: TextField(
         controller: _note,
         autofocus: true,
-        maxLength: StudyProblemLimits.noteMax,
         minLines: 1,
         maxLines: 4,
         decoration: InputDecoration(

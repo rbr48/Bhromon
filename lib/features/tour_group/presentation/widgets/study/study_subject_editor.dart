@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_subject_models.dart';
 
-/// The longest name a subject can have.
-const int kStudySubjectTitleMax = 80;
+import 'study_text_field.dart';
 
 /// What a member entered for a subject.
 class StudySubjectDraft {
@@ -30,13 +30,8 @@ Future<StudySubjectDraft?> showStudySubjectEditor(
   StudySubject? existing,
   bool proposal = false,
 }) {
-  return showModalBottomSheet<StudySubjectDraft>(
+  return showStudyModal<StudySubjectDraft>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: context.forest.sheet,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
     builder: (_) => StudySubjectEditor(existing: existing, proposal: proposal),
   );
 }
@@ -93,7 +88,7 @@ class _StudySubjectEditorState extends State<StudySubjectEditor> {
   void _save() {
     setState(() => _tried = true);
     final title = _title.text.trim();
-    if (title.isEmpty || title.length > kStudySubjectTitleMax) return;
+    if (title.isEmpty) return;
     Navigator.of(context).pop(StudySubjectDraft(
       title: title,
       code: _code.text.trim(),
@@ -138,7 +133,6 @@ class _StudySubjectEditorState extends State<StudySubjectEditor> {
               TextField(
                 controller: _title,
                 autofocus: _isNew,
-                maxLength: kStudySubjectTitleMax,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_subject_title_label'),
@@ -147,18 +141,15 @@ class _StudySubjectEditorState extends State<StudySubjectEditor> {
               ),
               TextField(
                 controller: _code,
-                maxLength: 20,
                 style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_subject_code_label'),
                 ),
               ),
-              TextField(
+              StudyTextField(
                 controller: _description,
-                maxLength: 300,
                 minLines: 1,
                 maxLines: 3,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_subject_description_label'),
                 ),

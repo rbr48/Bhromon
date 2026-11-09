@@ -498,4 +498,19 @@ void main() {
       expect(StudyProblem.fromMap('p', {'text': 'Solve it'})?.setId, isNull);
     });
   });
+
+  group('a moved due date', () {
+    final day = DateTime(2026, 11, 20);
+
+    test('the same instant is not a move, however it is written', () {
+      expect(problemSetDueMoved(day, day.toUtc()), isFalse);
+      expect(problemSetDueMoved(null, null), isFalse);
+    });
+
+    test('another day is a move, and gaining or losing a date is one too', () {
+      expect(problemSetDueMoved(day, day.add(const Duration(days: 1))), isTrue);
+      expect(problemSetDueMoved(day, null), isTrue);
+      expect(problemSetDueMoved(null, day), isTrue);
+    });
+  });
 }

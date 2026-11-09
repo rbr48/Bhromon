@@ -6,7 +6,6 @@
 class StudyFlashcardLimits {
   const StudyFlashcardLimits._();
 
-  static const int textMax = 500;
   static const int boxMin = 1;
   static const int boxMax = 5;
 }
@@ -64,7 +63,7 @@ class StudyFlashcard {
         if (termId != null) 'termId': termId,
       };
 
-  /// Reads one card. Returns null when a text is blank or too long, the box is out of range, or the due day
+  /// Reads one card. Returns null when a text is blank, the box is out of range, or the due day
   /// is not a yyyy-MM-dd key. A damaged card is left out rather than breaking the deck.
   static StudyFlashcard? fromJson(Map<dynamic, dynamic> json) {
     final id = json['id'];
@@ -76,10 +75,6 @@ class StudyFlashcard {
     final termId = json['termId'];
     if (id is! String || id.isEmpty || deckId is! String) return null;
     if (front.isEmpty || back.isEmpty) return null;
-    if (front.length > StudyFlashcardLimits.textMax ||
-        back.length > StudyFlashcardLimits.textMax) {
-      return null;
-    }
     if (box == null ||
         box < StudyFlashcardLimits.boxMin ||
         box > StudyFlashcardLimits.boxMax) {

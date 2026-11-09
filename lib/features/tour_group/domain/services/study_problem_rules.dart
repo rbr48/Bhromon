@@ -209,3 +209,10 @@ int workedCount({
       for (final problem in problems)
         if (workedIds.contains(problem.id)) problem,
     ].length;
+
+/// Whether a set's due date moved. A moved date gets a reminder of its own, so the reminder stamp of the old one
+/// is cleared on save (the media server sends the reminder again). Gaining or losing a date is a move too.
+bool problemSetDueMoved(DateTime? before, DateTime? after) {
+  if (before == null || after == null) return before != after;
+  return !before.isAtSameMomentAs(after);
+}

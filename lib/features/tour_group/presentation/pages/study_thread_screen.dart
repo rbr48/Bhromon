@@ -13,6 +13,8 @@ import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_thread_rules.dart';
 
+import '../widgets/study/study_text_field.dart';
+
 /// One thread on a book: its question, the replies in time order, and the actions each viewer
 /// may take. The asker or an admin accepts an answer. A member marks a reply helpful once and
 /// reports it once. A locked thread takes no replies.
@@ -141,7 +143,7 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
 
   Future<void> _send() async {
     final text = _reply.text.trim();
-    if (text.isEmpty || _sending || text.length > StudyReply.textMax) return;
+    if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     // The reply's id is made here, so a reply sent again after a lost connection lands once.
     final replyId = _uuid.v4();
@@ -629,12 +631,10 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
         child: Row(
           children: [
             Expanded(
-              child: TextField(
+              child: StudyTextField(
                 controller: _reply,
-                maxLength: StudyReply.textMax,
                 minLines: 1,
                 maxLines: 4,
-                style: TextStyle(color: palette.text),
                 decoration: InputDecoration(
                   hintText: l10n.translate('study_thread_reply_hint'),
                   counterText: '',

@@ -24,21 +24,6 @@ enum WorkVerdict {
 /// enforce the same numbers.
 class StudyProblemLimits {
   const StudyProblemLimits._();
-
-  /// The longest statement of a problem.
-  static const int textMax = 1000;
-
-  /// The longest title of a problem.
-  static const int titleMax = 120;
-
-  /// The longest reference solution.
-  static const int referenceMax = 4000;
-
-  /// The longest working a member submits.
-  static const int workMax = 4000;
-
-  /// The longest note a review can carry.
-  static const int noteMax = 300;
 }
 
 /// A problem posted in a subject's problems module.
@@ -133,9 +118,6 @@ class StudyProblem {
 /// numbers.
 class StudyProblemSetLimits {
   const StudyProblemSetLimits._();
-
-  /// The longest name of a set.
-  static const int titleMax = 120;
 
   /// The longest set id a problem may name.
   static const int idMax = 40;
