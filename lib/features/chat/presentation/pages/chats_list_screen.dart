@@ -21,6 +21,7 @@ import '../../data/call_history_stream.dart';
 import '../../data/chat_deletion_service.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../data/e2ee/e2ee_chat_controller.dart';
 import '../../domain/chat_deletion.dart';
 import '../../domain/chat_list_sort.dart';
 import '../widgets/chat_delete_dialogs.dart';
@@ -213,6 +214,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   void _ensureStreams(String uid) {
     if (_streamsUid == uid) return;
     _streamsUid = uid;
+    if (E2eeChatController.enabledInBuild &&
+        uid.isNotEmpty &&
+        uid != 'explorer_user') {
+      unawaited(E2eeChatController.instance.ensureReady(uid));
+    }
     _listenToTours();
     _blockedStream = FirebaseFirestore.instance
         .collection('explorer_profiles')
@@ -620,6 +626,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       cachedOtherProfile: cachedProfile,
                                       sharedTourId: sharedTourId,
                                       otherEmail: otherEmail,
+                                      isEncrypted: data['e2ee'] == true,
                                       activeTabFilter: _activeTab,
                                       onTap: () =>
                                           context.push('/chat/$chatId', extra: {
@@ -1761,6 +1768,7 @@ class ChatTile extends StatelessWidget {
   final Map<String, dynamic>? cachedOtherProfile;
   final String? sharedTourId;
   final String? otherEmail;
+  final bool isEncrypted;
   final String activeTabFilter;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -1778,6 +1786,7 @@ class ChatTile extends StatelessWidget {
     this.cachedOtherProfile,
     this.sharedTourId,
     this.otherEmail,
+    this.isEncrypted = false,
     required this.activeTabFilter,
     required this.onTap,
     this.onLongPress,
@@ -1910,12 +1919,29 @@ class ChatTile extends StatelessWidget {
                     fontSize: 13))
             : null,
       ),
-      title: Text(
-        displayName,
-        style: TextStyle(
-            color: context.chat.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 14),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.chat.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          if (isEncrypted) ...[
+            const SizedBox(width: 4),
+            Icon(
+              Icons.lock_outline,
+              size: 13,
+              color: context.chat.text54,
+            ),
+          ],
+        ],
       ),
       subtitle: Row(
         children: [
@@ -1930,7 +1956,9 @@ class ChatTile extends StatelessWidget {
           Expanded(
             child: Text(
               lastMessage.isNotEmpty
-                  ? lastMessage
+                  ? (lastMessage == '\u{1F512}'
+                      ? '${context.l10n.translate('e2ee_badge_encrypted')} \u{1F512}'
+                      : lastMessage)
                   : context.l10n.translate('chats_start_hint'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

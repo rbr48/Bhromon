@@ -233,6 +233,8 @@ class TranslationKeys {
           'They need to set up encryption before you can send them an encrypted message.',
       'e2ee_send_failed':
           "Couldn't send this encrypted message. Please try again.",
+      'e2ee_copy_safety_number': 'Copy safety number',
+      'e2ee_safety_number_copied': 'Safety number copied to clipboard',
       'chat_delete_failed':
           "Couldn't delete. Check your connection and try again.",
       'chat_delete_chat_title': 'Delete chat?',
@@ -726,6 +728,8 @@ class TranslationKeys {
           'এনক্রিপ্টেড বার্তা পাঠানোর আগে তাদের এনক্রিপশন সেট আপ করতে হবে।',
       'e2ee_send_failed':
           'এই এনক্রিপ্টেড বার্তাটি পাঠানো যায়নি। আবার চেষ্টা করুন।',
+      'e2ee_copy_safety_number': 'নিরাপত্তা নম্বর কপি করুন',
+      'e2ee_safety_number_copied': 'নিরাপত্তা নম্বর ক্লিপবোর্ডে কপি করা হয়েছে',
       'chat_delete_failed':
           'মোছা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
       'chat_delete_chat_title': 'চ্যাট মুছবেন?',

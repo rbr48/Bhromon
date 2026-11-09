@@ -10,8 +10,11 @@ import 'package:bhromon/features/chat/domain/e2ee/prekey_bundle.dart';
 // the service and the screen tests.
 
 class MemoryKeyStore implements E2eeKeyStore {
+  MemoryKeyStore({this.now});
+
   final Map<String, PublishedBundleRecord> bundles = {};
   final Map<String, Map<String, OneTimeKeyRecord>> oneTime = {};
+  final DateTime Function()? now;
 
   /// Simulates the server being unreachable for removals.
   bool failDeletes = false;
@@ -95,6 +98,7 @@ class MemoryKeyStore implements E2eeKeyStore {
       return false;
     }
     doc.claimedBy = claimerUid;
+    doc.claimedAt = (now != null) ? now!() : DateTime.now();
     return true;
   }
 
@@ -115,6 +119,25 @@ class MemoryKeyStore implements E2eeKeyStore {
     required String deviceId,
   }) async {
     oneTime[uid]?.removeWhere((_, doc) => doc.deviceId != deviceId);
+  }
+
+  @override
+  Future<int> deleteStaleClaimedOneTimeKeys({
+    required String uid,
+    required DateTime olderThan,
+  }) async {
+    final docs = oneTime[uid];
+    if (docs == null) return 0;
+    final staleIds = [
+      for (final entry in docs.entries)
+        if (entry.value.claimedAt != null &&
+            entry.value.claimedAt!.isBefore(olderThan))
+          entry.key,
+    ];
+    for (final id in staleIds) {
+      docs.remove(id);
+    }
+    return staleIds.length;
   }
 
   /// The keys of [uid] still on the server, claimed or not.
@@ -149,11 +172,12 @@ class PublishedBundleRecord {
 }
 
 class OneTimeKeyRecord {
-  OneTimeKeyRecord(this.deviceId, this.key);
+  OneTimeKeyRecord(this.deviceId, this.key, {this.claimedBy, this.claimedAt});
 
   final String deviceId;
   final E2eeSignedKey key;
   String? claimedBy;
+  DateTime? claimedAt;
 }
 
 class MemoryLocalStore implements E2eeLocalStore {

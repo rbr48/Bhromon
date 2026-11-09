@@ -10,6 +10,7 @@ import 'package:bhromon/features/chat/domain/e2ee/peer_key_state.dart';
 import 'package:bhromon/features/chat/domain/e2ee/safety_number.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qr/qr.dart';
 
@@ -233,17 +234,43 @@ class _E2eeVerificationScreenState extends State<E2eeVerificationScreen> {
         ));
       } else {
         children.add(
-          Text(
-            SafetyNumber.grouped(number),
-            key: const Key('safetyNumber'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: palette.text,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              fontFeatures: const [FontFeature.tabularFigures()],
-              letterSpacing: 1.2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  SafetyNumber.grouped(number),
+                  key: const Key('safetyNumber'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: palette.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                key: const Key('copySafetyNumber'),
+                icon: Icon(Icons.copy_rounded, size: 20, color: palette.text70),
+                tooltip: l10n.translate('e2ee_copy_safety_number'),
+                onPressed: () {
+                  Clipboard.setData(
+                    ClipboardData(text: SafetyNumber.grouped(number)),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        l10n.translate('e2ee_safety_number_copied'),
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         );
         children.add(const SizedBox(height: 16));

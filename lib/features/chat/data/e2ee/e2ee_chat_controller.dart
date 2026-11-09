@@ -63,6 +63,31 @@ class E2eeChatController {
     return _service;
   }
 
+  /// Ensures that end-to-end encryption is provisioned and ready on this device:
+  /// - If the account is new or has no published keys on the server ([E2eeSetupStatus.notSetUp]),
+  ///   it automatically provisions and publishes its initial pre-key bundle (`setUpThisDevice`).
+  /// - If the device is already set up and ready ([E2eeSetupStatus.ready]), it executes `prepare()`
+  ///   to replenish low one-time keys, rotate expired fallback keys, and prune stale claims.
+  /// - If the server keys belong to a different device ([E2eeSetupStatus.otherDevice]), it leaves
+  ///   the status intact without automatic overwrite, preserving user safeguards.
+  Future<E2eeSetupStatus> ensureReady(String uid) async {
+    final service = serviceFor(uid);
+    if (service == null) return E2eeSetupStatus.notSetUp;
+    try {
+      final status = await service.status();
+      if (status == E2eeSetupStatus.notSetUp) {
+        await service.setUpThisDevice();
+        return E2eeSetupStatus.ready;
+      } else if (status == E2eeSetupStatus.ready) {
+        return await service.prepare();
+      }
+      return status;
+    } catch (error, stackTrace) {
+      logWarning('E2EE ensureReady failed for user $uid', error, stackTrace);
+      return E2eeSetupStatus.notSetUp;
+    }
+  }
+
   /// The longest a release waits for encryption work that is already running. Sign-out
   /// must not wait on a network call; the native account is freed once that work ends.
   static const Duration _releaseWait = Duration(seconds: 3);

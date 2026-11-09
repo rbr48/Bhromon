@@ -19,10 +19,10 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 
 ### Track A: Study Group Subsystem (Claude)
 - [x] **Phase 9: Weekly Challenge & Today Card** ([PR #434](https://github.com/rbr48/Bhromon/pull/434) - Merged to `main` with `GroupBackButton` and `GroupPopScope`)
-- [ ] **Phase 10: Problem Sets, Content Reporting & Admin Reviews**
-  - Problem Sets: grouping problems under named sets with due dates.
-  - Report button on problems, working, findings, and summaries.
-  - Admin reviewing member working & removing invalid reviews.
+- [x] **Phase 10: Problem Sets, Content Reporting & Admin Reviews**
+  - Problem Sets: grouping problems under named sets with due dates ([PR #441](https://github.com/rbr48/Bhromon/pull/441), [PR #451](https://github.com/rbr48/Bhromon/pull/451), [PR #452](https://github.com/rbr48/Bhromon/pull/452)).
+  - Report button on problems, working, findings, and summaries ([PR #440](https://github.com/rbr48/Bhromon/pull/440), [PR #446](https://github.com/rbr48/Bhromon/pull/446), [PR #449](https://github.com/rbr48/Bhromon/pull/449)).
+  - Admin reviewing member working & removing invalid reviews ([PR #438](https://github.com/rbr48/Bhromon/pull/438)).
   - **Peer Review Gate**: Submit PR, wait for Antigravity review and sign-off, verify 100% green CI before merge.
 
 ---
@@ -41,7 +41,31 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 
 ---
 
-### Track C (Next Up): Travel Spot & Route Map Overlay / FinTech Refinements
-- [ ] **Task P9.3: Vector Map Route Checkpoint Overlay**:
-  - Convert `RoutePlan.legs` into dynamic MapLibre GeoJSON line layers; render mode-specific route paths and numbered checkpoints directly on top of offline vector tiles.
+### Track C: Travel Spot & Route Map Overlay / FinTech Refinements (Antigravity)
+- [x] **Task P9.3: Vector Map Route Checkpoint Overlay** ([PR #439](https://github.com/rbr48/Bhromon/pull/439), [PR #443](https://github.com/rbr48/Bhromon/pull/443) - Merged to `main`):
+  - Converted `RoutePlan.legs` into dynamic MapLibre GeoJSON line layers; rendered mode-specific route paths and numbered checkpoints directly on top of offline vector tiles.
+- [x] **MFS Duplicate TrxID Prevention & Navigation Hardening** ([PR #448](https://github.com/rbr48/Bhromon/pull/448), [PR #450](https://github.com/rbr48/Bhromon/pull/450) - Merged to `main`):
+  - Added atomic deduplication registry `tours/{id}/mfs_trx_registry/{trxId}` with rules coverage.
+  - Hardened Android hardware back and top app bar navigation across group modules.
+
+---
+
+### Track E: Full E2EE Task (1-on-1 Lifecycle, Key Hardening & Multi-Party Group Channels Architecture)
+- [x] **Task E1: E2EE Auto-Provisioning on Native (`ensureReady`)**:
+  - Automatically provisions native users on sign-in or chat opening (`E2eeChatController.instance.ensureReady(uid)`).
+  - Ensures new accounts publish Identity Keys and prekeys without requiring manual navigation to verification screens.
+- [x] **Task E2: Key Lifecycle Hardening (Orphaned Claim Pruning)**:
+  - Added `deleteStaleClaimedOneTimeKeys` to `E2eeKeyStore` and implemented in `E2eeFirestoreKeys` (querying `claimedAt < olderThan`).
+  - Added periodic pruning in `E2eeService.prepare()` (default 24h stale claim window).
+- [x] **Task E3: Chat List UI Indicators & Safety Number Export**:
+  - Added lock badge indicator on `ChatTile` when `data['e2ee'] == true`.
+  - Formatted encrypted message preview subtitle (`🔒 Encrypted` instead of raw unicode padlock marker `\u{1F512}`).
+  - Added "Copy Safety Number" button in `E2eeVerificationScreen` with localized clipboard feedback.
+- [x] **Task E4: Multi-Party Group Channels E2EE Architecture (`E2EE_GROUP_DESIGN.md`)**:
+  - Authored comprehensive cryptographic specification for group channels using Megolm Sender-Key ratchet ($O(1)$ symmetric broadcast encryption).
+  - Designed forward/backward secrecy re-keying on membership join/leave/kick events.
+  - Defined Ed25519 payload signatures for `/split` expenses and integer-paisa financial ledger integrity.
+  - Specified cryptographic tombstone protocol for admin message redaction.
+- [x] **Task E5: Test Suite Verification**:
+  - Comprehensive unit test coverage across all E2EE modules (`e2ee_service_test.dart`, `e2ee_chat_controller_test.dart`, `verification_screen_test.dart`).
 - [ ] **Peer Review Gate**: Submit PR, wait for Claude's review and sign-off, verify 100% green CI before merge.

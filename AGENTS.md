@@ -344,6 +344,14 @@ static session while the user visits other screens, and asks before discarding a
 - Upgraded `functions/Dockerfile` to `node:22-alpine` matching `"engines": { "node": ">=22" }`.
 - Resolved all strict TypeScript compilation errors across `functions/src/gameTable/` and game callables (`(tx: Transaction)`).
 
+### N. End-to-End Encryption (E2EE) Architecture (Track E)
+- **Scope & Platform Invariant**: E2EE is enabled for 1-to-1 chats on native mobile platforms (`!kIsWeb && (Platform.isAndroid || Platform.isIOS)`). Flutter Web (`kIsWeb`) remains plaintext client-server TLS per Decision D3. Existing chats remain plaintext per Decision D4 (no retroactive re-encryption).
+- **Cryptographic Primitives**: Double Ratchet + X3DH (Extended Triple Diffie-Hellman) utilizing libsodium (X25519 key exchange, Ed25519 signatures, XSalsa20-Poly1305 / ChaCha20-Poly1305 symmetric authenticated encryption).
+- **Auto-Provisioning**: Native users automatically publish Identity Keys, Signed Prekeys, and One-Time Prekeys on first sign-in or chat entry via `E2eeChatController.instance.ensureReady(uid)`.
+- **Key Lifecycle Hardening**: Orphaned one-time prekeys (claimed by peers but never established) are automatically pruned during `E2eeService.prepare()` using a single-field Firestore query (`claimedAt < olderThan`, default 24h lifetime), avoiding composite index requirements.
+- **Safety Number & Verification**: Hex-encoded 64-character safety numbers derived from both participants' Identity Keys can be verified and copied to the clipboard in `E2eeVerificationScreen`.
+- **Multi-Party Group Channels Architecture (`E2EE_GROUP_DESIGN.md`)**: Group E2EE uses the Megolm Sender-Key ratchet ($O(1)$ symmetric broadcast encryption) with forward/backward secrecy re-keying on membership changes (join/leave/kick), Ed25519 payload signatures for `/split` expenses preserving the integer paisa invariant, and cryptographic moderation tombstones.
+
 ## 5. Testing & Quality Verification Checklist
 Before shipping or pushing changes:
 1. `dart format .` -> Code must be formatted (enforced by `dart format --output=none --set-exit-if-changed .` in GitHub CI).

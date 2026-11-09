@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bhromon/core/utils/app_logger.dart';
 import 'package:bhromon/features/chat/domain/e2ee/e2ee_device.dart';
 import 'package:bhromon/features/chat/domain/e2ee/e2ee_envelope.dart';
 import 'package:bhromon/features/chat/domain/e2ee/e2ee_payload.dart';
@@ -52,6 +53,7 @@ class E2eeService {
     this.oneTimeKeyBatch = 20,
     this.oneTimeKeyLowWater = 10,
     this.fallbackLifetime = const Duration(days: 7),
+    this.staleClaimLifetime = const Duration(hours: 24),
   })  : _engine = engine,
         _keys = keys,
         _local = local,
@@ -71,6 +73,10 @@ class E2eeService {
   /// How long a published fallback key is kept before it is rotated. The previous
   /// one stays valid for messages already on their way.
   final Duration fallbackLifetime;
+
+  /// How long an unclaimed or unused one-time key claim is preserved before
+  /// being pruned as stale.
+  final Duration staleClaimLifetime;
 
   final OlmEngine _engine;
   final E2eeKeyStore _keys;
@@ -101,6 +107,7 @@ class E2eeService {
         await _replenishIfLow(device);
         await _rotateFallbackIfDue(device);
         await _retryPendingDeletions();
+        await _pruneStaleClaimedKeys();
         return E2eeSetupStatus.ready;
       });
 
@@ -440,5 +447,23 @@ class E2eeService {
       }
     }
     await _local.writePendingKeyDeletions(stillPending);
+  }
+
+  /// Prunes one-time keys that were claimed by peers but never established,
+  /// freeing up orphaned server slots after [staleClaimLifetime].
+  Future<void> _pruneStaleClaimedKeys() async {
+    try {
+      final olderThan = _now().subtract(staleClaimLifetime);
+      await _keys.deleteStaleClaimedOneTimeKeys(
+        uid: userId,
+        olderThan: olderThan,
+      );
+    } on Exception catch (error, stackTrace) {
+      logWarning(
+        'Could not prune stale claimed one-time keys for $userId',
+        error,
+        stackTrace,
+      );
+    }
   }
 }
