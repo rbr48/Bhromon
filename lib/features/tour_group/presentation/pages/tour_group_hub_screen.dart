@@ -2548,7 +2548,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 ? l10n.translate('hub_module_dates_study')
                                 : (!group.isFamily
                                     ? l10n.translate('hub_module_dates_trip')
-                                    : l10n.translate('hub_module_family_dates')))))));
+                                    : l10n.translate(
+                                        'hub_module_family_dates')))))));
         final subtitle = group.isOffice
             ? l10n.translate('hub_module_dates_office_sub')
             : (group.isCampus
@@ -2562,8 +2563,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             : (group.isStudy
                                 ? l10n.translate('hub_module_dates_study_sub')
                                 : (!group.isFamily
-                                    ? l10n.translate('hub_module_dates_trip_sub')
-                                    : l10n.translate('hub_module_family_dates_sub')))))));
+                                    ? l10n
+                                        .translate('hub_module_dates_trip_sub')
+                                    : l10n.translate(
+                                        'hub_module_family_dates_sub')))))));
         return _ModuleItem(
           title: title,
           subtitle: subtitle,

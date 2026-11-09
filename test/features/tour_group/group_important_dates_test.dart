@@ -49,7 +49,8 @@ void main() {
       expect(kinds, isNot(contains(FamilyDateKind.rent)));
 
       final presets = presetTemplatesFor(campus);
-      expect(presets.any((p) => p.titleEn.contains('Final Examination')), isTrue);
+      expect(
+          presets.any((p) => p.titleEn.contains('Final Examination')), isTrue);
       expect(presets.any((p) => p.titleEn.contains('Assignment')), isTrue);
     });
 
@@ -71,8 +72,10 @@ void main() {
       expect(kinds, contains(FamilyDateKind.bill));
 
       final presets = presetTemplatesFor(mess);
-      expect(presets.any((p) => p.titleEn.contains('Monthly House Rent')), isTrue);
-      expect(presets.any((p) => p.titleEn.contains('Meal Calculation')), isTrue);
+      expect(
+          presets.any((p) => p.titleEn.contains('Monthly House Rent')), isTrue);
+      expect(
+          presets.any((p) => p.titleEn.contains('Meal Calculation')), isTrue);
     });
 
     test('past dates beyond year 2000 are parsed and correctly computed', () {

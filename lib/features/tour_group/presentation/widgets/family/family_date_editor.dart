@@ -90,9 +90,8 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
       TextEditingController(text: _e?.title ?? widget.presetTitle ?? '');
   late final TextEditingController _note =
       TextEditingController(text: _e?.note ?? '');
-  late FamilyDateKind _kind = _e?.kind ??
-      widget.presetKind ??
-      kindsForGroup(widget.group).first;
+  late FamilyDateKind _kind =
+      _e?.kind ?? widget.presetKind ?? kindsForGroup(widget.group).first;
   late FamilyRecurrence _recurrence =
       _e?.recurrence ?? widget.presetRecurrence ?? FamilyRecurrence.yearly;
   late DateTime _startOn = _e == null
@@ -266,8 +265,7 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
                                       _kind = p.kind;
                                       _recurrence = p.recurrence;
                                       _remindDays = p.remindDays;
-                                      _note.text =
-                                          isBn ? p.noteBn : p.noteEn;
+                                      _note.text = isBn ? p.noteBn : p.noteEn;
                                     });
                                   },
                                 ),

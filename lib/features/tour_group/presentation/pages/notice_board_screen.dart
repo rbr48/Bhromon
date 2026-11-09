@@ -187,7 +187,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         fallback = '${g.name} Residence';
       } else {
         final cur = g.currentDestination(_now);
-        fallback = cur.isNotEmpty ? cur : (g.destination.isNotEmpty ? g.destination : 'Meeting Point');
+        fallback = cur.isNotEmpty
+            ? cur
+            : (g.destination.isNotEmpty ? g.destination : 'Meeting Point');
       }
     } else {
       fallback = 'Meeting Point';
@@ -203,13 +205,33 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     if (g == null) return const [];
     if (g.isOffice) {
       return isBn
-          ? const ['কনফারেন্স রুম ১', 'অফিস রিসেপশন', 'ক্যাফেটেরিয়া', 'মিটিং রুম']
-          : const ['Conference Room 1', 'Office Reception', 'Main Cafeteria', 'Meeting Room A'];
+          ? const [
+              'কনফারেন্স রুম ১',
+              'অফিস রিসেপশন',
+              'ক্যাফেটেরিয়া',
+              'মিটিং রুম'
+            ]
+          : const [
+              'Conference Room 1',
+              'Office Reception',
+              'Main Cafeteria',
+              'Meeting Room A'
+            ];
     }
     if (g.isCampus) {
       return isBn
-          ? const ['ক্যাম্পাস মূল ফটক', 'ডিপার্টমেন্ট করিডোর', 'ক্যাম্পাস ক্যান্টিন', 'সেন্ট্রাল লাইব্রেরি']
-          : const ['Main Gate', 'Department Corridor', 'Campus Canteen', 'Central Library'];
+          ? const [
+              'ক্যাম্পাস মূল ফটক',
+              'ডিপার্টমেন্ট করিডোর',
+              'ক্যাম্পাস ক্যান্টিন',
+              'সেন্ট্রাল লাইব্রেরি'
+            ]
+          : const [
+              'Main Gate',
+              'Department Corridor',
+              'Campus Canteen',
+              'Central Library'
+            ];
     }
     if (g.isMess) {
       return isBn
@@ -219,17 +241,37 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     if (g.isSociety) {
       return isBn
           ? const ['কমিউনিটি হল', 'বিল্ডিং রিসেপশন', 'সিকিউরিটি গেট', 'ছাদ']
-          : const ['Community Hall', 'Building Reception', 'Security Gate', 'Rooftop'];
+          : const [
+              'Community Hall',
+              'Building Reception',
+              'Security Gate',
+              'Rooftop'
+            ];
     }
     if (g.isSamity) {
       return isBn
-          ? const ['সমিতি কার্যালয়', 'মাসিক বৈঠক স্থান', 'ক্লাব রুম', 'অডিটোরিয়াম']
+          ? const [
+              'সমিতি কার্যালয়',
+              'মাসিক বৈঠক স্থান',
+              'ক্লাব রুম',
+              'অডিটোরিয়াম'
+            ]
           : const ['Main Office', 'Monthly Venue', 'Club Room', 'Auditorium'];
     }
     if (g.isStudy) {
       return isBn
-          ? const ['স্টাডি লাউঞ্জ', 'রিডিং রুম', 'ক্যাম্পাস ক্যাফে', 'সেমিনার হল']
-          : const ['Study Lounge', 'Reading Room', 'Campus Cafe', 'Seminar Hall'];
+          ? const [
+              'স্টাডি লাউঞ্জ',
+              'রিডিং রুম',
+              'ক্যাম্পাস ক্যাফে',
+              'সেমিনার হল'
+            ]
+          : const [
+              'Study Lounge',
+              'Reading Room',
+              'Campus Cafe',
+              'Seminar Hall'
+            ];
     }
     if (g.isFamily) {
       return isBn
@@ -238,7 +280,12 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     }
     return isBn
         ? const ['হোটেল লবি', 'বাস টার্মিনাল', 'এয়ারপোর্ট লাউঞ্জ', 'বিচ পয়েন্ট']
-        : const ['Hotel Lobby', 'Bus Terminal', 'Airport Lounge', 'Beach Point'];
+        : const [
+            'Hotel Lobby',
+            'Bus Terminal',
+            'Airport Lounge',
+            'Beach Point'
+          ];
   }
 
   Future<void> _editMeetingPoint() async {
@@ -277,7 +324,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
                           child: ActionChip(
-                            label: Text(s, style: const TextStyle(fontSize: 11)),
+                            label:
+                                Text(s, style: const TextStyle(fontSize: 11)),
                             onPressed: () {
                               titleCtrl.text = s;
                             },
