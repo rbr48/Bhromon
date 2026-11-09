@@ -47,7 +47,8 @@ void main() {
       expect(studyKindForFileName('program.exe'), isNull);
     });
 
-    test('a file of the wrong kind, an empty file or one too large is refused', () {
+    test('a file of the wrong kind, an empty file or one too large is refused',
+        () {
       expect(
         studyFileProblem(
           kind: StudyMaterialKind.image,
@@ -127,39 +128,76 @@ void main() {
   });
 
   group('who sees, reports and manages a material', () {
-    test('published material is shown to the group; pending and hidden only to the uploader and admins', () {
+    test(
+        'published material is shown to the group; pending and hidden only to the uploader and admins',
+        () {
       final published = _material('a');
       final pending = _material('b', status: StudyMaterialStatus.pending);
       final hidden = _material('c', status: StudyMaterialStatus.hidden);
 
-      expect(isStudyMaterialVisibleTo(published, viewerEmail: 'me@x.com', isAdmin: false), isTrue);
-      expect(isStudyMaterialVisibleTo(pending, viewerEmail: 'me@x.com', isAdmin: false), isFalse);
-      expect(isStudyMaterialVisibleTo(hidden, viewerEmail: 'me@x.com', isAdmin: false), isFalse);
-      expect(isStudyMaterialVisibleTo(pending, viewerEmail: 'other@x.com', isAdmin: false), isTrue);
-      expect(isStudyMaterialVisibleTo(hidden, viewerEmail: 'admin@x.com', isAdmin: true), isTrue);
+      expect(
+          isStudyMaterialVisibleTo(published,
+              viewerEmail: 'me@x.com', isAdmin: false),
+          isTrue);
+      expect(
+          isStudyMaterialVisibleTo(pending,
+              viewerEmail: 'me@x.com', isAdmin: false),
+          isFalse);
+      expect(
+          isStudyMaterialVisibleTo(hidden,
+              viewerEmail: 'me@x.com', isAdmin: false),
+          isFalse);
+      expect(
+          isStudyMaterialVisibleTo(pending,
+              viewerEmail: 'other@x.com', isAdmin: false),
+          isTrue);
+      expect(
+          isStudyMaterialVisibleTo(hidden,
+              viewerEmail: 'admin@x.com', isAdmin: true),
+          isTrue);
     });
 
-    test('a member reports another member\'s published material, never their own or a waiting one', () {
-      expect(canReportStudyMaterial(_material('a'), viewerEmail: 'me@x.com'), isTrue);
-      expect(canReportStudyMaterial(_material('a', by: 'me@x.com'), viewerEmail: 'me@x.com'), isFalse);
+    test(
+        'a member reports another member\'s published material, never their own or a waiting one',
+        () {
+      expect(canReportStudyMaterial(_material('a'), viewerEmail: 'me@x.com'),
+          isTrue);
       expect(
-        canReportStudyMaterial(_material('a', status: StudyMaterialStatus.pending), viewerEmail: 'me@x.com'),
+          canReportStudyMaterial(_material('a', by: 'me@x.com'),
+              viewerEmail: 'me@x.com'),
+          isFalse);
+      expect(
+        canReportStudyMaterial(
+            _material('a', status: StudyMaterialStatus.pending),
+            viewerEmail: 'me@x.com'),
         isFalse,
       );
       expect(
-        canReportStudyMaterial(_material('a', status: StudyMaterialStatus.hidden), viewerEmail: 'me@x.com'),
+        canReportStudyMaterial(
+            _material('a', status: StudyMaterialStatus.hidden),
+            viewerEmail: 'me@x.com'),
         isFalse,
       );
     });
 
     test('the uploader and an admin edit or remove a material', () {
       final mine = _material('a', by: 'me@x.com');
-      expect(canManageStudyMaterial(mine, viewerEmail: 'me@x.com', isAdmin: false), isTrue);
-      expect(canManageStudyMaterial(mine, viewerEmail: 'other@x.com', isAdmin: false), isFalse);
-      expect(canManageStudyMaterial(mine, viewerEmail: 'admin@x.com', isAdmin: true), isTrue);
+      expect(
+          canManageStudyMaterial(mine, viewerEmail: 'me@x.com', isAdmin: false),
+          isTrue);
+      expect(
+          canManageStudyMaterial(mine,
+              viewerEmail: 'other@x.com', isAdmin: false),
+          isFalse);
+      expect(
+          canManageStudyMaterial(mine,
+              viewerEmail: 'admin@x.com', isAdmin: true),
+          isTrue);
     });
 
-    test('an admin\'s material is published at once; a member\'s waits unless the group publishes directly', () {
+    test(
+        'an admin\'s material is published at once; a member\'s waits unless the group publishes directly',
+        () {
       expect(
         initialStudyMaterialStatus(isAdmin: true, needsApproval: true),
         StudyMaterialStatus.published,
@@ -197,8 +235,12 @@ void main() {
 
     test('the review queue holds the hidden material, oldest report first', () {
       final queue = studyReviewQueue([
-        _material('later', status: StudyMaterialStatus.hidden, reportedAt: DateTime(2026, 3, 2)),
-        _material('earlier', status: StudyMaterialStatus.hidden, reportedAt: DateTime(2026, 3, 1)),
+        _material('later',
+            status: StudyMaterialStatus.hidden,
+            reportedAt: DateTime(2026, 3, 2)),
+        _material('earlier',
+            status: StudyMaterialStatus.hidden,
+            reportedAt: DateTime(2026, 3, 1)),
         _material('shown'),
       ]);
       expect(queue.map((m) => m.id), ['earlier', 'later']);
@@ -206,8 +248,12 @@ void main() {
 
     test('the approval queue holds the waiting material, newest first', () {
       final queue = studyApprovalQueue([
-        _material('old', status: StudyMaterialStatus.pending, createdAt: DateTime(2026, 1, 1)),
-        _material('new', status: StudyMaterialStatus.pending, createdAt: DateTime(2026, 2, 1)),
+        _material('old',
+            status: StudyMaterialStatus.pending,
+            createdAt: DateTime(2026, 1, 1)),
+        _material('new',
+            status: StudyMaterialStatus.pending,
+            createdAt: DateTime(2026, 2, 1)),
         _material('shown'),
       ]);
       expect(queue.map((m) => m.id), ['new', 'old']);
@@ -217,21 +263,27 @@ void main() {
       final now = DateTime(2026, 3, 2, 12);
       expect(
         isStudyReportOverdue(
-          _material('a', status: StudyMaterialStatus.hidden, reportedAt: DateTime(2026, 3, 1, 11)),
+          _material('a',
+              status: StudyMaterialStatus.hidden,
+              reportedAt: DateTime(2026, 3, 1, 11)),
           now: now,
         ),
         isTrue,
       );
       expect(
         isStudyReportOverdue(
-          _material('a', status: StudyMaterialStatus.hidden, reportedAt: DateTime(2026, 3, 1, 13)),
+          _material('a',
+              status: StudyMaterialStatus.hidden,
+              reportedAt: DateTime(2026, 3, 1, 13)),
           now: now,
         ),
         isFalse,
       );
       expect(
         isStudyReportOverdue(
-          _material('a', status: StudyMaterialStatus.published, reportedAt: DateTime(2026, 3, 1)),
+          _material('a',
+              status: StudyMaterialStatus.published,
+              reportedAt: DateTime(2026, 3, 1)),
           now: now,
         ),
         isFalse,
@@ -240,7 +292,8 @@ void main() {
   });
 
   group('the record', () {
-    test('a stored material reads back with its kind, status and report count', () {
+    test('a stored material reads back with its kind, status and report count',
+        () {
       final material = StudyMaterial.fromMap('m1', {
         'title': ' Chapter 2 summary ',
         'kind': 'file',
@@ -261,9 +314,12 @@ void main() {
       expect(material.chapterId, 'c2');
     });
 
-    test('a record with no title or book is left out, and unknown names fall back', () {
+    test(
+        'a record with no title or book is left out, and unknown names fall back',
+        () {
       expect(StudyMaterial.fromMap('x', {'title': '', 'bookId': 'b1'}), isNull);
-      expect(StudyMaterial.fromMap('x', {'title': 'Notes', 'bookId': ''}), isNull);
+      expect(
+          StudyMaterial.fromMap('x', {'title': 'Notes', 'bookId': ''}), isNull);
       final odd = StudyMaterial.fromMap('x', {
         'title': 'Notes',
         'bookId': 'b1',
@@ -274,17 +330,23 @@ void main() {
       expect(odd.status, StudyMaterialStatus.pending);
     });
 
-    test('a new material is filed with its rights confirmed and no reports', () {
-      final fields = _material('a', by: 'me@x.com').toFields(status: StudyMaterialStatus.pending);
+    test('a new material is filed with its rights confirmed and no reports',
+        () {
+      final fields = _material('a', by: 'me@x.com')
+          .toFields(status: StudyMaterialStatus.pending);
       expect(fields['rightsConfirmed'], isTrue);
       expect(fields['reportCount'], 0);
       expect(fields['status'], 'pending');
       expect(fields['createdByEmail'], 'me@x.com');
     });
 
-    test('a report reason is one of the listed reasons; an unknown one is other', () {
-      expect(StudyMaterialReportReason.fromName('exam'), StudyMaterialReportReason.exam);
-      expect(StudyMaterialReportReason.fromName('rude'), StudyMaterialReportReason.other);
+    test(
+        'a report reason is one of the listed reasons; an unknown one is other',
+        () {
+      expect(StudyMaterialReportReason.fromName('exam'),
+          StudyMaterialReportReason.exam);
+      expect(StudyMaterialReportReason.fromName('rude'),
+          StudyMaterialReportReason.other);
     });
   });
 }
