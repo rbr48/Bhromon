@@ -64,6 +64,8 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
   @override
   void initState() {
     super.initState();
+    // The reference waits for the viewer's role: an admin may read it before its release day, and
+    // reading it once here and again after the role is known would read it twice for a member.
     _repository.myRole(widget.tourId).then((role) {
       if (!mounted) return;
       setState(() {
@@ -71,8 +73,9 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         _ensureWorkStream();
       });
       _loadReference();
-    }, onError: (Object _) {});
-    _loadReference();
+    }, onError: (Object _) {
+      _loadReference();
+    });
     _loadMine();
   }
 

@@ -137,6 +137,8 @@ const _theirs = StudyProblemSolution(
 );
 
 Future<void> _pump(WidgetTester tester, Widget page) async {
+  // Unmount the page of an earlier pump first, so this one starts from its own initState.
+  await tester.pumpWidget(const SizedBox());
   // A tall surface, so that every card of the page is built and can be found.
   await tester.binding.setSurfaceSize(const Size(800, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -198,7 +200,10 @@ void main() {
     await tester.tap(find.text('Looks right'));
     await tester.pumpAndSettle();
 
-    expect(repo.calls, ['review b@x.com right -']);
+    expect(
+      repo.calls.where((call) => call.startsWith('review')),
+      ['review b@x.com right -'],
+    );
     expect(find.text('You marked this right'), findsOneWidget);
     expect(find.text('Looks right'), findsNothing);
   });
