@@ -129,6 +129,7 @@ class StudyChapter {
     this.pageTo,
     this.dueOn,
     this.guide = const [],
+    this.pinnedSummaryId,
   });
 
   /// The most guide questions a chapter can carry.
@@ -155,7 +156,13 @@ class StudyChapter {
   /// Questions to think about while reading. A thread can start from each one later.
   final List<String> guide;
 
-  /// The fields written for a chapter. Empty optional values are stored as null.
+  /// The revision of the chapter summary an admin pinned for the group, or null when the newest
+  /// revision is shown.
+  final String? pinnedSummaryId;
+
+  /// The fields written for a chapter. Empty optional values are stored as null. The pinned summary is
+  /// not among them: a chapter edit writes these fields whole and would clear the pin, so the pin is set
+  /// on its own.
   Map<String, dynamic> toFields() => {
         'number': number,
         'title': title,
@@ -172,6 +179,7 @@ class StudyChapter {
     final title = (map['title'] as String?)?.trim() ?? '';
     if (number == null || number < 1 || title.isEmpty) return null;
     final due = map['dueOn'];
+    final pin = map['pinnedSummaryId'];
     final rawGuide = map['guide'];
     final guide = rawGuide is List
         ? [
@@ -188,6 +196,8 @@ class StudyChapter {
       pageTo: (map['pageTo'] as num?)?.toInt(),
       dueOn: due is DateTime ? due : null,
       guide: guide,
+      pinnedSummaryId:
+          pin is String && pin.trim().isNotEmpty ? pin.trim() : null,
     );
   }
 }

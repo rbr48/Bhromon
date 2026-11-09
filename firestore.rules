@@ -904,7 +904,7 @@ service cloud.firestore {
     // A chapter of a book: its number, title, optional page range, optional due date, and up to
     // five guide questions. Admins set chapters.
     function validStudyChapter(d) {
-      return d.keys().hasOnly(['number', 'title', 'pageFrom', 'pageTo', 'dueOn', 'guide']) &&
+      return d.keys().hasOnly(['number', 'title', 'pageFrom', 'pageTo', 'dueOn', 'guide', 'pinnedSummaryId']) &&
              d.number is int && d.number >= 1 && d.number <= 500 &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
              (d.get('pageFrom', null) == null || (d.pageFrom is int && d.pageFrom >= 1 && d.pageFrom <= 5000)) &&
@@ -912,7 +912,18 @@ service cloud.firestore {
              ((d.get('pageFrom', null) == null && d.get('pageTo', null) == null) ||
               (d.get('pageFrom', null) != null && d.get('pageTo', null) != null && d.pageTo >= d.pageFrom)) &&
              (d.get('dueOn', null) == null || d.dueOn is timestamp) &&
-             (d.get('guide', null) == null || (d.guide is list && d.guide.size() <= 5));
+             (d.get('guide', null) == null || (d.guide is list && d.guide.size() <= 5)) &&
+             (d.get('pinnedSummaryId', null) == null || (d.pinnedSummaryId is string && d.pinnedSummaryId.size() >= 1 && d.pinnedSummaryId.size() <= 40));
+    }
+    // A revision of a chapter summary: its text up to 4,000 characters, who wrote it, when, and the revision it
+    // restores when it is a restore.
+    function validStudySummary(d) {
+      return d.keys().hasOnly(['text', 'editorEmail', 'editorName', 'createdAt', 'restoredFromId']) &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
+             d.editorEmail is string && d.editorEmail.size() >= 1 && d.editorEmail.size() <= 254 &&
+             d.editorName is string && d.editorName.size() <= 80 &&
+             d.createdAt is timestamp &&
+             (d.get('restoredFromId', null) == null || (d.restoredFromId is string && d.restoredFromId.size() >= 1 && d.restoredFromId.size() <= 40));
     }
     // A thread on a book: a title, a body, an optional page reference and chapter, whether an admin has
     // pinned or locked it, and which reply is the accepted answer.
@@ -1416,6 +1427,18 @@ service cloud.firestore {
                              request.resource.data.readAt == resource.data.readAt &&
                              request.resource.data.counted is bool;
             allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
+          }
+
+          // A revision of a chapter summary. Any member adds one in their own name. Nothing is overwritten: a
+          // revision is never updated, so an earlier one can always be restored. Only an admin removes one.
+          match /summaries/{revisionId} {
+            allow read: if isActiveMember(tourId);
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             request.resource.data.editorEmail == tourUserEmail() &&
+                             request.resource.data.createdAt == request.time &&
+                             validStudySummary(request.resource.data) &&
+                             studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+            allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
           }
         }
 

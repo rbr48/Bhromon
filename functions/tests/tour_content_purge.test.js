@@ -346,6 +346,19 @@ async function seed() {
     createdByEmail: LEAVER,
     createdAt: new Date('2026-11-02T10:30:00Z'),
   });
+  // A chapter summary revision: the person's keeps its words under the stand-in, the other member's stays as it was.
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_leaver`, {
+    text: 'Anna and Vronsky meet at the station.',
+    editorEmail: LEAVER,
+    editorName: 'Leaver',
+    createdAt: new Date('2026-11-02T12:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other`, {
+    text: 'Levin works on his land.',
+    editorEmail: OTHER,
+    editorName: 'Friend',
+    createdAt: new Date('2026-11-02T12:30:00Z'),
+  });
 
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
@@ -699,6 +712,13 @@ describe('tour content purge', () => {
     expect(await read(`tours/${TOUR}/study_books/sb_other/glossary/term_leaver`)).toMatchObject({
       term: 'Vronsky',
       createdByEmail: STAND_IN,
+    });
+    expect(await read(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_leaver`)).toMatchObject({
+      text: 'Anna and Vronsky meet at the station.',
+      editorEmail: STAND_IN,
+    });
+    expect(await read(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other`)).toMatchObject({
+      editorEmail: OTHER,
     });
   });
 
