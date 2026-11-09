@@ -6,6 +6,7 @@ import 'package:bhromon/features/tour_group/domain/models/study_thread_models.da
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_problem_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_problems_screen.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -558,5 +559,22 @@ void main() {
 
     expect(repo.calls, contains('set problem p1 s-one'));
     expect(find.text('Set: Week one'), findsOneWidget);
+  });
+
+  testWidgets(
+      'StudyProblemsScreen and StudyProblemScreen have GroupPopScope and GroupBackButton',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.member);
+    await _pump(tester, _screen(repo, _released));
+
+    // The problem page has the pop scope and the back button.
+    expect(find.byType(GroupPopScope), findsOneWidget);
+    expect(find.byType(GroupBackButton), findsOneWidget);
+
+    // The problems list has them too.
+    await _pumpList(tester, repo);
+
+    expect(find.byType(GroupPopScope), findsOneWidget);
+    expect(find.byType(GroupBackButton), findsOneWidget);
   });
 }

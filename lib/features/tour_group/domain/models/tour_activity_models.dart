@@ -282,6 +282,32 @@ class RouteCheckpoint {
 
   bool get hasLocation => lat != null && lng != null;
 
+  /// GeoJSON Feature representing this checkpoint as a Point geometry with
+  /// its kind emoji, highlight, and visited metadata. Null when coordinates
+  /// are not set.
+  Map<String, dynamic>? toGeoJsonFeature([int? sequence]) {
+    if (!hasLocation) return null;
+    return {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [lng!, lat!],
+      },
+      'properties': {
+        'id': id,
+        'name': name,
+        if (sequence != null) 'sequence': sequence,
+        'kind': kind.name,
+        'emoji': kind.emoji,
+        'highlight': highlight,
+        'kmFromStart': kmFromStart,
+        'isVisited': visitedAt != null,
+        'notes': notes,
+        'legKey': legKey,
+      },
+    };
+  }
+
   factory RouteCheckpoint.fromMap(String id, Map<String, dynamic> map) {
     return RouteCheckpoint(
       id: id,

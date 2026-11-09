@@ -1,8 +1,22 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import '../models/itinerary_models.dart';
 import '../models/tour_group.dart';
 import 'destination_catalog.dart';
+
+/// Standardized color hex for each transport mode on vector maps and overlays.
+String colorHexForTransportMode(TransportMode mode) => switch (mode) {
+      TransportMode.road => '#2E6F5E',
+      TransportMode.rail => '#E76F51',
+      TransportMode.air => '#7209B7',
+      TransportMode.river ||
+      TransportMode.sea ||
+      TransportMode.boat =>
+        '#0077B6',
+      TransportMode.jeep => '#D4A373',
+      TransportMode.trek => '#2A9D8F',
+    };
 
 /// Great-circle distance in km.
 double haversineKm(double lat1, double lng1, double lat2, double lng2) {
@@ -109,6 +123,36 @@ class RouteLeg {
         'destination': to.mapsQuery,
         'travelmode': plan.mode.mapsTravelMode,
       });
+
+  /// GeoJSON Feature representing this leg as a LineString geometry with
+  /// metadata properties for MapLibre or vector overlays. Null when either
+  /// endpoint lacks coordinates.
+  Map<String, dynamic>? toGeoJsonFeature() {
+    if (!from.hasLocation || !to.hasLocation) return null;
+    return {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': [
+          [from.lng!, from.lat!],
+          [to.lng!, to.lat!],
+        ],
+      },
+      'properties': {
+        'key': key,
+        'index': index,
+        'fromId': from.id,
+        'fromName': from.name,
+        'toId': to.id,
+        'toName': to.name,
+        'mode': plan.mode.name,
+        'status': status.name,
+        'km': km,
+        'isEstimated': isEstimated,
+        'color': colorHexForTransportMode(plan.mode),
+      },
+    };
+  }
 }
 
 /// Where the group is right now on its route, from a GPS position.
@@ -241,6 +285,22 @@ class RoutePlan {
       'travelmode': 'driving',
     });
   }
+
+  /// GeoJSON FeatureCollection containing all route legs with coordinates.
+  Map<String, dynamic> toGeoJson() {
+    final features = <Map<String, dynamic>>[];
+    for (final leg in legs) {
+      final f = leg.toGeoJsonFeature();
+      if (f != null) features.add(f);
+    }
+    return {
+      'type': 'FeatureCollection',
+      'features': features,
+    };
+  }
+
+  /// JSON-encoded string representation of [toGeoJson].
+  String toGeoJsonString() => jsonEncode(toGeoJson());
 }
 
 /// A Google Maps search for [what] (such as "hospital") near a position, or
