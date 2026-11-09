@@ -51,7 +51,8 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list and reading plan) keeps its amounts and dates.
+ *   list, and the study book list, reading plan, subjects, tips and suggestions) keeps its
+ *   amounts and dates.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
  *
@@ -138,6 +139,10 @@ const ITINERARY_META: AnonymizePlan = { emails: ['updatedByEmail'] };
 const STUDY_BOOK: AnonymizePlan = { emails: ['createdByEmail', 'statusByEmail'] };
 /** A reading session: who planned it. */
 const STUDY_SESSION: AnonymizePlan = { emails: ['createdByEmail'] };
+/** A study subject: who added or proposed it. */
+const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
+/** A tip or a suggestion in a subject: who posted it. */
+const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -465,6 +470,26 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));
   await applyToQuery(db, tour.collection('study_books'), anonymize(STUDY_BOOK, email, standIn));
   await applyToQuery(db, tour.collection('reading_sessions'), anonymize(STUDY_SESSION, email, standIn));
+  await applyToQuery(db, tour.collection('study_subjects'), anonymize(STUDY_SUBJECT, email, standIn));
+  // Each subject's tips and suggestions keep their text under the stand-in. The person's
+  // helpful marks come out, and each post's count drops by the mark removed.
+  const subjects = await tour.collection('study_subjects').get();
+  for (const subject of subjects.docs) {
+    for (const kind of ['tips', 'suggestions']) {
+      const posts = subject.ref.collection(kind);
+      await applyToQuery(db, posts, anonymize(STUDY_POST, email, standIn));
+      const docs = await posts.get();
+      for (const post of docs.docs) {
+        const mark = post.ref.collection('helpful').doc(email);
+        const snap = await mark.get();
+        if (!snap.exists) continue;
+        const batch = db.batch();
+        batch.delete(mark);
+        batch.update(post.ref, { helpfulCount: FieldValue.increment(-1) });
+        await batch.commit();
+      }
+    }
+  }
 
   // What only the person used goes: luggage they own, seats and rooms they hold,
   // and their profile in the tour. At a game table only their seat goes.

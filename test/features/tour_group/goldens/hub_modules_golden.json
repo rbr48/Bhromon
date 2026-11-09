@@ -386,6 +386,7 @@
  "family-study|moments=1,games=1,chat=1,seats=1,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -399,6 +400,7 @@
  "family-study|moments=1,games=1,chat=1,seats=1,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -412,6 +414,7 @@
  "family-study|moments=1,games=1,chat=1,seats=0,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -425,6 +428,7 @@
  "family-study|moments=1,games=1,chat=1,seats=0,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -437,6 +441,7 @@
  ],
  "family-study|moments=1,games=1,chat=0,seats=1,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -449,6 +454,7 @@
  ],
  "family-study|moments=1,games=1,chat=0,seats=1,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -461,6 +467,7 @@
  ],
  "family-study|moments=1,games=1,chat=0,seats=0,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -473,6 +480,7 @@
  ],
  "family-study|moments=1,games=1,chat=0,seats=0,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -486,6 +494,7 @@
  "family-study|moments=1,games=0,chat=1,seats=1,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -498,6 +507,7 @@
  "family-study|moments=1,games=0,chat=1,seats=1,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -510,6 +520,7 @@
  "family-study|moments=1,games=0,chat=1,seats=0,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -522,6 +533,7 @@
  "family-study|moments=1,games=0,chat=1,seats=0,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -533,6 +545,7 @@
  ],
  "family-study|moments=1,games=0,chat=0,seats=1,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -544,6 +557,7 @@
  ],
  "family-study|moments=1,games=0,chat=0,seats=1,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -555,6 +569,7 @@
  ],
  "family-study|moments=1,games=0,chat=0,seats=0,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -566,6 +581,7 @@
  ],
  "family-study|moments=1,games=0,chat=0,seats=0,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -578,6 +594,7 @@
  "family-study|moments=0,games=1,chat=1,seats=1,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -591,6 +608,7 @@
  "family-study|moments=0,games=1,chat=1,seats=1,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -604,6 +622,7 @@
  "family-study|moments=0,games=1,chat=1,seats=0,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -617,6 +636,7 @@
  "family-study|moments=0,games=1,chat=1,seats=0,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -629,6 +649,7 @@
  ],
  "family-study|moments=0,games=1,chat=0,seats=1,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -641,6 +662,7 @@
  ],
  "family-study|moments=0,games=1,chat=0,seats=1,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -653,6 +675,7 @@
  ],
  "family-study|moments=0,games=1,chat=0,seats=0,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -665,6 +688,7 @@
  ],
  "family-study|moments=0,games=1,chat=0,seats=0,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -678,6 +702,7 @@
  "family-study|moments=0,games=0,chat=1,seats=1,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -690,6 +715,7 @@
  "family-study|moments=0,games=0,chat=1,seats=1,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -702,6 +728,7 @@
  "family-study|moments=0,games=0,chat=1,seats=0,tide=1": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -714,6 +741,7 @@
  "family-study|moments=0,games=0,chat=1,seats=0,tide=0": [
   "Discussion channels",
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -725,6 +753,7 @@
  ],
  "family-study|moments=0,games=0,chat=0,seats=1,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -736,6 +765,7 @@
  ],
  "family-study|moments=0,games=0,chat=0,seats=1,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -747,6 +777,7 @@
  ],
  "family-study|moments=0,games=0,chat=0,seats=0,tide=1": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",
@@ -758,6 +789,7 @@
  ],
  "family-study|moments=0,games=0,chat=0,seats=0,tide=0": [
   "Notice board",
+  "Subjects",
   "Reading plan",
   "Book list",
   "To-do",

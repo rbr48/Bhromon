@@ -22,6 +22,7 @@ import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/study_models.dart';
+import '../domain/models/study_subject_models.dart';
 import '../domain/models/meal_log.dart';
 import '../domain/models/samity_models.dart';
 import '../domain/models/service_request_models.dart';
@@ -2418,6 +2419,263 @@ class TourGroupRepository {
       'approval': StudyBookApproval.declined.name,
       'declineNote': cleanNote.isEmpty ? FieldValue.delete() : cleanNote,
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Study subjects: the modules of each subject and the posts in them
+  // (study_subject_models.dart). The rules in firestore.rules say who may write each.
+  // ---------------------------------------------------------------------------
+
+  /// Turns stored timestamps into dates, so the models read plain values.
+  Map<String, dynamic> _datesAsDateTimes(Map<String, dynamic> data) => {
+        for (final entry in data.entries)
+          entry.key: entry.value is Timestamp
+              ? (entry.value as Timestamp).toDate()
+              : entry.value,
+      };
+
+  Map<StudyModuleKey, StudyModuleSettings> _modulesFrom(
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
+    final result = <StudyModuleKey, StudyModuleSettings>{};
+    for (final doc in snap.docs) {
+      final key = StudyModuleKey.fromName(doc.id);
+      if (key == null) continue;
+      final settings = StudyModuleSettings.fromMap(key, doc.data());
+      if (settings != null) result[key] = settings;
+    }
+    return result;
+  }
+
+  Stream<List<StudySubject>> watchStudySubjects(String tourId) {
+    return _sub(tourId, 'study_subjects').limit(200).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (StudySubject.fromMap(d.id, _datesAsDateTimes(d.data()))
+                case final subject?)
+              subject,
+        ]);
+  }
+
+  /// Adds a subject. An admin lists it at once; a member's subject waits for an admin.
+  Future<void> addStudySubject(
+    String tourId, {
+    required String title,
+    required StudyBookApproval approval,
+    String code = '',
+    String description = '',
+    DateTime? examDate,
+  }) async {
+    final email = _requireEmail();
+    final subject = StudySubject(
+      id: '',
+      title: title.trim(),
+      code: code.trim(),
+      description: description.trim(),
+      examDate: examDate,
+      approval: approval,
+      createdByEmail: email,
+    );
+    await _sub(tourId, 'study_subjects').add(subject.toFields());
+  }
+
+  /// Changes a subject's details. Its creator or an admin does this.
+  Future<void> editStudySubject(
+    String tourId,
+    StudySubject original, {
+    required String title,
+    required String code,
+    required String description,
+    required DateTime? examDate,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects').doc(original.id).update({
+      'title': title.trim(),
+      'code': code.trim().isEmpty ? null : code.trim(),
+      'description': description.trim().isEmpty ? null : description.trim(),
+      'examDate': examDate,
+    });
+  }
+
+  /// Lists a proposed or declined subject. Only an admin does this.
+  Future<void> approveStudySubject(String tourId, String subjectId) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects').doc(subjectId).update({
+      'approval': StudyBookApproval.listed.name,
+      'declineNote': FieldValue.delete(),
+    });
+  }
+
+  /// Declines a proposed subject, with an optional note for the person who proposed it.
+  /// Only an admin does this.
+  Future<void> declineStudySubject(
+    String tourId,
+    String subjectId, {
+    String note = '',
+  }) async {
+    _requireEmail();
+    final clean = note.trim();
+    await _sub(tourId, 'study_subjects').doc(subjectId).update({
+      'approval': StudyBookApproval.declined.name,
+      'declineNote': clean.isEmpty ? FieldValue.delete() : clean,
+    });
+  }
+
+  /// The modules of a subject, by key. A module with no stored settings is off.
+  Stream<Map<StudyModuleKey, StudyModuleSettings>> watchStudyModules(
+    String tourId,
+    String subjectId,
+  ) {
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('modules')
+        .snapshots()
+        .map(_modulesFrom);
+  }
+
+  /// Turns a module on or off, renames it, or changes who may post in it. Only an admin does
+  /// this.
+  Future<void> setStudyModule(
+    String tourId,
+    String subjectId,
+    StudyModuleSettings settings,
+  ) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('modules')
+        .doc(settings.key.name)
+        .set(settings.toFields());
+  }
+
+  /// The posts in one module of a subject, newest first.
+  Stream<List<StudyPost>> watchStudyPosts(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key,
+  ) {
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection(key.name)
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyPost.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final post?)
+                  post,
+            ]);
+  }
+
+  /// Adds a post to a module. [shown] is false for a post an admin still has to show.
+  Future<void> addStudyPost(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key, {
+    required String text,
+    required bool shown,
+    String title = '',
+    String url = '',
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection(key.name)
+        .add({
+      'text': text.trim(),
+      'title': title.trim().isEmpty ? null : title.trim(),
+      'url': url.trim().isEmpty ? null : url.trim(),
+      'createdByEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'helpfulCount': 0,
+      'shown': shown,
+      'pinned': false,
+    });
+  }
+
+  /// Changes a post's words. Its author does this.
+  Future<void> editStudyPost(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key,
+    StudyPost original, {
+    required String text,
+    String title = '',
+    String url = '',
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection(key.name)
+        .doc(original.id)
+        .update({
+      'text': text.trim(),
+      'title': title.trim().isEmpty ? null : title.trim(),
+      'url': url.trim().isEmpty ? null : url.trim(),
+    });
+  }
+
+  /// Shows a waiting post to members, or pins or unpins a post. Only an admin does this.
+  Future<void> setStudyPostFlags(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key,
+    String postId, {
+    bool? shown,
+    bool? pinned,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection(key.name)
+        .doc(postId)
+        .update({
+      if (shown != null) 'shown': shown,
+      if (pinned != null) 'pinned': pinned,
+    });
+  }
+
+  /// Removes a post. Its author or an admin does this.
+  Future<void> deleteStudyPost(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key,
+    String postId,
+  ) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection(key.name)
+        .doc(postId)
+        .delete();
+  }
+
+  /// Marks a post helpful, or takes the mark back when it is already marked. The mark and the
+  /// count change in one batch. Returns true when the post is marked afterwards.
+  Future<bool> toggleStudyPostHelpful(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key,
+    String postId,
+  ) async {
+    final email = _requireEmail();
+    final post = _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection(key.name)
+        .doc(postId);
+    final mark = post.collection('helpful').doc(email);
+    final existing = await mark.get();
+    final batch = _firestore.batch();
+    if (existing.exists) {
+      batch.delete(mark);
+      batch.update(post, {'helpfulCount': FieldValue.increment(-1)});
+      await batch.commit();
+      return false;
+    }
+    batch.set(mark, {'createdAt': FieldValue.serverTimestamp()});
+    batch.update(post, {'helpfulCount': FieldValue.increment(1)});
+    await batch.commit();
+    return true;
   }
 
   Stream<List<ReadingSession>> watchReadingSessions(String tourId) {
