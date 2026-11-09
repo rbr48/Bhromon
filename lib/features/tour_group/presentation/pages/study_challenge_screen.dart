@@ -12,6 +12,7 @@ import '../../domain/models/study_challenge_models.dart';
 import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_challenge_rules.dart';
+import '../widgets/group_back_button.dart';
 import '../widgets/study/study_challenge_editor.dart';
 import '../widgets/study/study_labels.dart';
 
@@ -197,46 +198,50 @@ class _StudyChallengeScreenState extends State<StudyChallengeScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final challenge = _challenge;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(widget.settings.name,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          Text(
-            l10n.translate('study_challenge_week', args: {
-              'date': localizedDateFormat('d MMM').format(_week),
-            }),
-            style: TextStyle(color: palette.text70),
-          ),
-          const SizedBox(height: 12),
-          if (challenge == null)
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(widget.settings.name,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
             Text(
-              l10n.translate('study_challenge_none'),
-              style: TextStyle(color: palette.text),
-            )
-          else
-            _challengeCard(challenge),
-          if (_isAdmin && _open) ...[
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: _setChallenge,
-              child: Text(l10n.translate(challenge == null
-                  ? 'study_challenge_set_btn'
-                  : 'study_challenge_change_btn')),
+              l10n.translate('study_challenge_week', args: {
+                'date': localizedDateFormat('d MMM').format(_week),
+              }),
+              style: TextStyle(color: palette.text70),
             ),
+            const SizedBox(height: 12),
+            if (challenge == null)
+              Text(
+                l10n.translate('study_challenge_none'),
+                style: TextStyle(color: palette.text),
+              )
+            else
+              _challengeCard(challenge),
+            if (_isAdmin && _open) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _setChallenge,
+                child: Text(l10n.translate(challenge == null
+                    ? 'study_challenge_set_btn'
+                    : 'study_challenge_change_btn')),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
