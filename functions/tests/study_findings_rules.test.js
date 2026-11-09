@@ -20,6 +20,9 @@ const {
   Timestamp,
 } = require('firebase/firestore');
 
+// Starting the emulator and loading the rules can take longer than Jest's default five-second hook timeout.
+jest.setTimeout(120000);
+
 const PROJECT_ID = 'bhromon-rules-test-project';
 const STUDY = 'findingclub';
 const SUBJECT = 'stat101';
