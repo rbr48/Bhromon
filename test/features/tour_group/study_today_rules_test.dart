@@ -1,5 +1,6 @@
 import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_problem_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/study_subject_rules.dart';
@@ -195,6 +196,7 @@ void main() {
       expect(todayCardLineOrder(examMode: false), [
         TodayCardLine.exam,
         TodayCardLine.deadline,
+        TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.cards,
         TodayCardLine.challenge,
@@ -208,6 +210,7 @@ void main() {
         TodayCardLine.exam,
         TodayCardLine.cards,
         TodayCardLine.deadline,
+        TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.challenge,
       ]);
@@ -219,6 +222,99 @@ void main() {
         expect(order.toSet(), TodayCardLine.values.toSet());
         expect(order.length, TodayCardLine.values.length);
       }
+    });
+  });
+
+  group('the problem set on the Today card', () {
+    final now = DateTime(2026, 11, 10, 9);
+    final dueSoon = DateTime(2026, 11, 12);
+    final earlier = DateTime(2026, 11, 11);
+
+    StudyProblem problem(String id, String setId,
+            {bool shown = true, String by = 'b@x.com'}) =>
+        StudyProblem(
+          id: id,
+          text: 'Solve $id',
+          setId: setId,
+          shown: shown,
+          createdByEmail: by,
+        );
+
+    StudyProblemSet set(String id, String title, DateTime? due) =>
+        StudyProblemSet(id: id, title: title, dueAt: due);
+
+    DueProblemSet? pick({
+      required List<StudyProblemSet> sets,
+      required List<StudyProblem> problems,
+      Set<String> worked = const {},
+      bool admin = false,
+    }) =>
+        nextDueProblemSet(
+          sets: sets,
+          problems: problems,
+          workedIds: worked,
+          viewerEmail: 'me@x.com',
+          isAdmin: admin,
+          now: now,
+        );
+
+    test('the set due sooner comes first', () {
+      final line = pick(
+        sets: [set('s1', 'Week 3', dueSoon), set('s2', 'Week 2', earlier)],
+        problems: [problem('p1', 's1'), problem('p2', 's2')],
+      );
+      expect(line?.set.id, 's2');
+      expect(line?.total, 1);
+      expect(line?.worked, 0);
+    });
+
+    test('a set the viewer has fully worked is skipped for the next one', () {
+      final line = pick(
+        sets: [set('s1', 'Week 2', earlier), set('s2', 'Week 3', dueSoon)],
+        problems: [problem('p1', 's1'), problem('p2', 's2')],
+        worked: {'p1'},
+      );
+      expect(line?.set.id, 's2');
+    });
+
+    test(
+        'the counts are over the problems the viewer can see, and an admin sees more',
+        () {
+      final sets = [set('s1', 'Week 3', dueSoon)];
+      final problems = [
+        problem('p1', 's1'),
+        problem('p2', 's1', shown: false),
+        problem('p3', 's1'),
+      ];
+      final member = pick(sets: sets, problems: problems, worked: {'p3'});
+      expect(member?.total, 2);
+      expect(member?.worked, 1);
+      final admin =
+          pick(sets: sets, problems: problems, worked: {'p3'}, admin: true);
+      expect(admin?.total, 3);
+      expect(admin?.worked, 1);
+    });
+
+    test(
+        'nothing is shown for a set not due soon, undated, empty, or fully worked',
+        () {
+      final line = pick(
+        sets: [
+          set('later', 'Later', DateTime(2026, 11, 20)),
+          set('past', 'Past', DateTime(2026, 11, 9)),
+          set('undated', 'Undated', null),
+          set('empty', 'Empty', dueSoon),
+          set('done', 'Done', dueSoon),
+        ],
+        problems: [
+          problem('p1', 'later'),
+          problem('p2', 'past'),
+          problem('p3', 'undated'),
+          problem('p4', 'done'),
+        ],
+        worked: {'p4'},
+      );
+      expect(line, isNull);
     });
   });
 }

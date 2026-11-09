@@ -3,6 +3,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_challenge_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_problem_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
@@ -115,6 +116,28 @@ class _FakeSubjectRepo extends TourGroupRepository {
     String tourId,
     String subjectId,
     List<String> findingIds,
+  ) async =>
+      const {};
+
+  @override
+  Stream<List<StudyProblemSet>> watchStudyProblemSets(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(const []);
+
+  @override
+  Stream<List<StudyProblem>> watchStudyProblems(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(const []);
+
+  @override
+  Future<Map<String, StudyProblemSolution>> loadMyWork(
+    String tourId,
+    String subjectId,
+    List<String> problemIds,
   ) async =>
       const {};
 

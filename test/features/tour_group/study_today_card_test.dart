@@ -2,6 +2,7 @@ import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_challenge_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_problem_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/study/study_today_card.dart';
@@ -19,6 +20,9 @@ class _FakeTodayRepo extends TourGroupRepository {
     this.deadlines = const [],
     this.findings = const [],
     this.subjects = const [],
+    this.problemSets = const [],
+    this.problems = const [],
+    this.myWork = const {},
   });
 
   final StudyChallenge? challenge;
@@ -27,6 +31,9 @@ class _FakeTodayRepo extends TourGroupRepository {
   final List<StudyDeadline> deadlines;
   final List<StudyFinding> findings;
   final List<StudySubject> subjects;
+  final List<StudyProblemSet> problemSets;
+  final List<StudyProblem> problems;
+  final Map<String, StudyProblemSolution> myWork;
 
   @override
   String get currentEmail => 'me@x.com';
@@ -79,6 +86,28 @@ class _FakeTodayRepo extends TourGroupRepository {
   @override
   Stream<List<StudySubject>> watchStudySubjects(String tourId) =>
       Stream.value(subjects);
+
+  @override
+  Stream<List<StudyProblemSet>> watchStudyProblemSets(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(problemSets);
+
+  @override
+  Stream<List<StudyProblem>> watchStudyProblems(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(problems);
+
+  @override
+  Future<Map<String, StudyProblemSolution>> loadMyWork(
+    String tourId,
+    String subjectId,
+    List<String> problemIds,
+  ) async =>
+      myWork;
 }
 
 const _subject = StudySubject(
@@ -104,6 +133,13 @@ const _challengeModule = StudyModuleSettings(
   enabled: true,
   name: 'Weekly challenge',
   postPolicy: StudyPostPolicy.admins,
+);
+
+const _problemsModule = StudyModuleSettings(
+  key: StudyModuleKey.problems,
+  enabled: true,
+  name: 'Problem solving',
+  postPolicy: StudyPostPolicy.members,
 );
 
 /// The Tuesday of the week that starts on 2026-11-09.
@@ -314,5 +350,77 @@ void main() {
     expect(find.text('Physics: exam in 3 days'), findsOneWidget);
     expect(find.text('Next due: Chapter 1 (Book), 11 Nov'), findsOneWidget);
     expect(find.textContaining('Statistics 101'), findsNothing);
+  });
+
+  testWidgets(
+      'a problem set due soon shows the viewer\'s progress, and a tap opens the problems module',
+      (tester) async {
+    final opened = <StudyModuleSettings>[];
+    await _pump(
+      tester,
+      StudyTodayCard(
+        tourId: 't1',
+        subject: _subject,
+        repository: _FakeTodayRepo(
+          problemSets: [
+            StudyProblemSet(
+              id: 's1',
+              title: 'Week 3',
+              dueAt: DateTime(2026, 11, 12),
+            ),
+          ],
+          problems: const [
+            StudyProblem(id: 'p1', text: 'Solve one', setId: 's1'),
+            StudyProblem(id: 'p2', text: 'Solve two', setId: 's1'),
+          ],
+          myWork: const {
+            'p1': StudyProblemSolution(
+              solverEmail: 'me@x.com',
+              text: 'my working',
+            ),
+          },
+        ),
+        today: _tuesday,
+        problemsModule: _problemsModule,
+        onOpenModule: opened.add,
+        cardsDue: () async => 0,
+      ),
+    );
+
+    const line = 'Problem set Week 3 is due 12 Nov: 1 of 2 worked.';
+    expect(find.text(line), findsOneWidget);
+
+    await tester.tap(find.text(line));
+    await tester.pumpAndSettle();
+    expect(opened.map((m) => m.key), [StudyModuleKey.problems]);
+  });
+
+  testWidgets(
+      'the problem-set line is not shown when the problems module is off',
+      (tester) async {
+    await _pump(
+      tester,
+      StudyTodayCard(
+        tourId: 't1',
+        subject: _subject,
+        repository: _FakeTodayRepo(
+          problemSets: [
+            StudyProblemSet(
+              id: 's1',
+              title: 'Week 3',
+              dueAt: DateTime(2026, 11, 12),
+            ),
+          ],
+          problems: const [
+            StudyProblem(id: 'p1', text: 'Solve one', setId: 's1'),
+          ],
+        ),
+        today: _tuesday,
+        onOpenModule: (_) {},
+        cardsDue: () async => 0,
+      ),
+    );
+
+    expect(find.textContaining('Problem set Week 3'), findsNothing);
   });
 }

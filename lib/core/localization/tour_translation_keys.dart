@@ -2944,6 +2944,8 @@ class TourTranslationKeys {
       'study_today_exam_for': '{subject}: exam in {days} days',
       'study_today_exam_for_today': '{subject}: exam today',
       'study_today_next_deadline': 'Next due: {chapter} ({book}), {date}',
+      'study_today_problem_set':
+          'Problem set {title} is due {date}: {worked} of {total} worked.',
       'study_today_findings_waiting':
           '{count} findings are waiting for your check.',
       'study_today_cards_due': '{count} flashcards are due today.',
@@ -6437,6 +6439,8 @@ class TourTranslationKeys {
       'study_today_exam_for_today': '{subject}: আজ পরীক্ষা',
       'study_today_next_deadline':
           'পরবর্তী জমার দিন: {chapter} ({book}), {date}',
+      'study_today_problem_set':
+          'সমস্যার সেট {title}: জমা {date}। {total}টির মধ্যে {worked}টি করা হয়েছে।',
       'study_today_findings_waiting':
           'আপনার যাচাইয়ের অপেক্ষায় {count}টি ফলাফল।',
       'study_today_cards_due':
