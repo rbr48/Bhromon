@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_models.dart';
+import '../../../domain/services/study_chapter_rules.dart';
 import '../../../domain/services/study_rules.dart';
 
 /// What a member entered for a reading session.
@@ -14,20 +17,30 @@ class ReadingSessionDraft {
     required this.bookId,
     required this.place,
     required this.notes,
+    this.chapterIds = const [],
   });
 
   final String title;
   final DateTime startsAt;
   final String? bookId;
+
+  /// The chapters of the book the session covers.
+  final List<String> chapterIds;
   final String place;
   final String notes;
 }
 
-/// Opens the editor for a session. [books] fills the book choice. [existing] is null for a
-/// new session. Returns what the member saved, or null when they cancel.
+/// The chapters of a book, as a stream the editor listens to. The screen supplies it, so the
+/// editor never creates a stream itself.
+typedef StudyChaptersOf = Stream<List<StudyChapter>> Function(String bookId);
+
+/// Opens the editor for a session. [books] fills the book choice. [chaptersOf] fills the
+/// chapter choice once a book is picked. [existing] is null for a new session. Returns what
+/// the member saved, or null when they cancel.
 Future<ReadingSessionDraft?> showReadingSessionEditor(
   BuildContext context, {
   required List<StudyBook> books,
+  StudyChaptersOf? chaptersOf,
   ReadingSession? existing,
 }) {
   return showModalBottomSheet<ReadingSessionDraft>(
@@ -37,14 +50,24 @@ Future<ReadingSessionDraft?> showReadingSessionEditor(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => ReadingSessionEditor(books: books, existing: existing),
+    builder: (_) => ReadingSessionEditor(
+      books: books,
+      chaptersOf: chaptersOf,
+      existing: existing,
+    ),
   );
 }
 
 class ReadingSessionEditor extends StatefulWidget {
-  const ReadingSessionEditor({super.key, required this.books, this.existing});
+  const ReadingSessionEditor({
+    super.key,
+    required this.books,
+    this.chaptersOf,
+    this.existing,
+  });
 
   final List<StudyBook> books;
+  final StudyChaptersOf? chaptersOf;
   final ReadingSession? existing;
 
   @override
@@ -60,6 +83,12 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
       TextEditingController(text: widget.existing?.notes ?? '');
   late String? _bookId = _knownBook(widget.existing?.bookId);
   late DateTime _startsAt = widget.existing?.startsAt ?? _defaultStart();
+  late final List<String> _chapterIds =
+      List.of(widget.existing?.chapterIds ?? const []);
+
+  /// The chapters of the chosen book, once they have arrived.
+  List<StudyChapter> _chapterOptions = const [];
+  StreamSubscription<List<StudyChapter>>? _chapterSub;
   bool _tried = false;
 
   /// The book of an existing session, when the list still has it. A book removed since
@@ -73,7 +102,51 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    final bookId = _bookId;
+    if (bookId != null) _listenChapters(bookId);
+  }
+
+  /// Follows the chapters of [bookId] for the chapter choice. A subscription for another book
+  /// is cancelled first.
+  void _listenChapters(String bookId) {
+    _chapterSub?.cancel();
+    _chapterSub = null;
+    final chaptersOf = widget.chaptersOf;
+    if (chaptersOf == null) return;
+    _chapterSub = chaptersOf(bookId).listen(
+      (chapters) {
+        if (!mounted) return;
+        setState(() {
+          _chapterOptions = sortStudyChapters(chapters);
+          // Keep only the chapters the book still has.
+          _chapterIds
+              .removeWhere((id) => !_chapterOptions.any((c) => c.id == id));
+        });
+      },
+      onError: (Object _) {},
+    );
+  }
+
+  /// Picks a book. A different book clears the chapters chosen for the old one.
+  void _chooseBook(String? value) {
+    setState(() {
+      _bookId = value;
+      _chapterIds.clear();
+      _chapterOptions = const [];
+    });
+    if (value == null) {
+      _chapterSub?.cancel();
+      _chapterSub = null;
+    } else {
+      _listenChapters(value);
+    }
+  }
+
+  @override
   void dispose() {
+    _chapterSub?.cancel();
     _title.dispose();
     _place.dispose();
     _notes.dispose();
@@ -110,6 +183,7 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
       title: _title.text.trim(),
       startsAt: _startsAt,
       bookId: _bookId,
+      chapterIds: _bookId == null ? const [] : List.of(_chapterIds),
       place: _place.text.trim(),
       notes: _notes.text.trim(),
     ));
@@ -174,10 +248,43 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
                               Text(book.title, overflow: TextOverflow.ellipsis),
                         ),
                     ],
-                    onChanged: (value) => setState(() => _bookId = value),
+                    onChanged: _chooseBook,
                   ),
                 ),
               ),
+              if (_chapterOptions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  l10n.translate('study_session_chapters_label'),
+                  style: TextStyle(color: palette.text70),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final chapter in _chapterOptions)
+                      FilterChip(
+                        label: Text(l10n.translate(
+                          'study_chapter_chip',
+                          args: {
+                            'number': l10n.number(chapter.number),
+                            'title': chapter.title,
+                          },
+                        )),
+                        selected: _chapterIds.contains(chapter.id),
+                        onSelected: (on) => setState(() {
+                          if (!on) {
+                            _chapterIds.remove(chapter.id);
+                          } else if (_chapterIds.length <
+                              ReadingSession.chapterMax) {
+                            _chapterIds.add(chapter.id);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 l10n.translate('study_session_when_label'),

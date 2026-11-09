@@ -491,6 +491,19 @@ export async function purgeMemberContent(
     }
   }
 
+  // A book's votes and a chapter's read marks are the person's own records, so they go.
+  // Each delete runs only when the record is there, so the step can run again.
+  const books = await tour.collection('study_books').get();
+  for (const book of books.docs) {
+    const vote = book.ref.collection('votes').doc(email);
+    if ((await vote.get()).exists) await vote.delete();
+    const chapters = await book.ref.collection('chapters').get();
+    for (const chapter of chapters.docs) {
+      const read = chapter.ref.collection('reads').doc(email);
+      if ((await read.get()).exists) await read.delete();
+    }
+  }
+
   // What only the person used goes: luggage they own, seats and rooms they hold,
   // and their profile in the tour. At a game table only their seat goes.
   await applyToQuery(db, tour.collection('luggage'), luggageOf(email));

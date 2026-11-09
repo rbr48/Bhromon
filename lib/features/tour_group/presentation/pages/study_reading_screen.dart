@@ -54,7 +54,11 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
     // A fresh read of the books, so the choice is current when the sheet opens.
     final books = await _repository.watchStudyBooks(widget.tourId).first;
     if (!mounted) return;
-    final draft = await showReadingSessionEditor(context, books: books);
+    final draft = await showReadingSessionEditor(
+      context,
+      books: books,
+      chaptersOf: _chaptersOf,
+    );
     if (draft == null || !mounted) return;
     await _run(
       () => _repository.addReadingSession(
@@ -62,6 +66,7 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
         title: draft.title,
         startsAt: draft.startsAt,
         bookId: draft.bookId,
+        chapterIds: draft.chapterIds,
         place: draft.place,
         notes: draft.notes,
       ),
@@ -69,10 +74,15 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
     );
   }
 
+  /// The chapters of a book, for the session editor's chapter choice.
+  Stream<List<StudyChapter>> _chaptersOf(String bookId) =>
+      _repository.watchStudyChapters(widget.tourId, bookId);
+
   Future<void> _edit(ReadingSession session, List<StudyBook> books) async {
     final draft = await showReadingSessionEditor(
       context,
       books: books,
+      chaptersOf: _chaptersOf,
       existing: session,
     );
     if (draft == null || !mounted) return;
@@ -84,6 +94,7 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
           title: draft.title,
           startsAt: draft.startsAt,
           bookId: draft.bookId,
+          chapterIds: draft.chapterIds,
           place: draft.place,
           notes: draft.notes,
           createdByEmail: session.createdByEmail,

@@ -901,11 +901,25 @@ service cloud.firestore {
                (newData.status == oldData.status ||
                 (newData.get('statusByEmail', null) == tourUserEmail() && studyBookListed(newData)))));
     }
+    // A chapter of a book: its number, title, optional page range, optional due date, and up to
+    // five guide questions. Admins set chapters.
+    function validStudyChapter(d) {
+      return d.keys().hasOnly(['number', 'title', 'pageFrom', 'pageTo', 'dueOn', 'guide']) &&
+             d.number is int && d.number >= 1 && d.number <= 500 &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             (d.get('pageFrom', null) == null || (d.pageFrom is int && d.pageFrom >= 1 && d.pageFrom <= 5000)) &&
+             (d.get('pageTo', null) == null || (d.pageTo is int && d.pageTo >= 1 && d.pageTo <= 5000)) &&
+             ((d.get('pageFrom', null) == null && d.get('pageTo', null) == null) ||
+              (d.get('pageFrom', null) != null && d.get('pageTo', null) != null && d.pageTo >= d.pageFrom)) &&
+             (d.get('dueOn', null) == null || d.dueOn is timestamp) &&
+             (d.get('guide', null) == null || (d.guide is list && d.guide.size() <= 5));
+    }
     // A reading session: what to read, when it starts, and where it meets.
     function validStudySession(d) {
-      return d.keys().hasOnly(['title', 'bookId', 'startsAt', 'place', 'notes', 'createdByEmail']) &&
+      return d.keys().hasOnly(['title', 'bookId', 'chapterIds', 'startsAt', 'place', 'notes', 'createdByEmail']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
              (d.get('bookId', null) == null || (d.bookId is string && d.bookId.size() <= 100)) &&
+             (d.get('chapterIds', null) == null || (d.chapterIds is list && d.chapterIds.size() <= 10)) &&
              d.startsAt is timestamp &&
              (d.get('place', null) == null || (d.place is string && d.place.size() <= 120)) &&
              (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
@@ -1119,6 +1133,41 @@ service cloud.firestore {
                          studyBookUpdateAllowed(tourId, request.resource.data, resource.data);
         allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+        // The votes for a proposed book: each member says for themselves that they would read it.
+        match /votes/{voter} {
+          allow read: if isActiveMember(tourId);
+          allow create: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                           request.resource.data.keys().hasOnly(['createdAt']) &&
+                           request.resource.data.createdAt == request.time &&
+                           get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data.get('approval', 'listed') == 'proposed';
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
+        }
+
+        // The chapters of the book: a number, a title, its pages, a due date and up to five guide
+        // questions. Only an admin sets them.
+        match /chapters/{chapterId} {
+          allow read: if isActiveMember(tourId);
+          allow create, update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                                   validStudyChapter(request.resource.data);
+          allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+
+          // A member's read mark on the chapter, in their own name, on a listed book. An uncounted
+          // mark is private to its member; a counted one is visible to the group.
+          match /reads/{voter} {
+            allow read: if isActiveMember(tourId) && (voter == tourUserEmail() || resource.data.get('counted', false) == true);
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                             request.resource.data.keys().hasOnly(['readAt', 'counted']) &&
+                             request.resource.data.readAt == request.time &&
+                             request.resource.data.counted is bool &&
+                             studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+            allow update: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                             request.resource.data.keys().hasOnly(['readAt', 'counted']) &&
+                             request.resource.data.readAt == resource.data.readAt &&
+                             request.resource.data.counted is bool;
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
+          }
+        }
       }
 
       // A study subject: an admin adds it, or a member proposes it for an admin to decide. Its
