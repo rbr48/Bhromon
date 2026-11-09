@@ -7,7 +7,10 @@ This document serves as the persistent system memory, architectural guidelines, 
 ## 1. Project Overview & Architecture
 - **Repository**: [https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)
 - **Primary Branch**: `main` (active and default).
-- **GitHub PR Workflow (MANDATORY)**: Never push directly to `main` on GitHub. Always create a feature/fix branch, commit changes, push the branch, and open a Pull Request via `gh pr create --base main`.
+- **GitHub PR Workflow & Dual-Agent Review Gate (MANDATORY)**:
+  1. Never push directly to `main` on GitHub. Always create a feature/fix branch, commit changes, push the branch, and open a Pull Request via `gh pr create --base main`.
+  2. **Mutual Peer Review Required**: Even when all CI checks are 100% green, NEVER merge any PR to `main` before Antigravity and Claude review each other's PR on GitHub. Mutual peer sign-off must be exchanged and documented in PR comments.
+  3. **100% Green CI Required**: Zero tolerance for failing or in-progress checks at merge time. Every check in the matrix must show green success.
 - **Product**: Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips. The name, the Android and iOS identifiers, the domains and the Firebase project are unchanged. Copy and branding follow the group product; a trip is one group type among the others.
 - **Architecture**: Clean Architecture (Domain, Data, Presentation) with injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
 - **State management**: by feature. `tour_group` screens use `StatefulWidget`s that call repositories directly and listen to their streams. BLoC and Cubit remain in the other features. New tour-group code follows the direct pattern; don't add BLoC there.
