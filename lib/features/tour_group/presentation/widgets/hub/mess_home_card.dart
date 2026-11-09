@@ -10,9 +10,11 @@ import '../../../../../core/theme/colors.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/family_task_models.dart';
 import '../../../domain/models/meal_log.dart';
+import '../../../domain/models/mess_bazar_model.dart';
 import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/meal_engine.dart';
+import '../mess/mess_bazar_sheet.dart';
 
 const _card = Color(0xFF142428);
 
@@ -41,12 +43,16 @@ class _MessHomeCardState extends State<MessHomeCard> {
   List<MealLog> _meals = const [];
   List<FamilyTask> _tasks = const [];
   List<TourNotice> _notices = const [];
+  List<TourMember> _members = const [];
+  MessBazarSchedule? _todayBazar;
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
     final id = widget.group.id;
     final now = DateTime.now();
+    final todayKey = mealDateKey(now);
     _subs.addAll([
       _repository
           .watchMealsForMonth(id, now)
@@ -57,7 +63,16 @@ class _MessHomeCardState extends State<MessHomeCard> {
       _repository
           .watchNotices(id)
           .listen((v) => _update(() => _notices = v), onError: (Object _) {}),
+      _repository
+          .watchMembers(id)
+          .listen((v) => _update(() => _members = v), onError: (Object _) {}),
+      _repository.watchBazarScheduleForDay(id, todayKey).listen(
+          (v) => _update(() => _todayBazar = v),
+          onError: (Object _) {}),
     ]);
+    _repository.myRole(id).then((r) {
+      if (mounted) setState(() => _isAdmin = r?.isAdminOrOwner ?? false);
+    }, onError: (Object _) {});
     _dayTick = Timer.periodic(const Duration(minutes: 10), (_) {
       if (mounted) setState(() {});
     });
@@ -187,7 +202,22 @@ class _MessHomeCardState extends State<MessHomeCard> {
             ),
           ),
           const SizedBox(height: 8),
-          // Bazar row
+          // Bazar duty row
+          _row(
+            icon: Icons.storefront_rounded,
+            text: (_todayBazar != null && _todayBazar!.assignedNames.isNotEmpty)
+                ? l10n.translate('mess_bazar_today_duty',
+                    args: {'names': _todayBazar!.assignedNames.join(', ')})
+                : l10n.translate('mess_bazar_no_duty'),
+            onTap: () => showMessBazarSheet(
+              context,
+              tourId: widget.group.id,
+              isAdmin: _isAdmin,
+              members: _members,
+              initialDateKey: todayKey,
+            ),
+          ),
+          // Bazar tasks row
           _row(
             icon: Icons.shopping_basket_outlined,
             text: toBuy > 0
@@ -238,12 +268,18 @@ class _MessHomeCardState extends State<MessHomeCard> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () => context.push('$base/family-tasks'),
-                  icon: Icon(Icons.add_shopping_cart_rounded,
+                  onPressed: () => showMessBazarSheet(
+                    context,
+                    tourId: widget.group.id,
+                    isAdmin: _isAdmin,
+                    members: _members,
+                    initialDateKey: todayKey,
+                  ),
+                  icon: Icon(Icons.storefront_rounded,
                       size: 14,
                       color: context.forest.readable(const Color(0xFF52B788))),
                   label: Text(
-                    l10n.translate('mess_home_bazar_btn'),
+                    l10n.translate('mess_bazar_routine_btn'),
                     style: const TextStyle(fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),

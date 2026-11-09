@@ -8,9 +8,11 @@ import '../../../../core/utils/logger.dart';
 import '../../../../core/widgets/swipe_step.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/meal_log.dart';
+import '../../domain/models/mess_bazar_model.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/meal_engine.dart';
 import '../widgets/mess/mess_balance_sheet.dart';
+import '../widgets/mess/mess_bazar_sheet.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -96,6 +98,17 @@ class _MealsScreenState extends State<MealsScreen> {
                 style: TextStyle(color: context.forest.text)),
             actions: [
               IconButton(
+                tooltip: l10n.translate('mess_bazar_duty_title'),
+                icon: const Icon(Icons.storefront_rounded),
+                onPressed: () => showMessBazarSheet(
+                  context,
+                  tourId: widget.tourId,
+                  isAdmin: _isAdmin,
+                  members: members,
+                  initialDateKey: _selectedKey,
+                ),
+              ),
+              IconButton(
                 tooltip: 'মেস মিল ও বাজার হিসাব বিবরণী',
                 icon: const Icon(Icons.receipt_long_rounded),
                 onPressed: () => showMessBalanceSheet(
@@ -145,7 +158,72 @@ class _MealsScreenState extends State<MealsScreen> {
         _monthBar(l10n),
         const SizedBox(height: 8),
         _dayStrip(),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        StreamBuilder<MessBazarSchedule?>(
+          stream:
+              _repository.watchBazarScheduleForDay(widget.tourId, _selectedKey),
+          builder: (context, snap) {
+            final sched = snap.data;
+            if (sched == null || sched.assignedNames.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => showMessBazarSheet(
+                  context,
+                  tourId: widget.tourId,
+                  isAdmin: _isAdmin,
+                  members: members,
+                  initialDateKey: _selectedKey,
+                ),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: context.forest.surfaceFor(_card),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: sched.isCompleted
+                          ? AppColors.mintGreen.withValues(alpha: 0.3)
+                          : AppColors.gold.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        sched.isCompleted
+                            ? Icons.check_circle_rounded
+                            : Icons.storefront_rounded,
+                        size: 16,
+                        color: sched.isCompleted
+                            ? AppColors.mintGreen
+                            : AppColors.gold,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'আজকের বাজার: ${sched.assignedNames.join(', ')}${sched.estimatedBudgetPaisa != null ? ' (৳ ${sched.estimatedBudgetPaisa! ~/ 100})' : ''}',
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 16, color: context.forest.text38),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 4),
         InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () => showMessBalanceSheet(

@@ -944,6 +944,46 @@ class NotificationEngine:
             logger.error("Error in send_notice_notification: %s", e)
             return {"status": "error", "error": str(e)}
 
+    def send_bazar_duty_notification(
+        self,
+        tour_id: str,
+        date_key: str,
+        assigned_emails: List[str],
+        note: str = "",
+        estimated_budget_paisa: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Push a bazar duty reminder to assigned mess members."""
+        dedup_key = f"bazar_{tour_id}_{date_key}"
+        if self.is_seen(dedup_key):
+            return {"status": "already_sent"}
+        try:
+            clean_emails = [e.strip().lower() for e in assigned_emails if e.strip()]
+            if not clean_emails:
+                return {"status": "no_recipients"}
+            uids = self.get_uids_for_emails(clean_emails)
+            targets = self.get_push_targets_for_uids(uids)
+
+            data = {
+                "action": "bazar_duty",
+                "tourId": str(tour_id),
+                "dateKey": str(date_key),
+            }
+
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "bazar.duty.title"),
+                    push_text(lang, "bazar.duty.body"),
+                ),
+                data,
+                high_priority=True,
+            )
+            return {"status": "success", "recipients": len(clean_emails), "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_bazar_duty_notification: %s", e)
+            return {"status": "error", "error": str(e)}
+
     def send_ledger_notification(
         self,
         tour_id: str,
