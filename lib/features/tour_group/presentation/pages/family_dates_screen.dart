@@ -35,33 +35,11 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
   TourRole? _myRole;
   TourGroup? _group;
 
-  String _screenTitle(AppLocalizations l10n) {
-    final g = _group;
-    if (g != null) {
-      if (g.isOffice) return l10n.translate('hub_module_dates_office');
-      if (g.isCampus) return l10n.translate('hub_module_dates_campus');
-      if (g.isMess) return l10n.translate('hub_module_dates_mess');
-      if (g.isSociety) return l10n.translate('hub_module_dates_society');
-      if (g.isSamity) return l10n.translate('hub_module_dates_samity');
-      if (g.isStudy) return l10n.translate('hub_module_dates_study');
-      if (!g.isFamily) return l10n.translate('hub_module_dates_trip');
-    }
-    return l10n.translate('fd_title');
-  }
+  String _screenTitle(AppLocalizations l10n) =>
+      groupDateScreenTitle(_group, l10n);
 
-  String _introText(AppLocalizations l10n) {
-    final g = _group;
-    if (g != null) {
-      if (g.isOffice) return l10n.translate('hub_module_dates_office_sub');
-      if (g.isCampus) return l10n.translate('hub_module_dates_campus_sub');
-      if (g.isMess) return l10n.translate('hub_module_dates_mess_sub');
-      if (g.isSociety) return l10n.translate('hub_module_dates_society_sub');
-      if (g.isSamity) return l10n.translate('hub_module_dates_samity_sub');
-      if (g.isStudy) return l10n.translate('hub_module_dates_study_sub');
-      if (!g.isFamily) return l10n.translate('hub_module_dates_trip_sub');
-    }
-    return l10n.translate('fd_intro');
-  }
+  String _introText(AppLocalizations l10n) =>
+      groupDateScreenSubtitle(_group, l10n);
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
   String get _me => _repository.currentEmail;
@@ -174,7 +152,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
                   style: TextStyle(color: context.forest.text60, fontSize: 13)),
               const SizedBox(height: 8),
               if (dates.isEmpty)
-                _message(l10n.translate('fd_empty'))
+                _message(groupDateEmptyText(_group, l10n))
               else
                 for (final section in sections) ...[
                   _sectionHeader(

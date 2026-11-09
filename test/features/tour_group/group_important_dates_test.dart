@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/domain/models/family_date_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/services/family_date_rules.dart';
@@ -76,6 +78,92 @@ void main() {
           presets.any((p) => p.titleEn.contains('Monthly House Rent')), isTrue);
       expect(
           presets.any((p) => p.titleEn.contains('Meal Calculation')), isTrue);
+    });
+
+    test('friends circle provides friend-tailored kinds, presets, and titles',
+        () {
+      final friends = TourGroup(
+        id: 'friends_1',
+        name: 'Dost Squad',
+        kind: GroupKind.family,
+        preset: TourGroup.friendsPreset,
+        ownerEmail: 'dost@bhromon.fun',
+        inviteCode: 'FRIEND12',
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 12, 31),
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final kinds = kindsForGroup(friends);
+      expect(kinds, contains(FamilyDateKind.event));
+      expect(kinds, contains(FamilyDateKind.birthday));
+      expect(kinds, contains(FamilyDateKind.meeting));
+      expect(kinds, contains(FamilyDateKind.bill));
+      expect(kinds, isNot(contains(FamilyDateKind.rent)));
+      expect(kinds, isNot(contains(FamilyDateKind.medicine)));
+      expect(kinds, isNot(contains(FamilyDateKind.school)));
+
+      final presets = presetTemplatesFor(friends);
+      expect(
+          presets.any((p) =>
+              p.titleEn.contains('Adda') || p.titleEn.contains('Hangout')),
+          isTrue);
+      expect(presets.any((p) => p.titleEn.contains('Friendship Day')), isTrue);
+      expect(presets.any((p) => p.titleEn.contains('Batch Reunion')), isTrue);
+
+      final l10nBn = AppLocalizations(const Locale('bn'));
+      final l10nEn = AppLocalizations(const Locale('en'));
+
+      // Check Bengali titles and modal headers
+      expect(groupDateScreenTitle(friends, l10nBn), 'আড্ডা ও বিশেষ তারিখ');
+      expect(groupDateModalHeader(friends, l10nBn, isAdd: true, canEdit: true),
+          'নতুন আড্ডা বা বিশেষ তারিখ');
+      expect(groupDateModalHeader(friends, l10nBn, isAdd: false, canEdit: true),
+          'তারিখ ও আয়োজন সম্পাদন');
+
+      // Check English titles and modal headers
+      expect(groupDateScreenTitle(friends, l10nEn), 'Friends Dates & Hangouts');
+      expect(groupDateModalHeader(friends, l10nEn, isAdd: true, canEdit: true),
+          'Add hangout or friends date');
+    });
+
+    test('household group vs other presets show correct headers', () {
+      final household = TourGroup(
+        id: 'home_1',
+        name: 'Rahman Family',
+        kind: GroupKind.family,
+        preset: null, // Pure household
+        ownerEmail: 'dad@home.com',
+        inviteCode: 'HOME1234',
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 12, 31),
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final school = TourGroup(
+        id: 'school_1',
+        name: 'Class 10 Section A',
+        kind: GroupKind.family,
+        preset: TourGroup.schoolPreset,
+        ownerEmail: 'teacher@school.com',
+        inviteCode: 'SCHL1234',
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 12, 31),
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final l10nBn = AppLocalizations(const Locale('bn'));
+
+      // Household still says পারিবারিক তারিখ
+      expect(groupDateScreenTitle(household, l10nBn), 'পারিবারিক তারিখ');
+      expect(
+          groupDateModalHeader(household, l10nBn, isAdd: true, canEdit: true),
+          'নতুন পারিবারিক তারিখ');
+
+      // School says স্কুল ও ক্লাসের সময়সূচি
+      expect(groupDateScreenTitle(school, l10nBn), 'স্কুল ও ক্লাসের সময়সূচি');
+      expect(groupDateModalHeader(school, l10nBn, isAdd: true, canEdit: true),
+          'নতুন স্কুল বা পরীক্ষার তারিখ');
     });
 
     test('past dates beyond year 2000 are parsed and correctly computed', () {

@@ -41,6 +41,7 @@ import '../features/tour_group/presentation/pages/family_safety_hub_screen.dart'
 import '../features/tour_group/presentation/pages/journey_tracker_screen.dart';
 import '../features/tour_group/presentation/pages/offline_map_viewer_screen.dart';
 import '../features/tour_group/domain/services/offline_map_regions.dart';
+import '../features/tour_group/domain/models/tour_group.dart';
 import '../features/tour_group/presentation/pages/notice_board_screen.dart';
 import '../features/tour_group/presentation/pages/tour_quiz_screen.dart';
 import '../features/tour_group/presentation/widgets/tour_membership_guard.dart';
@@ -262,7 +263,10 @@ class AppRouter {
         path: '/group/:tourId/family-dates',
         pageBuilder: (context, state) => _tripPage(
           state,
-          FamilyDatesScreen(tourId: state.pathParameters['tourId']!),
+          FamilyDatesScreen(
+            tourId: state.pathParameters['tourId']!,
+            group: state.extra as TourGroup?,
+          ),
         ),
       ),
       GoRoute(
