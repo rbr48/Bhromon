@@ -176,9 +176,33 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
               ),
             );
           }
+          // An admin decides the reported problems first, the oldest report first. Each is listed once.
+          final queue = _isAdmin
+              ? reportedProblemsForReview(shown)
+              : const <StudyProblem>[];
+          final rest = [
+            for (final problem in shown)
+              if (!queue.contains(problem)) problem,
+          ];
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [for (final problem in shown) _problemCard(problem)],
+            children: [
+              if (queue.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.translate('study_problem_queue_title'),
+                    style: TextStyle(
+                        color: palette.text,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                  ),
+                ),
+                for (final problem in queue) _problemCard(problem),
+                const SizedBox(height: 8),
+              ],
+              for (final problem in rest) _problemCard(problem),
+            ],
           );
         },
       ),
@@ -233,7 +257,13 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
                 style: TextStyle(
                     color: palette.accentText, fontWeight: FontWeight.w600),
               ),
-              if (!problem.shown) ...[
+              if (problem.isReported) ...[
+                const SizedBox(height: 6),
+                Text(l10n.translate('study_problem_reported_label'),
+                    style: TextStyle(
+                        color: palette.accentText,
+                        fontWeight: FontWeight.w600)),
+              ] else if (!problem.shown) ...[
                 const SizedBox(height: 6),
                 Text(l10n.translate('study_post_waiting_label'),
                     style: TextStyle(

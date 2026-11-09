@@ -20,6 +20,7 @@ const {
   writeBatch,
   increment,
   serverTimestamp,
+  deleteField,
   Timestamp,
 } = require('firebase/firestore');
 
@@ -459,6 +460,167 @@ describe('problems, reference solutions, working and reviews', () => {
       await assertSucceeds(deleteDoc(problemRef(db('member'), P_MEMBER)));
       await assertFails(deleteDoc(problemRef(db('other'), P_ADMIN)));
       await assertSucceeds(deleteDoc(problemRef(db('admin'), P_ADMIN)));
+    });
+  });
+
+  describe('reporting a problem and a working', () => {
+    const problemReportRef = (f, problemId, reporterEmail, subjectId = SUBJECT) =>
+      doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'problems', problemId, 'reports', reporterEmail);
+    const workReportRef = (f, problemId, solverEmail, reporterEmail, subjectId = SUBJECT) =>
+      doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'problems', problemId, 'solutions', solverEmail, 'reports', reporterEmail);
+
+    // A member reports a problem. The report and the hiding of the problem are written in one batch. Only the
+    // first report sets the report time.
+    const reportProblemBatch = (who, problemId, { reason = 'unclear', first = true } = {}) => {
+      const f = db(who);
+      const batch = writeBatch(f);
+      batch.set(problemReportRef(f, problemId, people[who].email), { reason, createdAt: serverTimestamp() });
+      batch.update(problemRef(f, problemId), {
+        shown: false,
+        reportCount: increment(1),
+        ...(first ? { reportedAt: serverTimestamp() } : {}),
+      });
+      return batch.commit();
+    };
+
+    // A member reports a working. The report and the hiding of the working are written in one batch.
+    const reportWorkBatch = (who, problemId, solverEmail, { reason = 'wrong', first = true } = {}) => {
+      const f = db(who);
+      const batch = writeBatch(f);
+      batch.set(workReportRef(f, problemId, solverEmail, people[who].email), { reason, createdAt: serverTimestamp() });
+      batch.update(workRef(f, problemId, solverEmail), {
+        reportCount: increment(1),
+        ...(first ? { reportedAt: serverTimestamp() } : {}),
+      });
+      return batch.commit();
+    };
+
+    test('a member reports a shown problem by someone else, and the report and the hiding go together', async () => {
+      await assertSucceeds(reportProblemBatch('member', P_ADMIN));
+    });
+
+    test('a member cannot report their own problem, nor one an admin has not shown', async () => {
+      await assertFails(reportProblemBatch('member', P_MEMBER));
+      await assertFails(reportProblemBatch('other', P_WAITING));
+    });
+
+    test('a report alone, or a hiding alone, is refused', async () => {
+      await assertFails(setDoc(problemReportRef(db('other'), P_ADMIN, people.other.email), {
+        reason: 'spam',
+        createdAt: serverTimestamp(),
+      }));
+      await assertFails(updateDoc(problemRef(db('other'), P_ADMIN), { reportCount: increment(1) }));
+      await assertFails(updateDoc(problemRef(db('other'), P_ADMIN), {
+        shown: false,
+        reportCount: increment(1),
+        reportedAt: serverTimestamp(),
+      }));
+    });
+
+    test('the count must rise by one with the report, and the reason must be one the app knows', async () => {
+      const f = db('other');
+      const batch = writeBatch(f);
+      batch.set(problemReportRef(f, P_ADMIN, people.other.email), { reason: 'spam', createdAt: serverTimestamp() });
+      batch.update(problemRef(f, P_ADMIN), { shown: false, reportCount: increment(2), reportedAt: serverTimestamp() });
+      await assertFails(batch.commit());
+      await assertFails(reportProblemBatch('other', P_ADMIN, { reason: 'rude' }));
+    });
+
+    test('a member reports a problem once: a second report is refused', async () => {
+      await assertSucceeds(reportProblemBatch('other', P_ADMIN));
+      await assertFails(reportProblemBatch('member', P_ADMIN, { first: false }));
+    });
+
+    test('the reporter and an admin read the reports on a problem; another member does not', async () => {
+      await assertSucceeds(reportProblemBatch('other', P_ADMIN));
+      await assertSucceeds(getDoc(problemReportRef(db('other'), P_ADMIN, people.other.email)));
+      await assertSucceeds(getDoc(problemReportRef(db('admin'), P_ADMIN, people.other.email)));
+      await assertFails(getDoc(problemReportRef(db('member'), P_ADMIN, people.other.email)));
+    });
+
+    test('an admin restores a reported problem: it is shown again and its report time is cleared', async () => {
+      await assertSucceeds(reportProblemBatch('other', P_ADMIN));
+      await assertSucceeds(updateDoc(problemRef(db('admin'), P_ADMIN), { shown: true, reportedAt: deleteField() }));
+    });
+
+    test('a member cannot restore a reported problem', async () => {
+      await assertSucceeds(reportProblemBatch('other', P_ADMIN));
+      await assertFails(updateDoc(problemRef(db('other'), P_ADMIN), { shown: true, reportedAt: deleteField() }));
+      await assertFails(updateDoc(problemRef(db('member'), P_ADMIN), { shown: true, reportedAt: deleteField() }));
+    });
+
+    test('a problem reported again after a restore starts a new report time', async () => {
+      await assertSucceeds(reportProblemBatch('other', P_ADMIN));
+      await assertSucceeds(updateDoc(problemRef(db('admin'), P_ADMIN), { shown: true, reportedAt: deleteField() }));
+      await assertSucceeds(reportProblemBatch('member', P_ADMIN));
+    });
+
+    test('a new problem or working cannot be written with reports already counted', async () => {
+      await assertFails(setDoc(problemRef(db('member'), 'pr-reported'), newProblem(people.member.email, {
+        reportCount: 1,
+        reportedAt: serverTimestamp(),
+      })));
+      await assertFails(setDoc(workRef(db('member'), P_NOREF, people.member.email), newWork({ reportCount: 1 })));
+    });
+
+    test('a member who has submitted their own working reports a peer\'s: the working is hidden and the report goes with it', async () => {
+      await assertSucceeds(reportWorkBatch('member', P_REVIEW, people.other.email));
+    });
+
+    test('a member without a working of their own cannot report a peer\'s, and nobody reports their own', async () => {
+      await assertFails(reportWorkBatch('member', P_ADMIN, people.other.email));
+      await assertFails(reportWorkBatch('member', P_MEMBER, people.member.email));
+    });
+
+    test('a working report alone, without hiding the working, is refused', async () => {
+      await assertFails(setDoc(workReportRef(db('member'), P_REVIEW, people.other.email, people.member.email), {
+        reason: 'wrong',
+        createdAt: serverTimestamp(),
+      }));
+      await assertFails(updateDoc(workRef(db('member'), P_REVIEW, people.other.email), { reportCount: increment(1) }));
+    });
+
+    test('a reported working takes no reviews from members, and an admin may still review it', async () => {
+      // A control first: on a working that is not reported, the same member's review goes through. So the refusal
+      // below is the report's doing, and not the rules' expression limit.
+      await assertSucceeds(setDoc(workRef(db('other'), P_NOREF, people.other.email), newWork()));
+      await assertSucceeds(setDoc(workRef(db('member'), P_NOREF, people.member.email), newWork()));
+      await assertSucceeds(reviewBatch('member', P_NOREF, people.other.email, 'right'));
+      // The owner is an admin-level member, so may report a peer's working without one of their own.
+      await assertSucceeds(reportWorkBatch('owner', P_REVIEW, people.other.email));
+      await assertFails(reviewBatch('member', P_REVIEW, people.other.email, 'right'));
+      await assertSucceeds(reviewBatch('admin', P_REVIEW, people.other.email, 'right'));
+    });
+
+    test('the reporter and an admin read the reports on a working; its author does not', async () => {
+      await assertSucceeds(reportWorkBatch('member', P_REVIEW, people.other.email));
+      await assertSucceeds(getDoc(workReportRef(db('member'), P_REVIEW, people.other.email, people.member.email)));
+      await assertSucceeds(getDoc(workReportRef(db('admin'), P_REVIEW, people.other.email, people.member.email)));
+      await assertFails(getDoc(workReportRef(db('other'), P_REVIEW, people.other.email, people.member.email)));
+    });
+
+    test('an admin restores a reported working, and its report time is cleared', async () => {
+      await assertSucceeds(reportWorkBatch('member', P_REVIEW, people.other.email));
+      await assertSucceeds(updateDoc(workRef(db('admin'), P_REVIEW, people.other.email), { reportedAt: deleteField() }));
+    });
+
+    test('a member cannot clear the report on a working', async () => {
+      await assertSucceeds(reportWorkBatch('member', P_REVIEW, people.other.email));
+      await assertFails(updateDoc(workRef(db('member'), P_REVIEW, people.other.email), { reportedAt: deleteField() }));
+    });
+
+    test('the author of a reported working may still edit its words', async () => {
+      await assertSucceeds(reportWorkBatch('member', P_REVIEW, people.other.email));
+      await assertSucceeds(updateDoc(workRef(db('other'), P_REVIEW, people.other.email), {
+        text: 'Revised after the report.',
+        updatedAt: serverTimestamp(),
+      }));
+    });
+
+    test('an admin removes a reported working; a member cannot', async () => {
+      await assertSucceeds(reportWorkBatch('member', P_REVIEW, people.other.email));
+      await assertFails(deleteDoc(workRef(db('member'), P_REVIEW, people.other.email)));
+      await assertSucceeds(deleteDoc(workRef(db('admin'), P_REVIEW, people.other.email)));
     });
   });
 });
