@@ -2169,12 +2169,9 @@ class TourGroupRepository {
   /// Watches today\'s or a specific day\'s bazar schedule.
   Stream<MessBazarSchedule?> watchBazarScheduleForDay(
       String tourId, String dateKey) {
-    return _sub(tourId, 'mess_bazar_schedule')
-        .doc(dateKey)
-        .snapshots()
-        .map((doc) => doc.exists
-            ? MessBazarSchedule.fromDoc(doc.id, doc.data())
-            : null);
+    return _sub(tourId, 'mess_bazar_schedule').doc(dateKey).snapshots().map(
+        (doc) =>
+            doc.exists ? MessBazarSchedule.fromDoc(doc.id, doc.data()) : null);
   }
 
   /// Saves or updates a bazar duty assignment. Admins can assign anyone;

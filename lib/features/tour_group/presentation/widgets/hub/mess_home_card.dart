@@ -66,9 +66,9 @@ class _MessHomeCardState extends State<MessHomeCard> {
       _repository
           .watchMembers(id)
           .listen((v) => _update(() => _members = v), onError: (Object _) {}),
-      _repository
-          .watchBazarScheduleForDay(id, todayKey)
-          .listen((v) => _update(() => _todayBazar = v), onError: (Object _) {}),
+      _repository.watchBazarScheduleForDay(id, todayKey).listen(
+          (v) => _update(() => _todayBazar = v),
+          onError: (Object _) {}),
     ]);
     _repository.myRole(id).then((r) {
       if (mounted) setState(() => _isAdmin = r?.isAdminOrOwner ?? false);

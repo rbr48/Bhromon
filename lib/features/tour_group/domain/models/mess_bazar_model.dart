@@ -86,15 +86,15 @@ class MessBazarSchedule {
       if (estimatedBudgetPaisa != null)
         'estimatedBudgetPaisa': estimatedBudgetPaisa,
       'isCompleted': isCompleted,
-      if (actualExpensePaisa != null)
-        'actualExpensePaisa': actualExpensePaisa,
+      if (actualExpensePaisa != null) 'actualExpensePaisa': actualExpensePaisa,
       if (expenseId != null && expenseId!.isNotEmpty) 'expenseId': expenseId,
       'updatedByEmail': normalizeEmail(updatedByEmail),
       if (updatedAt != null) 'updatedAt': writeDate(updatedAt!),
     };
   }
 
-  static MessBazarSchedule? fromDoc(String dateKey, Map<String, dynamic>? data) {
+  static MessBazarSchedule? fromDoc(
+      String dateKey, Map<String, dynamic>? data) {
     if (data == null) return null;
     final emailsRaw = data['assignedEmails'];
     final assignedEmails = emailsRaw is List
