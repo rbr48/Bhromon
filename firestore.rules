@@ -942,6 +942,81 @@ service cloud.firestore {
              d.reason in ['wrong', 'unclear', 'spam', 'other'] &&
              d.createdAt is timestamp;
     }
+    // Study materials. A file is stored in the group's study folder on the media server, so its address
+    // must name this group and that folder, with an extension and size of its kind. A link is an http or
+    // https address. A note is text written in the app.
+    function studyMaterialFileOk(tourId, d) {
+      let folder = 'https://bhromon\\.fun/media/' + tourId + '/study/[0-9a-f]{32}\\.';
+      return d.url is string && d.sizeBytes is int && d.sizeBytes > 0 && (
+        (d.kind == 'image' && d.sizeBytes <= 10485760 && d.url.matches(folder + '(jpg|jpeg|png|webp|gif|heic|heif)')) ||
+        (d.kind == 'audio' && d.sizeBytes <= 26214400 && d.url.matches(folder + '(m4a|mp3|aac|wav|ogg|opus)')) ||
+        (d.kind == 'video' && d.sizeBytes <= 104857600 && d.url.matches(folder + '(mp4|mov|m4v|webm|3gp|mkv)')) ||
+        (d.kind == 'file' && d.sizeBytes <= 52428800 && d.url.matches(folder + '(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)'))
+      );
+    }
+    function studyMaterialShapeOk(tourId, d) {
+      return (d.kind == 'link' && d.url is string && d.url.size() >= 8 && d.url.size() <= 2000 &&
+              d.url.matches('https?://.+') && d.get('sizeBytes', null) == null && d.get('body', null) == null) ||
+             (d.kind == 'note' && d.body is string && d.body.size() >= 1 && d.body.size() <= 20000 &&
+              d.get('url', null) == null && d.get('sizeBytes', null) == null) ||
+             (d.kind in ['file', 'image', 'audio', 'video'] && studyMaterialFileOk(tourId, d) && d.get('body', null) == null);
+    }
+    // A material: its title, kind, book and optional chapter, its address or text, whether it waits or is
+    // published or hidden, the member's confirmation of rights, and its reports.
+    function validStudyMaterial(tourId, d) {
+      return d.keys().hasOnly(['title', 'kind', 'bookId', 'chapterId', 'url', 'fileName', 'sizeBytes', 'body', 'status', 'rightsConfirmed', 'reportCount', 'reportedAt', 'createdByEmail', 'createdAt', 'replacesId']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.kind in ['file', 'image', 'audio', 'video', 'link', 'note'] &&
+             d.bookId is string && d.bookId.size() >= 1 && d.bookId.size() <= 40 &&
+             (d.get('chapterId', null) == null || (d.chapterId is string && d.chapterId.size() <= 40)) &&
+             (d.get('fileName', null) == null || (d.fileName is string && d.fileName.size() <= 120)) &&
+             (d.get('replacesId', null) == null || (d.replacesId is string && d.replacesId.size() <= 40)) &&
+             d.status in ['pending', 'published', 'hidden'] &&
+             d.rightsConfirmed == true &&
+             d.reportCount is int && d.reportCount >= 0 &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp &&
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp) &&
+             studyMaterialShapeOk(tourId, d);
+    }
+    // A report of a material: one of the reasons, and when it was made.
+    function validStudyMaterialReport(d) {
+      return d.keys().hasOnly(['reason', 'createdAt']) &&
+             d.reason in ['copyright', 'exam', 'personal', 'wrong', 'other'] &&
+             d.createdAt is timestamp;
+    }
+    // Whether the group publishes materials without an admin's approval. Off unless an admin turns it on.
+    function studyMaterialPublishesDirectly(tourId) {
+      return get(/databases/$(database)/documents/tours/$(tourId)).data.get('studyPolicy', {}).get('materialsNeedApproval', true) == false;
+    }
+    // Whether an update to a material is allowed. An admin publishes a pending material or restores a hidden
+    // one. The uploader or an admin edits the title. A member's report hides it at once, with its count and
+    // the time of the first report. Nothing else about it changes after it is written.
+    function studyMaterialUpdateAllowed(tourId, newData, oldData) {
+      let changed = newData.diff(oldData).affectedKeys();
+      let byAdmin = isTourAdmin(tourId);
+      let byUploader = oldData.createdByEmail == tourUserEmail();
+      return validStudyMaterial(tourId, newData) &&
+             newData.bookId == oldData.bookId &&
+             newData.kind == oldData.kind &&
+             newData.createdByEmail == oldData.createdByEmail &&
+             newData.createdAt == oldData.createdAt &&
+             newData.get('chapterId', null) == oldData.get('chapterId', null) &&
+             newData.get('url', null) == oldData.get('url', null) &&
+             newData.get('body', null) == oldData.get('body', null) &&
+             newData.get('sizeBytes', null) == oldData.get('sizeBytes', null) &&
+             newData.get('fileName', null) == oldData.get('fileName', null) &&
+             newData.get('replacesId', null) == oldData.get('replacesId', null) &&
+             (
+               (byAdmin && changed.hasOnly(['status']) && oldData.status == 'pending' && newData.status == 'published') ||
+               (byAdmin && changed.hasOnly(['status']) && oldData.status == 'hidden' && newData.status == 'published') ||
+               ((byAdmin || byUploader) && changed.hasOnly(['title'])) ||
+               (!byUploader && oldData.status in ['published', 'hidden'] && changed.hasOnly(['status', 'reportCount', 'reportedAt']) &&
+                newData.status == 'hidden' && newData.reportCount == oldData.reportCount + 1 &&
+                ((oldData.get('reportedAt', null) == null && newData.reportedAt == request.time) ||
+                 (oldData.get('reportedAt', null) != null && newData.reportedAt == oldData.reportedAt)))
+             );
+    }
     // Whether an update to a thread is allowed. An admin pins or locks it, or accepts an answer on
     // the asker's behalf. The member who asked accepts or un-accepts an answer, and changes nothing
     // else. An accepted answer must be a reply that exists.
@@ -1062,6 +1137,11 @@ service cloud.firestore {
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['momentsEnabled']) || isManagedTour(tourId)) &&
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['samity']) ||
                      (isSamityTour(tourId) && validSamityConfig(request.resource.data.samity))) &&
+                    // The study policy: whether a member's material waits for an admin. Only a study group has one.
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['studyPolicy']) ||
+                     (isStudyTour(tourId) && request.resource.data.studyPolicy is map &&
+                      request.resource.data.studyPolicy.keys().hasOnly(['materialsNeedApproval']) &&
+                      request.resource.data.studyPolicy.materialsNeedApproval is bool)) &&
                     (!('emergencyContacts' in request.resource.data) ||
                      (request.resource.data.emergencyContacts is list &&
                       request.resource.data.emergencyContacts.size() <= 10)) &&
@@ -1303,6 +1383,50 @@ service cloud.firestore {
                                getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.reportCount == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.reportCount + 1;
             }
           }
+        }
+      }
+
+      // Study materials: a note, a file, a link or a recording a member files under a book. It waits for an
+      // admin unless the group publishes directly. The uploader or an admin edits its title or removes it. A
+      // report hides it at once from everyone but its uploader and the admins who decide it.
+      match /study_materials/{materialId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail() &&
+                         request.resource.data.createdAt == request.time &&
+                         request.resource.data.reportCount == 0 &&
+                         request.resource.data.get('reportedAt', null) == null &&
+                         validStudyMaterial(tourId, request.resource.data) &&
+                         (request.resource.data.status == 'pending' ||
+                          (request.resource.data.status == 'published' &&
+                           (isTourAdmin(tourId) || studyMaterialPublishesDirectly(tourId)))) &&
+                         studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(request.resource.data.bookId)).data);
+        allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         studyMaterialUpdateAllowed(tourId, request.resource.data, resource.data);
+        allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+        // One report per member, never on their own material. The report, the count and the hiding change in
+        // one batch. The reporter and an admin read it; an admin clears reports when the material is removed.
+        match /reports/{reporter} {
+          allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || reporter == tourUserEmail());
+          allow create: if isStudyTour(tourId) && isActiveMember(tourId) && reporter == tourUserEmail() &&
+                           validStudyMaterialReport(request.resource.data) &&
+                           get(/databases/$(database)/documents/tours/$(tourId)/study_materials/$(materialId)).data.createdByEmail != tourUserEmail() &&
+                           get(/databases/$(database)/documents/tours/$(tourId)/study_materials/$(materialId)).data.status in ['published', 'hidden'] &&
+                           getAfter(/databases/$(database)/documents/tours/$(tourId)/study_materials/$(materialId)).data.status == 'hidden' &&
+                           getAfter(/databases/$(database)/documents/tours/$(tourId)/study_materials/$(materialId)).data.reportCount == get(/databases/$(database)/documents/tours/$(tourId)/study_materials/$(materialId)).data.reportCount + 1;
+          allow delete: if isTourAdmin(tourId);
+        }
+
+        // A marker for each member who opened a published material. The member writes their own, once.
+        match /opens/{viewer} {
+          allow read: if isActiveMember(tourId) && (isTourAdmin(tourId) || viewer == tourUserEmail());
+          allow create: if isStudyTour(tourId) && isActiveMember(tourId) && viewer == tourUserEmail() &&
+                           request.resource.data.keys().hasOnly(['openedAt']) &&
+                           request.resource.data.openedAt == request.time &&
+                           get(/databases/$(database)/documents/tours/$(tourId)/study_materials/$(materialId)).data.status == 'published';
+          allow delete: if isTourAdmin(tourId);
         }
       }
 

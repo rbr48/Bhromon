@@ -15,6 +15,7 @@ import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_pace_sheet.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'study_discussion_screen.dart';
+import 'study_materials_screen.dart';
 
 /// One book's chapters in reading order. Each has its due date and guide questions. A member
 /// marks a chapter read in their own name, and can keep a place in the book on this device.
@@ -238,6 +239,17 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     );
   }
 
+  /// Opens the materials of this book: the notes, files, links and recordings members filed.
+  void _openMaterials() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => StudyMaterialsScreen(
+        tourId: widget.tourId,
+        book: widget.book,
+        repository: _repository,
+      ),
+    ));
+  }
+
   /// Opens the discussion of this book: its threads, with the fence and the member's place.
   void _openDiscussion() {
     Navigator.of(context).push(MaterialPageRoute<void>(
@@ -311,6 +323,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         iconTheme: IconThemeData(color: palette.text),
         elevation: 0,
         actions: [
+          IconButton(
+            tooltip: l10n.translate('study_material_title'),
+            icon: const Icon(Icons.folder_open_rounded),
+            onPressed: _openMaterials,
+          ),
           IconButton(
             tooltip: l10n.translate('study_discussion_title'),
             icon: const Icon(Icons.forum_rounded),
