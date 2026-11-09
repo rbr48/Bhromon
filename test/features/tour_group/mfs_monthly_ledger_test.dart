@@ -9,6 +9,7 @@ import 'package:bhromon/features/tour_group/domain/models/expense_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/mfs_sms_parser.dart';
 import 'package:bhromon/features/tour_group/data/monthly_ledger_pdf.dart';
 import 'package:bhromon/features/tour_group/domain/services/trip_ledger_engine.dart';
+import 'package:bhromon/core/localization/tour_translation_keys.dart';
 
 void main() {
   group('MfsSmsParser & MfsTrxIdValidator', () {
@@ -75,6 +76,58 @@ void main() {
           trxId: 'BKL890XYZ1',
           expenses: const [],
           settlements: existingSettlements,
+        ),
+        isFalse,
+      );
+    });
+
+    test('duplicate TrxID localized error string exists in English and Bengali',
+        () {
+      final en = TourTranslationKeys.localizedValues['en']
+          ?['fund_mfs_duplicate_trxid'];
+      final bn = TourTranslationKeys.localizedValues['bn']
+          ?['fund_mfs_duplicate_trxid'];
+
+      expect(en, isNotNull);
+      expect(en, contains('Transaction ID (TrxID) has already been recorded'));
+      expect(bn, isNotNull);
+      expect(bn, contains('ট্রানজ্যাকশন আইডি (TrxID)'));
+    });
+
+    test('detects duplicate TrxID within expenses as well as settlements', () {
+      final existingExpenses = [
+        ExpenseItem(
+          id: 'exp_1',
+          tourId: 'mess_dhaka_1',
+          title: 'Grocery',
+          amountPaisa: 50000,
+          category: 'Food',
+          date: DateTime(2026, 11, 2),
+          addedByEmail: 'rafi@example.com',
+          mfsInfo: const MfsPaymentInfo(
+            provider: MfsProvider.nagad,
+            trxId: 'NGD12345678',
+            status: MfsVerificationStatus.unverified,
+          ),
+        ),
+      ];
+
+      expect(
+        MfsTrxIdValidator.isDuplicateTrxId(
+          tourId: 'mess_dhaka_1',
+          trxId: 'ngd12345678',
+          expenses: existingExpenses,
+          settlements: const [],
+        ),
+        isTrue,
+      );
+
+      expect(
+        MfsTrxIdValidator.isDuplicateTrxId(
+          tourId: 'mess_dhaka_1',
+          trxId: 'NGD99999999',
+          expenses: existingExpenses,
+          settlements: const [],
         ),
         isFalse,
       );

@@ -253,6 +253,94 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), budget));
     });
 
+    const mfsTrx = (by, trxId = 'BKL890XYZ1', provider = 'bkash', amountPaisa = 50000) => ({
+      trxId,
+      provider,
+      recordType: 'settlement',
+      recordId: 'set1',
+      amountPaisa,
+      addedByEmail: by,
+      createdAt: serverTimestamp(),
+    });
+
+    test('mfs_trx_registry: active members record unique valid TrxIDs; duplicate or update fails; author or admin deletes', async () => {
+      const reg = (who, trxId) => doc(db(who), 'tours', TOUR, 'mfs_trx_registry', trxId);
+
+      // Active member creates valid registry entry
+      await assertSucceeds(setDoc(reg('member', 'BKL890XYZ1'), mfsTrx(people.member.email, 'BKL890XYZ1')));
+
+      // Reading registry is permitted for members, denied for outsiders
+      await assertSucceeds(getDoc(reg('other', 'BKL890XYZ1')));
+      await assertFails(getDoc(reg('outsider', 'BKL890XYZ1')));
+
+      // Duplicate creation fails because update is disallowed (update: if false)
+      await assertFails(setDoc(reg('other', 'BKL890XYZ1'), mfsTrx(people.other.email, 'BKL890XYZ1')));
+      await assertFails(updateDoc(reg('member', 'BKL890XYZ1'), { amountPaisa: 100000 }));
+
+      // Outsiders cannot create
+      await assertFails(setDoc(reg('outsider', 'OUTSIDER123'), mfsTrx(people.outsider.email, 'OUTSIDER123')));
+
+      // Invalid TrxID format (lowercase, too short, symbols) or invalid provider or invalid amount fails
+      await assertFails(setDoc(reg('member', 'short'), mfsTrx(people.member.email, 'short')));
+      await assertFails(setDoc(reg('member', 'lowercase123'), mfsTrx(people.member.email, 'lowercase123')));
+      await assertFails(setDoc(reg('member', 'BKL890XYZ2'), mfsTrx(people.member.email, 'BKL890XYZ2', 'invalid_provider')));
+      await assertFails(setDoc(reg('member', 'BKL890XYZ3'), mfsTrx(people.member.email, 'BKL890XYZ3', 'bkash', 0)));
+      await assertFails(setDoc(reg('member', 'BKL890XYZ4'), { ...mfsTrx(people.member.email, 'BKL890XYZ4'), extraKey: 'bad' }));
+      // AddedByEmail must match auth email
+      await assertFails(setDoc(reg('member', 'BKL890XYZ5'), mfsTrx(people.other.email, 'BKL890XYZ5')));
+
+      // Deletion: non-author member cannot delete; author can delete; admin can delete
+      await assertFails(deleteDoc(reg('other', 'BKL890XYZ1')));
+      await assertSucceeds(deleteDoc(reg('member', 'BKL890XYZ1')));
+
+      // Re-create and test admin delete
+      await assertSucceeds(setDoc(reg('member', 'BKL890XYZ1'), mfsTrx(people.member.email, 'BKL890XYZ1')));
+      await assertSucceeds(deleteDoc(reg('admin', 'BKL890XYZ1')));
+    });
+
+    const settlement = (by, from, to, status = 'unverified', trxId = 'BKL890XYZ1', provider = 'bkash') => ({
+      tourId: TOUR,
+      fromMemberId: from,
+      fromMemberName: 'Sender',
+      toMemberId: to,
+      toMemberName: 'Receiver',
+      amountPaisa: 50000,
+      addedByEmail: by,
+      date: '2026-11-09T10:00:00.000',
+      mfsInfo: {
+        provider,
+        trxId,
+        status,
+        feePaisa: 500,
+        feeAbsorbedByGroup: false,
+      },
+    });
+
+    test('settlements: members record settlements they take part in; admin verifies; member cannot verify on create', async () => {
+      const s = (who, id) => doc(db(who), 'tours', TOUR, 'settlements', id);
+
+      // Member records unverified settlement where they are the payer
+      await assertSucceeds(setDoc(s('member', 's1'), settlement(people.member.email, people.member.email, people.other.email, 'unverified')));
+
+      // Member cannot record already 'verified' settlement on create (canVerifyMfsOnCreate)
+      await assertFails(setDoc(s('member', 's2'), settlement(people.member.email, people.member.email, people.other.email, 'verified')));
+
+      // Admin CAN record already verified settlement on create
+      await assertSucceeds(setDoc(s('admin', 's2'), settlement(people.admin.email, people.member.email, people.other.email, 'verified')));
+
+      // Outsiders cannot read or create settlements
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'settlements')));
+      await assertFails(setDoc(s('outsider', 's3'), settlement(people.outsider.email, people.outsider.email, people.member.email)));
+
+      // Admin can update status to verified or disputed
+      await assertSucceeds(updateDoc(s('admin', 's1'), { 'mfsInfo.status': 'verified', 'mfsInfo.verifiedByUserId': people.admin.email }));
+
+      // Once verified, non-admin member cannot delete it
+      await assertFails(deleteDoc(s('member', 's1')));
+      // Admin can delete it
+      await assertSucceeds(deleteDoc(s('admin', 's1')));
+    });
+
     test('members answer a notice only for themselves', async () => {
       const n = (who) => doc(db(who), 'tours', TOUR, 'notices', 'n1');
       await env.withSecurityRulesDisabled(async (ctx) => {
