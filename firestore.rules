@@ -1430,6 +1430,33 @@ service cloud.firestore {
                          (resource.data.email == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Mess bazar duty schedule: admins assign members to daily market duties.
+      // Assigned members can update status and notes; only admins can reassign or delete.
+      match /mess_bazar_schedule/{dateKey} {
+        function validBazarSchedule(d) {
+          return d.keys().hasOnly(['dateKey', 'assignedEmails', 'assignedNames', 'note', 'estimatedBudgetPaisa', 'isCompleted', 'actualExpensePaisa', 'expenseId', 'updatedByEmail', 'updatedAt']) &&
+                 d.dateKey == dateKey &&
+                 d.assignedEmails is list && d.assignedEmails.size() <= 20 &&
+                 (!('assignedNames' in d) || d.assignedNames is list) &&
+                 (!('note' in d) || (d.note is string && d.note.size() <= 500)) &&
+                 (!('estimatedBudgetPaisa' in d) || (d.estimatedBudgetPaisa is int && d.estimatedBudgetPaisa >= 0)) &&
+                 (!('actualExpensePaisa' in d) || (d.actualExpensePaisa is int && d.actualExpensePaisa >= 0)) &&
+                 (!('expenseId' in d) || d.expenseId is string) &&
+                 d.isCompleted is bool &&
+                 d.updatedByEmail == tourUserEmail();
+        }
+
+        allow read: if isMessTour(tourId) && isActiveMember(tourId);
+        allow create: if isMessTour(tourId) && isActiveMember(tourId) && isTourAdmin(tourId) &&
+                         validBazarSchedule(request.resource.data);
+        allow update: if isMessTour(tourId) && isActiveMember(tourId) && validBazarSchedule(request.resource.data) &&
+                         (isTourAdmin(tourId) ||
+                          (resource.data.assignedEmails.hasAny([tourUserEmail()]) &&
+                           request.resource.data.assignedEmails == resource.data.assignedEmails &&
+                           request.resource.data.dateKey == resource.data.dateKey));
+        allow delete: if isMessTour(tourId) && isActiveMember(tourId) && isTourAdmin(tourId);
+      }
+
       // Service requests in a housing society. Any member raises one under their own email, and
       // it starts open. While it is open its author may correct the words. The owner or an
       // admin moves it on and leaves a note for the residents, and the author or an admin

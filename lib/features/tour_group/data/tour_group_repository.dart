@@ -26,6 +26,7 @@ import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/services/study_chapter_rules.dart';
 import '../domain/models/meal_log.dart';
+import '../domain/models/mess_bazar_model.dart';
 import '../domain/models/samity_models.dart';
 import '../domain/models/service_request_models.dart';
 import '../domain/services/meal_engine.dart';
@@ -2147,6 +2148,49 @@ class TourGroupRepository {
       _sub(tourId, 'meals')
           .where('dateKey', isGreaterThanOrEqualTo: mealMonthFirstKey(month))
           .where('dateKey', isLessThanOrEqualTo: mealMonthLastKey(month));
+
+  /// Watches upcoming and recent mess bazar duty assignments.
+  Stream<List<MessBazarSchedule>> watchBazarSchedules(String tourId,
+      {int limit = 60}) {
+    return _sub(tourId, 'mess_bazar_schedule')
+        .orderBy('dateKey', descending: false)
+        .limit(limit)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (MessBazarSchedule.fromDoc(d.id, d.data())
+                    case final schedule?)
+                  schedule,
+            ]);
+  }
+
+  /// Watches today\'s or a specific day\'s bazar schedule.
+  Stream<MessBazarSchedule?> watchBazarScheduleForDay(
+      String tourId, String dateKey) {
+    return _sub(tourId, 'mess_bazar_schedule')
+        .doc(dateKey)
+        .snapshots()
+        .map((doc) => doc.exists
+            ? MessBazarSchedule.fromDoc(doc.id, doc.data())
+            : null);
+  }
+
+  /// Saves or updates a bazar duty assignment. Admins can assign anyone;
+  /// assigned members can update the completion status or shopping note.
+  Future<void> saveBazarSchedule(
+      String tourId, MessBazarSchedule schedule) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'mess_bazar_schedule').doc(schedule.dateKey).set({
+      ...schedule.toMap(),
+      'updatedByEmail': email,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Deletes a bazar schedule entry (owner/admin only).
+  Future<void> deleteBazarSchedule(String tourId, String dateKey) async {
+    await _sub(tourId, 'mess_bazar_schedule').doc(dateKey).delete();
+  }
 
   // ---------------------------------------------------------------------------
   // Housing society service requests

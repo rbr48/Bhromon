@@ -10,6 +10,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/family_date_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/family_task_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/meal_log.dart';
+import 'package:bhromon/features/tour_group/domain/models/mess_bazar_model.dart';
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/samity_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/service_request_models.dart';
@@ -59,6 +60,9 @@ class _Repo extends TourGroupRepository {
   @override
   Stream<List<MealLog>> watchMealsForMonth(String tourId, DateTime month) =>
       Stream.value(const []);
+  @override
+  Stream<MessBazarSchedule?> watchBazarScheduleForDay(String tourId, String dateKey) => Stream.value(null);
+
 
   @override
   Stream<List<ServiceRequest>> watchServiceRequests(String tourId) =>

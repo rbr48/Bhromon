@@ -614,6 +614,33 @@ def test_send_ledger_notification():
     assert engine.stats["ledger_pushes_sent"] == 1
 
 
+def test_send_bazar_duty_notification():
+    engine = NotificationEngine()
+    engine.get_uids_for_emails = MagicMock(return_value=["uid_alice", "uid_bob"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_alice", MagicMock(), "en")])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_bazar_duty_notification(
+        tour_id="tour_mess",
+        date_key="2026-11-09",
+        assigned_emails=["alice@test.com", "bob@test.com"],
+        note="Fish and vegetables",
+        estimated_budget_paisa=50000,
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert res["recipients"] == 2
+
+    # Second call is deduplicated
+    res2 = engine.send_bazar_duty_notification(
+        tour_id="tour_mess",
+        date_key="2026-11-09",
+        assigned_emails=["alice@test.com"],
+    )
+    assert res2["status"] == "already_sent"
+
+
 def test_send_broadcast_notification():
     engine = NotificationEngine()
     mock_db = MagicMock()
