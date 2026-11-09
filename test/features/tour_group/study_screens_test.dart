@@ -42,6 +42,10 @@ class _FakeStudyRepo extends TourGroupRepository {
       Stream.value(sessions);
 
   @override
+  Stream<StudyVoteTally> watchStudyBookVotes(String tourId, String bookId) =>
+      Stream.value(StudyVoteTally.none);
+
+  @override
   Future<void> addStudyBook(
     String tourId, {
     required String title,
@@ -83,6 +87,7 @@ class _FakeStudyRepo extends TourGroupRepository {
     required String title,
     required DateTime startsAt,
     String? bookId,
+    List<String> chapterIds = const [],
     String place = '',
     String notes = '',
   }) async {

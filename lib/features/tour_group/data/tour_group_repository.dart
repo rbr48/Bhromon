@@ -23,6 +23,7 @@ import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/study_models.dart';
 import '../domain/models/study_subject_models.dart';
+import '../domain/services/study_chapter_rules.dart';
 import '../domain/models/meal_log.dart';
 import '../domain/models/samity_models.dart';
 import '../domain/models/service_request_models.dart';
@@ -2700,6 +2701,7 @@ class TourGroupRepository {
     required String title,
     required DateTime startsAt,
     String? bookId,
+    List<String> chapterIds = const [],
     String place = '',
     String notes = '',
   }) async {
@@ -2709,6 +2711,7 @@ class TourGroupRepository {
       title: title.trim(),
       startsAt: startsAt,
       bookId: bookId,
+      chapterIds: chapterIds,
       place: place.trim(),
       notes: notes.trim(),
       createdByEmail: email,
@@ -2725,6 +2728,7 @@ class TourGroupRepository {
       'title': session.title.trim(),
       'startsAt': session.startsAt,
       'bookId': session.bookId,
+      'chapterIds': session.chapterIds.isEmpty ? null : session.chapterIds,
       'place': place.isEmpty ? null : place,
       'notes': notes.isEmpty ? null : notes,
     });
@@ -2733,6 +2737,235 @@ class TourGroupRepository {
   Future<void> deleteReadingSession(String tourId, String sessionId) async {
     _requireEmail();
     await _sub(tourId, 'reading_sessions').doc(sessionId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Study books: votes on a proposal, chapters, read marks and the reading pace.
+  // The rules in firestore.rules say who may write each; the dates come from
+  // study_chapter_rules.dart.
+  // ---------------------------------------------------------------------------
+
+  DocumentReference<Map<String, dynamic>> _studyBookDoc(
+    String tourId,
+    String bookId,
+  ) =>
+      _sub(tourId, 'study_books').doc(bookId);
+
+  DocumentReference<Map<String, dynamic>> _readMarkDoc(
+    String tourId,
+    String bookId,
+    String chapterId,
+    String email,
+  ) =>
+      _studyBookDoc(tourId, bookId)
+          .collection('chapters')
+          .doc(chapterId)
+          .collection('reads')
+          .doc(email);
+
+  /// How many members would read a proposed book, and whether the signed-in member is one.
+  Stream<StudyVoteTally> watchStudyBookVotes(String tourId, String bookId) {
+    final me = currentEmail;
+    return _studyBookDoc(tourId, bookId)
+        .collection('votes')
+        .limit(500)
+        .snapshots()
+        .map((s) => StudyVoteTally(
+              count: s.docs.length,
+              mine: s.docs.any((d) => d.id == me),
+            ));
+  }
+
+  /// Says that the signed-in member would read a proposed book, or takes that back.
+  Future<void> setStudyBookVote(
+    String tourId,
+    String bookId, {
+    required bool voted,
+  }) async {
+    final email = _requireEmail();
+    final vote = _studyBookDoc(tourId, bookId).collection('votes').doc(email);
+    if (voted) {
+      await vote.set({'createdAt': FieldValue.serverTimestamp()});
+    } else {
+      await vote.delete();
+    }
+  }
+
+  /// The chapters of a book, in no particular order; sort them with sortStudyChapters.
+  Stream<List<StudyChapter>> watchStudyChapters(String tourId, String bookId) {
+    return _studyBookDoc(tourId, bookId)
+        .collection('chapters')
+        .limit(200)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyChapter.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final chapter?)
+                  chapter,
+            ]);
+  }
+
+  /// Adds a chapter to a book. Only an admin does this.
+  Future<void> addStudyChapter(
+    String tourId,
+    String bookId,
+    StudyChapter chapter,
+  ) async {
+    _requireEmail();
+    await _studyBookDoc(tourId, bookId)
+        .collection('chapters')
+        .add(chapter.toFields());
+  }
+
+  /// Changes a chapter's number, title, pages, due date or guide questions. Only an admin
+  /// does this.
+  Future<void> editStudyChapter(
+    String tourId,
+    String bookId,
+    StudyChapter chapter,
+  ) async {
+    _requireEmail();
+    await _studyBookDoc(tourId, bookId)
+        .collection('chapters')
+        .doc(chapter.id)
+        .update(chapter.toFields());
+  }
+
+  /// Removes a chapter. Only an admin does this. Other members' read marks under it are not
+  /// removed with it, since the rules let each member remove only their own.
+  Future<void> deleteStudyChapter(
+    String tourId,
+    String bookId,
+    String chapterId,
+  ) async {
+    _requireEmail();
+    await _studyBookDoc(tourId, bookId)
+        .collection('chapters')
+        .doc(chapterId)
+        .delete();
+  }
+
+  /// Sets every chapter's due date from a start date and a number of chapters a week. The
+  /// chapters are taken in reading order, so the first ones fall due first. Only an admin
+  /// does this, and any date can be changed afterwards.
+  Future<void> setStudyReadingPace(
+    String tourId,
+    String bookId, {
+    required List<StudyChapter> chapters,
+    required DateTime start,
+    required int perWeek,
+  }) async {
+    _requireEmail();
+    final ordered = sortStudyChapters(chapters);
+    final dues =
+        chapterDueDates(start: start, perWeek: perWeek, count: ordered.length);
+    final batch = _firestore.batch();
+    final col = _studyBookDoc(tourId, bookId).collection('chapters');
+    for (var i = 0; i < ordered.length; i++) {
+      batch.update(col.doc(ordered[i].id), {'dueOn': dues[i]});
+    }
+    await batch.commit();
+  }
+
+  /// The signed-in member's read marks on a book's chapters, by chapter id. It follows the
+  /// chapters as they change and each mark as it is made or taken back. A member who is not
+  /// signed in gets an empty map.
+  Stream<Map<String, StudyReadMark>> watchMyReadMarks(
+    String tourId,
+    String bookId,
+  ) {
+    final email = currentEmail;
+    final controller = StreamController<Map<String, StudyReadMark>>();
+    final marks = <String, StudyReadMark>{};
+    final perChapter =
+        <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? chapters;
+
+    void emit() {
+      if (!controller.isClosed) controller.add(Map.of(marks));
+    }
+
+    controller
+      ..onListen = () {
+        if (email.isEmpty) {
+          emit();
+          return;
+        }
+        chapters = _studyBookDoc(tourId, bookId)
+            .collection('chapters')
+            .limit(200)
+            .snapshots()
+            .listen((snap) {
+          final ids = {for (final d in snap.docs) d.id};
+          for (final gone
+              in perChapter.keys.where((id) => !ids.contains(id)).toList()) {
+            perChapter.remove(gone)?.cancel();
+            marks.remove(gone);
+          }
+          for (final id in ids) {
+            perChapter.putIfAbsent(id, () {
+              return _readMarkDoc(tourId, bookId, id, email).snapshots().listen(
+                  (doc) {
+                if (doc.exists) {
+                  marks[id] = StudyReadMark.fromMap(
+                    id,
+                    _datesAsDateTimes(doc.data() ?? const {}),
+                  );
+                } else {
+                  marks.remove(id);
+                }
+                emit();
+              }, onError: controller.addError);
+            });
+          }
+          emit();
+        }, onError: controller.addError);
+      }
+      ..onCancel = () {
+        chapters?.cancel();
+        for (final sub in perChapter.values) {
+          sub.cancel();
+        }
+        perChapter.clear();
+      };
+    return controller.stream;
+  }
+
+  /// Marks a chapter read in the signed-in member's own name. A counted mark joins the group
+  /// total; an uncounted one stays private to its member.
+  Future<void> markStudyChapterRead(
+    String tourId,
+    String bookId,
+    String chapterId, {
+    required bool counted,
+  }) async {
+    final email = _requireEmail();
+    await _readMarkDoc(tourId, bookId, chapterId, email).set({
+      'readAt': FieldValue.serverTimestamp(),
+      'counted': counted,
+    });
+  }
+
+  /// Changes whether the member's read mark counts towards the group total.
+  Future<void> setStudyChapterReadCounted(
+    String tourId,
+    String bookId,
+    String chapterId, {
+    required bool counted,
+  }) async {
+    final email = _requireEmail();
+    await _readMarkDoc(tourId, bookId, chapterId, email)
+        .update({'counted': counted});
+  }
+
+  /// Takes the member's read mark back.
+  Future<void> unmarkStudyChapterRead(
+    String tourId,
+    String bookId,
+    String chapterId,
+  ) async {
+    final email = _requireEmail();
+    await _readMarkDoc(tourId, bookId, chapterId, email).delete();
   }
 
   // ---------------------------------------------------------------------------

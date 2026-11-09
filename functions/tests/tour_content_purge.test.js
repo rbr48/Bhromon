@@ -207,6 +207,33 @@ async function seed() {
     createdAt: new Date('2026-11-02T10:00:00Z'),
   });
 
+  // A proposed book the leaver and another member would read, and a listed book's chapter that
+  // the leaver and another member have marked read. The votes and read marks are each member's
+  // own, so the leaver's go and the others' stay. The chapter is the admin's record and stays.
+  await set(`tours/${TOUR}/study_books/bk_proposal`, {
+    title: 'Dune',
+    approval: 'proposed',
+    createdByEmail: OTHER,
+  });
+  await set(`tours/${TOUR}/study_books/bk_proposal/votes/${LEAVER}`, {
+    createdAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/bk_proposal/votes/${OTHER}`, {
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1`, {
+    number: 1,
+    title: 'Part one',
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/reads/${LEAVER}`, {
+    readAt: new Date('2026-11-02T11:00:00Z'),
+    counted: false,
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/reads/${OTHER}`, {
+    readAt: new Date('2026-11-02T12:00:00Z'),
+    counted: true,
+  });
+
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
     title: 'Lunch',
@@ -523,6 +550,21 @@ describe('tour content purge', () => {
       text: 'Past papers for the last five years.',
       createdByEmail: OTHER,
       helpfulCount: 1,
+    });
+  });
+
+  it('a leaver’s votes and read marks go, the others’ stay, and the chapter stays', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    expect(await exists(`tours/${TOUR}/study_books/bk_proposal/votes/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_books/bk_proposal/votes/${OTHER}`)).toBe(true);
+    expect(await exists(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/reads/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/reads/${OTHER}`)).toBe(true);
+    expect(await read(`tours/${TOUR}/study_books/sb_other/chapters/ch_1`)).toMatchObject({
+      number: 1,
+      title: 'Part one',
     });
   });
 

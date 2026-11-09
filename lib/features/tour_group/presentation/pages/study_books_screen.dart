@@ -10,6 +10,8 @@ import '../../domain/services/study_rules.dart';
 import '../widgets/study/study_book_editor.dart';
 import '../widgets/study/study_decline_dialog.dart';
 import '../widgets/study/study_labels.dart';
+import '../widgets/study/study_vote_row.dart';
+import 'study_book_chapters_screen.dart';
 
 /// A study or book club's shared book list. A member proposes a book, and an admin lists it
 /// or declines it. Anyone moves a listed book along its statuses. A book's creator or an
@@ -124,6 +126,17 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
       () => _repository.declineStudyBook(widget.tourId, book.id, note: note),
       'study_book_declined_done',
     );
+  }
+
+  /// Opens a listed book's chapters, with the reading progress of the signed-in member.
+  void _openChapters(StudyBook book) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => StudyBookChaptersScreen(
+        tourId: widget.tourId,
+        book: book,
+        repository: _repository,
+      ),
+    ));
   }
 
   /// Asks an admin for the optional note. Null when the admin cancels.
@@ -300,6 +313,15 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
             subtitle: Text(subtitle, style: TextStyle(color: palette.text54)),
             trailing: _creatorMenu(book),
           ),
+          if (book.isProposed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+              child: StudyVoteRow(
+                tourId: widget.tourId,
+                bookId: book.id,
+                repository: _repository,
+              ),
+            ),
           if (_isAdmin)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
@@ -359,7 +381,7 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        onTap: canEdit ? () => _edit(book) : null,
+        onTap: () => _openChapters(book),
         title: Text(book.title,
             style: TextStyle(color: palette.text, fontWeight: FontWeight.w600)),
         subtitle: book.author.isEmpty
