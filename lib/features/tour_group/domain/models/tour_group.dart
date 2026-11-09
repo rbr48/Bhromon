@@ -519,40 +519,40 @@ class TourGroup {
   }
 
   /// An office or team: a family-style circle where only admins write notices.
-  bool get isOffice => effectivePreset == officePreset;
+  bool get isOffice => preset == officePreset;
 
   /// A campus, class, batch or club: the office rules, with campus copy.
-  bool get isCampus => effectivePreset == campusPreset;
+  bool get isCampus => preset == campusPreset;
 
   /// A mess or shared home: a family-style circle with its own categories and
   /// channels. The owner and admins post its notices, and members answer them.
-  bool get isMess => effectivePreset == messPreset;
+  bool get isMess => preset == messPreset;
 
   /// A housing society or apartment building: a family-style circle with its own
   /// categories, channels and service requests.
-  bool get isSociety => effectivePreset == societyPreset;
+  bool get isSociety => preset == societyPreset;
 
   /// A rotating savings group: a family-style circle with a schedule of payments and
   /// payouts.
-  bool get isSamity => effectivePreset == samityPreset;
+  bool get isSamity => preset == samityPreset;
 
   /// A school, coaching centre or class: a family-style circle where the teachers post
   /// the notices. SOS stays on.
-  bool get isSchool => effectivePreset == schoolPreset;
+  bool get isSchool => preset == schoolPreset;
 
   /// A sports team or gym: a family-style circle where the coach posts the notices.
-  bool get isSports => effectivePreset == sportsPreset;
+  bool get isSports => preset == sportsPreset;
 
   /// A study or book club: a family-style circle where any member can post.
-  bool get isStudy => effectivePreset == studyPreset;
+  bool get isStudy => preset == studyPreset;
 
   /// A neighbourhood committee: a family-style circle with notices and service requests,
   /// as in a housing society.
-  bool get isCommittee => effectivePreset == committeePreset;
+  bool get isCommittee => preset == committeePreset;
 
   /// A friends circle: a casual family-style circle for friends with hangout plans,
   /// dining splits, shared checklists, games and photos. Any friend can post.
-  bool get isFriends => effectivePreset == friendsPreset;
+  bool get isFriends => preset == friendsPreset;
 
   /// An office or a campus: a workspace, where the household tiles and records do not
   /// apply and SOS is refused.
@@ -560,7 +560,7 @@ class TourGroup {
 
   /// A plain household: a family circle with no preset. Only a household keeps
   /// dependents, the family album and family dates.
-  bool get isHousehold => isFamily && effectivePreset == null;
+  bool get isHousehold => isFamily && preset == null;
 
   /// Whether the owner and admins alone post notices: an office, a campus, a mess, a
   /// housing society or a samity. Members answer them. A plain family circle lets any

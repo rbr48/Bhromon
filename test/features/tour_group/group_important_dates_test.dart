@@ -142,8 +142,7 @@ void main() {
       );
 
       expect(friendsByName.effectivePreset, TourGroup.friendsPreset);
-      expect(friendsByName.isFriends, isTrue);
-      expect(friendsByName.isHousehold, isFalse);
+      expect(friendsByName.preset, isNull);
 
       final l10nBn = AppLocalizations(const Locale('bn'));
       expect(
