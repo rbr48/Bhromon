@@ -82,3 +82,47 @@ List<StudyProblem> sortStudyProblems(List<StudyProblem> problems) {
   });
   return sorted;
 }
+
+/// Whether a viewer may report a problem: a shown problem that the viewer did not write. A report hides
+/// the problem from everyone but its author and the admins, until an admin restores it.
+bool canReportProblem({
+  required StudyProblem problem,
+  required String viewerEmail,
+}) =>
+    problem.shown && problem.createdByEmail != viewerEmail;
+
+/// Whether a viewer may report a working: one that is not their own, by a member who has submitted their
+/// own working, or by an admin. Such a viewer can see the working, so the report is theirs to make.
+bool canReportWork({
+  required String solverEmail,
+  required String viewerEmail,
+  required bool viewerHasWork,
+  bool viewerIsAdmin = false,
+}) =>
+    solverEmail != viewerEmail && (viewerHasWork || viewerIsAdmin);
+
+/// Whether a viewer sees a working. A reported working is hidden from everyone but its author and the
+/// admins. The rules cannot filter a list read, so the screen asks this of each working it shows.
+bool workVisibleTo({
+  required StudyProblemSolution work,
+  required String viewerEmail,
+  required bool isAdmin,
+}) =>
+    !work.isReported || isAdmin || work.solverEmail == viewerEmail;
+
+/// The problems an admin must decide, because they were reported and are hidden: the oldest report first.
+List<StudyProblem> reportedProblemsForReview(Iterable<StudyProblem> problems) {
+  final reported = [
+    for (final problem in problems)
+      if (problem.isReported && !problem.shown) problem,
+  ];
+  reported.sort((a, b) {
+    final ta = a.reportedAt;
+    final tb = b.reportedAt;
+    if (ta == null && tb == null) return 0;
+    if (ta == null) return 1;
+    if (tb == null) return -1;
+    return ta.compareTo(tb);
+  });
+  return reported;
+}

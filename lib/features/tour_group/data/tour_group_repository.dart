@@ -3405,6 +3405,96 @@ class TourGroupRepository {
     await batch.commit();
   }
 
+  /// Reports a problem to the admins. The problem is hidden at once from everyone but its author and the
+  /// admins, and its report count rises by one. The report and the count move in one batch. The report
+  /// time is set by the first report only, so a later report keeps it.
+  Future<void> reportStudyProblem(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    required StudyReportReason reason,
+  }) async {
+    final email = _requireEmail();
+    final problem = _problemRef(tourId, subjectId, problemId);
+    final snap = await problem.get();
+    final alreadyReported = snap.data()?['reportedAt'] != null;
+    final batch = _firestore.batch();
+    batch.set(problem.collection('reports').doc(email), {
+      'reason': reason.name,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(problem, {
+      'shown': false,
+      'reportCount': FieldValue.increment(1),
+      if (!alreadyReported) 'reportedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  /// Shows a reported problem to the members again, and clears its report time. Only an admin does this.
+  Future<void> restoreStudyProblem(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, problemId).update({
+      'shown': true,
+      'reportedAt': FieldValue.delete(),
+    });
+  }
+
+  /// Reports a member's working to the admins. The working is hidden at once from everyone but its author
+  /// and the admins, and its report count rises by one. The report and the count move in one batch, as a
+  /// problem's do.
+  Future<void> reportStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail, {
+    required StudyReportReason reason,
+  }) async {
+    final email = _requireEmail();
+    final work = _workRef(tourId, subjectId, problemId, solverEmail);
+    final snap = await work.get();
+    final alreadyReported = snap.data()?['reportedAt'] != null;
+    final batch = _firestore.batch();
+    batch.set(work.collection('reports').doc(email), {
+      'reason': reason.name,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(work, {
+      'reportCount': FieldValue.increment(1),
+      if (!alreadyReported) 'reportedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  /// Shows a reported working to the members again, and clears its report time. Only an admin does this.
+  Future<void> restoreStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+  ) async {
+    _requireEmail();
+    await _workRef(tourId, subjectId, problemId, solverEmail).update({
+      'reportedAt': FieldValue.delete(),
+    });
+  }
+
+  /// Removes a member's working. An admin does this to a reported working; the rules also let the member
+  /// remove their own. The reviews under it stay in the database, unread.
+  Future<void> deleteStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+  ) async {
+    _requireEmail();
+    await _workRef(tourId, subjectId, problemId, solverEmail).delete();
+  }
+
   Stream<List<ReadingSession>> watchReadingSessions(String tourId) {
     return _sub(tourId, 'reading_sessions').limit(300).snapshots().map((s) => [
           for (final d in s.docs)
