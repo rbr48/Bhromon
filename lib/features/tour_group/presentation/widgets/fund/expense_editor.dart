@@ -70,6 +70,7 @@ class ExpenseDraft {
     required this.notes,
     this.receiptUrl,
     this.newReceiptFile,
+    this.mfsInfo,
   });
 
   final String title;
@@ -88,6 +89,7 @@ class ExpenseDraft {
   final String? notes;
   final String? receiptUrl;
   final XFile? newReceiptFile;
+  final MfsPaymentInfo? mfsInfo;
 }
 
 Future<ExpenseDraft?> showExpenseEditor(
@@ -327,6 +329,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
         notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         receiptUrl: _receiptUrl,
         newReceiptFile: _pickedReceipt,
+        mfsInfo: e?.mfsInfo,
       ),
     );
   }

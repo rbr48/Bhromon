@@ -1569,6 +1569,69 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   ],
                 ),
               ),
+              StreamBuilder<List<VoiceParticipant>>(
+                stream:
+                    _voiceService.watchParticipants(widget.tourId, activeId),
+                builder: (context, snap) {
+                  final participants = snap.data ?? const <VoiceParticipant>[];
+                  if (participants.isEmpty) return const SizedBox.shrink();
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(width: 6),
+                      for (final p in participants.take(3)) ...[
+                        Builder(
+                          builder: (context) {
+                            final isSpeaking =
+                                _voiceService.isSpeaking(p.email);
+                            return Container(
+                              margin: const EdgeInsets.only(right: 4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSpeaking
+                                      ? AppColors.mintGreen
+                                      : Colors.transparent,
+                                  width: isSpeaking ? 2 : 1,
+                                ),
+                                boxShadow: isSpeaking
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.mintGreen
+                                              .withValues(alpha: 0.6),
+                                          blurRadius: 6,
+                                          spreadRadius: 1,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: CircleAvatar(
+                                radius: 12,
+                                backgroundColor: context.forest
+                                    .surfaceFor(const Color(0xFF1F2C34)),
+                                backgroundImage:
+                                    p.photoUrl != null && p.photoUrl!.isNotEmpty
+                                        ? NetworkImage(p.photoUrl!)
+                                        : null,
+                                child: p.photoUrl == null || p.photoUrl!.isEmpty
+                                    ? Text(
+                                        p.displayName.isNotEmpty
+                                            ? p.displayName[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold),
+                                      )
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
               IconButton(
                 icon: Icon(
                   _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,

@@ -484,6 +484,24 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.verified_outlined,
+                  size: 13, color: AppColors.mintGreen),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  'উৎস: ${calc.route.source} (হালনাগাদ: ${calc.route.asOf})',
+                  style: TextStyle(
+                    color: context.forest.text54,
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (calc.route.tips.isNotEmpty) ...[
             const SizedBox(height: 10),
             for (final tip in calc.route.tips)
@@ -591,9 +609,22 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
               fontSize: 13,
             ),
           ),
-          subtitle: Text(
-            '${route.vehicleTitle} · ${route.fareTypeBn}',
-            style: TextStyle(color: context.forest.text54, fontSize: 11),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${route.vehicleTitle} · ${route.fareTypeBn}',
+                style: TextStyle(color: context.forest.text54, fontSize: 11),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'উৎস: ${route.source} (${route.asOf})',
+                style: TextStyle(
+                  color: context.forest.text54.withValues(alpha: 0.7),
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,

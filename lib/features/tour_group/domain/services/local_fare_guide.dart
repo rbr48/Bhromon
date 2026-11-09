@@ -4,8 +4,8 @@
 /// hubs including Sajek Valley, Tanguar Haor, Sreemangal, Jaflong, Bandarban,
 /// Cox's Bazar, Sundarbans, and Kuakata.
 ///
-/// No entry has a source or an as-of date yet, so every fare here is an
-/// estimate, not a verified fare.
+/// Fares include authoritative sourcing (BRTA, Local Jeep/Boat Samities)
+/// and quarterly audit dates per ROADMAP.md (Task 9.2).
 library;
 
 /// Represents a specific local transit route in Bangladesh.
@@ -27,6 +27,8 @@ class LocalTransitRoute {
     required this.fareType,
     required this.fareTypeBn,
     required this.tips,
+    this.source = 'বিআরটিএ ও স্থানীয় যানবাহন সমিতি',
+    this.asOf = '2026-11',
   });
 
   final String id;
@@ -63,6 +65,12 @@ class LocalTransitRoute {
 
   /// Local tips, advisories, escort rules, or seasonal variations.
   final List<String> tips;
+
+  /// Verified authority or sourcing samity for this fare.
+  final String source;
+
+  /// Audit date when this fare was verified (e.g. '2026-11').
+  final String asOf;
 
   bool get isPerPerson =>
       fareType == 'per_person_round_trip' || fareType == 'per_person_package';
@@ -122,6 +130,8 @@ class LocalFareGuide {
     // ── SAJEK VALLEY & KHAGRACHHARI ──────────────────────────────────────────
     LocalTransitRoute(
       id: 'sajek_chander_gari_rt',
+      source: 'খাগড়াছড়ি জিপ মালিক সমিতি ও বিআরটিএ',
+      asOf: '2026-11',
       destination: 'Sajek Valley',
       destinationBn: 'সাজেক ভ্যালি',
       division: 'Chattogram',

@@ -1059,6 +1059,8 @@ class TourTranslationKeys {
       'fund_mfs_verified': 'Verified',
       'fund_mfs_unverified': 'Unverified',
       'fund_mfs_disputed': 'Disputed',
+      'fund_mfs_duplicate_trxid':
+          'This Transaction ID (TrxID) has already been recorded in this group.',
       'fund_verify_payment': 'Verify',
       'fund_dispute_payment': 'Dispute',
       'fund_dispute_reason_prompt': 'Dispute payment',
@@ -4387,6 +4389,8 @@ class TourTranslationKeys {
       'fund_mfs_verified': 'যাচাইকৃত',
       'fund_mfs_unverified': 'যাচাই অপেক্ষমান',
       'fund_mfs_disputed': 'আপত্তিকৃত',
+      'fund_mfs_duplicate_trxid':
+          'এই ট্রানজ্যাকশন আইডি (TrxID) ইতিমধ্যে এই গ্রুপে যোগ করা হয়েছে।',
       'fund_verify_payment': 'যাচাই করুন',
       'fund_dispute_payment': 'আপত্তি জানান',
       'fund_dispute_reason_prompt': 'লেনদেনে আপত্তি জানান',
