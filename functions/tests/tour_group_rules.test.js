@@ -377,7 +377,10 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(setDoc(doc(db('admin'), 'tours', OFFICE, 'dependents', 'd2'), { ...dependent, parentEmail: people.admin.email }));
       await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'family_tasks'), task));
       await assertFails(addDoc(collection(db('admin'), 'tours', OFFICE, 'family_tasks'), { ...task, createdByEmail: people.admin.email }));
-      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'family_dates'), date));
+      // Important dates are now supported across all groups including office:
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', OFFICE, 'family_dates'), { ...date, kind: 'deadline', title: 'Q4 Review' }));
+      await assertFails(addDoc(collection(db('outsider'), 'tours', OFFICE, 'family_dates'), { ...date, kind: 'deadline', createdByEmail: people.outsider.email }));
+      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'family_dates'), { ...date, kind: 'invalid_kind' }));
 
       await assertSucceeds(setDoc(doc(db('member'), 'tours', HOUSE, 'dependents', 'd1'), dependent));
       await assertSucceeds(addDoc(collection(db('member'), 'tours', HOUSE, 'family_tasks'), task));
@@ -406,13 +409,15 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(addDoc(collection(db('member'), 'tours', CAMPUS, 'notices'), notice(people.member.email)));
     });
 
-    test('a campus batch keeps no household records', async () => {
+    test('a campus batch keeps no household records, but supports important dates', async () => {
       const dependent = { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true };
       const task = { title: 'Notebook', kind: 'shopping', done: false, assigneeEmail: null, doneByEmail: null, createdByEmail: people.member.email };
-      const date = { title: 'Birthday', kind: 'birthday', recurrence: 'yearly', startOn: '2026-11-01', nextOn: '2026-11-01', remindDays: 3, remindOn: null, note: '', createdByEmail: people.member.email };
+      const date = { title: 'Exam day', kind: 'exam', recurrence: 'once', startOn: '2026-11-01', nextOn: '2026-11-01', remindDays: 3, remindOn: null, note: '', createdByEmail: people.admin.email };
       await assertFails(setDoc(doc(db('member'), 'tours', CAMPUS, 'dependents', 'd1'), dependent));
       await assertFails(addDoc(collection(db('member'), 'tours', CAMPUS, 'family_tasks'), task));
-      await assertFails(addDoc(collection(db('admin'), 'tours', CAMPUS, 'family_dates'), { ...date, createdByEmail: people.admin.email }));
+      // Important dates are supported in campus batches (e.g. exam date)
+      await assertSucceeds(addDoc(collection(db('admin'), 'tours', CAMPUS, 'family_dates'), date));
+      await assertFails(addDoc(collection(db('admin'), 'tours', CAMPUS, 'family_dates'), { ...date, kind: 'invalid_kind' }));
     });
 
     test('a member answers a campus notice for themselves', async () => {
@@ -450,10 +455,10 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(addDoc(collection(db('member'), 'tours', MESS, 'family_tasks'), task(people.member.email)));
     });
 
-    test('a mess keeps no dependents and no family dates', async () => {
+    test('a mess keeps no dependents, but keeps shared lists and important dates', async () => {
       const dependent = { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true };
       await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'dependents', 'd1'), dependent));
-      await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'family_dates'), date(people.member.email)));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', MESS, 'family_dates'), { ...date(people.member.email), kind: 'rent' }));
     });
   });
 
@@ -784,10 +789,10 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(getDocs(collection(db('outsider'), 'tours', SOC, 'service_requests')));
     });
 
-    test('a housing society keeps no dependents, family dates or meals, but keeps shared lists and SOS', async () => {
+    test('a housing society keeps no dependents or meals, but keeps shared lists, important dates and SOS', async () => {
       const dependent = { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true };
       await assertFails(setDoc(doc(db('member'), 'tours', SOC, 'dependents', 'd1'), dependent));
-      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'family_dates'), dateRecord(people.member.email)));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'family_dates'), { ...dateRecord(people.member.email), kind: 'maintenance' }));
       await assertFails(setDoc(doc(db('member'), 'tours', SOC, 'meals', `2026-11-01__${people.member.email}`), { dateKey: '2026-11-01', email: people.member.email, breakfast: 1, lunch: 0, dinner: 0, updatedByEmail: people.member.email }));
       await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'family_tasks'), task(people.member.email)));
       await assertSucceeds(setDoc(doc(db('member'), 'tours', SOC, 'sos', 'a1'), alert(people.member.email)));

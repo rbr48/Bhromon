@@ -152,18 +152,140 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         _group!.meetingPointTitle!.trim().isNotEmpty) {
       return _group!.meetingPointTitle!;
     }
+    final g = _group;
+    if (g != null) {
+      if (g.isOffice) return l10n.translate('tour_meeting_point_office');
+      if (g.isCampus) return l10n.translate('tour_meeting_point_campus');
+      if (g.isMess) return l10n.translate('tour_meeting_point_mess');
+      if (g.isSociety) return l10n.translate('tour_meeting_point_society');
+      if (g.isSamity) return l10n.translate('tour_meeting_point_samity');
+      if (g.isStudy) return l10n.translate('tour_meeting_point_study');
+      if (g.isFamily) return l10n.translate('tour_meeting_point_family');
+    }
     return l10n.translate('tour_meeting_point_default', args: {
       'destination': _effectiveDestination(l10n),
     });
   }
 
   Uri get _meetingMapUri {
-    final dest = _group?.meetingPointTitle ??
-        _group?.currentDestination(_now) ??
-        _group?.destination ??
-        'Hotel Lobby';
+    final g = _group;
+    String fallback;
+    if (g != null) {
+      if (g.isOffice) {
+        fallback = '${g.name} Office';
+      } else if (g.isCampus) {
+        fallback = '${g.name} Campus';
+      } else if (g.isMess) {
+        fallback = '${g.name} Mess';
+      } else if (g.isSociety) {
+        fallback = '${g.name} Community Hall';
+      } else if (g.isSamity) {
+        fallback = '${g.name} Meeting Venue';
+      } else if (g.isStudy) {
+        fallback = '${g.name} Library';
+      } else if (g.isFamily) {
+        fallback = '${g.name} Residence';
+      } else {
+        final cur = g.currentDestination(_now);
+        fallback = cur.isNotEmpty
+            ? cur
+            : (g.destination.isNotEmpty ? g.destination : 'Meeting Point');
+      }
+    } else {
+      fallback = 'Meeting Point';
+    }
+    final dest = _group?.meetingPointTitle ?? fallback;
     return Uri.parse(_group?.meetingPointMapUrl ??
         'https://maps.google.com/?q=${Uri.encodeComponent(dest)}');
+  }
+
+  List<String> _meetingSuggestions(AppLocalizations l10n) {
+    final g = _group;
+    final isBn = l10n.locale.languageCode == 'bn';
+    if (g == null) return const [];
+    if (g.isOffice) {
+      return isBn
+          ? const [
+              'কনফারেন্স রুম ১',
+              'অফিস রিসেপশন',
+              'ক্যাফেটেরিয়া',
+              'মিটিং রুম'
+            ]
+          : const [
+              'Conference Room 1',
+              'Office Reception',
+              'Main Cafeteria',
+              'Meeting Room A'
+            ];
+    }
+    if (g.isCampus) {
+      return isBn
+          ? const [
+              'ক্যাম্পাস মূল ফটক',
+              'ডিপার্টমেন্ট করিডোর',
+              'ক্যাম্পাস ক্যান্টিন',
+              'সেন্ট্রাল লাইব্রেরি'
+            ]
+          : const [
+              'Main Gate',
+              'Department Corridor',
+              'Campus Canteen',
+              'Central Library'
+            ];
+    }
+    if (g.isMess) {
+      return isBn
+          ? const ['মেস ডাইনিং রুম', 'ড্রয়িং রুম', 'বারান্দা', 'মেসের ছাদ']
+          : const ['Dining Room', 'Drawing Room', 'Balcony', 'Flat Rooftop'];
+    }
+    if (g.isSociety) {
+      return isBn
+          ? const ['কমিউনিটি হল', 'বিল্ডিং রিসেপশন', 'সিকিউরিটি গেট', 'ছাদ']
+          : const [
+              'Community Hall',
+              'Building Reception',
+              'Security Gate',
+              'Rooftop'
+            ];
+    }
+    if (g.isSamity) {
+      return isBn
+          ? const [
+              'সমিতি কার্যালয়',
+              'মাসিক বৈঠক স্থান',
+              'ক্লাব রুম',
+              'অডিটোরিয়াম'
+            ]
+          : const ['Main Office', 'Monthly Venue', 'Club Room', 'Auditorium'];
+    }
+    if (g.isStudy) {
+      return isBn
+          ? const [
+              'স্টাডি লাউঞ্জ',
+              'রিডিং রুম',
+              'ক্যাম্পাস ক্যাফে',
+              'সেমিনার হল'
+            ]
+          : const [
+              'Study Lounge',
+              'Reading Room',
+              'Campus Cafe',
+              'Seminar Hall'
+            ];
+    }
+    if (g.isFamily) {
+      return isBn
+          ? const ['ড্রয়িং রুম', 'পারিবারিক বাসভবন', 'ডাইনিং স্পেস', 'বাগান']
+          : const ['Living Room', 'Family Residence', 'Dining Area', 'Garden'];
+    }
+    return isBn
+        ? const ['হোটেল লবি', 'বাস টার্মিনাল', 'এয়ারপোর্ট লাউঞ্জ', 'বিচ পয়েন্ট']
+        : const [
+            'Hotel Lobby',
+            'Bus Terminal',
+            'Airport Lounge',
+            'Beach Point'
+          ];
   }
 
   Future<void> _editMeetingPoint() async {
@@ -190,6 +312,29 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 decoration: InputDecoration(
                     labelText: l10n.translate('tour_place_name')),
               ),
+              const SizedBox(height: 6),
+              Builder(builder: (ctx) {
+                final suggestions = _meetingSuggestions(l10n);
+                if (suggestions.isEmpty) return const SizedBox.shrink();
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final s in suggestions)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ActionChip(
+                            label:
+                                Text(s, style: const TextStyle(fontSize: 11)),
+                            onPressed: () {
+                              titleCtrl.text = s;
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
               TextField(
                 controller: noteCtrl,
                 style: TextStyle(color: context.forest.text),

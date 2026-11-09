@@ -68,13 +68,13 @@ void main() {
         reason: 'a family leads with what it uses every day');
   });
 
-  test('an office has no safety tile, no calendar and no household tools', () {
+  test(
+      'an office has no safety tile and no household tools, but keeps important dates',
+      () {
     final ids =
         hubModulesFor(_group(family: true, preset: TourGroup.officePreset));
-    expect(
-        ids,
-        isNot(anyOf(
-            contains('safety'), contains('calendar'), contains('dependents'))));
+    expect(ids, isNot(anyOf(contains('safety'), contains('dependents'))));
+    expect(ids, contains('calendar'));
   });
 
   test('Moments follows its setting only where it can be turned off', () {

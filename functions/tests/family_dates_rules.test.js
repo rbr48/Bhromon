@@ -78,8 +78,12 @@ describe('family dates rules', () => {
     await assertFails(setDoc(doc(db('outsider'), 'tours', FAMILY, 'family_dates', 'd4'), date(people.outsider.email)));
   });
 
-  test('a trip has no family dates', async () => {
-    await assertFails(setDoc(doc(db('member'), 'tours', TRIP, 'family_dates', 'd2'), date(people.member.email)));
+  test('a trip member can create and manage important dates with dynamic kinds', async () => {
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', TRIP, 'family_dates', 'd2'), date(people.member.email, { kind: 'meeting', title: 'Trip briefing' })));
+    await assertSucceeds(setDoc(doc(db('member'), 'tours', TRIP, 'family_dates', 'd3'), date(people.member.email, { kind: 'deadline', title: 'Luggage drop' })));
+    await assertFails(setDoc(doc(db('outsider'), 'tours', TRIP, 'family_dates', 'd4'), date(people.outsider.email, { kind: 'meeting' })));
+    await assertFails(setDoc(doc(db('member'), 'tours', TRIP, 'family_dates', 'd5'), date(people.owner.email, { kind: 'meeting' })));
+    await assertFails(setDoc(doc(db('member'), 'tours', TRIP, 'family_dates', 'd6'), date(people.member.email, { kind: 'invalid_kind' })));
   });
 
   test('every field is checked on create', async () => {
@@ -103,6 +107,22 @@ describe('family dates rules', () => {
     }
     // A date with no reminder due carries a null remindOn.
     await assertSucceeds(setDoc(doc(db('member'), 'tours', FAMILY, 'family_dates', 'ok1'), date(me, { remindOn: null })));
+  });
+
+  test('accepts all dynamic kinds and rejects invalid kinds', async () => {
+    const validKinds = [
+      'birthday', 'anniversary', 'bill', 'school', 'medicine',
+      'meeting', 'deadline', 'exam', 'rent', 'maintenance',
+      'installment', 'payout', 'event', 'custom',
+    ];
+    for (const kind of validKinds) {
+      await assertSucceeds(
+        setDoc(doc(db('member'), 'tours', FAMILY, 'family_dates', `kind_${kind}`), date(people.member.email, { kind }))
+      );
+    }
+    await assertFails(
+      setDoc(doc(db('member'), 'tours', FAMILY, 'family_dates', 'kind_party'), date(people.member.email, { kind: 'party' }))
+    );
   });
 
   test('the creator edits their own date, and an admin or the owner edits any', async () => {

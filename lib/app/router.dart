@@ -250,10 +250,13 @@ class AppRouter {
       ),
       GoRoute(
         path: '/group/:tourId/calendar',
-        pageBuilder: (context, state) => _tripPage(
-          state,
-          HolidayCalendarScreen(tourId: state.pathParameters['tourId']!),
-        ),
+        redirect: (context, state) =>
+            '/group/${state.pathParameters["tourId"]!}/family-dates',
+      ),
+      GoRoute(
+        path: '/group/:tourId/important-dates',
+        redirect: (context, state) =>
+            '/group/${state.pathParameters["tourId"]!}/family-dates',
       ),
       GoRoute(
         path: '/group/:tourId/family-dates',

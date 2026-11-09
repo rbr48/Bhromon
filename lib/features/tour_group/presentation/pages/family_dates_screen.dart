@@ -19,9 +19,10 @@ const _card = Color(0xFF142428);
 /// Everyone in the circle sees them and gets the reminders. The member who added
 /// a date, or an admin, changes it.
 class FamilyDatesScreen extends StatefulWidget {
-  const FamilyDatesScreen({super.key, required this.tourId});
+  const FamilyDatesScreen({super.key, required this.tourId, this.group});
 
   final String tourId;
+  final TourGroup? group;
 
   @override
   State<FamilyDatesScreen> createState() => _FamilyDatesScreenState();
@@ -32,6 +33,35 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
   late final Stream<List<FamilyDate>> _dates =
       _repository.watchFamilyDates(widget.tourId);
   TourRole? _myRole;
+  TourGroup? _group;
+
+  String _screenTitle(AppLocalizations l10n) {
+    final g = _group;
+    if (g != null) {
+      if (g.isOffice) return l10n.translate('hub_module_dates_office');
+      if (g.isCampus) return l10n.translate('hub_module_dates_campus');
+      if (g.isMess) return l10n.translate('hub_module_dates_mess');
+      if (g.isSociety) return l10n.translate('hub_module_dates_society');
+      if (g.isSamity) return l10n.translate('hub_module_dates_samity');
+      if (g.isStudy) return l10n.translate('hub_module_dates_study');
+      if (!g.isFamily) return l10n.translate('hub_module_dates_trip');
+    }
+    return l10n.translate('fd_title');
+  }
+
+  String _introText(AppLocalizations l10n) {
+    final g = _group;
+    if (g != null) {
+      if (g.isOffice) return l10n.translate('hub_module_dates_office_sub');
+      if (g.isCampus) return l10n.translate('hub_module_dates_campus_sub');
+      if (g.isMess) return l10n.translate('hub_module_dates_mess_sub');
+      if (g.isSociety) return l10n.translate('hub_module_dates_society_sub');
+      if (g.isSamity) return l10n.translate('hub_module_dates_samity_sub');
+      if (g.isStudy) return l10n.translate('hub_module_dates_study_sub');
+      if (!g.isFamily) return l10n.translate('hub_module_dates_trip_sub');
+    }
+    return l10n.translate('fd_intro');
+  }
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
   String get _me => _repository.currentEmail;
@@ -42,8 +72,12 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
   @override
   void initState() {
     super.initState();
+    _group = widget.group;
     _repository.myRole(widget.tourId).then((role) {
       if (mounted) setState(() => _myRole = role);
+    }, onError: (Object _) {});
+    _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _group = g);
     }, onError: (Object _) {});
   }
 
@@ -52,6 +86,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
       context,
       tourId: widget.tourId,
       repository: _repository,
+      group: _group,
     );
   }
 
@@ -60,6 +95,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
       context,
       tourId: widget.tourId,
       repository: _repository,
+      group: _group,
       existing: date,
       canEdit: _canEdit(date),
     );
@@ -82,6 +118,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
       context,
       tourId: widget.tourId,
       repository: _repository,
+      group: _group,
       presetTitle: bengali ? picked.holiday.nameBn : picked.holiday.nameEn,
       presetDate: picked.date,
       presetKind: FamilyDateKind.custom,
@@ -97,7 +134,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
     return Scaffold(
       backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
-        title: Text(l10n.translate('fd_title'),
+        title: Text(_screenTitle(l10n),
             style: TextStyle(
                 color: context.forest.text,
                 fontWeight: FontWeight.bold,
@@ -133,7 +170,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
-              Text(l10n.translate('fd_intro'),
+              Text(_introText(l10n),
                   style: TextStyle(color: context.forest.text60, fontSize: 13)),
               const SizedBox(height: 8),
               if (dates.isEmpty)
@@ -171,6 +208,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
     final l10n = context.l10n;
     final due = FamilyDateRules.nextDue(date, today);
     final days = FamilyDateRules.daysBetween(today, due);
+    final start = parseFamilyDay(date.startOn);
     final parts = <String>[
       localizedDateFormat('EEE, d MMM yyyy').format(due),
       if (days == 0)
@@ -180,6 +218,16 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
       else if (days > 1)
         l10n.translate('fd_when_in_days', args: {'days': l10n.number(days)}),
       l10n.translate('fd_repeat_${date.recurrence.name}'),
+      if (start != null &&
+          date.recurrence == FamilyRecurrence.yearly &&
+          start.year < today.year)
+        (l10n.locale.languageCode == 'bn'
+            ? '${l10n.number(today.year - start.year)}ম বছর (শুরু ${l10n.number(start.year)})'
+            : 'Year ${today.year - start.year} (Since ${start.year})')
+      else if (start != null &&
+          date.recurrence == FamilyRecurrence.once &&
+          start.year != due.year)
+        '(${start.year})',
     ];
     final editable = _canEdit(date);
     return Card(

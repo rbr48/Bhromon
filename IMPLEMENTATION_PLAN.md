@@ -1,56 +1,58 @@
-# Implementation Plan: Itinerary Printable PDF, Burn-Rate Budget Alerts & Route Checkpoint Overlay
+# Implementation Plan: Group Important Dates, Leave Calendar Profile-Only & Dynamic Meeting Points
 
 ## Objective
-Implement Roadmap Sprints 9 & 10 items:
-- **Sprint 9 (Travel and Live Journey)**:
-  - Task 9.4: Multi-stop Itinerary Printable PDF using `bangla_pdf` with custom Bangla typography and day-by-day itinerary tables.
-  - Task 9.3: Route checkpoints & waypoints overlay on Offline Map (`offline_map_viewer_screen.dart`).
-- **Sprint 10 (Ledger and FinOps)**:
-  - Task 10.3: Burn-rate threshold alerts (`normal`, `caution` at ≥80% or projected overage, `critical` at ≥100%) in `fund_analytics.dart` and `expense_ledger_screen.dart`.
-- **Release**: Monotonic version bump to `1.8.149+203`, unit test suite verification, GitHub PR with 100% green CI gate, and production deployments.
+Address the three core user requirements:
+1. **Remove Leave Calendar from All Groups & Keep in Profile Only**:
+   - Remove the `HolidayCalendarScreen` tab from `TourLogisticsHubScreen` (`tour_logistics_hub_screen.dart`).
+   - Remove/redirect `/group/:tourId/calendar` to the group's Important Dates screen.
+   - Keep `/holiday-calendar` intact in the Profile section (`explorer_profile_screen.dart`).
+2. **Add Dynamic Important Dates to Each & Every Group**:
+   - Replace the legacy `'calendar'` module with dynamic dates for ALL groups in `hub_modules.dart` and `tour_group_hub_screen.dart`.
+   - Update `FamilyDateKind` and add group-specific date kinds (Meeting, Deadline, Exam, Rent, Maintenance, Installment, Payout, Event, etc.) with custom emojis.
+   - Adapt UI copy, headers, and quick presets dynamically per group kind/preset (Family, Office, Campus, Mess, Society, Samity, Study, Trip).
+   - Support adding past dates beyond year 2000 (`firstDate: DateTime(1900)`, year picker, original start year display).
+   - Update Firestore Security Rules via `firestore-rules-author` subagent to permit all active group members and allow new kinds.
+3. **Dynamic Default Meeting Points**:
+   - Replace the hardcoded "Hotel Lobby" default with group-aware defaults (Office conference room/reception, Campus main gate/canteen, Mess dining/common room, Society community hall, Samity venue, Study lounge, Trip landmark) in `notice_board_screen.dart` and `tour_translation_keys.dart`.
 
 ---
 
 ## Atomic Tasks
 
-### Phase 1: Sprint 10 — Burn-Rate Alerts & Budget Thresholds
-- [ ] **Task 1.1: BurnRateAlert Model & Logic in `fund_analytics.dart`**
-  - Add `BurnRateAlert` enum (`normal`, `caution`, `critical`) to `fund_analytics.dart`.
-  - Add `alertLevel` getter to `FundReport` and `BudgetLine`.
-  - Trigger `caution` if spent ratio ≥ 0.80 or if projected spend exceeds budget.
-  - Trigger `critical` if spent ratio ≥ 1.00 (`isOverBudget`).
-  - Unit test in `test/features/tour_group/fund_burn_rate_test.dart`.
+### Phase 1: Leave Calendar Removal from Groups
+- [ ] **Task 1.1: Logistics Hub Tab Update**
+  - In `tour_logistics_hub_screen.dart`, remove `HolidayCalendarScreen` and `tour_tab_calendar`. Change tab length from 4 to 3.
+- [ ] **Task 1.2: App Router Clean-up**
+  - In `router.dart`, redirect `/group/:tourId/calendar` to `/group/:tourId/family-dates` (or `/important-dates`). Verify profile route `/holiday-calendar` remains accessible.
 
-- [ ] **Task 1.2: UI Warnings in `expense_ledger_screen.dart`**
-  - Display caution/critical banner badge in the Budget vs Spent section.
-  - Show warning accent colors (amber for caution, red for critical).
-  - Add localized strings in `app_localizations.dart` / translation keys.
+### Phase 2: Dynamic Important Dates Engine & Past Date Support
+- [ ] **Task 2.1: Model & Enum Expansion (`family_date_models.dart`)**
+  - Add group-tailored kinds to `FamilyDateKind`: `meeting` (🤝), `deadline` (⏳), `exam` (📝), `rent` (🏠), `maintenance` (🛠️), `installment` (💰), `payout` (🎁), `event` (🎉).
+  - Add helper methods to return relevant kinds and suggested presets by `TourGroup`.
+- [ ] **Task 2.2: Past Date Selection & Year Display (`family_date_editor.dart` & `family_dates_screen.dart`)**
+  - In `family_date_editor.dart`, change `firstDate: DateTime(1900)` and `lastDate: DateTime(2100)`.
+  - In `family_dates_screen.dart`, display the originating year/anniversary for past dates (e.g. `(Since 1985)` or `(41st Year)` for recurring dates).
+- [ ] **Task 2.3: Dynamic Hub Tile & Modules (`hub_modules.dart`, `tour_group_hub_screen.dart`)**
+  - Enable Important Dates module for every group type in `hub_modules.dart`.
+  - In `tour_group_hub_screen.dart`, customize the tile title and subtitle based on group type (Family, Office, Campus, Mess, Society, Samity, Study, Trip).
+  - Update `hub_modules_golden.json` golden test.
 
-### Phase 2: Sprint 9 — Multi-Stop Itinerary PDF
-- [ ] **Task 2.1: Itinerary PDF Generator (`itinerary_pdf.dart`)**
-  - Create `lib/features/tour_group/data/itinerary_pdf.dart` using `bangla_pdf`.
-  - Render tour header (destination summary, dates, duration, style, total members).
-  - Render stops breakdown table (order, destination, arrival, departure, nights, notes).
-  - Render transport legs and route checkpoints (modes, distance estimates, checkpoint stops).
-  - Render packing checklist summary if available.
-  - Unit test in `test/features/tour_group/itinerary_pdf_test.dart`.
+### Phase 3: Dynamic Meeting Points
+- [ ] **Task 3.1: Group-Aware Meeting Points (`notice_board_screen.dart`, `tour_translation_keys.dart`)**
+  - Update default title and map search query based on `group.isOffice`, `group.isCampus`, `group.isMess`, `group.isSociety`, `group.isSamity`, `group.isStudy`, `group.isHousehold`, `group.isFamily`, and Trips.
+  - Add localized strings for each group type's default meeting point.
 
-- [ ] **Task 2.2: Itinerary PDF Export Wire-up (`itinerary_pdf_export.dart`)**
-  - Create `lib/features/tour_group/presentation/itinerary_pdf_export.dart`.
-  - Add "Export Itinerary PDF" button in `journey_tracker_screen.dart` and `itinerary_editor.dart`.
-  - Support cross-platform downloading on Web (`kIsWeb`) and share sheet on Mobile (`share_plus`).
+### Phase 4: Firestore Security Rules Update (Specialist Subagent)
+- [ ] **Task 4.1: Subagent Delegation for `firestore.rules`**
+  - Invoke `firestore-rules-author` subagent to allow active members of ANY tour group (`isActiveMember(tourId)`) to create/update/delete dates in `family_dates`.
+  - Expand `validFamilyDate` to validate the new kinds (`meeting`, `deadline`, `exam`, `rent`, `maintenance`, `installment`, `payout`, `event`).
+  - Run rules emulator tests to confirm security policies.
 
-### Phase 3: Sprint 9 — Route Checkpoint Overlay on Offline Map
-- [ ] **Task 3.1: Route & Checkpoint Markers in `offline_map_viewer_screen.dart`**
-  - Read `RoutePlan.of(group)` when viewing a tour.
-  - Display route checkpoints and stops as map markers with icons and names.
-  - Tap marker to view checkpoint details (type, leg, notes).
-
-### Phase 4: Automated Testing, Release & CI Green Gate
-- [ ] **Task 4.1: Automated Verification & Monotonic Version Bump**
-  - Run `flutter analyze` and all unit tests.
-  - Monotonically increment version in `pubspec.yaml` to `1.8.149+203`.
-- [ ] **Task 4.2: PR Creation & Merge**
-  - Push branch, open PR via `gh pr create --base main`.
-  - Wait for all GitHub Actions CI checks to pass green.
-  - Merge PR, deploy web to Firebase Hosting and release APK to Hostinger VPS.
+### Phase 5: Automated Verification, PR & Deployment
+- [ ] **Task 5.1: Test Suite & Analysis Verification**
+  - Run `flutter analyze` and `flutter test`.
+  - Commit changes atomically.
+- [ ] **Task 5.2: Monotonic Version Bump & PR Gate**
+  - Monotonically increment version in `pubspec.yaml` to `1.8.151+205`.
+  - Open PR via `gh pr create --base main` and await 100% green CI.
+  - Deploy rules, web hosting, and VPS updates.
