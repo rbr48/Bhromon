@@ -9,6 +9,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_module_sheet.dart';
+import 'study_findings_screen.dart';
 import 'study_module_posts_screen.dart';
 
 /// One subject: its modules. Members see the modules an admin has turned on. An admin sees
@@ -82,14 +83,22 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
   }
 
   void _open(StudyModuleSettings settings) {
+    final page = settings.key == StudyModuleKey.findings
+        ? StudyFindingsScreen(
+            tourId: widget.tourId,
+            subject: widget.subject,
+            settings: settings,
+            repository: _repository,
+          )
+        : StudyModulePostsScreen(
+            tourId: widget.tourId,
+            subject: widget.subject,
+            moduleKey: settings.key,
+            settings: settings,
+            repository: _repository,
+          );
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => StudyModulePostsScreen(
-        tourId: widget.tourId,
-        subject: widget.subject,
-        moduleKey: settings.key,
-        settings: settings,
-        repository: _repository,
-      ),
+      builder: (_) => page,
     ));
   }
 
@@ -202,6 +211,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
   IconData _iconFor(StudyModuleKey key) => switch (key) {
         StudyModuleKey.tips => Icons.lightbulb_rounded,
         StudyModuleKey.suggestions => Icons.thumb_up_rounded,
+        StudyModuleKey.findings => Icons.fact_check_rounded,
         _ => Icons.extension_rounded,
       };
 

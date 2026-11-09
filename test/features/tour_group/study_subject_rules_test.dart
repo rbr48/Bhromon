@@ -248,9 +248,13 @@ void main() {
   });
 
   group('modules and posts as stored', () {
-    test('only tips and suggestions are live', () {
+    test('tips, suggestions and shared findings are live', () {
       final live = StudyModuleKey.values.where((k) => k.isLive).toList();
-      expect(live, [StudyModuleKey.tips, StudyModuleKey.suggestions]);
+      expect(live, [
+        StudyModuleKey.tips,
+        StudyModuleKey.suggestions,
+        StudyModuleKey.findings,
+      ]);
     });
 
     test('a module key is read from its name, and an unknown name is not', () {
