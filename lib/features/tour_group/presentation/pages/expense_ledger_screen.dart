@@ -1944,6 +1944,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       initialShares: mealShares,
     );
     if (draft == null || !mounted) return;
+    final l10n = context.l10n;
     await _run(() async {
       String? finalReceiptUrl = draft.receiptUrl;
       if (draft.newReceiptFile != null) {
@@ -1971,35 +1972,48 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               await _repository.isMfsTrxRegistered(widget.tourId, trxId);
           if (isRegistered) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content:
-                      Text(context.l10n.translate('fund_mfs_duplicate_trxid')),
-                  backgroundColor: Colors.redAccent,
-                ),
+              _toast(
+                l10n.translate('fund_mfs_duplicate_trxid'),
+                error: true,
               );
             }
             return;
           }
         }
-        await _repository.addExpense(
-          tourId: widget.tourId,
-          title: draft.title,
-          amountPaisa: draft.amountPaisa,
-          paidById: draft.paidById,
-          paidByName: draft.paidByName,
-          category: draft.category,
-          date: draft.date,
-          notes: draft.notes,
-          participantIds: draft.participantIds,
-          splitMode: draft.splitMode,
-          splitShares: draft.splitShares,
-          stopId: draft.stopId,
-          currency: draft.currency,
-          originalMinor: draft.originalMinor,
-          fxRate: draft.fxRate,
-          receiptUrl: finalReceiptUrl,
-        );
+        try {
+          await _repository.addExpense(
+            tourId: widget.tourId,
+            title: draft.title,
+            amountPaisa: draft.amountPaisa,
+            paidById: draft.paidById,
+            paidByName: draft.paidByName,
+            category: draft.category,
+            date: draft.date,
+            notes: draft.notes,
+            participantIds: draft.participantIds,
+            splitMode: draft.splitMode,
+            splitShares: draft.splitShares,
+            stopId: draft.stopId,
+            currency: draft.currency,
+            originalMinor: draft.originalMinor,
+            fxRate: draft.fxRate,
+            receiptUrl: finalReceiptUrl,
+            mfsInfo: draft.mfsInfo,
+          );
+        } catch (e) {
+          if (trxId != null &&
+              trxId.isNotEmpty &&
+              await _repository.isMfsTrxRegistered(widget.tourId, trxId)) {
+            if (mounted) {
+              _toast(
+                l10n.translate('fund_mfs_duplicate_trxid'),
+                error: true,
+              );
+            }
+            return;
+          }
+          rethrow;
+        }
       } else {
         await _repository.updateExpense(ExpenseItem(
           id: existing.id,
@@ -2020,6 +2034,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           originalMinor: draft.originalMinor,
           fxRate: draft.fxRate,
           receiptUrl: finalReceiptUrl,
+          mfsInfo: draft.mfsInfo,
         ));
       }
     }, 'fund_err_save');
@@ -2127,9 +2142,38 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         initialAmountPaisa: prefill?.amountPaisa,
         onSaveSettlement: (record) async {
           final l10n = context.l10n;
+          final trxId = record.mfsInfo.trxId?.trim().toUpperCase();
+          if (trxId != null &&
+              trxId.isNotEmpty &&
+              record.mfsInfo.provider.requiresTrxId) {
+            final isRegistered =
+                await _repository.isMfsTrxRegistered(widget.tourId, trxId);
+            if (isRegistered) {
+              if (mounted) {
+                _toast(
+                  l10n.translate('fund_mfs_duplicate_trxid'),
+                  error: true,
+                );
+              }
+              return;
+            }
+          }
           await _run(() async {
-            await _repository.addSettlement(widget.tourId, record);
-            _toast(l10n.translate('fund_payment_saved'));
+            try {
+              await _repository.addSettlement(widget.tourId, record);
+              _toast(l10n.translate('fund_payment_saved'));
+            } catch (e) {
+              if (trxId != null &&
+                  trxId.isNotEmpty &&
+                  await _repository.isMfsTrxRegistered(widget.tourId, trxId)) {
+                if (mounted) {
+                  _toast(l10n.translate('fund_mfs_duplicate_trxid'),
+                      error: true);
+                }
+                return;
+              }
+              rethrow;
+            }
           }, 'fund_err_save');
         },
       ),
