@@ -295,6 +295,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _checkBlockStatus();
     _startOnlinePolling();
     _initVpsTypingListener();
+    if (E2eeChatController.enabledInBuild) {
+      final authState = context.read<AuthCubit>().state;
+      final currentUid =
+          authState is Authenticated ? authState.profile.uid : '';
+      if (currentUid.isNotEmpty) {
+        unawaited(E2eeChatController.instance.ensureReady(currentUid));
+      }
+    }
     _messageController.addListener(_onTextChanged);
     unawaited(_restoreDraft());
     if (widget.sharedFiles?.isNotEmpty ?? false) {

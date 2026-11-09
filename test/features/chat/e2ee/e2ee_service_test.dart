@@ -20,8 +20,8 @@ void main() {
 
   setUp(() {
     engine = FakeOlmEngine();
-    keys = MemoryKeyStore();
     clock = DateTime.utc(2026, 11, 8);
+    keys = MemoryKeyStore(now: () => clock);
     deviceCounter = 0;
   });
 
@@ -534,6 +534,29 @@ void main() {
       expect(keys.keyCount('uid-b'), 19);
       alice.dispose();
       bob.dispose();
+    });
+
+    test('stale claimed one-time keys are pruned on prepare', () async {
+      final (alice, _) = await setUpUser('uid-a');
+      final bundle = await keys.fetchBundle('uid-a');
+      expect(bundle, isNotNull);
+      final keyId = bundle!.oneTimeKeys.first.keyId;
+
+      // Simulate a sender claiming a key that was never established
+      await keys.claimOneTimeKey(
+        ownerUid: 'uid-a',
+        keyId: keyId,
+        claimerUid: 'uid-abandoned',
+      );
+      expect(keys.claimedCount('uid-a'), 1);
+
+      // Advance clock past staleClaimLifetime (24 hours + 1 hour)
+      clock = clock.add(const Duration(hours: 25));
+      await alice.prepare();
+
+      // The stale claimed key should be pruned from the server
+      expect(keys.claimedCount('uid-a'), 0);
+      alice.dispose();
     });
   });
 }

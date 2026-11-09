@@ -53,6 +53,13 @@ abstract interface class E2eeKeyStore {
     required String uid,
     required String deviceId,
   });
+
+  /// Removes claimed one-time keys of [uid] that were claimed before [olderThan]
+  /// but never deleted by an incoming message establishment.
+  Future<int> deleteStaleClaimedOneTimeKeys({
+    required String uid,
+    required DateTime olderThan,
+  });
 }
 
 /// What this device keeps on the device itself. The values are written to an

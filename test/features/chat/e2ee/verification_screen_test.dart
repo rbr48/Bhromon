@@ -99,6 +99,11 @@ void main() {
     expect(shown.data, SafetyNumber.grouped(bobSees));
     expect(find.text('Not verified yet'), findsOneWidget);
 
+    expect(find.byKey(const Key('copySafetyNumber')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('copySafetyNumber')));
+    await tester.pump();
+    expect(find.text('Safety number copied to clipboard'), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('markVerified')));
     await tester.pumpAndSettle();
 

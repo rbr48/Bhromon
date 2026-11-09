@@ -164,6 +164,26 @@ class FirestoreE2eeKeyStore implements E2eeKeyStore {
     }
   }
 
+  @override
+  Future<int> deleteStaleClaimedOneTimeKeys({
+    required String uid,
+    required DateTime olderThan,
+  }) async {
+    final staleQuery = await _oneTimeKeys(uid)
+        .where('claimedAt', isLessThan: Timestamp.fromDate(olderThan))
+        .get();
+    if (staleQuery.docs.isEmpty) return 0;
+    for (var start = 0; start < staleQuery.docs.length; start += batchLimit) {
+      final batch = _db.batch();
+      final end = min(start + batchLimit, staleQuery.docs.length);
+      for (final doc in staleQuery.docs.sublist(start, end)) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    return staleQuery.docs.length;
+  }
+
   static E2eeSignedKey _signedKeyOf(Map<String, dynamic> data) {
     final key = base64Url.decode(data['key'] as String);
     return E2eeSignedKey(

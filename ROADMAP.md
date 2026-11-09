@@ -95,14 +95,15 @@ Audited against the code. Most of this sprint is built; the open item needs a de
 - **11.2 Desktop layout.** Build the three-pane layout around `desktop_tour_sidebar.dart`. Confirm the breakpoint first.
 - **11.3 Android 16 edge-to-edge.** Verify on a device. Keep the APK under 175 MB.
 
-### Track E — End-to-end encryption (separate, not scheduled)
+### Track E — End-to-end encryption (Architecture & Lifecycle Complete, Rollout Open)
 
-End-to-end encryption is a project of its own, not a sprint. Before any build:
-- A design document and a threat model.
-- A group-channel design. Channels need a sender-key scheme, and the design must cover `/split`, `/poll`, mentions, reactions, pins and admin moderation.
-- Push previews must become generic text. The VPS watcher reads plaintext today (`media-server/notifications.py`).
-- Search, multi-device use and key recovery. A lost key means lost history.
-- An outside cryptographic review.
+End-to-end encryption has completed its core architecture, implementation, and lifecycle milestones (M0–M4, M5 enablers):
+- [x] A design document and a threat model ([`E2EE_DESIGN.md`](./E2EE_DESIGN.md)).
+- [x] A group-channel design with Sender-Key / Megolm protocol ([`E2EE_GROUP_DESIGN.md`](./E2EE_GROUP_DESIGN.md)), covering forward/backward secrecy, `/split`, mentions, reactions, pins, and admin moderation.
+- [x] Push previews are generic text on encrypted chats (`media-server/notifications.py`, `chat.py`).
+- [x] Search over local decrypted messages (`domain/chat_search.dart`).
+- [x] Automatic provisioning (`ensureReady`), orphaned claimed key pruning (`deleteStaleClaimedOneTimeKeys`), and safety number clipboard support.
+- [ ] M6 outside cryptographic review & M7 general store copy rollout.
 
 Google Drive backups of chat data wait for this track (decision D-04 in `AGENTS.md`).
 

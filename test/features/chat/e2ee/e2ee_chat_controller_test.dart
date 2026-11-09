@@ -36,6 +36,51 @@ void main() {
     await E2eeChatController.instance.release();
   });
 
+  group('ensureReady auto-provisioning', () {
+    test('auto-sets up new account when status is notSetUp', () async {
+      final keyStore = MemoryKeyStore();
+      final localStore = MemoryLocalStore();
+      final service = E2eeService(
+        userId: 'uid-new',
+        engine: FakeOlmEngine(),
+        keys: keyStore,
+        local: localStore,
+        pickleKeys: FixedPickleKeyVault(),
+        newDeviceId: () => 'device-new-1',
+        now: DateTime.now,
+      );
+      E2eeChatController.instance.useServiceForTest(service, 'uid-new');
+
+      expect(await service.status(), E2eeSetupStatus.notSetUp);
+      final status = await E2eeChatController.instance.ensureReady('uid-new');
+      expect(status, E2eeSetupStatus.ready);
+      expect(await service.status(), E2eeSetupStatus.ready);
+      expect(keyStore.publishedDeviceIdSync('uid-new'), 'device-new-1');
+      await E2eeChatController.instance.release();
+    });
+
+    test('prepares and remains ready when device already set up', () async {
+      final keyStore = MemoryKeyStore();
+      final localStore = MemoryLocalStore();
+      final service = E2eeService(
+        userId: 'uid-existing',
+        engine: FakeOlmEngine(),
+        keys: keyStore,
+        local: localStore,
+        pickleKeys: FixedPickleKeyVault(),
+        newDeviceId: () => 'device-existing-1',
+        now: DateTime.now,
+      );
+      E2eeChatController.instance.useServiceForTest(service, 'uid-existing');
+      await service.setUpThisDevice();
+
+      final status =
+          await E2eeChatController.instance.ensureReady('uid-existing');
+      expect(status, E2eeSetupStatus.ready);
+      await E2eeChatController.instance.release();
+    });
+  });
+
   group('deleting a closed account', () {
     late Directory dir;
 
