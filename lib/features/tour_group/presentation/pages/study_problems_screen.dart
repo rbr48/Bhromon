@@ -10,6 +10,7 @@ import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_problem_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
+import '../widgets/group_back_button.dart';
 import '../widgets/study/study_problem_composer.dart';
 import 'study_problem_screen.dart';
 
@@ -126,85 +127,89 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
     final palette = context.forest;
     final canPost =
         canPostInStudyModule(settings: widget.settings, isAdmin: _isAdmin);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(widget.settings.name,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      floatingActionButton: canPost
-          ? FloatingActionButton.extended(
-              onPressed: _add,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.translate('study_problem_add')),
-            )
-          : null,
-      body: StreamBuilder<List<StudyProblem>>(
-        stream: _problems,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(l10n.translate('study_failed'),
-                  style: TextStyle(color: palette.text70)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final shown = sortStudyProblems(visibleStudyProblems(
-            problems: snap.data!,
-            viewerEmail: _me,
-            isAdmin: _isAdmin,
-          ));
-          _askWork([for (final problem in shown) problem.id]);
-          if (shown.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.translate('study_problem_empty'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: palette.text70),
-                ),
-              ),
-            );
-          }
-          // An admin decides the reported problems first, the oldest report first. Each is listed once.
-          final queue = _isAdmin
-              ? reportedProblemsForReview(shown)
-              : const <StudyProblem>[];
-          final rest = [
-            for (final problem in shown)
-              if (!queue.contains(problem)) problem,
-          ];
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [
-              if (queue.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(widget.settings.name,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: canPost
+            ? FloatingActionButton.extended(
+                onPressed: _add,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.translate('study_problem_add')),
+              )
+            : null,
+        body: StreamBuilder<List<StudyProblem>>(
+          stream: _problems,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                child: Text(l10n.translate('study_failed'),
+                    style: TextStyle(color: palette.text70)),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final shown = sortStudyProblems(visibleStudyProblems(
+              problems: snap.data!,
+              viewerEmail: _me,
+              isAdmin: _isAdmin,
+            ));
+            _askWork([for (final problem in shown) problem.id]);
+            if (shown.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Text(
-                    l10n.translate('study_problem_queue_title'),
-                    style: TextStyle(
-                        color: palette.text,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15),
+                    l10n.translate('study_problem_empty'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: palette.text70),
                   ),
                 ),
-                for (final problem in queue) _problemCard(problem),
-                const SizedBox(height: 8),
+              );
+            }
+            // An admin decides the reported problems first, the oldest report first. Each is listed once.
+            final queue = _isAdmin
+                ? reportedProblemsForReview(shown)
+                : const <StudyProblem>[];
+            final rest = [
+              for (final problem in shown)
+                if (!queue.contains(problem)) problem,
+            ];
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [
+                if (queue.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      l10n.translate('study_problem_queue_title'),
+                      style: TextStyle(
+                          color: palette.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15),
+                    ),
+                  ),
+                  for (final problem in queue) _problemCard(problem),
+                  const SizedBox(height: 8),
+                ],
+                for (final problem in rest) _problemCard(problem),
               ],
-              for (final problem in rest) _problemCard(problem),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
