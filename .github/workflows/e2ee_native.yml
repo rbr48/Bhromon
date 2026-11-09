@@ -1,12 +1,13 @@
 name: E2EE native library
 
 # Builds and tests the vodozemac-based library for the end-to-end encrypted
-# one-to-one chat (native/e2ee_olm; E2EE_DESIGN.md, milestones M1 and M2).
+# one-to-one chat (native/e2ee_olm; E2EE_DESIGN.md, milestones M1, M2 and M4).
 #
 # The Linux job runs the Rust checks, the C smoke test, the export check and the
 # libolm interoperability test. The dart job runs the Dart tests against the library
 # it builds; the native tests skip in the other Flutter jobs. The Android job builds
-# the shared library for three ABIs with the NDK. The iOS job
+# the shared library for three ABIs with the NDK, packages them into jniLibs, and
+# produces a test debug APK with E2EE_ONE_TO_ONE=true. The iOS job
 # builds device and simulator libraries on macOS, which costs several times the
 # Linux minutes, so it runs on a manual start or when the repository variable
 # IOS_BUILD_ENABLED is 'true', as native_build.yml does.
@@ -20,6 +21,7 @@ on:
       - 'lib/features/chat/data/e2ee/**'
       - 'lib/features/chat/domain/e2ee/**'
       - 'test/features/chat/e2ee/**'
+      - 'tool/package_e2ee_android.sh'
       - '.github/workflows/e2ee_native.yml'
   workflow_dispatch:
 
@@ -140,7 +142,7 @@ jobs:
         run: flutter test test/features/chat/e2ee/
 
   android:
-    name: Android shared libraries
+    name: Android shared libraries & E2EE test APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -192,6 +194,51 @@ jobs:
         with:
           name: e2ee-olm-android
           path: native/e2ee_olm/dist/android
+          if-no-files-found: error
+          retention-days: 14
+
+      # Package the freshly built shared libraries into the Android app's jniLibs
+      # and build an E2EE-enabled test debug APK (Milestones M4 & M5).
+      - name: Package native libraries into Android jniLibs
+        working-directory: .
+        run: |
+          bash tool/package_e2ee_android.sh
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'gradle'
+          cache-dependency-path: 'android/gradle/wrapper/gradle-wrapper.properties'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        working-directory: .
+        run: flutter pub get
+
+      - name: Drop Windows-only JDK path for this job
+        working-directory: .
+        run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
+
+      - name: Build E2EE-enabled test APK (debug)
+        working-directory: .
+        env:
+          GRADLE_OPTS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
+          _JAVA_OPTIONS: "-Xmx4608m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC"
+        run: flutter build apk --debug --dart-define=E2EE_ONE_TO_ONE=true
+
+      - name: Upload E2EE test APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bhromon-e2ee-test-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 14
 
