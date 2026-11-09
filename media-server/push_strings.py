@@ -59,6 +59,8 @@ _TEXTS = {
         "notice.body": "{body}",
         "ledger.title": "💸 ৳{taka} expense recorded",
         "ledger.body": "{payer} paid ৳{taka} for {title}",
+        "bazar.duty.title": "🛒 Bazar Duty Today",
+        "bazar.duty.body": "You have bazar duty for your mess today.",
     },
     "bn": {
         "preview.voice": "🎤 ভয়েস বার্তা",
@@ -105,6 +107,8 @@ _TEXTS = {
         "notice.body": "{body}",
         "ledger.title": "💸 ৳{taka} খরচ যোগ করা হয়েছে",
         "ledger.body": "{payer} {title}-এর জন্য ৳{taka} পরিশোধ করেছেন",
+        "bazar.duty.title": "🛒 আজকের বাজার দায়িত্ব",
+        "bazar.duty.body": "আজ আপনার মেসের বাজার করার দায়িত্ব রয়েছে।",
     },
 }
 

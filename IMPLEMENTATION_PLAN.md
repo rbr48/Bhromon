@@ -1,40 +1,72 @@
-# Implementation Plan: E2EE Android Native Packaging (M4) & Test Build Delivery
+# Implementation Plan: Sprint 7 — Everyday Group Specializations (Phase 9)
 
 ## Objective
-Fulfill Milestone M4 of `E2EE_DESIGN.md`:
-1. Package the precompiled and verified `libe2ee_olm.so` native binaries (built from `native/e2ee_olm` via the `vodozemac` Rust Olm engine) into Android's `jniLibs` for all 3 supported ABIs (`arm64-v8a`, `armeabi-v7a`, `x86_64`).
-2. Configure `android/app/build.gradle` so Gradle automatically packages `libe2ee_olm.so` into the APK/AAB `lib/<abi>/` directories.
-3. Update `.github/workflows/e2ee_native.yml` to build and package an E2EE-enabled test APK (`--dart-define=E2EE_ONE_TO_ONE=true`) and publish it as a downloadable GitHub Actions artifact for internal testing and dogfooding (M5).
-4. Update `E2EE_DESIGN.md` to reflect the completion of Milestone M4 packaging.
-5. Monotonically increment version in `pubspec.yaml` to `1.8.153+207`.
-6. Pass all quality gates (`flutter analyze`, unit tests, GitHub CI checks) and create PR.
+Deliver Sprint 7 specializations across everyday circles (Mess, Society, Office/Campus, Samity) per `ROADMAP.md`:
+1. **Task 9.1: Mess Monthly Bazar Duty Schedule & Reminders**
+   - Data model: `MessBazarSchedule` (`tours/{id}/mess_bazar_schedule/{dateKey}`).
+   - Firestore rules: enforce `isMessTour` and role validation.
+   - UI: Duty card in `MessHomeCard` and `MealsScreen`, with admin assignment sheet.
+   - VPS reminder: scheduled daily reminder dispatch for bazar duty members.
+2. **Task 9.2: Society Service Requests: Photo Attachments & Ledger Booking**
+   - Attach up to 3 photos per request via `TourMediaUploader`.
+   - Status timeline progression (Open → In Progress → Resolved) with admin note history.
+   - One-tap booking of resolved repair costs into Society Maintenance ledger.
+3. **Task 9.3: Office & Campus Notice Acknowledgement Rings**
+   - Circular progress indicator and response count on managed notices.
+   - Pending-member drawer with response status.
+4. **Task 9.4: Samity Receipts & Verification**
+   - Receipt / transfer screenshot upload on samity payout handover.
+   - Beneficiary confirmation status (`payoutStatus: verified`).
+5. **Quality Gates & Verification**
+   - Unit and emulator rules tests.
+   - `flutter analyze` clean (0 errors, 0 warnings).
+   - Monotonic version bump in `pubspec.yaml`.
+   - GitHub PR workflow.
 
 ---
 
 ## Atomic Tasks
 
-### Phase 1: Native Library Packaging & Gradle Configuration
-- [x] **Task 1.1: Copy Native Libraries to Android `jniLibs`**
-  - Place `libe2ee_olm.so` into `android/app/src/main/jniLibs/{arm64-v8a, armeabi-v7a, x86_64}/`.
-  - Add helper scripts `tool/package_e2ee_android.sh` and `scripts/package_e2ee_android.ps1` to automate copying from `native/e2ee_olm/dist/android/`.
-- [x] **Task 1.2: Configure Gradle SourceSets**
-  - In `android/app/build.gradle`, ensure `sourceSets.main.jniLibs.srcDirs` explicitly includes `src/main/jniLibs` and `../../native/e2ee_olm/dist/android` when available.
+### Phase 1: Mess Bazar Duty Schedule (Task 9.1)
+- [x] **Task 1.1: Bazar Duty Model & Repository**
+  - Define `MessBazarSchedule` in `lib/features/tour_group/domain/models/mess_bazar_model.dart`.
+  - Add watch and write methods in `TourGroupRepository`.
+- [x] **Task 1.2: Security Rules for Mess Bazar Schedule**
+  - Add rules in `firestore.rules` for `tours/{tourId}/mess_bazar_schedule/{dateKey}`.
+  - Verify via `functions/tests/mess_bazar_rules.test.js`.
+- [x] **Task 1.3: Mess UI Integration**
+  - Display Bazar Duty badge/card in `MessHomeCard` (`mess_home_card.dart`).
+  - Add Bazar Duty tab/sheet in `meals_screen.dart` with date navigation and admin assignment dialog.
+- [x] **Task 1.4: VPS Bazar Duty Daily Notification**
+  - Add morning duty reminder logic in `media-server/notifications.py`.
 
-### Phase 2: CI Test Build Pipeline
-- [x] **Task 2.1: Update `.github/workflows/e2ee_native.yml`**
-  - In the `android` job, after building the `.so` files, copy them into `android/app/src/main/jniLibs/`.
-  - Add Flutter setup and build step: `flutter build apk --debug --dart-define=E2EE_ONE_TO_ONE=true`.
-  - Upload `build/app/outputs/flutter-apk/app-debug.apk` as artifact `bhromon-e2ee-test-apk`.
+### Phase 2: Society Service Requests Upgrades (Task 9.2)
+- [ ] **Task 2.1: Photo Attachments in Service Requests**
+  - Add `photos: List<String>` to `ServiceRequest` model.
+  - Add image picker & uploader in request creation dialog in `society_requests_screen.dart`.
+- [ ] **Task 2.2: Status Timeline & Maintenance Ledger Booking**
+  - Render 3-step visual status timeline with admin note in `society_requests_screen.dart`.
+  - Add "Book to Ledger" action on resolved requests prefilling the Maintenance category.
 
-### Phase 3: Documentation & Verification
-- [x] **Task 3.1: Update `E2EE_DESIGN.md`**
-  - Document that M4 Android packaging is completed.
-- [x] **Task 3.2: Version Bump & Static Analysis**
-  - Increment `pubspec.yaml` version to `1.8.153+207`.
-  - Run `flutter analyze` to ensure 0 errors and 0 warnings (Passed, 0 issues).
-  - Run unit tests to verify no regressions (Passed, 96/96 E2EE tests & all golden tests).
-- [ ] **Task 3.3: GitHub PR & CI Verification**
-  - Commit changes with descriptive commit messages.
-  - Push branch `feat/e2ee-m4-android-packaging` to remote.
-  - Open Pull Request via `gh pr create --base main`.
-  - Verify all GitHub Actions CI checks turn green.
+### Phase 3: Office & Campus Notice Progress Ring (Task 9.3)
+- [ ] **Task 3.1: Response Progress Ring on Notices**
+  - Calculate response count and total active members in `TourNoticesScreen`.
+  - Display circular progress ring showing acknowledgment percentage.
+- [ ] **Task 3.2: Pending Members Drawer**
+  - Add bottom sheet / drawer showing who answered and who is pending.
+
+### Phase 4: Samity Receipts & Verification (Task 9.4)
+- [ ] **Task 4.1: Samity Payout Receipt Upload & Verification**
+  - Add receipt photo URL and `isVerified` flag to `SamityPayout`.
+  - Add receipt viewer and beneficiary "Confirm Received" verification button in `SamitySheet`.
+
+### Phase 5: Verification, Web Deploy & PR
+- [ ] **Task 5.1: Run Static Analysis & Unit Tests**
+  - `flutter analyze` 0 errors.
+  - `flutter test` all test suites green.
+- [ ] **Task 5.2: Version Bump & PR**
+  - Increment `pubspec.yaml` to `1.8.154+208`.
+  - Create and push PR via `gh pr create --base main`.
+- [ ] **Task 5.3: Web & VPS Deployment**
+  - Deploy web build to `app.bhromon.fun`.
+  - Pull and run updated `deploy.sh` on VPS.
