@@ -942,6 +942,64 @@ service cloud.firestore {
              d.reason in ['wrong', 'unclear', 'spam', 'other'] &&
              d.createdAt is timestamp;
     }
+    // A quiz on a chapter: its title, the chapter, who wrote it, and how many members have taken it.
+    function validStudyQuiz(d) {
+      return d.keys().hasOnly(['chapterId', 'title', 'createdByEmail', 'takerCount']) &&
+             d.chapterId is string && d.chapterId.size() >= 1 && d.chapterId.size() <= 40 &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.takerCount is int && d.takerCount >= 0;
+    }
+    // A question: one of three kinds. A single-answer question has two to five choices and the index of the
+    // right one; a true-or-false question has index 0 or 1; an explain question has a model answer. Every
+    // question has an explanation.
+    function validStudyQuestion(d) {
+      return d.keys().hasOnly(['type', 'text', 'explanation', 'choices', 'answerIndex', 'modelAnswer', 'approved', 'proposedByEmail', 'createdAt']) &&
+             d.type in ['single', 'trueFalse', 'explain'] &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 300 &&
+             d.explanation is string && d.explanation.size() >= 1 && d.explanation.size() <= 1000 &&
+             d.approved is bool &&
+             d.proposedByEmail is string && d.proposedByEmail.size() <= 254 &&
+             d.createdAt is timestamp &&
+             (d.get('choices', null) == null || (d.choices is list && d.choices.size() >= 2 && d.choices.size() <= 5)) &&
+             (d.get('answerIndex', null) == null || (d.answerIndex is int && d.answerIndex >= 0 && d.answerIndex <= 4)) &&
+             (d.get('modelAnswer', null) == null || (d.modelAnswer is string && d.modelAnswer.size() <= 1000)) &&
+             (d.type != 'single' || (d.choices is list && d.answerIndex is int && d.answerIndex < d.choices.size())) &&
+             (d.type != 'trueFalse' || (d.answerIndex is int && d.answerIndex <= 1)) &&
+             (d.type != 'explain' || (d.modelAnswer is string && d.modelAnswer.size() >= 1));
+    }
+    // A member's private attempt on a quiz: the best score, the last score and the count, each as a percentage
+    // or a count.
+    function validStudyAttempt(d) {
+      return d.keys().hasOnly(['best', 'last', 'attempts', 'updatedAt']) &&
+             d.best is int && d.best >= 0 && d.best <= 100 &&
+             d.last is int && d.last >= 0 && d.last <= 100 &&
+             d.attempts is int && d.attempts >= 1 &&
+             d.updatedAt is timestamp;
+    }
+    // A glossary term: the word, its definition, the chapter it belongs to, whether an admin approved it, and who
+    // proposed it.
+    function validStudyTerm(d) {
+      return d.keys().hasOnly(['term', 'definition', 'chapterId', 'approved', 'createdByEmail', 'createdAt']) &&
+             d.term is string && d.term.size() >= 1 && d.term.size() <= 80 &&
+             d.definition is string && d.definition.size() >= 1 && d.definition.size() <= 500 &&
+             (d.get('chapterId', null) == null || (d.chapterId is string && d.chapterId.size() <= 40)) &&
+             d.approved is bool &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp;
+    }
+    // A quiz changes in one of two ways. An admin changes its title or chapter, never its taker count. A member
+    // changes only the taker count, by one, in the same write as their first attempt, which must exist after the
+    // write.
+    function studyQuizUpdateAllowed(tourId, bookId, quizId, email, newData, oldData) {
+      return (isTourAdmin(tourId) && validStudyQuiz(newData) &&
+              newData.takerCount == oldData.takerCount &&
+              newData.createdByEmail == oldData.createdByEmail) ||
+             (!isTourAdmin(tourId) &&
+              newData.diff(oldData).affectedKeys().hasOnly(['takerCount']) &&
+              newData.takerCount == oldData.takerCount + 1 &&
+              existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/quizzes/$(quizId)/attempts/$(email)));
+    }
     // Study materials. A file is stored in the group's study folder on the media server, so its address
     // must name this group and that folder, with an extension and size of its kind. A link is an http or
     // https address. A note is text written in the app.
@@ -1416,6 +1474,71 @@ service cloud.firestore {
                                getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.reportCount == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/threads/$(threadId)/replies/$(replyId)).data.reportCount + 1;
             }
           }
+        }
+
+        // The quizzes of the book. An admin writes a quiz on one of its chapters. A member proposes a question in
+        // their own name, unapproved, and an admin approves it. A member's first attempt moves the taker count by
+        // one, in the same write.
+        match /quizzes/{quizId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                           request.resource.data.createdByEmail == tourUserEmail() &&
+                           request.resource.data.takerCount == 0 &&
+                           validStudyQuiz(request.resource.data) &&
+                           studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+          allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           studyQuizUpdateAllowed(tourId, bookId, quizId, tourUserEmail(), request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+
+          // A question on the quiz. A member proposes one in their own name, not yet approved; an admin approves it.
+          match /questions/{questionId} {
+            allow read: if isActiveMember(tourId);
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             request.resource.data.proposedByEmail == tourUserEmail() &&
+                             request.resource.data.createdAt == request.time &&
+                             (isTourAdmin(tourId) || request.resource.data.approved == false) &&
+                             validStudyQuestion(request.resource.data) &&
+                             studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+            allow update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                             request.resource.data.proposedByEmail == resource.data.proposedByEmail &&
+                             request.resource.data.createdAt == resource.data.createdAt &&
+                             validStudyQuestion(request.resource.data);
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             (isTourAdmin(tourId) || (resource.data.approved == false && resource.data.proposedByEmail == tourUserEmail()));
+          }
+
+          // A member's private attempt: only the member reads it. The first attempt is written in the same batch as
+          // the quiz's taker count moving up by one.
+          match /attempts/{voter} {
+            allow read: if isActiveMember(tourId) && voter == tourUserEmail();
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                             request.resource.data.attempts == 1 &&
+                             request.resource.data.updatedAt == request.time &&
+                             validStudyAttempt(request.resource.data) &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/quizzes/$(quizId)).data.takerCount == get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)/quizzes/$(quizId)).data.takerCount + 1;
+            allow update: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                             request.resource.data.attempts == resource.data.attempts + 1 &&
+                             request.resource.data.updatedAt == request.time &&
+                             validStudyAttempt(request.resource.data);
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
+          }
+        }
+
+        // The glossary: a member proposes a term, and an admin approves it. An approved term feeds flashcards.
+        match /glossary/{termId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           request.resource.data.createdByEmail == tourUserEmail() &&
+                           request.resource.data.createdAt == request.time &&
+                           (isTourAdmin(tourId) || request.resource.data.approved == false) &&
+                           validStudyTerm(request.resource.data) &&
+                           studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+          allow update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                           request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                           request.resource.data.createdAt == resource.data.createdAt &&
+                           validStudyTerm(request.resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || (resource.data.approved == false && resource.data.createdByEmail == tourUserEmail()));
         }
       }
 

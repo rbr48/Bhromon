@@ -307,6 +307,46 @@ async function seed() {
     openedAt: new Date('2026-11-02T14:00:00Z'),
   });
 
+  // Learning tools: the person wrote a quiz, proposed a question and a glossary term, and took the quiz. Their
+  // attempt is their private record and goes; another member's attempt stays.
+  await set(`tours/${TOUR}/study_books/sb_other/quizzes/qz_leaver`, {
+    chapterId: 'ch_1',
+    title: 'Chapter 1 quiz',
+    createdByEmail: LEAVER,
+    takerCount: 2,
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/quizzes/qz_leaver/questions/q_proposed`, {
+    type: 'single',
+    text: 'Who is Vronsky?',
+    explanation: 'He is an officer.',
+    choices: ['An officer', 'A doctor'],
+    answerIndex: 0,
+    modelAnswer: null,
+    approved: false,
+    proposedByEmail: LEAVER,
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/quizzes/qz_leaver/attempts/${LEAVER}`, {
+    best: 80,
+    last: 60,
+    attempts: 2,
+    updatedAt: new Date('2026-11-02T11:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/quizzes/qz_leaver/attempts/${OTHER}`, {
+    best: 50,
+    last: 50,
+    attempts: 1,
+    updatedAt: new Date('2026-11-02T11:30:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/glossary/term_leaver`, {
+    term: 'Vronsky',
+    definition: 'The officer Anna loves.',
+    chapterId: null,
+    approved: false,
+    createdByEmail: LEAVER,
+    createdAt: new Date('2026-11-02T10:30:00Z'),
+  });
+
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
     title: 'Lunch',
@@ -640,6 +680,25 @@ describe('tour content purge', () => {
     expect(await read(`tours/${TOUR}/study_books/sb_other/chapters/ch_1`)).toMatchObject({
       number: 1,
       title: 'Part one',
+    });
+  });
+
+  it('a leaver’s quiz, question and term keep their words under the stand-in, and their attempt comes out', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    const quiz = `tours/${TOUR}/study_books/sb_other/quizzes/qz_leaver`;
+    expect(await read(quiz)).toMatchObject({ title: 'Chapter 1 quiz', createdByEmail: STAND_IN });
+    expect(await read(`${quiz}/questions/q_proposed`)).toMatchObject({
+      text: 'Who is Vronsky?',
+      proposedByEmail: STAND_IN,
+    });
+    expect(await exists(`${quiz}/attempts/${LEAVER}`)).toBe(false);
+    expect(await exists(`${quiz}/attempts/${OTHER}`)).toBe(true);
+    expect(await read(`tours/${TOUR}/study_books/sb_other/glossary/term_leaver`)).toMatchObject({
+      term: 'Vronsky',
+      createdByEmail: STAND_IN,
     });
   });
 

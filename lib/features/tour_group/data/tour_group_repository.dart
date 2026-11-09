@@ -22,7 +22,10 @@ import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/study_models.dart';
+import '../domain/models/study_glossary_models.dart';
 import '../domain/models/study_material_models.dart';
+import '../domain/models/study_quiz_models.dart';
+import '../domain/services/study_quiz_rules.dart';
 import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
@@ -4867,5 +4870,221 @@ class TourGroupRepository {
     return snap.docs
         .map((d) => TourCommentItem.fromMap(d.id, d.data()))
         .toList();
+  }
+
+  // The learning tools of a book (Phase 5): the quizzes on its chapters, their questions, a member's private
+  // attempts, and the glossary. An admin writes quizzes and approves; a member proposes and takes them. The rules
+  // check each write.
+
+  CollectionReference<Map<String, dynamic>> _quizzesCol(
+    String tourId,
+    String bookId,
+  ) =>
+      _studyBookDoc(tourId, bookId).collection('quizzes');
+
+  CollectionReference<Map<String, dynamic>> _questionsCol(
+    String tourId,
+    String bookId,
+    String quizId,
+  ) =>
+      _quizzesCol(tourId, bookId).doc(quizId).collection('questions');
+
+  CollectionReference<Map<String, dynamic>> _glossaryCol(
+    String tourId,
+    String bookId,
+  ) =>
+      _studyBookDoc(tourId, bookId).collection('glossary');
+
+  /// The quizzes of a book, in no particular order; the screen sorts them.
+  Stream<List<StudyQuiz>> watchStudyQuizzes(String tourId, String bookId) {
+    return _quizzesCol(tourId, bookId).limit(100).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (StudyQuiz.fromMap(d.id, _datesAsDateTimes(d.data()))
+                case final quiz?)
+              quiz,
+        ]);
+  }
+
+  /// Writes a quiz on a chapter. Only an admin does this. A new quiz has no takers yet.
+  Future<void> addStudyQuiz(
+    String tourId,
+    String bookId, {
+    required String chapterId,
+    required String title,
+  }) async {
+    final email = _requireEmail();
+    final quiz = StudyQuiz(
+      id: '',
+      chapterId: chapterId,
+      title: title.trim(),
+      createdByEmail: email,
+    );
+    await _quizzesCol(tourId, bookId).add(quiz.toFields());
+  }
+
+  /// The questions of a quiz, proposals and approved ones alike, oldest first. A quiz shows only the approved
+  /// ones (quizQuestions in study_quiz_rules.dart).
+  Stream<List<StudyQuizQuestion>> watchQuizQuestions(
+    String tourId,
+    String bookId,
+    String quizId,
+  ) {
+    return _questionsCol(tourId, bookId, quizId)
+        .orderBy('createdAt')
+        .limit(300)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyQuizQuestion.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final question?)
+                  question,
+            ]);
+  }
+
+  /// Adds a question to a quiz in the signed-in member's name. A member's question is a proposal and waits for an
+  /// admin; an admin's is added approved when [approved] is set.
+  Future<void> addQuizQuestion(
+    String tourId,
+    String bookId,
+    String quizId, {
+    required StudyQuizQuestion question,
+    required bool approved,
+  }) async {
+    final email = _requireEmail();
+    await _questionsCol(tourId, bookId, quizId).add({
+      ...question.toFields(),
+      'approved': approved,
+      'proposedByEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Approves a proposed question so it joins the quiz. Only an admin does this.
+  Future<void> approveQuizQuestion(
+    String tourId,
+    String bookId,
+    String quizId,
+    String questionId,
+  ) async {
+    _requireEmail();
+    await _questionsCol(tourId, bookId, quizId)
+        .doc(questionId)
+        .update({'approved': true});
+  }
+
+  /// Removes a question: an admin, or the member who proposed it while it is still a proposal.
+  Future<void> deleteQuizQuestion(
+    String tourId,
+    String bookId,
+    String quizId,
+    String questionId,
+  ) async {
+    _requireEmail();
+    await _questionsCol(tourId, bookId, quizId).doc(questionId).delete();
+  }
+
+  /// The signed-in member's own record on a quiz, or null when they have not taken it. Nobody else reads it.
+  Stream<StudyQuizAttempt?> watchMyQuizAttempt(
+    String tourId,
+    String bookId,
+    String quizId,
+  ) {
+    final email = currentEmail;
+    if (email.isEmpty) return Stream.value(null);
+    return _quizzesCol(tourId, bookId)
+        .doc(quizId)
+        .collection('attempts')
+        .doc(email)
+        .snapshots()
+        .map((s) {
+      final data = s.data();
+      if (!s.exists || data == null) return null;
+      return StudyQuizAttempt.fromMap(data);
+    });
+  }
+
+  /// Records one attempt as [correct] answers out of [total]. The first attempt also moves the quiz's taker count
+  /// up by one, in the same transaction, so the count stays exact. Returns the member's record afterwards.
+  Future<StudyQuizAttempt> recordQuizAttempt(
+    String tourId,
+    String bookId,
+    String quizId, {
+    required int correct,
+    required int total,
+  }) {
+    final email = _requireEmail();
+    final quiz = _quizzesCol(tourId, bookId).doc(quizId);
+    final attempt = quiz.collection('attempts').doc(email);
+    final percent = scorePercent(correct: correct, total: total);
+    return _firestore.runTransaction<StudyQuizAttempt>((tx) async {
+      final snap = await tx.get(attempt);
+      final data = snap.data();
+      final previous =
+          snap.exists && data != null ? StudyQuizAttempt.fromMap(data) : null;
+      final next = nextAttempt(previous, percent);
+      tx.set(attempt, {
+        ...next.toFields(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      if (previous == null) {
+        tx.update(quiz, {'takerCount': FieldValue.increment(1)});
+      }
+      return next;
+    });
+  }
+
+  /// The glossary of a book: approved terms and proposals alike. The screen sorts and filters them.
+  Stream<List<StudyGlossaryTerm>> watchGlossary(String tourId, String bookId) {
+    return _glossaryCol(tourId, bookId).limit(500).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (StudyGlossaryTerm.fromMap(d.id, _datesAsDateTimes(d.data()))
+                case final term?)
+              term,
+        ]);
+  }
+
+  /// Adds a term in the signed-in member's name. A member's term is a proposal; an admin's is added approved when
+  /// [approved] is set.
+  Future<void> addGlossaryTerm(
+    String tourId,
+    String bookId, {
+    required String term,
+    required String definition,
+    String? chapterId,
+    required bool approved,
+  }) async {
+    final email = _requireEmail();
+    final entry = StudyGlossaryTerm(
+      id: '',
+      term: term.trim(),
+      definition: definition.trim(),
+      chapterId: chapterId,
+      approved: approved,
+      createdByEmail: email,
+    );
+    await _glossaryCol(tourId, bookId).add({
+      ...entry.toFields(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Approves a proposed term. Only an admin does this.
+  Future<void> approveGlossaryTerm(
+    String tourId,
+    String bookId,
+    String termId,
+  ) async {
+    _requireEmail();
+    await _glossaryCol(tourId, bookId).doc(termId).update({'approved': true});
+  }
+
+  /// Removes a term: an admin, or the member who proposed it while it is still a proposal.
+  Future<void> deleteGlossaryTerm(
+    String tourId,
+    String bookId,
+    String termId,
+  ) async {
+    _requireEmail();
+    await _glossaryCol(tourId, bookId).doc(termId).delete();
   }
 }

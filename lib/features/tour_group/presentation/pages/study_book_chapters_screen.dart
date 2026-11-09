@@ -15,7 +15,13 @@ import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_pace_sheet.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'study_discussion_screen.dart';
+import 'study_flashcards_screen.dart';
+import 'study_glossary_screen.dart';
 import 'study_materials_screen.dart';
+import 'study_quizzes_screen.dart';
+
+/// The learning tools a book offers, from the sheet on its chapters.
+enum _LearningTool { quizzes, glossary, flashcards }
 
 /// One book's chapters in reading order. Each has its due date and guide questions. A member
 /// marks a chapter read in their own name, and can keep a place in the book on this device.
@@ -262,6 +268,70 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     ));
   }
 
+  /// The learning tools of this book, chosen from a sheet: quizzes, the glossary and flashcards.
+  Future<void> _openLearning() async {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    final tool = await showModalBottomSheet<_LearningTool>(
+      context: context,
+      backgroundColor: palette.card,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                l10n.translate('study_learning_title'),
+                style: TextStyle(
+                    color: palette.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.quiz_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_quizzes_title'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.quizzes),
+            ),
+            ListTile(
+              leading: Icon(Icons.menu_book_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_glossary_title'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.glossary),
+            ),
+            ListTile(
+              leading: Icon(Icons.style_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_flashcards_title'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.flashcards),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (tool == null || !mounted) return;
+    final Widget page = switch (tool) {
+      _LearningTool.quizzes => StudyQuizzesScreen(
+          tourId: widget.tourId,
+          book: widget.book,
+          repository: _repository,
+        ),
+      _LearningTool.glossary => StudyGlossaryScreen(
+          tourId: widget.tourId,
+          book: widget.book,
+          repository: _repository,
+        ),
+      _LearningTool.flashcards => StudyFlashcardsScreen(book: widget.book),
+    };
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
   /// A guide question starts a thread on its chapter, with the question as its title. The
   /// member writes the body and may change the title first.
   Future<void> _startThreadFromGuide(
@@ -332,6 +402,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             tooltip: l10n.translate('study_discussion_title'),
             icon: const Icon(Icons.forum_rounded),
             onPressed: _openDiscussion,
+          ),
+          IconButton(
+            tooltip: l10n.translate('study_learning_title'),
+            icon: const Icon(Icons.school_rounded),
+            onPressed: _openLearning,
           ),
           if (_isAdmin && _chapters.isNotEmpty)
             IconButton(
