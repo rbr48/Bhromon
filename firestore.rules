@@ -805,7 +805,7 @@ service cloud.firestore {
     }
     // The modules a study subject can turn on. Only these are live; the rest are coming.
     function studyModuleLive(key) {
-      return key in ['tips', 'suggestions', 'findings'];
+      return key in ['tips', 'suggestions', 'findings', 'problems'];
     }
     // A module's settings: on or off, its name, and who may post in it.
     function validStudyModule(d) {
@@ -950,6 +950,108 @@ service cloud.firestore {
                studyCountsMoveOk(tourId, subjectId, findingId, newData, oldData)) ||
               (byAdmin && changed.hasOnly(['text', 'method', 'shown', 'pinned'])) ||
               (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'method'])));
+    }
+
+    // A problem a group works through: its statement, an optional title, the time its reference solution
+    // opens to members, and whether it is shown and pinned.
+    function validStudyProblem(d) {
+      return d.keys().hasOnly(['text', 'title', 'createdByEmail', 'createdAt', 'releaseAt', 'shown', 'pinned']) &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
+             (d.get('title', null) == null || (d.title is string && d.title.size() <= 120)) &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp &&
+             (d.get('releaseAt', null) == null || d.releaseAt is timestamp) &&
+             d.shown is bool && d.pinned is bool;
+    }
+    // Whether a member may add a problem: the same rule as a finding's (the module's post policy).
+    function studyProblemCreateAllowed(tourId, subjectId, d) {
+      let byAdmin = isTourAdmin(tourId);
+      return isStudyTour(tourId) && isActiveMember(tourId) &&
+             d.createdByEmail == tourUserEmail() &&
+             d.pinned == false &&
+             d.createdAt == request.time &&
+             validStudyProblem(d) &&
+             studySubjectListed(tourId, subjectId) &&
+             studyModuleOn(tourId, subjectId, 'problems') &&
+             (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/problems).data.postPolicy != 'admins') &&
+             d.shown == (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/problems).data.postPolicy == 'members');
+    }
+    // Whether an update to a problem is allowed. An admin shows, pins, schedules or edits it; its author
+    // changes the words and the title only, never the release time or the flags.
+    function studyProblemUpdateAllowed(tourId, newData, oldData) {
+      let byAdmin = isTourAdmin(tourId);
+      let changed = newData.diff(oldData).affectedKeys();
+      return newData.createdByEmail == oldData.createdByEmail &&
+             validStudyProblem(newData) &&
+             ((byAdmin && changed.hasOnly(['text', 'title', 'releaseAt', 'shown', 'pinned'])) ||
+              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'title'])));
+    }
+    // The reference solution of a problem: its text, the admin who reviewed it, and when it was written.
+    function validStudyReference(d) {
+      return d.keys().hasOnly(['text', 'reviewedByEmail', 'updatedAt']) &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
+             d.reviewedByEmail is string && d.reviewedByEmail.size() <= 254 &&
+             d.updatedAt is timestamp;
+    }
+    // A member's working on a problem: its text, when it was first and last written, and its review counts.
+    function validStudyWork(d) {
+      return d.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'rightCount', 'gapCount']) &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 4000 &&
+             d.createdAt is timestamp && d.updatedAt is timestamp &&
+             d.rightCount is int && d.rightCount >= 0 &&
+             d.gapCount is int && d.gapCount >= 0;
+    }
+    // A review of a working: a verdict of right or gap, and an optional note.
+    function validStudyWorkReview(d) {
+      return d.keys().hasOnly(['verdict', 'note', 'createdAt']) &&
+             d.verdict in ['right', 'gap'] &&
+             (d.get('note', null) == null || (d.note is string && d.note.size() <= 300)) &&
+             d.createdAt is timestamp;
+    }
+    // Whether the signed-in member has submitted their own working on a problem. A request-level check, so
+    // it can be used in a list query.
+    function studyHasOwnWork(tourId, subjectId, problemId) {
+      return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(tourUserEmail()));
+    }
+    // Whether the signed-in member's review of a working is, now or after the batch, a review of the verdict.
+    function studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, verdict) {
+      return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(tourUserEmail())) &&
+             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(tourUserEmail())).data.verdict == verdict;
+    }
+    function studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, verdict) {
+      return existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(tourUserEmail())) &&
+             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(tourUserEmail())).data.verdict == verdict;
+    }
+    // Whether a working's review counts move only with the reviewing member's review in the same batch: a right
+    // or a gap is added or taken back, and the other count stays where it is.
+    function studyWorkCountsOk(tourId, subjectId, problemId, solverEmail, newData, oldData) {
+      let dRight = newData.rightCount - oldData.rightCount;
+      let dGap = newData.gapCount - oldData.gapCount;
+      return (dRight == 0 && dGap == 0) ||
+             (dRight == 1 && dGap == 0 && !studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'right') && studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'right')) ||
+             (dRight == 0 && dGap == 1 && !studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'gap') && studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'gap')) ||
+             (dRight == -1 && dGap == 0 && studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'right') && !studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'right')) ||
+             (dRight == 0 && dGap == -1 && studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'gap') && !studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'gap'));
+    }
+    // Whether an update to a working is allowed: its counts move only with a review; its author edits the words.
+    function studyWorkUpdateAllowed(tourId, subjectId, problemId, solverEmail, newData, oldData) {
+      let changed = newData.diff(oldData).affectedKeys();
+      return validStudyWork(newData) &&
+             ((changed.hasOnly(['rightCount', 'gapCount']) &&
+               studyWorkCountsOk(tourId, subjectId, problemId, solverEmail, newData, oldData)) ||
+              (solverEmail == tourUserEmail() && changed.hasOnly(['text', 'updatedAt']) && newData.updatedAt == request.time));
+    }
+    // Whether a member may submit their own working: once, on a shown problem, in a listed subject whose
+    // problems module is on. The counts start at zero.
+    function studyWorkCreateAllowed(tourId, subjectId, problemId, solverEmail, d) {
+      return isStudyTour(tourId) && isActiveMember(tourId) &&
+             solverEmail == tourUserEmail() &&
+             d.createdAt == request.time && d.updatedAt == request.time &&
+             d.rightCount == 0 && d.gapCount == 0 &&
+             validStudyWork(d) &&
+             studySubjectListed(tourId, subjectId) &&
+             studyModuleOn(tourId, subjectId, 'problems') &&
+             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.shown == true;
     }
 
     // Whether an update to a study book is allowed. The admin check reads the member record,
@@ -1780,6 +1882,75 @@ service cloud.firestore {
                               (resource.data.verdict == 'challenge' &&
                                getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount - 1 &&
                                getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount));
+          }
+        }
+
+        // Problems a group works through. A member submits their own working; the reference solution is written by
+        // an admin and opens to members at its release time; a member sees and reviews others' working only after
+        // submitting their own.
+        match /problems/{problemId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if studyProblemCreateAllowed(tourId, subjectId, request.resource.data);
+          allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           studyProblemUpdateAllowed(tourId, request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+          // The reference solution: an admin writes it and is its reviewer. Members read it once the problem is
+          // shown to them and its release time has come.
+          match /reference/solution {
+            allow read: if isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) ||
+                            (get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.shown == true &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.get('releaseAt', null) != null &&
+                             request.time >= get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)).data.releaseAt));
+            allow create, update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                                     validStudyReference(request.resource.data) &&
+                                     request.resource.data.reviewedByEmail == tourUserEmail() &&
+                                     request.resource.data.updatedAt == request.time;
+            allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+          }
+
+          // A member's own working. Read by its author, and by an admin or a member who has submitted their own
+          // working. A list query needs the request-level condition alone, so the list rule has no document test.
+          match /solutions/{solverEmail} {
+            allow get: if isActiveMember(tourId) &&
+                          (isTourAdmin(tourId) || solverEmail == tourUserEmail() || studyHasOwnWork(tourId, subjectId, problemId));
+            allow list: if isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || studyHasOwnWork(tourId, subjectId, problemId));
+            allow create: if studyWorkCreateAllowed(tourId, subjectId, problemId, solverEmail, request.resource.data);
+            allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             studyWorkUpdateAllowed(tourId, subjectId, problemId, solverEmail, request.resource.data, resource.data);
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                             (solverEmail == tourUserEmail() || isTourAdmin(tourId));
+
+            // A review of a working by a member who has submitted their own, and never of their own working. The
+            // working's review counts move in the same batch (studyWorkCountsOk).
+            match /reviews/{voter} {
+              allow get: if isActiveMember(tourId) &&
+                            (isTourAdmin(tourId) || solverEmail == tourUserEmail() || studyHasOwnWork(tourId, subjectId, problemId));
+              allow list: if isActiveMember(tourId) &&
+                             (isTourAdmin(tourId) || studyHasOwnWork(tourId, subjectId, problemId));
+              allow create: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                               voter != solverEmail &&
+                               validStudyWorkReview(request.resource.data) &&
+                               request.resource.data.createdAt == request.time &&
+                               studyHasOwnWork(tourId, subjectId, problemId) &&
+                               ((request.resource.data.verdict == 'right' &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount + 1 &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount) ||
+                                (request.resource.data.verdict == 'gap' &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount + 1 &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount));
+              // A reviewer takes their own review back, and the working's count falls in the same batch.
+              allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                               ((resource.data.verdict == 'right' &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount - 1 &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount) ||
+                                (resource.data.verdict == 'gap' &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount - 1 &&
+                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount));
+            }
           }
         }
       }
