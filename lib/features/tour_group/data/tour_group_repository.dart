@@ -6060,6 +6060,47 @@ class TourGroupRepository {
     });
   }
 
+  /// Reports a revision of a chapter's summary to the admins. Its count rises by one, and its first report time is
+  /// set, in one batch with the report. The member's own revision cannot be reported.
+  Future<void> reportStudySummary(
+    String tourId,
+    String bookId,
+    String chapterId,
+    String revisionId, {
+    required StudyReportReason reason,
+  }) async {
+    final email = _requireEmail();
+    final revision = _summariesCol(tourId, bookId, chapterId).doc(revisionId);
+    final snap = await revision.get();
+    final alreadyReported = snap.data()?['reportedAt'] != null;
+    final batch = _firestore.batch();
+    batch.set(revision.collection('reports').doc(email), {
+      'reason': reason.name,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(revision, {
+      'reportCount': FieldValue.increment(1),
+      if (!alreadyReported) 'reportedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  /// Hides a revision from the group, or shows it again. Only an admin does this. Showing it again clears its
+  /// report time. The words of the revision are not changed.
+  Future<void> setSummaryHidden(
+    String tourId,
+    String bookId,
+    String chapterId,
+    String revisionId, {
+    required bool hidden,
+  }) async {
+    _requireEmail();
+    await _summariesCol(tourId, bookId, chapterId).doc(revisionId).update({
+      'hidden': hidden,
+      if (!hidden) 'reportedAt': FieldValue.delete(),
+    });
+  }
+
   /// Pins a revision of a chapter's summary for the group, or unpins it when [revisionId] is null. Only an admin
   /// does this. The pin is written on its own, so a chapter edit does not clear it.
   Future<void> setChapterPin(

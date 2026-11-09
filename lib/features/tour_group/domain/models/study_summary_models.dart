@@ -10,7 +10,8 @@ class StudySummaryLimits {
   static const int nameMax = 80;
 }
 
-/// One revision of a chapter summary. A revision is never changed after it is written.
+/// One revision of a chapter summary. Its words are never changed after it is written. An admin may hide it
+/// or show it again, and a member's report counts it (`reportCount`, `reportedAt`).
 class StudySummaryRevision {
   const StudySummaryRevision({
     required this.id,
@@ -19,6 +20,9 @@ class StudySummaryRevision {
     this.editorName = '',
     this.createdAt,
     this.restoredFromId,
+    this.hidden = false,
+    this.reportCount = 0,
+    this.reportedAt,
   });
 
   final String id;
@@ -38,12 +42,27 @@ class StudySummaryRevision {
   /// The revision this one restores, when it is a restore. Null for an ordinary revision.
   final String? restoredFromId;
 
-  /// The fields written for a new revision. The time is added by the repository, as the server's time.
+  /// Whether an admin has hidden the revision. A hidden revision is not read by the group.
+  final bool hidden;
+
+  /// How many members have reported the revision.
+  final int reportCount;
+
+  /// When the first report was made. Null when it has never been reported, or an admin showed it again.
+  final DateTime? reportedAt;
+
+  /// Whether the revision is reported and waiting for an admin.
+  bool get isReported => reportedAt != null;
+
+  /// The fields written for a new revision. The time is added by the repository, as the server's time. A new
+  /// revision is shown and has no reports, as firestore.rules requires.
   Map<String, dynamic> toFields() => {
         'text': text,
         'editorEmail': editorEmail,
         'editorName': editorName,
         'restoredFromId': restoredFromId,
+        'hidden': false,
+        'reportCount': 0,
       };
 
   /// Reads one stored revision. Returns null when it has no text, so a damaged revision does not break
@@ -53,6 +72,8 @@ class StudySummaryRevision {
     if (text.isEmpty) return null;
     final created = map['createdAt'];
     final restored = map['restoredFromId'];
+    final reported = map['reportedAt'];
+    final count = map['reportCount'];
     return StudySummaryRevision(
       id: id,
       text: text,
@@ -61,6 +82,9 @@ class StudySummaryRevision {
       createdAt: created is DateTime ? created : null,
       restoredFromId:
           restored is String && restored.isNotEmpty ? restored : null,
+      hidden: map['hidden'] == true,
+      reportCount: count is num && count > 0 ? count.toInt() : 0,
+      reportedAt: reported is DateTime ? reported : null,
     );
   }
 }

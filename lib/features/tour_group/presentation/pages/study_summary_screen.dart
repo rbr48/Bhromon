@@ -10,6 +10,7 @@ import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/models/study_summary_models.dart';
+import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_progress_rules.dart';
 
@@ -37,7 +38,7 @@ class StudySummaryScreen extends StatefulWidget {
 }
 
 /// What a member does with one revision from its sheet.
-enum _RevisionAction { restore, pin, unpin }
+enum _RevisionAction { restore, pin, unpin, report, hide, show }
 
 class _StudySummaryScreenState extends State<StudySummaryScreen> {
   late final TourGroupRepository _repository =
@@ -52,6 +53,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
   bool _failed = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
+  String get _me => _repository.currentEmail;
 
   @override
   void initState() {
@@ -165,6 +167,55 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
     );
   }
 
+  /// Asks why a revision is reported. Returns null when the member cancels.
+  Future<StudyReportReason?> _askReportReason() {
+    final l10n = context.l10n;
+    return showDialog<StudyReportReason>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l10n.translate('study_summary_report_title')),
+        children: [
+          for (final reason in StudyReportReason.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(reason),
+              child: Text(l10n.translate('study_thread_reason_${reason.name}')),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Reports a revision to the admins. The count rises, and an admin decides whether to hide it.
+  Future<void> _report(StudySummaryRevision revision) async {
+    final reason = await _askReportReason();
+    if (reason == null || !mounted) return;
+    await _run(
+      () => _repository.reportStudySummary(
+        widget.tourId,
+        widget.book.id,
+        widget.chapter.id,
+        revision.id,
+        reason: reason,
+      ),
+      'study_report_thanks',
+    );
+  }
+
+  /// An admin hides a revision from the group, or shows it again.
+  Future<void> _setHidden(StudySummaryRevision revision,
+      {required bool hidden}) {
+    return _run(
+      () => _repository.setSummaryHidden(
+        widget.tourId,
+        widget.book.id,
+        widget.chapter.id,
+        revision.id,
+        hidden: hidden,
+      ),
+      hidden ? 'study_summary_hidden_done' : 'study_summary_shown_done',
+    );
+  }
+
   /// Who wrote a revision, and when, as one line.
   String _byline(StudySummaryRevision revision) {
     final l10n = context.l10n;
@@ -203,7 +254,22 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
               onPressed: () => Navigator.of(ctx).pop(_RevisionAction.restore),
               child: Text(l10n.translate('study_summary_restore')),
             ),
-          if (_isAdmin && !isPinned)
+          if (!_isAdmin && revision.editorEmail != _me && !revision.isReported)
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(_RevisionAction.report),
+              child: Text(l10n.translate('study_summary_report')),
+            ),
+          if (_isAdmin && !revision.hidden)
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(_RevisionAction.hide),
+              child: Text(l10n.translate('study_summary_hide')),
+            ),
+          if (_isAdmin && revision.hidden)
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(_RevisionAction.show),
+              child: Text(l10n.translate('study_summary_show')),
+            ),
+          if (_isAdmin && !isPinned && !revision.hidden)
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(_RevisionAction.pin),
               child: Text(l10n.translate('study_summary_pin')),
@@ -224,6 +290,12 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
         await _pin(revision);
       case _RevisionAction.unpin:
         await _unpin();
+      case _RevisionAction.report:
+        await _report(revision);
+      case _RevisionAction.hide:
+        await _setHidden(revision, hidden: true);
+      case _RevisionAction.show:
+        await _setHidden(revision, hidden: false);
       case null:
         return;
     }
@@ -270,8 +342,15 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
     }
     if (!_loaded) return const Center(child: CircularProgressIndicator());
     final shown = summaryShownToGroup(_revisions, pinnedId: _pinnedId);
+    // A member does not see a hidden revision. An admin sees every revision, with the hidden ones marked.
     final ordered = newestFirst(_revisions);
-    final newestId = ordered.isEmpty ? null : ordered.first.id;
+    final listed = _isAdmin
+        ? ordered
+        : [
+            for (final revision in ordered)
+              if (!revision.hidden) revision
+          ];
+    final newestId = listed.isEmpty ? null : listed.first.id;
     final pinnedRevisionId = shown.pinned ? shown.revision?.id : null;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -286,7 +365,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
                   color: palette.accentText, fontWeight: FontWeight.w600),
             ),
           ),
-        for (final revision in ordered)
+        for (final revision in listed)
           _revisionTile(
             revision,
             isNewest: revision.id == newestId,
@@ -350,11 +429,30 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
           _byline(revision),
           style: TextStyle(color: palette.text54, fontSize: 12),
         ),
-        subtitle: Text(
-          revision.text,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: palette.text),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              revision.text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: palette.text),
+            ),
+            if (_isAdmin && revision.hidden)
+              Text(
+                context.l10n.translate('study_summary_hidden_notice'),
+                style: TextStyle(
+                    color: palette.text54, fontStyle: FontStyle.italic),
+              )
+            else if (_isAdmin && revision.isReported)
+              Text(
+                context.l10n.translate('study_summary_reported_notice',
+                    args: {'n': context.l10n.number(revision.reportCount)}),
+                style: TextStyle(
+                    color: palette.text54, fontStyle: FontStyle.italic),
+              ),
+          ],
         ),
         trailing: isPinned
             ? Icon(Icons.push_pin_rounded, color: palette.accentText)

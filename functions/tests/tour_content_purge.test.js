@@ -476,6 +476,25 @@ async function seed() {
     editorName: 'Friend',
     createdAt: new Date('2026-11-02T12:30:00Z'),
   });
+  // The leaver reported the other member's revision. The report comes out and the count drops by one; the other
+  // member's report on the same revision stays.
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other`, {
+    text: 'Levin works on his land.',
+    editorEmail: OTHER,
+    editorName: 'Friend',
+    createdAt: new Date('2026-11-02T12:30:00Z'),
+    hidden: false,
+    reportCount: 2,
+    reportedAt: new Date('2026-11-02T13:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other/reports/${LEAVER}`, {
+    reason: 'wrong',
+    createdAt: new Date('2026-11-02T13:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other/reports/third@x.com`, {
+    reason: 'other',
+    createdAt: new Date('2026-11-02T13:05:00Z'),
+  });
 
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
@@ -895,6 +914,13 @@ describe('tour content purge', () => {
     });
     expect(await read(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other`)).toMatchObject({
       editorEmail: OTHER,
+    });
+    // The leaver's report on the revision comes out, the other member's stays, and the count is one.
+    expect(await exists(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other/reports/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other/reports/third@x.com`)).toBe(true);
+    expect(await read(`tours/${TOUR}/study_books/sb_other/chapters/ch_1/summaries/sum_other`)).toMatchObject({
+      reportCount: 1,
+      hidden: false,
     });
   });
 
