@@ -142,8 +142,8 @@ Future<void> _pump(WidgetTester tester, Widget page) async {
 const _book =
     StudyBook(id: 'b1', title: 'Anna Karenina', createdByEmail: 'admin@x.com');
 
-final _chapterOne = StudyChapter(id: 'c1', number: 1, title: 'First');
-final _chapterFive = StudyChapter(id: 'c5', number: 5, title: 'Fifth');
+const _chapterOne = StudyChapter(id: 'c1', number: 1, title: 'First');
+const _chapterFive = StudyChapter(id: 'c5', number: 5, title: 'Fifth');
 
 final _openThread = StudyThread(
   id: 't1',
@@ -271,7 +271,7 @@ void main() {
     });
 
     testWidgets('a locked thread takes no reply', (tester) async {
-      final locked = StudyThread(
+      const locked = StudyThread(
         id: 't1',
         title: 'Closed',
         body: 'Done.',
