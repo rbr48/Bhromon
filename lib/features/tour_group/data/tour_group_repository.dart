@@ -3210,6 +3210,110 @@ class TourGroupRepository {
     await _problemRef(tourId, subjectId, problemId).delete();
   }
 
+  DocumentReference<Map<String, dynamic>> _problemSetRef(
+    String tourId,
+    String subjectId,
+    String setId,
+  ) =>
+      _sub(tourId, 'study_subjects')
+          .doc(subjectId)
+          .collection('problem_sets')
+          .doc(setId);
+
+  CollectionReference<Map<String, dynamic>> _problemsRef(
+    String tourId,
+    String subjectId,
+  ) =>
+      _sub(tourId, 'study_subjects').doc(subjectId).collection('problems');
+
+  /// The problem sets of a subject, newest first.
+  Stream<List<StudyProblemSet>> watchStudyProblemSets(
+    String tourId,
+    String subjectId,
+  ) {
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('problem_sets')
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyProblemSet.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final set?)
+                  set,
+            ]);
+  }
+
+  /// Makes a problem set. An admin does this. [dueAt] is the start of the day the set is due, or null for none.
+  Future<void> addStudyProblemSet(
+    String tourId,
+    String subjectId, {
+    required String title,
+    required DateTime? dueAt,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('problem_sets')
+        .add({
+      'title': title.trim(),
+      if (dueAt != null) 'dueAt': dueAt,
+      'createdByEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Renames a problem set or moves its due date. An admin does this. The creator and the creation time stay as
+  /// they were.
+  Future<void> editStudyProblemSet(
+    String tourId,
+    String subjectId,
+    String setId, {
+    required String title,
+    required DateTime? dueAt,
+  }) async {
+    _requireEmail();
+    await _problemSetRef(tourId, subjectId, setId).update({
+      'title': title.trim(),
+      'dueAt': dueAt ?? FieldValue.delete(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Deletes a problem set and takes its problems out of it in one batch, so no problem names a set that is gone.
+  /// The problems stay in the list. An admin does this.
+  Future<void> deleteStudyProblemSet(
+    String tourId,
+    String subjectId,
+    String setId,
+  ) async {
+    _requireEmail();
+    final members = await _problemsRef(tourId, subjectId)
+        .where('setId', isEqualTo: setId)
+        .get();
+    final batch = _firestore.batch();
+    for (final problem in members.docs) {
+      batch.update(problem.reference, {'setId': FieldValue.delete()});
+    }
+    batch.delete(_problemSetRef(tourId, subjectId, setId));
+    await batch.commit();
+  }
+
+  /// Puts a problem into a set, or takes it out of its set when [setId] is null. Only an admin does this.
+  Future<void> setStudyProblemSet(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String? setId,
+  ) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, problemId).update({
+      'setId': setId ?? FieldValue.delete(),
+    });
+  }
+
   /// The reference solution of a problem, or null when there is none, or when it has not opened to
   /// this member yet. A member who may not read it yet gets an error from the server, so the caller
   /// treats an error the same way.

@@ -54,6 +54,7 @@ class StudyProblem {
     this.pinned = false,
     this.reportCount = 0,
     this.reportedAt,
+    this.setId,
   });
 
   final String id;
@@ -89,6 +90,9 @@ class StudyProblem {
   /// Whether the problem is reported and waiting for an admin's decision.
   bool get isReported => reportedAt != null;
 
+  /// The id of the problem set this problem is in, or null when it is in none. Only an admin sets it.
+  final String? setId;
+
   /// Reads one stored problem. Returns null when it has no statement, so a damaged problem does not
   /// break the list.
   static StudyProblem? fromMap(String id, Map<String, dynamic> map) {
@@ -108,12 +112,72 @@ class StudyProblem {
       pinned: map['pinned'] == true,
       reportCount: _count(map['reportCount']),
       reportedAt: reported is DateTime ? reported : null,
+      setId: _setIdOf(map['setId']),
     );
   }
 
   static int _count(Object? raw) {
     final n = (raw as num?)?.toInt() ?? 0;
     return n < 0 ? 0 : n;
+  }
+
+  /// The set id a problem names: a non-empty string, or null when it names none.
+  static String? _setIdOf(Object? raw) {
+    if (raw is! String) return null;
+    final id = raw.trim();
+    return id.isEmpty ? null : id;
+  }
+}
+
+/// The limits on a problem set's name, and on the id a problem names its set by. The rules enforce the same
+/// numbers.
+class StudyProblemSetLimits {
+  const StudyProblemSetLimits._();
+
+  /// The longest name of a set.
+  static const int titleMax = 120;
+
+  /// The longest set id a problem may name.
+  static const int idMax = 40;
+}
+
+/// A named group of a subject's problems, which an admin makes, with an optional due date. The due date is the
+/// start of its day.
+class StudyProblemSet {
+  const StudyProblemSet({
+    required this.id,
+    required this.title,
+    this.dueAt,
+    this.createdByEmail = '',
+    this.createdAt,
+  });
+
+  final String id;
+
+  /// The name of the set.
+  final String title;
+
+  /// The start of the day the set is due. Null for a set with no due date.
+  final DateTime? dueAt;
+
+  final String createdByEmail;
+
+  /// When it was made. Null only while the server's clock has not yet given a time.
+  final DateTime? createdAt;
+
+  /// Reads one stored set. Returns null when it has no name, so a damaged set does not break the list.
+  static StudyProblemSet? fromMap(String id, Map<String, dynamic> map) {
+    final title = (map['title'] as String?)?.trim() ?? '';
+    if (title.isEmpty) return null;
+    final due = map['dueAt'];
+    final created = map['createdAt'];
+    return StudyProblemSet(
+      id: id,
+      title: title,
+      dueAt: due is DateTime ? due : null,
+      createdByEmail: (map['createdByEmail'] as String?) ?? '',
+      createdAt: created is DateTime ? created : null,
+    );
   }
 }
 

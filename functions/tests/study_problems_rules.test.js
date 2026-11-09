@@ -623,4 +623,97 @@ describe('problems, reference solutions, working and reviews', () => {
       await assertSucceeds(deleteDoc(workRef(db('admin'), P_REVIEW, people.other.email)));
     });
   });
+
+  describe('problem sets', () => {
+    const SET_ONE = 'set-one';
+    const setRef = (f, setId, subjectId = SUBJECT) =>
+      doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'problem_sets', setId);
+    const DUE = Timestamp.fromDate(new Date('2026-11-20T00:00:00Z'));
+
+    // A set as an admin writes it: a name, a due day, and the server's times.
+    const newSet = (by, extra = {}) => ({
+      title: 'Week one',
+      dueAt: DUE,
+      createdByEmail: by,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      ...extra,
+    });
+    // A set with no due date.
+    const undatedSet = (by, extra = {}) => {
+      const set = newSet(by, extra);
+      delete set.dueAt;
+      return set;
+    };
+
+    test('an admin makes a set under their own email, with a due date or without one', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertSucceeds(setDoc(setRef(db('admin'), 'set-undated'), undatedSet(people.admin.email)));
+      await assertFails(setDoc(setRef(db('admin'), 'set-other'), newSet(people.owner.email)));
+    });
+
+    test('a member cannot make, rename or delete a set', async () => {
+      await assertFails(setDoc(setRef(db('member'), 'set-member'), newSet(people.member.email)));
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertFails(updateDoc(setRef(db('member'), SET_ONE), { title: 'Renamed', updatedAt: serverTimestamp() }));
+      await assertFails(deleteDoc(setRef(db('member'), SET_ONE)));
+    });
+
+    test('a set has a name of 1 to 120 characters, and a due date only as a time', async () => {
+      await assertFails(setDoc(setRef(db('admin'), 'bad-empty'), newSet(people.admin.email, { title: '' })));
+      await assertFails(setDoc(setRef(db('admin'), 'bad-long'), newSet(people.admin.email, { title: 'x'.repeat(121) })));
+      await assertFails(setDoc(setRef(db('admin'), 'bad-due'), newSet(people.admin.email, { dueAt: '2026-11-20' })));
+      await assertSucceeds(setDoc(setRef(db('admin'), 'ok-long'), newSet(people.admin.email, { title: 'x'.repeat(120) })));
+    });
+
+    test('a set is refused in a subject that is not listed, and in one whose problems module is off', async () => {
+      await assertFails(setDoc(setRef(db('admin'), SET_ONE, PROPOSED), newSet(people.admin.email)));
+      await assertFails(setDoc(setRef(db('admin'), SET_ONE, OFF), newSet(people.admin.email)));
+    });
+
+    test('members read the sets of their group, and an outsider reads none', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertSucceeds(getDoc(setRef(db('member'), SET_ONE)));
+      await assertFails(getDoc(setRef(db('outsider'), SET_ONE)));
+    });
+
+    test('an admin renames a set, and cannot change its creator, nor save it without a new update time', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertSucceeds(updateDoc(setRef(db('admin'), SET_ONE), { title: 'Week two', updatedAt: serverTimestamp() }));
+      await assertFails(updateDoc(setRef(db('admin'), SET_ONE), { title: 'Week three' }));
+      await assertFails(updateDoc(setRef(db('admin'), SET_ONE), {
+        createdByEmail: people.owner.email,
+        updatedAt: serverTimestamp(),
+      }));
+    });
+
+    test('an admin puts a problem into a set that exists, and never into one that does not', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertSucceeds(updateDoc(problemRef(db('admin'), P_ADMIN), { setId: SET_ONE }));
+      await assertFails(updateDoc(problemRef(db('admin'), P_NOREF), { setId: 'no-such-set' }));
+      await assertFails(updateDoc(problemRef(db('admin'), P_NOREF), { setId: 'x'.repeat(41) }));
+    });
+
+    test('a member cannot put a problem into a set, and cannot post a problem already in one', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertFails(updateDoc(problemRef(db('member'), P_MEMBER), { setId: SET_ONE }));
+      await assertFails(setDoc(problemRef(db('member'), 'pr-in-set'), newProblem(people.member.email, { setId: SET_ONE })));
+    });
+
+    test('an admin takes a problem out of its set', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertSucceeds(updateDoc(problemRef(db('admin'), P_ADMIN), { setId: SET_ONE }));
+      await assertSucceeds(updateDoc(problemRef(db('admin'), P_ADMIN), { setId: deleteField() }));
+    });
+
+    test('an admin deletes a set and clears its problems in one batch', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertSucceeds(updateDoc(problemRef(db('admin'), P_ADMIN), { setId: SET_ONE }));
+      const f = db('admin');
+      const batch = writeBatch(f);
+      batch.update(problemRef(f, P_ADMIN), { setId: deleteField() });
+      batch.delete(setRef(f, SET_ONE));
+      await assertSucceeds(batch.commit());
+    });
+  });
 });

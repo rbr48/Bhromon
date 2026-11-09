@@ -391,4 +391,111 @@ void main() {
       );
     });
   });
+
+  group('problem sets', () {
+    final now = DateTime(2026, 11, 9, 14);
+
+    test(
+        'a set is due in its day, overdue from the day after, and due soon in the three days before',
+        () {
+      expect(problemSetDueState(dueAt: null, now: now), ProblemSetDue.none);
+      // Due on the 20th: still open through the 20th, overdue once the 21st has begun.
+      expect(
+        problemSetDueState(
+            dueAt: DateTime(2026, 11, 20), now: DateTime(2026, 11, 20, 23, 59)),
+        ProblemSetDue.dueSoon,
+      );
+      expect(
+        problemSetDueState(
+            dueAt: DateTime(2026, 11, 20), now: DateTime(2026, 11, 21)),
+        ProblemSetDue.overdue,
+      );
+      // Three days before the 20th is the 17th: due soon from its start, upcoming the day before.
+      expect(
+        problemSetDueState(
+            dueAt: DateTime(2026, 11, 20), now: DateTime(2026, 11, 17)),
+        ProblemSetDue.dueSoon,
+      );
+      expect(
+        problemSetDueState(
+            dueAt: DateTime(2026, 11, 20), now: DateTime(2026, 11, 16, 23, 59)),
+        ProblemSetDue.upcoming,
+      );
+    });
+
+    test(
+        'problems are grouped under their sets: nearest due date first, undated last, and the rest are unset',
+        () {
+      final sets = [
+        const StudyProblemSet(id: 's-undated', title: 'Extra', dueAt: null),
+        StudyProblemSet(
+            id: 's-later', title: 'Week two', dueAt: DateTime(2026, 11, 27)),
+        StudyProblemSet(
+            id: 's-first', title: 'Week one', dueAt: DateTime(2026, 11, 20)),
+      ];
+      const a = StudyProblem(id: 'a', text: 'A', setId: 's-first');
+      const b = StudyProblem(id: 'b', text: 'B', setId: 's-later');
+      const c = StudyProblem(id: 'c', text: 'C', setId: 's-first');
+      const loose = StudyProblem(id: 'loose', text: 'Loose');
+      const gone = StudyProblem(id: 'gone', text: 'Gone', setId: 'deleted-set');
+
+      final grouped = groupProblemsBySet(
+        problems: [a, loose, b, c, gone],
+        sets: sets,
+      );
+
+      expect(grouped.sections.map((s) => s.set.title),
+          ['Week one', 'Week two', 'Extra']);
+      expect(grouped.sections.first.problems.map((p) => p.id), ['a', 'c']);
+      expect(grouped.sections[1].problems.map((p) => p.id), ['b']);
+      expect(grouped.sections.last.problems, isEmpty);
+      expect(grouped.unset.map((p) => p.id), ['loose', 'gone']);
+    });
+
+    test(
+        'the worked count is the problems of the set the viewer has a working for',
+        () {
+      final problems = [
+        const StudyProblem(id: 'a', text: 'A', setId: 's'),
+        const StudyProblem(id: 'b', text: 'B', setId: 's'),
+        const StudyProblem(id: 'c', text: 'C', setId: 's'),
+      ];
+      expect(
+          workedCount(problems: problems, workedIds: {'a', 'c', 'elsewhere'}),
+          2);
+      expect(workedCount(problems: problems, workedIds: const {}), 0);
+    });
+
+    test(
+        'a stored set needs a name, which is trimmed, and a due date only as a time',
+        () {
+      expect(StudyProblemSet.fromMap('s', {'title': '   '}), isNull);
+      final set = StudyProblemSet.fromMap('s', {
+        'title': '  Week one  ',
+        'dueAt': DateTime(2026, 11, 20),
+        'createdByEmail': 'a@x.com',
+      });
+      expect(set?.title, 'Week one');
+      expect(set?.dueAt, DateTime(2026, 11, 20));
+      expect(
+          StudyProblemSet.fromMap('s', {'title': 'Week one', 'dueAt': 'soon'})
+              ?.dueAt,
+          isNull);
+    });
+
+    test(
+        'a problem names its set by a non-empty id, and names none when the id is blank or not text',
+        () {
+      expect(
+          StudyProblem.fromMap('p', {'text': 'Solve it', 'setId': ' s-1 '})
+              ?.setId,
+          's-1');
+      expect(
+          StudyProblem.fromMap('p', {'text': 'Solve it', 'setId': '  '})?.setId,
+          isNull);
+      expect(StudyProblem.fromMap('p', {'text': 'Solve it', 'setId': 7})?.setId,
+          isNull);
+      expect(StudyProblem.fromMap('p', {'text': 'Solve it'})?.setId, isNull);
+    });
+  });
 }

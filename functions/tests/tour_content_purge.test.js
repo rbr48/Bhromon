@@ -304,6 +304,15 @@ async function seed() {
     joinedAt: new Date('2026-11-09T07:30:00Z'),
   });
 
+  // A problem set the leaver made as an admin: its name and due date stay, under the stand-in.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver`, {
+    title: 'Week one',
+    dueAt: new Date('2026-11-20T00:00:00Z'),
+    createdByEmail: LEAVER,
+    createdAt: new Date('2026-11-09T06:00:00Z'),
+    updatedAt: new Date('2026-11-09T06:00:00Z'),
+  });
+
   // A proposed book the leaver and another member would read, and a listed book's chapter that
   // the leaver and another member have marked read. The votes and read marks are each member's
   // own, so the leaver's go and the others' stay. The chapter is the admin's record and stays.
@@ -809,6 +818,11 @@ describe('tour content purge', () => {
     });
     expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09/joins/${LEAVER}`)).toBe(false);
     expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09/joins/${OTHER}`)).toBe(true);
+    // The problem set keeps its name and due date, under the stand-in.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver`)).toMatchObject({
+      title: 'Week one',
+      createdByEmail: STAND_IN,
+    });
   });
 
   it('a leaver’s votes and read marks go, the others’ stay, and the chapter stays', async () => {

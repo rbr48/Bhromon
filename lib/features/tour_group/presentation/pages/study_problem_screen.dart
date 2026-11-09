@@ -12,6 +12,7 @@ import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_problem_rules.dart';
 import '../widgets/study/study_problem_composer.dart';
+import '../widgets/study/study_problem_set_sheets.dart';
 
 /// One problem: its statement, its reference solution once it has opened, the member's own working,
 /// and the working of the other members. A member sees and reviews the others' working only after
@@ -24,6 +25,7 @@ class StudyProblemScreen extends StatefulWidget {
     required this.settings,
     required this.problem,
     this.repository,
+    this.setTitle,
   });
 
   final String tourId;
@@ -34,6 +36,9 @@ class StudyProblemScreen extends StatefulWidget {
   /// The data source. Null in the app, where the screen makes its own; tests pass one.
   final TourGroupRepository? repository;
 
+  /// The name of the problem's set, when it is in one. The page shows it, and an admin's change of set updates it.
+  final String? setTitle;
+
   @override
   State<StudyProblemScreen> createState() => _StudyProblemScreenState();
 }
@@ -42,6 +47,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
   late final TourGroupRepository _repository =
       widget.repository ?? TourGroupRepository();
   late StudyProblem _problem = widget.problem;
+  late String? _setTitle = widget.setTitle;
   TourRole? _myRole;
 
   /// The reference solution, once it has been read, and whether the read has been tried.
@@ -399,6 +405,37 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     );
   }
 
+  /// An admin puts this problem into a set, or takes it out of its set. The page keeps the set's name for its line.
+  Future<void> _pickSet() async {
+    final sets = await _repository
+        .watchStudyProblemSets(widget.tourId, widget.subject.id)
+        .first;
+    if (!mounted) return;
+    final choice = await showStudyProblemSetPicker(
+      context,
+      sets: sets,
+      currentSetId: _problem.setId,
+    );
+    if (choice == null || !mounted) return;
+    final chosen = [
+      for (final set in sets)
+        if (set.id == choice.setId) set,
+    ];
+    await _runProblem(
+      () => _repository.setStudyProblemSet(
+        widget.tourId,
+        widget.subject.id,
+        _problem.id,
+        choice.setId,
+      ),
+      _copy(setId: choice.setId, clearSet: choice.setId == null),
+      'study_set_problem_moved',
+    );
+    if (mounted) {
+      setState(() => _setTitle = chosen.isEmpty ? null : chosen.first.title);
+    }
+  }
+
   Future<void> _clearRelease() async {
     await _runProblem(
       () => _repository.setStudyProblemRelease(
@@ -571,6 +608,8 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     DateTime? releaseAt,
     bool clearRelease = false,
     bool clearReport = false,
+    String? setId,
+    bool clearSet = false,
   }) =>
       StudyProblem(
         id: _problem.id,
@@ -583,6 +622,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         pinned: pinned ?? _problem.pinned,
         reportCount: _problem.reportCount,
         reportedAt: clearReport ? null : _problem.reportedAt,
+        setId: clearSet ? null : (setId ?? _problem.setId),
       );
 
   String _standingKey(WorkStanding standing) => switch (standing) {
@@ -639,6 +679,8 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
                     _setShown();
                   case 'pin':
                     _togglePinned();
+                  case 'set':
+                    _pickSet();
                   case 'release':
                     _pickRelease();
                   case 'clear_release':
@@ -669,6 +711,11 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
                     child: Text(l10n.translate(_problem.pinned
                         ? 'study_post_unpin'
                         : 'study_post_pin')),
+                  ),
+                if (_isAdmin)
+                  PopupMenuItem<String>(
+                    value: 'set',
+                    child: Text(l10n.translate('study_set_pick_title')),
                   ),
                 if (_isAdmin)
                   PopupMenuItem<String>(
@@ -732,6 +779,14 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
         const SizedBox(height: 4),
       ],
       Text(_problem.text, style: TextStyle(color: palette.text)),
+      if (_setTitle != null) ...[
+        const SizedBox(height: 6),
+        Text(
+          l10n.translate('study_set_in_line', args: {'name': _setTitle!}),
+          style:
+              TextStyle(color: palette.accentText, fontWeight: FontWeight.w600),
+        ),
+      ],
       if (_problem.isReported) ...[
         const SizedBox(height: 6),
         Text(l10n.translate('study_problem_reported_notice'),

@@ -51,7 +51,7 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list, reading plan, subjects, tips, suggestions, findings, problems and weekly
+ *   list, and the study book list, reading plan, subjects, tips, suggestions, findings, problems, problem sets and weekly
  *   challenges) keeps its amounts and dates. A challenge loses the person's join only.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
@@ -145,6 +145,7 @@ const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_PROBLEM_SET: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_REFERENCE: AnonymizePlan = { emails: ['reviewedByEmail'] };
 const STUDY_CHALLENGE: AnonymizePlan = { emails: ['setByEmail'] };
 /** A discussion thread on a book: who started it. */
@@ -532,6 +533,8 @@ export async function purgeMemberContent(
     // their attempts do. Their reviews of other members' working go too, and each working's counts follow them.
     const problems = subject.ref.collection('problems');
     await applyToQuery(db, problems, anonymize(STUDY_PROBLEM, email, standIn));
+    // A problem set keeps its name and due date under the stand-in for the admin who made it.
+    await applyToQuery(db, subject.ref.collection('problem_sets'), anonymize(STUDY_PROBLEM_SET, email, standIn));
     const problemDocs = await problems.get();
     for (const problem of problemDocs.docs) {
       await applyToQuery(db, problem.ref.collection('reference'), anonymize(STUDY_REFERENCE, email, standIn));
