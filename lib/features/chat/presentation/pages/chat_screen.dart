@@ -3407,6 +3407,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             }
             if (context.canPop()) {
               context.pop();
+            } else if (widget.sharedTourId != null &&
+                widget.sharedTourId!.isNotEmpty) {
+              context.go('/group/${widget.sharedTourId}/channels');
             } else {
               context.go('/chats');
             }
@@ -3611,6 +3614,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       onPressed: () {
                                         if (context.canPop()) {
                                           context.pop();
+                                        } else if (widget.sharedTourId !=
+                                                null &&
+                                            widget.sharedTourId!.isNotEmpty) {
+                                          context.go(
+                                              '/group/${widget.sharedTourId}/channels');
                                         } else {
                                           context.go('/chats');
                                         }

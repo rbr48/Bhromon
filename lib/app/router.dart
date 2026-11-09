@@ -183,7 +183,8 @@ class AppRouter {
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final otherUid = extra?['otherUid'] as String?;
-          final sharedTourId = extra?['sharedTourId'] as String?;
+          final sharedTourId = (extra?['sharedTourId'] as String?) ??
+              state.uri.queryParameters['tourId'];
           return _desktopShellPage(
             state,
             ChatScreen(
@@ -202,6 +203,8 @@ class AppRouter {
         path: '/call/:callId',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
+          final sharedTourId = (extra['sharedTourId'] as String?) ??
+              state.uri.queryParameters['tourId'];
           return _customPageTransition(
             state,
             CallScreen(
@@ -209,7 +212,7 @@ class AppRouter {
               localUid: extra['localUid'] as String? ?? '',
               remoteUid: extra['remoteUid'] as String? ?? '',
               remoteEmail: extra['remoteEmail'] as String?,
-              sharedTourId: extra['sharedTourId'] as String?,
+              sharedTourId: sharedTourId,
               remoteUserName: extra['remoteUserName'] as String? ?? 'Member',
               remoteAvatarUrl: extra['remoteAvatarUrl'] as String?,
               isCaller: extra['isCaller'] as bool? ?? false,
@@ -461,8 +464,14 @@ class AppRouter {
       ),
       GoRoute(
         path: '/newspaper-hub',
-        pageBuilder: (context, state) =>
-            _desktopShellPage(state, const NewspaperHubScreen()),
+        pageBuilder: (context, state) {
+          final tourId = state.uri.queryParameters['tourId'];
+          return _desktopShellPage(
+            state,
+            NewspaperHubScreen(tourId: tourId),
+            tourId: tourId,
+          );
+        },
       ),
       GoRoute(
         path: '/holiday-calendar',

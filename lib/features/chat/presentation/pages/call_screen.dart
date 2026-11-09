@@ -157,6 +157,8 @@ class _CallScreenState extends State<CallScreen> {
     _hasExited = true;
     if (context.canPop()) {
       context.pop();
+    } else if (widget.sharedTourId != null && widget.sharedTourId!.isNotEmpty) {
+      context.go('/group/${widget.sharedTourId}/channels');
     } else {
       context.go('/chats');
     }
@@ -785,7 +787,12 @@ class _CallScreenState extends State<CallScreen> {
         _signaling.endCall();
         if (!didPop) {
           try {
-            context.go('/chats');
+            if (widget.sharedTourId != null &&
+                widget.sharedTourId!.isNotEmpty) {
+              context.go('/group/${widget.sharedTourId}/channels');
+            } else {
+              context.go('/chats');
+            }
           } catch (error, stackTrace) {
             logSkipped(error, stackTrace);
           }

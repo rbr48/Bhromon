@@ -10,30 +10,37 @@ class RouteNotFoundScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/group-hub'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/group-hub'),
+          ),
+          title: Text(context.l10n.translate('route_not_found_title')),
         ),
-        title: Text(context.l10n.translate('route_not_found_title')),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.translate('route_not_found_body'),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => context.go('/group-hub'),
-                child: Text(context.l10n.translate('route_not_found_action')),
-              ),
-            ],
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n.translate('route_not_found_body'),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => context.go('/group-hub'),
+                  child: Text(context.l10n.translate('route_not_found_action')),
+                ),
+              ],
+            ),
           ),
         ),
       ),

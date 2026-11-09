@@ -1433,27 +1433,34 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   /// A page shell for a group that is loading or not available.
   Widget _buildGroupShell(BuildContext context, Widget body) {
-    return Scaffold(
-      backgroundColor: context.forest.background,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
         backgroundColor: context.forest.background,
-        elevation: 0,
-        leading: IconButton(
-          tooltip: context.l10n.translate('group_back_to_list'),
-          icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
-          onPressed: () => context.go('/group-hub'),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            child: body,
+        appBar: AppBar(
+          backgroundColor: context.forest.background,
+          elevation: 0,
+          leading: IconButton(
+            tooltip: context.l10n.translate('group_back_to_list'),
+            icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
+            onPressed: () => context.go('/group-hub'),
           ),
         ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              child: body,
+            ),
+          ),
+        ),
+        bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
       ),
-      bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
     );
   }
 
@@ -1728,7 +1735,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           _rememberedTourId,
         ]);
 
-        return Scaffold(
+        final scaffold = Scaffold(
           backgroundColor: context.forest.background,
           appBar: _hubAppBar(context),
           body: Center(
@@ -1825,6 +1832,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             selectedIndex: 0,
             tourId: current?.id,
           ),
+        );
+
+        final canCloseExpanded = _expandedGroupId != null;
+        return PopScope(
+          canPop: !canCloseExpanded,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (canCloseExpanded) {
+              setState(() => _expandedGroupId = null);
+              if (widget.initialTourId != null &&
+                  widget.initialTourId!.isNotEmpty) {
+                context.go('/group-hub');
+              }
+            }
+          },
+          child: scaffold,
         );
       },
     );
@@ -2693,7 +2716,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             subtitle: l10n.translate('hub_module_games_sub'),
             icon: Icons.sports_esports_rounded,
             color: const Color(0xFFF59E0B),
-            onTap: () => context.push('/game-zone'),
+            onTap: () => context.push('/game-zone?tourId='),
           ),
       'quiz': () => _ModuleItem(
             title: l10n.translate('hub_module_quiz'),
@@ -2729,7 +2752,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             subtitle: l10n.translate('hub_module_news_sub'),
             icon: Icons.article_rounded,
             color: const Color(0xFF0EA5E9),
-            onTap: () => context.push('/newspaper-hub'),
+            onTap: () => context.push('/newspaper-hub?tourId='),
           ),
     };
     final modules = [for (final id in ids) builders[id]!()];
