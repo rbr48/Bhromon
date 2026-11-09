@@ -179,6 +179,15 @@ async function seed() {
     bookId: 'sb_other',
     createdByEmail: LEAVER,
   });
+  // The leaver and another member answered the session. The leaver's answer comes out; the other stays.
+  await set(`tours/${TOUR}/reading_sessions/rs_leaver/rsvps/${LEAVER}`, {
+    response: 'going',
+    updatedAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/reading_sessions/rs_leaver/rsvps/${OTHER}`, {
+    response: 'maybe',
+    updatedAt: new Date('2026-11-02T09:05:00Z'),
+  });
   // A subject the leaver proposed, with a tip they wrote, and a tip of another member's that
   // the leaver and a third member found helpful.
   await set(`tours/${TOUR}/study_subjects/subj_leaver`, {
@@ -585,6 +594,8 @@ describe('tour content purge', () => {
       createdByEmail: OTHER,
       statusByEmail: STAND_IN,
     });
+    expect(await exists(`tours/${TOUR}/reading_sessions/rs_leaver/rsvps/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/reading_sessions/rs_leaver/rsvps/${OTHER}`)).toBe(true);
     expect(await read(`tours/${TOUR}/reading_sessions/rs_leaver`)).toMatchObject({
       title: 'Chapter 1',
       createdByEmail: STAND_IN,

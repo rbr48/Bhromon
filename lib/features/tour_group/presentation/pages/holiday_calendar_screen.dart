@@ -5,16 +5,20 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/study_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/holiday_calendar.dart';
 import '../../domain/services/holiday_export.dart';
+import '../../domain/services/study_room_rules.dart';
 import '../widgets/holiday_calendar/holiday_common.dart';
 import '../widgets/holiday_calendar/holiday_day_sheet.dart';
 import '../widgets/holiday_calendar/holiday_leave_view.dart';
 import '../widgets/holiday_calendar/holiday_list_view.dart';
 import '../widgets/holiday_calendar/holiday_month_view.dart';
+import 'study_session_screen.dart';
 
 enum HolidayView { month, year, list, leave }
 
@@ -44,6 +48,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
   int _lunarShift = 0;
   late int _month;
   DateTime? _selected;
+  Stream<List<ReadingSession>>? _sessionStream;
 
   @override
   void initState() {
@@ -75,6 +80,10 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
               const SizedBox(height: 12),
               _buildTripCard(context, calendar, trip),
             ],
+            if (group != null && group.isStudy) ...[
+              const SizedBox(height: 12),
+              _studySessionCard(context),
+            ],
             const SizedBox(height: 12),
             _buildLegend(context),
             const SizedBox(height: 10),
@@ -101,6 +110,84 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
         ),
       ),
       body: body,
+    );
+  }
+
+  /// The group's reading sessions. One stream per open of the screen, read only by a study group.
+  Stream<List<ReadingSession>> _sessionsOf(String tourId) =>
+      _sessionStream ??= _repository.watchReadingSessions(tourId);
+
+  /// The study group's sessions whose study room has not closed, soonest first. Each opens its session page.
+  Widget _studySessionCard(BuildContext context) {
+    final l10n = context.l10n;
+    final now = DateTime.now();
+    return StreamBuilder<List<ReadingSession>>(
+      stream: _sessionsOf(widget.tourId),
+      builder: (context, snap) {
+        final sessions = calendarSessions(snap.data ?? const [], now: now);
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: kHolidayCard,
+            borderRadius: BorderRadius.circular(14),
+            border:
+                Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.translate('study_calendar_title'),
+                style: const TextStyle(
+                  color: AppColors.mintGreen,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (sessions.isEmpty)
+                Text(
+                  l10n.translate('study_calendar_empty'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              for (final session in sessions)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => StudySessionScreen(
+                        tourId: widget.tourId,
+                        session: session,
+                        repository: _repository,
+                      ),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          session.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          localizedDateFormat('d MMM y, h:mm a')
+                              .format(session.startsAt),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

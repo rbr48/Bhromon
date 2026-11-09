@@ -476,6 +476,13 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));
   await applyToQuery(db, tour.collection('study_books'), anonymize(STUDY_BOOK, email, standIn));
   await applyToQuery(db, tour.collection('reading_sessions'), anonymize(STUDY_SESSION, email, standIn));
+  // A session keeps its words under the stand-in. The person's answer and check-in come out, and the
+  // step runs again safely: each delete happens only when the answer is there.
+  const sessions = await tour.collection('reading_sessions').get();
+  for (const session of sessions.docs) {
+    const answer = session.ref.collection('rsvps').doc(email);
+    if ((await answer.get()).exists) await answer.delete();
+  }
   await applyToQuery(db, tour.collection('study_subjects'), anonymize(STUDY_SUBJECT, email, standIn));
   // Each subject's tips and suggestions keep their text under the stand-in. The person's
   // helpful marks come out, and each post's count drops by the mark removed.
