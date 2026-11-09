@@ -1,72 +1,72 @@
-# Implementation Plan: Sprint 7 — Everyday Group Specializations (Phase 9)
+# Implementation Plan: Sprints 8 to 10 Full Implementation
 
 ## Objective
-Deliver Sprint 7 specializations across everyday circles (Mess, Society, Office/Campus, Samity) per `ROADMAP.md`:
-1. **Task 9.1: Mess Monthly Bazar Duty Schedule & Reminders**
-   - Data model: `MessBazarSchedule` (`tours/{id}/mess_bazar_schedule/{dateKey}`).
-   - Firestore rules: enforce `isMessTour` and role validation.
-   - UI: Duty card in `MessHomeCard` and `MealsScreen`, with admin assignment sheet.
-   - VPS reminder: scheduled daily reminder dispatch for bazar duty members.
-2. **Task 9.2: Society Service Requests: Photo Attachments & Ledger Booking**
-   - Attach up to 3 photos per request via `TourMediaUploader`.
-   - Status timeline progression (Open → In Progress → Resolved) with admin note history.
-   - One-tap booking of resolved repair costs into Society Maintenance ledger.
-3. **Task 9.3: Office & Campus Notice Acknowledgement Rings**
-   - Circular progress indicator and response count on managed notices.
-   - Pending-member drawer with response status.
-4. **Task 9.4: Samity Receipts & Verification**
-   - Receipt / transfer screenshot upload on samity payout handover.
-   - Beneficiary confirmation status (`payoutStatus: verified`).
-5. **Quality Gates & Verification**
-   - Unit and emulator rules tests.
+Deliver full implementations for Sprints 8, 9, and 10 per `ROADMAP.md`:
+1. **Sprint 8 — Calls & Voice Lounge**:
+   - Task 8.1: Quality HUD verification & test coverage.
+   - Task 8.2: Call Reconnection (10s timeout window & attempt budget).
+   - Task 8.3: Voice Lounge Speaking Indicator in Docked Floating Bar.
+   - Task 8.4: In-chat search tests & verification.
+2. **Sprint 9 — Travel & Live Journey**:
+   - Task 9.1: Live Journey GA verification & documentation.
+   - Task 9.2: Local Fare Guide Sourced Audit (source & as-of date per route + UI badge).
+   - Task 9.3: Route Checkpoint Overlay (numbered checkpoints & route polyline on map).
+   - Task 9.4: Multi-Stop Itinerary PDF export entry point & tests.
+3. **Sprint 10 — Ledger & FinOps**:
+   - Task 10.1: Duplicate TrxID Prevention (UI validation, localized messages, rules tests).
+   - Task 10.2: Statement PDF Date Range (current month, whole tour, custom range).
+   - Task 10.3: Fund Burn-Rate Alerts (80% caution, 100% critical) unit test suite.
+4. **Quality Gates & PR Delivery**:
    - `flutter analyze` clean (0 errors, 0 warnings).
+   - `dart format .` 100% compliant.
+   - Unit and rules tests green.
    - Monotonic version bump in `pubspec.yaml`.
-   - GitHub PR workflow.
+   - Feature branch → Pull Request → 100% Green CI → Merge.
 
 ---
 
 ## Atomic Tasks
 
-### Phase 1: Mess Bazar Duty Schedule (Task 9.1)
-- [x] **Task 1.1: Bazar Duty Model & Repository**
-  - Define `MessBazarSchedule` in `lib/features/tour_group/domain/models/mess_bazar_model.dart`.
-  - Add watch and write methods in `TourGroupRepository`.
-- [x] **Task 1.2: Security Rules for Mess Bazar Schedule**
-  - Add rules in `firestore.rules` for `tours/{tourId}/mess_bazar_schedule/{dateKey}`.
-  - Verify via `functions/tests/mess_bazar_rules.test.js`.
-- [x] **Task 1.3: Mess UI Integration**
-  - Display Bazar Duty badge/card in `MessHomeCard` (`mess_home_card.dart`).
-  - Add Bazar Duty tab/sheet in `meals_screen.dart` with date navigation and admin assignment dialog.
-- [x] **Task 1.4: VPS Bazar Duty Daily Notification**
-  - Add morning duty reminder logic in `media-server/notifications.py`.
+### Sprint 8: Calls and Chat
+- [x] **Task 8.1: Quality HUD & Reconnect Tuning**
+  - Verify `_reconnectTimeout` is set to 10 seconds in `CallSignalingService`.
+  - Add unit tests for `CallReconnectPolicy` and `CallQualityHud` in `test/features/chat/call_quality_test.dart`.
+- [x] **Task 8.2: Speaking Indicator in Docked Voice Bar**
+  - In `group_channels_screen.dart`, update `_buildDockedVoiceBar` to render active speaker avatars with the animated mint-green speaking ring when participants talk.
+  - Verify audio level detection and speaking indicator behavior in unit tests.
+- [x] **Task 8.3: Chat Search Verification**
+  - Add comprehensive unit tests in `test/features/chat/chat_search_test.dart` verifying case-insensitivity, whitespace trimming, and empty query matching.
 
-### Phase 2: Society Service Requests Upgrades (Task 9.2)
-- [x] **Task 2.1: Photo Attachments in Service Requests**
-  - Add `photos: List<String>` to `ServiceRequest` model.
-  - Add image picker & uploader in request creation dialog in `society_requests_screen.dart`.
-- [x] **Task 2.2: Status Timeline & Maintenance Ledger Booking**
-  - Render 3-step visual status timeline with admin note in `society_requests_screen.dart`.
-  - Add "Book to Ledger" action on resolved requests prefilling the Maintenance category.
+### Sprint 9: Travel and Live Journey
+- [x] **Task 9.1: Local Fare Guide Sourced Audit**
+  - Add `source` and `asOf` fields to `LocalTransitRoute` in `local_fare_guide.dart`.
+  - Annotate all Bangladesh transit routes with authoritative sources (e.g. BRTA, Chander Gari Samity, BIWTA) and as-of dates.
+  - Render source and as-of badge on `local_fare_guide_sheet.dart`.
+  - Update `test/features/tour_group/local_fare_guide_test.dart`.
+- [x] **Task 9.2: Route Checkpoint Numbered Overlay**
+  - In `offline_map_viewer_screen.dart`, display numbered indices (1, 2, 3...) on checkpoint markers and waypoints so travelers can follow ordered legs.
+- [x] **Task 9.3: Itinerary PDF UI Entry Points & Tests**
+  - Add PDF export button in `journey_tracker_screen.dart` and `itinerary_editor.dart` wired to `exportItineraryPdf`.
+  - Add unit tests in `test/features/tour_group/itinerary_pdf_test.dart`.
 
-### Phase 3: Office & Campus Notice Progress Ring (Task 9.3)
-- [x] **Task 3.1: Response Progress Ring on Notices**
-  - Calculate response count and total active members in `TourNoticesScreen`.
-  - Display circular progress ring showing acknowledgment percentage.
-- [x] **Task 3.2: Pending Members Drawer**
-  - Add bottom sheet / drawer showing who answered and who is pending.
+### Sprint 10: Ledger and FinOps
+- [x] **Task 10.1: Duplicate TrxID Prevention & Localized Warnings**
+  - Add `mfs_trx_duplicate_error` localized string (BN & EN) to `tour_translation_keys.dart` and translation JSON files.
+  - In `expense_editor.dart` and `mfs_settlement_sheet.dart`, check `isMfsTrxRegistered` before submission and display error message on duplicate.
+  - Add emulator test in `functions/tests/mfs_rules.test.js` asserting second create on duplicate `trxId` fails.
+- [x] **Task 10.2: Statement PDF Date Range Selection**
+  - In `expense_ledger_screen.dart`, add "Whole Tour / Group History" (`whole_tour`) option to `_exportMonthlyPdf`.
+  - Confirm MFS audit table reflects verification statuses (`verified`, `unverified`, `disputed`).
+- [x] **Task 10.3: Fund Burn-Rate Alerts Unit Tests**
+  - Add unit tests in `test/features/tour_group/fund_analytics_test.dart` verifying `BurnRateAlert.normal`, `caution` (≥80%), and `critical` (≥100%).
 
-### Phase 4: Samity Receipts & Verification (Task 9.4)
-- [x] **Task 4.1: Samity Payout Receipt Upload & Verification**
-  - Add receipt photo URL and `isVerified` flag to `SamityPayout`.
-  - Add receipt viewer and beneficiary "Confirm Received" verification button in `SamitySheet`.
-
-### Phase 5: Verification, Web Deploy & PR
-- [ ] **Task 5.1: Run Static Analysis & Unit Tests**
-  - `flutter analyze` 0 errors.
-  - `flutter test` all test suites green.
-- [ ] **Task 5.2: Version Bump & PR**
-  - Increment `pubspec.yaml` to `1.8.154+208`.
-  - Create and push PR via `gh pr create --base main`.
-- [ ] **Task 5.3: Web & VPS Deployment**
-  - Deploy web build to `app.bhromon.fun`.
-  - Pull and run updated `deploy.sh` on VPS.
+### Verification, Release & PR
+- [x] **Task 11.1: Automated Code Quality Verification**
+  - Run `dart format .`.
+  - Run `flutter analyze`.
+  - Run `flutter test`.
+- [ ] **Task 11.2: Monotonic Version Bump & PR Delivery**
+  - Bump version in `pubspec.yaml` to `1.8.159+213`.
+  - Create feature branch `feat/sprint8-10-full-implementation`.
+  - Push and open PR via `gh pr create --base main`.
+  - Wait for ALL CI checks to pass 100% green before merging!

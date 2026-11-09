@@ -193,5 +193,30 @@ void main() {
       expect(policy.startAttempt(), isFalse);
       expect(policy.attempts, 2);
     });
+
+    test('reset clears the attempt counter back to zero', () {
+      final policy = CallReconnectPolicy(maxAttempts: 3);
+      expect(policy.startAttempt(), isTrue);
+      expect(policy.startAttempt(), isTrue);
+      expect(policy.attempts, 2);
+
+      policy.reset();
+      expect(policy.attempts, 0);
+      expect(policy.startAttempt(), isTrue);
+    });
+  });
+
+  group('PacketLossMeter', () {
+    test('computes incremental loss ratio across intervals', () {
+      final meter = PacketLossMeter();
+      // First interval: sets baseline
+      expect(meter.lossSince(10, 90), isNull);
+
+      // Second interval: 5 lost out of 100 total packets
+      expect(meter.lossSince(15, 185), closeTo(5 / 100, 1e-9));
+
+      // Third interval: zero loss
+      expect(meter.lossSince(15, 285), closeTo(0, 1e-9));
+    });
   });
 }

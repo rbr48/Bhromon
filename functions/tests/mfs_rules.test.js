@@ -301,6 +301,13 @@ describe('MFS payment rules', () => {
       await assertFails(updateDoc(doc(db('member'), 'tours', TOUR, 'mfs_trx_registry', 'BKL890XYZ1'), { recordId: 'e-other' }));
     });
 
+    test('a duplicate registration of the same TrxID is refused', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', TOUR, 'mfs_trx_registry', 'BKL890XYZ1'), entry());
+      });
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'mfs_trx_registry', 'BKL890XYZ1'), entry({ addedByEmail: people.admin.email })));
+    });
+
     test('an outsider cannot register a TrxID', async () => {
       const outsider = env.authenticatedContext('eve', { email: people.outsider.email, email_verified: true }).firestore();
       await assertFails(setDoc(doc(outsider, 'tours', TOUR, 'mfs_trx_registry', 'BKL890XYZ1'), entry({ addedByEmail: people.outsider.email })));
