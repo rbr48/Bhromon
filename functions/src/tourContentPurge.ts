@@ -149,6 +149,9 @@ const STUDY_THREAD: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_REPLY: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A study material: who filed it. */
 const STUDY_MATERIAL: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_QUIZ: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_QUESTION: AnonymizePlan = { emails: ['proposedByEmail'] };
+const STUDY_TERM: AnonymizePlan = { emails: ['createdByEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -544,6 +547,22 @@ export async function purgeMemberContent(
         }
       }
     }
+  }
+
+  // A quiz and its questions keep their words under the stand-in, and so does a glossary term. The person's
+  // attempt on a quiz is their private record, so it goes. Each delete runs only when the record is there.
+  for (const book of books.docs) {
+    const quizzes = book.ref.collection('quizzes');
+    await applyToQuery(db, quizzes, anonymize(STUDY_QUIZ, email, standIn));
+    const quizDocs = await quizzes.get();
+    for (const quiz of quizDocs.docs) {
+      const questions = quiz.ref.collection('questions');
+      await applyToQuery(db, questions, anonymize(STUDY_QUESTION, email, standIn));
+      const attempt = quiz.ref.collection('attempts').doc(email);
+      if ((await attempt.get()).exists) await attempt.delete();
+    }
+    const terms = book.ref.collection('glossary');
+    await applyToQuery(db, terms, anonymize(STUDY_TERM, email, standIn));
   }
 
   // Materials keep their title and file under the stand-in. The person's reports come out, and each
