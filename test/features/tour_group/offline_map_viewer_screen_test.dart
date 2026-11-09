@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -22,8 +23,9 @@ void main() {
       supportedLocales: const [Locale('en'), Locale('bn')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
-        DefaultMaterialLocalizations.delegate,
-        DefaultWidgetsLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       home: OfflineMapViewerScreen(
         region: sajek,
@@ -138,8 +140,9 @@ void main() {
       supportedLocales: const [Locale('en'), Locale('bn')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
-        DefaultMaterialLocalizations.delegate,
-        DefaultWidgetsLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       home: OfflineMapViewerScreen(
         region: sajek,
@@ -252,5 +255,72 @@ void main() {
     expect(feature['properties']['sequence'], 1);
     expect(feature['properties']['kind'], 'checkpost');
     expect(feature['properties']['emoji'], '🛡️');
+  });
+
+  test('CheckpointKind label renders English uppercase and Bengali labels', () {
+    expect(CheckpointKind.checkpost.label(isBn: false), 'CHECKPOST');
+    expect(
+        CheckpointKind.checkpost.label(isBn: true), 'আর্মি / বিজিবি চেকপোস্ট');
+    expect(CheckpointKind.food.label(isBn: true), 'খাবার ও রিফ্রেশমেন্ট');
+    expect(CheckpointKind.prayer.label(isBn: true), 'নামাজ ও বিশ্রাম');
+    expect(CheckpointKind.fuel.label(isBn: true), 'ফুয়েল স্টেশন');
+    expect(CheckpointKind.washroom.label(isBn: true), 'ওয়াশরুম');
+  });
+
+  testWidgets('renders checkpoints with Bengali labels in Bengali locale',
+      (tester) async {
+    const checkpoints = [
+      RouteCheckpoint(
+        id: 'cp1',
+        name: 'দীঘিনালা আর্মি ক্যাম্প',
+        highlight: 'এসকোর্ট পয়েন্ট',
+        kmFromStart: 45,
+        lat: 23.2500,
+        lng: 92.0500,
+        kind: CheckpointKind.checkpost,
+      ),
+    ];
+
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('bn'),
+      supportedLocales: const [Locale('en'), Locale('bn')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: OfflineMapViewerScreen(
+        region: sajek,
+        initialPosition: Position(
+          latitude: 23.3833,
+          longitude: 92.2833,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 800.0,
+          altitudeAccuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 5.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+        checkpoints: checkpoints,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Switch to Checkpoints
+    await tester.tap(find.textContaining('চেকপয়েন্ট (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('#1 দীঘিনালা আর্মি ক্যাম্প'), findsOneWidget);
+
+    // Tap Checkpoint 1
+    await tester.tap(find.textContaining('#1 দীঘিনালা আর্মি ক্যাম্প'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.textContaining('আর্মি / বিজিবি চেকপোস্ট · 45 km'), findsOneWidget);
+    expect(find.text('এসকোর্ট পয়েন্ট'), findsOneWidget);
   });
 }

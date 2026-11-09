@@ -240,6 +240,25 @@ enum CheckpointKind {
         shopping => '🛍️',
         custom => '📍',
       };
+
+  /// Localized or uppercase name for UI display.
+  String label({required bool isBn}) => isBn
+      ? switch (this) {
+          food => 'খাবার ও রিফ্রেশমেন্ট',
+          prayer => 'নামাজ ও বিশ্রাম',
+          fuel => 'ফুয়েল স্টেশন',
+          washroom => 'ওয়াশরুম',
+          viewpoint => 'ভিউ পয়েন্ট / ফটোস্পট',
+          checkpost => 'আর্মি / বিজিবি চেকপোস্ট',
+          ferry => 'ফেরিঘাট',
+          toll => 'টোল প্লাজা',
+          hospital => 'হাসপাতাল / ফার্মেসি',
+          police => 'থানা / হাইওয়ে পুলিশ',
+          hotel => 'হোটেল / রিসোর্ট',
+          shopping => 'শপিং / স্যুভেনিয়ার',
+          custom => 'সাধারণ বিরতি',
+        }
+      : name.toUpperCase();
 }
 
 /// A stop along a leg of the route that a member added: a meal break, a

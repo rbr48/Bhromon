@@ -638,39 +638,42 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                   if (widget.checkpoints.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(left: 14, bottom: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ChoiceChip(
-                            label: Text(
-                              isBn
-                                  ? 'আগ্রহের স্থান (${widget.region.waypoints.length})'
-                                  : 'Waypoints (${widget.region.waypoints.length})',
-                              style: const TextStyle(fontSize: 11),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ChoiceChip(
+                              label: Text(
+                                isBn
+                                    ? 'আগ্রহের স্থান (${widget.region.waypoints.length})'
+                                    : 'Waypoints (${widget.region.waypoints.length})',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              selected: !_showCheckpointsList,
+                              onSelected: (val) {
+                                if (val) {
+                                  setState(() => _showCheckpointsList = false);
+                                }
+                              },
                             ),
-                            selected: !_showCheckpointsList,
-                            onSelected: (val) {
-                              if (val) {
-                                setState(() => _showCheckpointsList = false);
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: Text(
-                              isBn
-                                  ? 'চেকপয়েন্ট (${widget.checkpoints.length})'
-                                  : 'Checkpoints (${widget.checkpoints.length})',
-                              style: const TextStyle(fontSize: 11),
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: Text(
+                                isBn
+                                    ? 'চেকপয়েন্ট (${widget.checkpoints.length})'
+                                    : 'Checkpoints (${widget.checkpoints.length})',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              selected: _showCheckpointsList,
+                              onSelected: (val) {
+                                if (val) {
+                                  setState(() => _showCheckpointsList = true);
+                                }
+                              },
                             ),
-                            selected: _showCheckpointsList,
-                            onSelected: (val) {
-                              if (val) {
-                                setState(() => _showCheckpointsList = true);
-                              }
-                            },
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   SizedBox(
@@ -1056,7 +1059,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                       ),
                     ),
                     Text(
-                      '${cp.kind.name.toUpperCase()} · ${cp.kmFromStart} km'
+                      '${cp.kind.label(isBn: isBn)} · ${cp.kmFromStart} km'
                       '${isVisited ? (isBn ? " · ভ্রমণ সম্পন্ন" : " · Visited") : ""}',
                       style: TextStyle(
                         color: isVisited
