@@ -68,6 +68,27 @@ void main() {
     expect(tapped, DateTime(2027, 1, 24));
   });
 
+  testWidgets(
+      'a study session marks its day in the month grid, and no other day',
+      (tester) async {
+    _phoneSize(tester);
+    await tester.pumpWidget(_wrap(HolidayMonthView(
+      calendar: HolidayCalendar(),
+      month: 1,
+      trip: null,
+      selected: null,
+      onMonthChanged: (_) {},
+      onDayTap: (_) {},
+      studyDays: {DateTime(2027, 1, 15)},
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('study-dot-2027-1-15')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('study-dot-2027-1-16')),
+        findsNothing);
+  });
+
   testWidgets('the holiday list renders every holiday without overflowing',
       (tester) async {
     _phoneSize(tester);

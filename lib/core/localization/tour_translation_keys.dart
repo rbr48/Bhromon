@@ -3231,6 +3231,7 @@ class TourTranslationKeys {
       'study_room_full': 'The study room is full ({count} people).',
       'study_room_failed': 'The study room could not be joined.',
       'study_calendar_title': 'Study sessions',
+      'study_calendar_legend': 'Study session',
       'study_calendar_empty': 'No sessions are planned.',
       'study_session_recap_no_book':
           'Recap saved. This session has no book, so its questions stay in the recap.',
@@ -6715,6 +6716,7 @@ class TourTranslationKeys {
       'study_room_full': 'স্টাডি রুম ভরে গেছে ({count} জন)।',
       'study_room_failed': 'স্টাডি রুমে যোগ দেওয়া যায়নি।',
       'study_calendar_title': 'স্টাডি সেশন',
+      'study_calendar_legend': 'স্টাডি সেশন',
       'study_calendar_empty': 'কোনো সেশন পরিকল্পনা করা হয়নি।',
       'study_session_recap_no_book':
           'সারসংক্ষেপ সংরক্ষণ করা হয়েছে। এই আসরের কোনো বই নেই, তাই প্রশ্নগুলো শুধু সারসংক্ষেপে থাকবে।',

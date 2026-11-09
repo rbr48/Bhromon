@@ -42,3 +42,15 @@ List<ReadingSession> calendarSessions(
   listed.sort((a, b) => a.startsAt.compareTo(b.startsAt));
   return listed;
 }
+
+/// The days the group calendar marks for study sessions: the day of each session it lists. A day is a date at
+/// midnight, as the calendar's own days are.
+Set<DateTime> calendarSessionDays(
+  List<ReadingSession> sessions, {
+  required DateTime now,
+}) =>
+    {
+      for (final session in calendarSessions(sessions, now: now))
+        DateTime(session.startsAt.year, session.startsAt.month,
+            session.startsAt.day),
+    };
