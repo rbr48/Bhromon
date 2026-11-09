@@ -778,6 +778,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       viewerEmail: _me,
       viewerHasWork: _myWork != null,
       viewerHasReview: myReview != null,
+      viewerIsAdmin: _isAdmin,
     );
     return _card(children: [
       if (mine)

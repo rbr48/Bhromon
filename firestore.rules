@@ -1970,7 +1970,7 @@ service cloud.firestore {
                                voter != solverEmail &&
                                validStudyWorkReview(request.resource.data) &&
                                request.resource.data.createdAt == request.time &&
-                               studyHasOwnWork(tourId, subjectId, problemId) &&
+                               (studyHasOwnWork(tourId, subjectId, problemId) || isTourAdmin(tourId)) &&
                                ((request.resource.data.verdict == 'right' &&
                                  getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount + 1 &&
                                  getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount) ||
