@@ -7,15 +7,18 @@ import '../../../../core/theme/colors.dart';
 import '../../data/news_tts_service.dart';
 import '../../data/newspaper_service.dart';
 import '../../domain/models/newspaper_models.dart';
+import '../../../tour_group/presentation/tour_routes.dart';
 
 class NewspaperHubScreen extends StatefulWidget {
   final String? initialCategory;
   final String? initialPaperId;
+  final String? tourId;
 
   const NewspaperHubScreen({
     super.key,
     this.initialCategory,
     this.initialPaperId,
+    this.tourId,
   });
 
   @override
@@ -328,95 +331,107 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1115)),
-      appBar: AppBar(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14181E)),
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/group-hub');
-            }
-          },
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Newspaper Hub',
-              style: TextStyle(
-                color: context.forest.text,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppColors.mintGreen,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Ad-Free Live Headlines & Directory',
-                  style: TextStyle(color: context.forest.text54, fontSize: 11),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.mintGreen),
-                  )
-                : Icon(Icons.refresh_rounded, color: context.forest.text70),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(tourHubPath(widget.tourId));
+        }
+      },
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1115)),
+        appBar: AppBar(
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF14181E)),
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
             onPressed: () {
-              _loadHeadlines(refresh: true);
-              _loadPapers(forceRefresh: true);
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(tourHubPath(widget.tourId));
+              }
             },
           ),
-        ],
-        bottom: TabBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Newspaper Hub',
+                style: TextStyle(
+                  color: context.forest.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.mintGreen,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Ad-Free Live Headlines & Directory',
+                    style:
+                        TextStyle(color: context.forest.text54, fontSize: 11),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Refresh',
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.mintGreen),
+                    )
+                  : Icon(Icons.refresh_rounded, color: context.forest.text70),
+              onPressed: () {
+                _loadHeadlines(refresh: true);
+                _loadPapers(forceRefresh: true);
+              },
+            ),
+          ],
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.mintGreen,
+            indicatorWeight: 3,
+            labelColor: AppColors.mintGreen,
+            unselectedLabelColor: context.forest.text54,
+            labelStyle:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            tabs: const [
+              Tab(text: 'Live headlines'),
+              Tab(text: 'All newspapers'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          indicatorColor: AppColors.mintGreen,
-          indicatorWeight: 3,
-          labelColor: AppColors.mintGreen,
-          unselectedLabelColor: context.forest.text54,
-          labelStyle:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          tabs: const [
-            Tab(text: 'Live headlines'),
-            Tab(text: 'All newspapers'),
+          children: [
+            _buildLiveHeadlinesTab(),
+            _buildAllNewspapersTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildLiveHeadlinesTab(),
-          _buildAllNewspapersTab(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: Colors.black,
-        tooltip: 'Quick Refresh & Pulse',
-        child: const Icon(Icons.bolt_rounded, size: 26),
-        onPressed: () => _loadHeadlines(refresh: true),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: Colors.black,
+          tooltip: 'Quick Refresh & Pulse',
+          child: const Icon(Icons.bolt_rounded, size: 26),
+          onPressed: () => _loadHeadlines(refresh: true),
+        ),
       ),
     );
   }

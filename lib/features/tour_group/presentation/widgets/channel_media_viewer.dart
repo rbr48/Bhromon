@@ -28,26 +28,37 @@ class _ChannelMediaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        Navigator.of(context).maybePop();
+      },
+      child: Scaffold(
         backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
-      ),
-      body: attachment.isVideo
-          ? _VideoPane(url: attachment.url)
-          : InteractiveViewer(
-              child: Center(
-                child: Image.network(
-                  signedMediaUrl(attachment.url),
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => _LoadFailed(
-                    text: context.l10n.translate('chan_media_load_failed'),
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+          elevation: 0,
+        ),
+        body: attachment.isVideo
+            ? _VideoPane(url: attachment.url)
+            : InteractiveViewer(
+                child: Center(
+                  child: Image.network(
+                    signedMediaUrl(attachment.url),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => _LoadFailed(
+                      text: context.l10n.translate('chan_media_load_failed'),
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

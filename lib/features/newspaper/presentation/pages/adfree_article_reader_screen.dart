@@ -172,174 +172,187 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
         _article?.sourceName ?? widget.initialSourceName ?? 'Newspaper';
     final heroImage = _article?.heroImageUrl ?? widget.initialImageUrl;
 
-    return Scaffold(
-      backgroundColor: _backgroundColor,
-      appBar: AppBar(
-        backgroundColor: _barColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: _textColor),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.mintGreen.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        Navigator.of(context).maybePop();
+      },
+      child: Scaffold(
+        backgroundColor: _backgroundColor,
+        appBar: AppBar(
+          backgroundColor: _barColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: _textColor),
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.shield_outlined,
-                  size: 14, color: AppColors.mintGreen),
-              const SizedBox(width: 4),
-              Text(
-                sourceName,
-                style: const TextStyle(
-                  color: AppColors.mintGreen,
-                  fontSize: 12,
+          title: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.mintGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.shield_outlined,
+                    size: 14, color: AppColors.mintGreen),
+                const SizedBox(width: 4),
+                Text(
+                  sourceName,
+                  style: const TextStyle(
+                    color: AppColors.mintGreen,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  '• Ad-Free',
+                  style: TextStyle(
+                    color: AppColors.mintGreen,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            // TTS Audio narration toggle
+            IconButton(
+              tooltip: _isSpeaking ? 'Stop Audio' : 'Listen Article (TTS)',
+              icon: Icon(
+                _isSpeaking
+                    ? Icons.volume_up_rounded
+                    : Icons.volume_down_rounded,
+                color: _isSpeaking ? AppColors.mintGreen : _textColor,
+              ),
+              onPressed: _toggleTts,
+            ),
+            // Font size decrease
+            IconButton(
+              tooltip: 'Decrease font size',
+              icon: Text(
+                'A-',
+                style: TextStyle(
+                  color: _textColor,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 4),
-              const Text(
-                '• Ad-Free',
+              onPressed: _decreaseFont,
+            ),
+            // Font size increase
+            IconButton(
+              tooltip: 'Increase font size',
+              icon: Text(
+                'A+',
                 style: TextStyle(
-                  color: AppColors.mintGreen,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                  color: _textColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
-          ),
-        ),
-        actions: [
-          // TTS Audio narration toggle
-          IconButton(
-            tooltip: _isSpeaking ? 'Stop Audio' : 'Listen Article (TTS)',
-            icon: Icon(
-              _isSpeaking ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-              color: _isSpeaking ? AppColors.mintGreen : _textColor,
+              onPressed: _increaseFont,
             ),
-            onPressed: _toggleTts,
-          ),
-          // Font size decrease
-          IconButton(
-            tooltip: 'Decrease font size',
-            icon: Text(
-              'A-',
-              style: TextStyle(
-                color: _textColor,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            onPressed: _decreaseFont,
-          ),
-          // Font size increase
-          IconButton(
-            tooltip: 'Increase font size',
-            icon: Text(
-              'A+',
-              style: TextStyle(
-                color: _textColor,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            onPressed: _increaseFont,
-          ),
-          // Reader theme menu
-          PopupMenuButton<ReaderTheme>(
-            tooltip: 'Reader appearance',
-            icon: Icon(Icons.palette_outlined, color: _textColor),
-            color: _barColor,
-            onSelected: (t) => setState(() => _readerTheme = t),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: ReaderTheme.light,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAFAFA),
-                        border: Border.all(color: Colors.grey.shade400),
-                        shape: BoxShape.circle,
+            // Reader theme menu
+            PopupMenuButton<ReaderTheme>(
+              tooltip: 'Reader appearance',
+              icon: Icon(Icons.palette_outlined, color: _textColor),
+              color: _barColor,
+              onSelected: (t) => setState(() => _readerTheme = t),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: ReaderTheme.light,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAFAFA),
+                          border: Border.all(color: Colors.grey.shade400),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text('Light (সাদা)', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: ReaderTheme.sepia,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFBF0D9),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text('Sepia (কাগজ)', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: ReaderTheme.dark,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color:
-                            context.forest.surfaceFor(const Color(0xFF121417)),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text('Dark (ডার্ক)', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // AdBlock Browser switcher
-          IconButton(
-            tooltip: 'Open in AdBlock Browser',
-            icon: const Icon(Icons.public_rounded, color: AppColors.mintGreen),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => AdBlockBrowserScreen(
-                    initialUrl: widget.articleUrl,
-                    initialTitle: title,
+                      const SizedBox(width: 10),
+                      const Text('Light (সাদা)',
+                          style: TextStyle(fontSize: 14)),
+                    ],
                   ),
                 ),
-              );
-            },
-          ),
-          // Share
-          IconButton(
-            tooltip: 'Share',
-            icon: Icon(Icons.share_rounded, color: _textColor),
-            onPressed: () {
-              // ignore: deprecated_member_use
-              Share.share(
-                '$title\n\nRead ad-free on Bhromon Newspaper Hub: ${widget.articleUrl}',
-              );
-            },
-          ),
-        ],
+                PopupMenuItem(
+                  value: ReaderTheme.sepia,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFBF0D9),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('Sepia (কাগজ)',
+                          style: TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: ReaderTheme.dark,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: context.forest
+                              .surfaceFor(const Color(0xFF121417)),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('Dark (ডার্ক)',
+                          style: TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // AdBlock Browser switcher
+            IconButton(
+              tooltip: 'Open in AdBlock Browser',
+              icon:
+                  const Icon(Icons.public_rounded, color: AppColors.mintGreen),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AdBlockBrowserScreen(
+                      initialUrl: widget.articleUrl,
+                      initialTitle: title,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Share
+            IconButton(
+              tooltip: 'Share',
+              icon: Icon(Icons.share_rounded, color: _textColor),
+              onPressed: () {
+                // ignore: deprecated_member_use
+                Share.share(
+                  '$title\n\nRead ad-free on Bhromon Newspaper Hub: ${widget.articleUrl}',
+                );
+              },
+            ),
+          ],
+        ),
+        body: _buildBody(title, sourceName, heroImage),
       ),
-      body: _buildBody(title, sourceName, heroImage),
     );
   }
 
