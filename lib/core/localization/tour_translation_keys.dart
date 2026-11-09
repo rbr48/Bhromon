@@ -2715,7 +2715,6 @@ class TourTranslationKeys {
       'study_module_saved': 'Modules saved.',
       'study_module_off': 'Off',
       'study_module_coming_soon': 'Coming soon',
-      'study_module_coming_item': '{name}: coming soon',
       'study_module_sheet_title': 'Modules',
       'study_module_name_label': 'Name',
       'study_module_policy_label': 'Who can post',
@@ -2945,6 +2944,8 @@ class TourTranslationKeys {
       'study_today_exam_for': '{subject}: exam in {days} days',
       'study_today_exam_for_today': '{subject}: exam today',
       'study_today_next_deadline': 'Next due: {chapter} ({book}), {date}',
+      'study_today_problem_set':
+          'Problem set {title} is due {date}: {worked} of {total} worked.',
       'study_today_findings_waiting':
           '{count} findings are waiting for your check.',
       'study_today_cards_due': '{count} flashcards are due today.',
@@ -6210,7 +6211,6 @@ class TourTranslationKeys {
       'study_module_saved': 'মডিউল সংরক্ষণ হয়েছে।',
       'study_module_off': 'বন্ধ',
       'study_module_coming_soon': 'শীঘ্রই আসছে',
-      'study_module_coming_item': '{name}: শীঘ্রই আসছে',
       'study_module_sheet_title': 'মডিউল',
       'study_module_name_label': 'নাম',
       'study_module_policy_label': 'কারা পোস্ট করতে পারবে',
@@ -6439,6 +6439,8 @@ class TourTranslationKeys {
       'study_today_exam_for_today': '{subject}: আজ পরীক্ষা',
       'study_today_next_deadline':
           'পরবর্তী জমার দিন: {chapter} ({book}), {date}',
+      'study_today_problem_set':
+          'সমস্যার সেট {title}: জমা {date}। {total}টির মধ্যে {worked}টি করা হয়েছে।',
       'study_today_findings_waiting':
           'আপনার যাচাইয়ের অপেক্ষায় {count}টি ফলাফল।',
       'study_today_cards_due':

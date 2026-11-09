@@ -1,7 +1,10 @@
 import '../models/study_finding_models.dart';
+import '../models/study_problem_models.dart';
 import '../models/study_subject_models.dart';
 import '../models/study_today_models.dart';
 import 'study_finding_rules.dart' show canCheckFinding;
+import 'study_problem_rules.dart'
+    show ProblemSetDue, problemSetDueState, visibleStudyProblems, workedCount;
 import 'study_subject_rules.dart' show daysUntilExam;
 
 /// Exam mode starts this many days before a subject's exam.
@@ -13,26 +16,93 @@ bool examModeOn(int? daysLeft) =>
     daysLeft != null && daysLeft >= 0 && daysLeft <= kExamModeDays;
 
 /// The lines of the Today card, in the order they can appear.
-enum TodayCardLine { exam, deadline, findings, cards, challenge }
+enum TodayCardLine { exam, deadline, problemSet, findings, cards, challenge }
 
-/// The order of the Today card's lines. Outside exam mode the next deadline leads, then the findings, the cards
-/// due and the challenge. In exam mode the exam comes first and then the cards due and the deadline, so revision
-/// comes before the other work.
+/// The order of the Today card's lines. Outside exam mode the next deadline leads, then the problem set due soon, the
+/// findings, the cards due and the challenge. In exam mode the exam comes first and then the cards due, the deadline
+/// and the problem set, so revision comes before the other work.
 List<TodayCardLine> todayCardLineOrder({required bool examMode}) => examMode
     ? const [
         TodayCardLine.exam,
         TodayCardLine.cards,
         TodayCardLine.deadline,
+        TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.challenge,
       ]
     : const [
         TodayCardLine.exam,
         TodayCardLine.deadline,
+        TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.cards,
         TodayCardLine.challenge,
       ];
+
+/// The problem set the Today card shows for a viewer: the set due soon (see [problemSetDueState]) that has a problem the
+/// viewer can see and has not worked yet. [total] counts the problems of the set the viewer can see, and [worked] the
+/// ones among them the viewer has submitted a working for.
+class DueProblemSet {
+  const DueProblemSet({
+    required this.set,
+    required this.total,
+    required this.worked,
+  });
+
+  final StudyProblemSet set;
+  final int total;
+  final int worked;
+}
+
+/// The nearest set that is due soon and that the viewer still has to work on, or null when there is none. [workedIds]
+/// holds the ids of the problems the viewer has submitted a working for. A set due sooner comes first; two that are due
+/// the same day come in the order of their names.
+DueProblemSet? nextDueProblemSet({
+  required List<StudyProblemSet> sets,
+  required List<StudyProblem> problems,
+  required Set<String> workedIds,
+  required String viewerEmail,
+  required bool isAdmin,
+  required DateTime now,
+}) {
+  final visible = visibleStudyProblems(
+    problems: problems,
+    viewerEmail: viewerEmail,
+    isAdmin: isAdmin,
+  );
+  DueProblemSet? next;
+  for (final set in sets) {
+    if (problemSetDueState(dueAt: set.dueAt, now: now) !=
+        ProblemSetDue.dueSoon) {
+      continue;
+    }
+    final inSet = [
+      for (final problem in visible)
+        if (problem.setId == set.id) problem,
+    ];
+    if (inSet.isEmpty) continue;
+    final worked = workedCount(problems: inSet, workedIds: workedIds);
+    if (worked == inSet.length) continue;
+    final candidate = DueProblemSet(
+      set: set,
+      total: inSet.length,
+      worked: worked,
+    );
+    if (next == null || _dueSooner(candidate.set, next.set)) {
+      next = candidate;
+    }
+  }
+  return next;
+}
+
+/// Whether [a] is due before [b], or on the same day with a name that comes first. Both sets have a due date here.
+bool _dueSooner(StudyProblemSet a, StudyProblemSet b) {
+  final dueA = a.dueAt!;
+  final dueB = b.dueAt!;
+  if (dueA.isBefore(dueB)) return true;
+  if (dueB.isBefore(dueA)) return false;
+  return a.title.compareTo(b.title) < 0;
+}
 
 /// The findings a viewer may check and has not checked yet: the ones waiting for their check.
 /// [checkedIds] holds the ids of the findings the viewer has checked.

@@ -10,6 +10,7 @@ import '../../../data/study_activity_log.dart';
 import '../../../data/study_flashcard_store.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_challenge_models.dart';
+import '../../../domain/models/study_problem_models.dart';
 import '../../../domain/models/study_subject_models.dart';
 import '../../../domain/models/study_today_models.dart';
 import '../../../domain/services/study_challenge_rules.dart';
@@ -36,6 +37,8 @@ class StudyTodayCard extends StatefulWidget {
     required this.onOpenModule,
     this.findingsModule,
     this.challengeModule,
+    this.problemsModule,
+    this.isAdmin = false,
     this.repository,
     this.cardsDue,
     this.cardsReviewed,
@@ -50,6 +53,12 @@ class StudyTodayCard extends StatefulWidget {
 
   /// The challenge module, when it is on. Its line is shown only then.
   final StudyModuleSettings? challengeModule;
+
+  /// The problems module, when it is on. The problem-set line is shown only then, and opens it.
+  final StudyModuleSettings? problemsModule;
+
+  /// Whether the viewer is an admin, who sees the problems a member does not (see visibleStudyProblems).
+  final bool isAdmin;
 
   /// Opens a module that a line is about.
   final void Function(StudyModuleSettings module) onOpenModule;
@@ -76,6 +85,7 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
   final List<StreamSubscription<dynamic>> _subs = [];
 
   StudyDeadline? _deadline;
+  DueProblemSet? _problemSet;
   int _findingsWaiting = 0;
   int _cardsDue = 0;
   StudyChallenge? _challenge;
@@ -159,10 +169,29 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
         subjectId,
         [for (final finding in findings) finding.id],
       );
+      final problemSets =
+          await _repository.watchStudyProblemSets(tourId, subjectId).first;
+      final problems =
+          await _repository.watchStudyProblems(tourId, subjectId).first;
+      final myWork = problems.isEmpty
+          ? const <String, StudyProblemSolution>{}
+          : await _repository.loadMyWork(
+              tourId,
+              subjectId,
+              [for (final problem in problems) problem.id],
+            );
       final due = await _cardsDueNow();
       if (!mounted) return;
       setState(() {
         _deadline = nextStudyDeadline(deadlines, _today);
+        _problemSet = nextDueProblemSet(
+          sets: problemSets,
+          problems: problems,
+          workedIds: myWork.keys.toSet(),
+          viewerEmail: _me,
+          isAdmin: widget.isAdmin,
+          now: _today,
+        );
         _findingsWaiting = findingsWaitingForCheck(
           findings: findings,
           viewerEmail: _me,
@@ -264,9 +293,26 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
       }
     }
 
+    final problemSet = _problemSet;
+    final problemsModule = widget.problemsModule;
+    _TodayLine? problemSetLine;
+    if (problemSet != null && problemsModule != null) {
+      problemSetLine = _TodayLine(
+        icon: Icons.edit_note_rounded,
+        text: l10n.translate('study_today_problem_set', args: {
+          'title': problemSet.set.title,
+          'date': localizedDateFormat('d MMM').format(problemSet.set.dueAt!),
+          'worked': l10n.number(problemSet.worked),
+          'total': l10n.number(problemSet.total),
+        }),
+        onTap: () => widget.onOpenModule(problemsModule),
+      );
+    }
+
     final byLine = <TodayCardLine, _TodayLine?>{
       TodayCardLine.exam: examLine,
       TodayCardLine.deadline: deadlineLine,
+      TodayCardLine.problemSet: problemSetLine,
       TodayCardLine.findings: findingsLine,
       TodayCardLine.cards: cardsLine,
       TodayCardLine.challenge: challengeLine,
