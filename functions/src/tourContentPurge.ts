@@ -143,6 +143,10 @@ const STUDY_SESSION: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A tip or a suggestion in a subject: who posted it. */
 const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
+/** A discussion thread on a book: who started it. */
+const STUDY_THREAD: AnonymizePlan = { emails: ['createdByEmail'] };
+/** A reply in a thread: who wrote it. */
+const STUDY_REPLY: AnonymizePlan = { emails: ['createdByEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -501,6 +505,35 @@ export async function purgeMemberContent(
     for (const chapter of chapters.docs) {
       const read = chapter.ref.collection('reads').doc(email);
       if ((await read.get()).exists) await read.delete();
+    }
+  }
+
+  // Each book's threads and their replies keep their words under the stand-in. The person's helpful
+  // marks and reports on replies come out, and each count drops by the mark or report removed.
+  for (const book of books.docs) {
+    const threads = book.ref.collection('threads');
+    await applyToQuery(db, threads, anonymize(STUDY_THREAD, email, standIn));
+    const threadDocs = await threads.get();
+    for (const thread of threadDocs.docs) {
+      const replies = thread.ref.collection('replies');
+      await applyToQuery(db, replies, anonymize(STUDY_REPLY, email, standIn));
+      const replyDocs = await replies.get();
+      for (const reply of replyDocs.docs) {
+        const mark = reply.ref.collection('helpful').doc(email);
+        if ((await mark.get()).exists) {
+          const batch = db.batch();
+          batch.delete(mark);
+          batch.update(reply.ref, { helpfulCount: FieldValue.increment(-1) });
+          await batch.commit();
+        }
+        const report = reply.ref.collection('reports').doc(email);
+        if ((await report.get()).exists) {
+          const batch = db.batch();
+          batch.delete(report);
+          batch.update(reply.ref, { reportCount: FieldValue.increment(-1) });
+          await batch.commit();
+        }
+      }
     }
   }
 

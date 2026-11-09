@@ -13,6 +13,8 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_pace_sheet.dart';
+import '../widgets/study/study_thread_composer.dart';
+import 'study_discussion_screen.dart';
 
 /// One book's chapters in reading order. Each has its due date and guide questions. A member
 /// marks a chapter read in their own name, and can keep a place in the book on this device.
@@ -236,6 +238,42 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     );
   }
 
+  /// Opens the discussion of this book: its threads, with the fence and the member's place.
+  void _openDiscussion() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => StudyDiscussionScreen(
+        tourId: widget.tourId,
+        book: widget.book,
+        repository: _repository,
+        position: _position,
+      ),
+    ));
+  }
+
+  /// A guide question starts a thread on its chapter, with the question as its title. The
+  /// member writes the body and may change the title first.
+  Future<void> _startThreadFromGuide(
+      StudyChapter chapter, String question) async {
+    final draft = await showStudyThreadComposer(
+      context,
+      chapters: _chapters,
+      initialTitle: question,
+      initialChapterId: chapter.id,
+    );
+    if (draft == null || !mounted) return;
+    await _run(
+      () => _repository.addStudyThread(
+        widget.tourId,
+        widget.book.id,
+        title: draft.title,
+        body: draft.body,
+        pageRef: draft.pageRef,
+        chapterId: draft.chapterId,
+      ),
+      'study_thread_posted',
+    );
+  }
+
   /// Keeps the member's place in the book on this device. Choosing the chapter they are on
   /// again clears it.
   Future<void> _setHere(StudyChapter chapter) async {
@@ -273,6 +311,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         iconTheme: IconThemeData(color: palette.text),
         elevation: 0,
         actions: [
+          IconButton(
+            tooltip: l10n.translate('study_discussion_title'),
+            icon: const Icon(Icons.forum_rounded),
+            onPressed: _openDiscussion,
+          ),
           if (_isAdmin && _chapters.isNotEmpty)
             IconButton(
               tooltip: l10n.translate('study_pace_action'),
@@ -399,10 +442,23 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               expandedCrossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final question in chapter.guide)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child:
-                        Text(question, style: TextStyle(color: palette.text)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(question,
+                              style: TextStyle(color: palette.text)),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: l10n.translate('study_guide_start_thread'),
+                        icon: Icon(Icons.add_comment_outlined,
+                            color: palette.accentText),
+                        onPressed: () =>
+                            _startThreadFromGuide(chapter, question),
+                      ),
+                    ],
                   ),
               ],
             ),

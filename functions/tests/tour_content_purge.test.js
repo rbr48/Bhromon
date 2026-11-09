@@ -234,6 +234,36 @@ async function seed() {
     counted: true,
   });
 
+  // A discussion the leaver started, with a reply by another member that the leaver found helpful and
+  // reported, and that a third member also found helpful. The leaver's mark and report come out, the
+  // counts fall with them, and the words stay under the stand-in.
+  await set(`tours/${TOUR}/study_books/sb_other/threads/th_leaver`, {
+    title: 'Why the train?',
+    body: 'The train appears three times.',
+    createdByEmail: LEAVER,
+    pinned: false,
+    locked: false,
+    acceptedReplyId: null,
+    createdAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/threads/th_leaver/replies/rp_other`, {
+    text: 'It marks the turning point.',
+    createdByEmail: OTHER,
+    helpfulCount: 2,
+    reportCount: 1,
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/threads/th_leaver/replies/rp_other/helpful/${LEAVER}`, {
+    createdAt: new Date('2026-11-02T11:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/threads/th_leaver/replies/rp_other/helpful/third@x.com`, {
+    createdAt: new Date('2026-11-02T12:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_books/sb_other/threads/th_leaver/replies/rp_other/reports/${LEAVER}`, {
+    reason: 'unclear',
+    createdAt: new Date('2026-11-02T13:00:00Z'),
+  });
+
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
     title: 'Lunch',
@@ -566,6 +596,28 @@ describe('tour content purge', () => {
       number: 1,
       title: 'Part one',
     });
+  });
+
+  it('a leaver’s thread keeps its words under the stand-in, and their marks and reports come out', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    const thread = `tours/${TOUR}/study_books/sb_other/threads/th_leaver`;
+    expect(await read(thread)).toMatchObject({
+      title: 'Why the train?',
+      createdByEmail: STAND_IN,
+    });
+    const reply = `${thread}/replies/rp_other`;
+    expect(await read(reply)).toMatchObject({
+      text: 'It marks the turning point.',
+      createdByEmail: OTHER,
+      helpfulCount: 1,
+      reportCount: 0,
+    });
+    expect(await exists(`${reply}/helpful/${LEAVER}`)).toBe(false);
+    expect(await exists(`${reply}/helpful/third@x.com`)).toBe(true);
+    expect(await exists(`${reply}/reports/${LEAVER}`)).toBe(false);
   });
 
   it('removes what the person alone used: luggage, seats, rooms and profiles', async () => {
