@@ -5,6 +5,8 @@
 // session. An admin splits a listed book into chapters; members mark them read, and a
 // session can name the chapters it covers.
 
+import 'study_session_models.dart';
+
 /// Where a book stands in the group's reading.
 enum StudyBookStatus {
   toRead,
@@ -229,6 +231,11 @@ class ReadingSession {
     this.place = '',
     this.notes = '',
     this.createdByEmail = '',
+    this.agenda = '',
+    this.link = '',
+    this.timerStartsAt,
+    this.timerSeconds,
+    this.recap,
   });
 
   /// The most chapters a session can name.
@@ -256,12 +263,29 @@ class ReadingSession {
   /// The member who planned the session. Only they, or an admin, change or remove it.
   final String createdByEmail;
 
+  /// What the session covers, for the members who come. Empty when it is not written.
+  final String agenda;
+
+  /// The meeting link, which must be https. Empty when there is none.
+  final String link;
+
+  /// When the shared focus timer started, or null when it is not running.
+  final DateTime? timerStartsAt;
+
+  /// How long the focus timer runs, in seconds. Null when the session has no timer.
+  final int? timerSeconds;
+
+  /// The recap written after the session, or null when there is none.
+  final StudySessionRecap? recap;
+
   /// The fields a member writes when adding a session. [startsAt] is written as a
   /// timestamp by the repository.
   Map<String, dynamic> toFields() => {
         'title': title,
         'bookId': bookId,
         'chapterIds': chapterIds.isEmpty ? null : chapterIds,
+        'agenda': agenda.isEmpty ? null : agenda,
+        'link': link.isEmpty ? null : link,
         'startsAt': startsAt,
         'place': place.isEmpty ? null : place,
         'notes': notes.isEmpty ? null : notes,
@@ -289,6 +313,13 @@ class ReadingSession {
           : const [],
       place: (map['place'] as String?)?.trim() ?? '',
       notes: (map['notes'] as String?)?.trim() ?? '',
+      agenda: (map['agenda'] as String?)?.trim() ?? '',
+      link: (map['link'] as String?)?.trim() ?? '',
+      timerStartsAt: map['timerStartsAt'] is DateTime
+          ? map['timerStartsAt'] as DateTime
+          : null,
+      timerSeconds: (map['timerSeconds'] as num?)?.toInt(),
+      recap: StudySessionRecap.fromMap(map['recap']),
       createdByEmail: (map['createdByEmail'] as String?) ?? '',
     );
   }

@@ -1070,14 +1070,47 @@ service cloud.firestore {
 
     // A reading session: what to read, when it starts, and where it meets.
     function validStudySession(d) {
-      return d.keys().hasOnly(['title', 'bookId', 'chapterIds', 'startsAt', 'place', 'notes', 'createdByEmail']) &&
+      return d.keys().hasOnly(['title', 'bookId', 'chapterIds', 'startsAt', 'place', 'notes', 'createdByEmail', 'agenda', 'link', 'timerStartsAt', 'timerSeconds', 'recap', 'recapAt', 'reminder24Sent', 'reminder30Sent']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
              (d.get('bookId', null) == null || (d.bookId is string && d.bookId.size() <= 100)) &&
              (d.get('chapterIds', null) == null || (d.chapterIds is list && d.chapterIds.size() <= 10)) &&
              d.startsAt is timestamp &&
              (d.get('place', null) == null || (d.place is string && d.place.size() <= 120)) &&
              (d.get('notes', null) == null || (d.notes is string && d.notes.size() <= 500)) &&
+             (d.get('agenda', null) == null || (d.agenda is string && d.agenda.size() <= 500)) &&
+             (d.get('link', null) == null || (d.link is string && d.link.size() <= 2000 && d.link.matches('https://.+'))) &&
+             (d.get('timerStartsAt', null) == null || d.timerStartsAt is timestamp) &&
+             (d.get('timerSeconds', null) == null || (d.timerSeconds is int && d.timerSeconds >= 60 && d.timerSeconds <= 14400)) &&
+             (d.get('recap', null) == null || validSessionRecap(d.recap)) &&
+             (d.get('recapAt', null) == null || d.recapAt is timestamp) &&
+             // The reminder times are written by the media server, which bypasses these rules. They are kept
+             // here so an edit by the creator does not fail once a reminder has gone out.
+             (d.get('reminder24Sent', null) == null || d.reminder24Sent is timestamp) &&
+             (d.get('reminder30Sent', null) == null || d.reminder30Sent is timestamp) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
+    }
+    // The reminder times belong to the media server. Nothing a member writes can change them, except that a
+    // change to the start clears them, so the reminders go out again for the new time.
+    function studySessionRemindersOk(newData, oldData) {
+      return (newData.get('reminder24Sent', null) == oldData.get('reminder24Sent', null) &&
+              newData.get('reminder30Sent', null) == oldData.get('reminder30Sent', null)) ||
+             (newData.startsAt != oldData.startsAt &&
+              newData.get('reminder24Sent', null) == null && newData.get('reminder30Sent', null) == null);
+    }
+    // The recap of a session: what was covered, what was hard, and up to ten open questions. Each question's
+    // length is checked by the app, since the rules cannot check every item of a list.
+    function validSessionRecap(r) {
+      return r is map && r.keys().hasOnly(['covered', 'hard', 'openQuestions']) &&
+             (r.get('covered', null) == null || (r.covered is string && r.covered.size() <= 1000)) &&
+             (r.get('hard', null) == null || (r.hard is string && r.hard.size() <= 1000)) &&
+             (r.get('openQuestions', null) == null || (r.openQuestions is list && r.openQuestions.size() <= 10));
+    }
+    // A member's answer to a session: going, maybe or cannot, and when they checked in, if they did.
+    function validSessionRsvp(d) {
+      return d.keys().hasOnly(['response', 'checkedInAt', 'updatedAt']) &&
+             d.response in ['going', 'maybe', 'cannot'] &&
+             (d.get('checkedInAt', null) == null || d.checkedInAt is timestamp) &&
+             d.updatedAt is timestamp;
     }
     // A person without an account, listed under the member who added them.
     function validDependent(d) {
@@ -1507,13 +1540,28 @@ service cloud.firestore {
         allow read: if isActiveMember(tourId);
         allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == tourUserEmail() &&
+                         request.resource.data.get('reminder24Sent', null) == null &&
+                         request.resource.data.get('reminder30Sent', null) == null &&
                          validStudySession(request.resource.data);
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         studySessionRemindersOk(request.resource.data, resource.data) &&
                          validStudySession(request.resource.data);
         allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+        // Each member answers for themselves: going, maybe or cannot. A check-in is allowed once the session
+        // has started, and a missed check-in counts against no one.
+        match /rsvps/{voter} {
+          allow read: if isActiveMember(tourId);
+          allow create, update: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                                   validSessionRsvp(request.resource.data) &&
+                                   request.resource.data.updatedAt == request.time &&
+                                   (request.resource.data.get('checkedInAt', null) == null ||
+                                    get(/databases/$(database)/documents/tours/$(tourId)/reading_sessions/$(sessionId)).data.startsAt <= request.time);
+          allow delete: if isActiveMember(tourId) && voter == tourUserEmail();
+        }
       }
 
       // Important / family dates. Any member of a tour group adds one under their own email.

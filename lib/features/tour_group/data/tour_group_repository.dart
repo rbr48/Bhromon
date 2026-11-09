@@ -23,6 +23,7 @@ import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/study_models.dart';
 import '../domain/models/study_material_models.dart';
+import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/services/study_chapter_rules.dart';
@@ -2696,6 +2697,7 @@ class TourGroupRepository {
   Map<String, dynamic> _sessionFields(Map<String, dynamic> data) => {
         ...data,
         'startsAt': (data['startsAt'] as Timestamp?)?.toDate(),
+        'timerStartsAt': (data['timerStartsAt'] as Timestamp?)?.toDate(),
       };
 
   /// Plans a session. The signed-in member is recorded as its creator.
@@ -2723,23 +2725,155 @@ class TourGroupRepository {
   }
 
   /// Changes a session. Its creator or an admin does this. Its creator is not changed.
-  Future<void> editReadingSession(String tourId, ReadingSession session) async {
+  /// Changes a session. Its creator or an admin does this, and its creator is not changed. When the start
+  /// moves, the reminders are cleared, so the media server sends them again for the new time.
+  Future<void> editReadingSession(
+    String tourId,
+    ReadingSession session, {
+    bool startChanged = false,
+  }) async {
     _requireEmail();
     final place = session.place.trim();
     final notes = session.notes.trim();
-    await _sub(tourId, 'reading_sessions').doc(session.id).update({
+    final update = <String, dynamic>{
       'title': session.title.trim(),
       'startsAt': session.startsAt,
       'bookId': session.bookId,
       'chapterIds': session.chapterIds.isEmpty ? null : session.chapterIds,
       'place': place.isEmpty ? null : place,
       'notes': notes.isEmpty ? null : notes,
-    });
+    };
+    if (startChanged) {
+      update['reminder24Sent'] = FieldValue.delete();
+      update['reminder30Sent'] = FieldValue.delete();
+    }
+    await _sub(tourId, 'reading_sessions').doc(session.id).update(update);
   }
 
   Future<void> deleteReadingSession(String tourId, String sessionId) async {
     _requireEmail();
     await _sub(tourId, 'reading_sessions').doc(sessionId).delete();
+  }
+
+  // Reading sessions, Phase 4: each member's answer and check-in, the shared focus timer, the agenda and
+  // link, and the recap. The rules in firestore.rules say who may write each one.
+
+  /// The answers to a session, with each check-in as a [DateTime].
+  Stream<List<StudySessionRsvp>> watchSessionRsvps(
+    String tourId,
+    String sessionId,
+  ) {
+    return _sub(tourId, 'reading_sessions')
+        .doc(sessionId)
+        .collection('rsvps')
+        .limit(300)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudySessionRsvp.fromMap(d.id, {
+                  ...d.data(),
+                  'checkedInAt':
+                      (d.data()['checkedInAt'] as Timestamp?)?.toDate(),
+                })
+                    case final answer?)
+                  answer,
+            ]);
+  }
+
+  /// Answers a session for the signed-in member. A check-in they already made is kept.
+  Future<void> setSessionAnswer(
+    String tourId,
+    String sessionId,
+    StudySessionResponse response,
+  ) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'reading_sessions')
+        .doc(sessionId)
+        .collection('rsvps')
+        .doc(email)
+        .set({
+      'response': response.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Marks the signed-in member present. The session must have started, which the rules check. A member who
+  /// has not answered yet is recorded as going.
+  Future<void> checkInToSession(String tourId, String sessionId) async {
+    final email = _requireEmail();
+    final answer = _sub(tourId, 'reading_sessions')
+        .doc(sessionId)
+        .collection('rsvps')
+        .doc(email);
+    final existing = await answer.get();
+    await answer.set({
+      'response':
+          existing.data()?['response'] ?? StudySessionResponse.going.name,
+      'checkedInAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Starts the shared focus timer for [seconds], from now. Its creator or an admin does this.
+  Future<void> startSessionTimer(
+    String tourId,
+    String sessionId, {
+    required int seconds,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'reading_sessions').doc(sessionId).update({
+      'timerStartsAt': FieldValue.serverTimestamp(),
+      'timerSeconds': seconds,
+    });
+  }
+
+  /// Stops the shared focus timer. Its creator or an admin does this.
+  Future<void> stopSessionTimer(String tourId, String sessionId) async {
+    _requireEmail();
+    await _sub(tourId, 'reading_sessions').doc(sessionId).update({
+      'timerStartsAt': FieldValue.delete(),
+      'timerSeconds': FieldValue.delete(),
+    });
+  }
+
+  /// Writes the agenda and the meeting link. An empty value is removed. Its creator or an admin does this.
+  Future<void> setSessionDetails(
+    String tourId,
+    String sessionId, {
+    required String agenda,
+    required String link,
+  }) async {
+    _requireEmail();
+    final trimmedAgenda = agenda.trim();
+    final trimmedLink = link.trim();
+    await _sub(tourId, 'reading_sessions').doc(sessionId).update({
+      'agenda': trimmedAgenda.isEmpty ? FieldValue.delete() : trimmedAgenda,
+      'link': trimmedLink.isEmpty ? FieldValue.delete() : trimmedLink,
+    });
+  }
+
+  /// Writes the recap of a session, and starts a thread on the session's book for each of [newQuestions]: the
+  /// questions that were not in the recap before, so saving again does not repeat them. A session with no
+  /// book keeps its questions in the recap only. Its creator or an admin does this.
+  Future<void> saveSessionRecap(
+    String tourId,
+    ReadingSession session,
+    StudySessionRecap recap, {
+    required List<String> newQuestions,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'reading_sessions').doc(session.id).update({
+      'recap': recap.toFields(),
+      'recapAt': FieldValue.serverTimestamp(),
+    });
+    final bookId = session.bookId;
+    if (bookId == null) return;
+    for (final question in newQuestions) {
+      final title = question.length > StudySessionLimits.threadTitleMax
+          ? question.substring(0, StudySessionLimits.threadTitleMax)
+          : question;
+      await addStudyThread(tourId, bookId, title: title, body: question);
+    }
   }
 
   // ---------------------------------------------------------------------------
