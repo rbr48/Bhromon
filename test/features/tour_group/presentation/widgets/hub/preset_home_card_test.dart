@@ -7,6 +7,9 @@ import 'package:bhromon/features/tour_group/domain/models/mess_bazar_model.dart'
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/samity_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/service_request_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_activity_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/family/family_home_card.dart';
@@ -23,6 +26,19 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeTourGroupRepository extends TourGroupRepository {
   @override
   String get currentEmail => 'test@bhromon.fun';
+
+  // The study group's Today card on the home reads these. Empty here, so the card says that nothing is due.
+  @override
+  Stream<List<StudySubject>> watchStudySubjects(String tourId) =>
+      Stream.value(const []);
+
+  @override
+  Stream<List<StudyBook>> watchStudyBooks(String tourId) =>
+      Stream.value(const []);
+
+  @override
+  Future<List<StudyDeadline>> loadStudyDeadlines(String tourId) async =>
+      const [];
 
   @override
   Stream<List<FamilyDate>> watchFamilyDates(String tourId) =>

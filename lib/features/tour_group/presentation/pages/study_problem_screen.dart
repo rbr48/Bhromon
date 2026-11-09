@@ -4,6 +4,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../data/study_activity_log.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_problem_models.dart';
 import '../../domain/models/study_subject_models.dart';
@@ -151,6 +152,8 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     final l10n = context.l10n;
     try {
       await change();
+      // A working counts as a study action on this device, so it keeps the member's streak.
+      await countStudyActionToday();
       if (!mounted) return;
       await _loadMine();
       messenger.showSnackBar(

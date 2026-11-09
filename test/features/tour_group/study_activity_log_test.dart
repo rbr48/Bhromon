@@ -53,4 +53,27 @@ void main() {
     expect(await log().cardsReviewed(), 0);
     expect(await log().activeDays(), [DateTime(2026, 11, 3)]);
   });
+
+  test(
+      'a working or a finding check counts as an active day, and the cards reviewed in a week are counted from its Monday',
+      () async {
+    await log().recordReview(DateTime(2026, 11, 9, 8));
+    await log().recordReview(DateTime(2026, 11, 15, 8));
+    await log().recordReview(DateTime(2026, 11, 16, 8));
+    await log().recordAction(DateTime(2026, 11, 12, 10));
+
+    expect(
+      await log().cardsReviewedBetween(
+        DateTime(2026, 11, 9),
+        DateTime(2026, 11, 16),
+      ),
+      2,
+    );
+    expect(await log().activeDays(), [
+      DateTime(2026, 11, 9),
+      DateTime(2026, 11, 12),
+      DateTime(2026, 11, 15),
+      DateTime(2026, 11, 16),
+    ]);
+  });
 }

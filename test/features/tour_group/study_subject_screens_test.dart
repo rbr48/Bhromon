@@ -1,7 +1,10 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_challenge_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_module_posts_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_subject_screen.dart';
@@ -59,6 +62,56 @@ class _FakeSubjectRepo extends TourGroupRepository {
   Future<void> approveStudySubject(String tourId, String subjectId) async {
     calls.add('list $subjectId');
   }
+
+  // The Today card of a subject reads these. They are empty here, so the card says that nothing is due.
+  @override
+  Stream<StudyChallenge?> watchStudyChallenge(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) =>
+      Stream.value(null);
+
+  @override
+  Stream<Set<String>> watchChallengeJoins(
+    String tourId,
+    String subjectId,
+    String weekKey,
+  ) =>
+      Stream.value(const {});
+
+  @override
+  Future<int> countMyChallengeTasks(
+    String tourId,
+    String subjectId,
+    ChallengeKind kind,
+    DateTime weekStart, {
+    required Future<int> Function() cardsReviewed,
+  }) async =>
+      0;
+
+  @override
+  Future<List<StudyDeadline>> loadStudyDeadlines(String tourId) async =>
+      const [];
+
+  @override
+  Stream<List<StudyFinding>> watchStudyFindings(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(const []);
+
+  @override
+  Future<Map<String, StudyFindingCheck>> loadMyFindingChecks(
+    String tourId,
+    String subjectId,
+    List<String> findingIds,
+  ) async =>
+      const {};
+
+  @override
+  Stream<List<StudyBook>> watchStudyBooks(String tourId) =>
+      Stream.value(const []);
 
   @override
   Future<bool> toggleStudyPostHelpful(

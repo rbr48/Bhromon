@@ -1,5 +1,20 @@
+import '../../../domain/models/study_challenge_models.dart';
 import '../../../domain/models/study_models.dart';
 import '../../../domain/models/study_subject_models.dart';
+
+/// The translation key of a challenge's kind, as the editor names it.
+String challengeKindKey(ChallengeKind kind) => switch (kind) {
+      ChallengeKind.problems => 'study_challenge_kind_problems',
+      ChallengeKind.findings => 'study_challenge_kind_findings',
+      ChallengeKind.cards => 'study_challenge_kind_cards',
+    };
+
+/// The translation key of a challenge's task sentence. The sentence takes the number of tasks.
+String challengeTaskKey(ChallengeKind kind) => switch (kind) {
+      ChallengeKind.problems => 'study_challenge_task_problems',
+      ChallengeKind.findings => 'study_challenge_task_findings',
+      ChallengeKind.cards => 'study_challenge_task_cards',
+    };
 
 /// The translation key of a book's status, which is also the title of its section in the
 /// book list.

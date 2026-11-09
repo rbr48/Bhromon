@@ -51,8 +51,8 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list, reading plan, subjects, tips, suggestions, findings and problems) keeps its
- *   amounts and dates.
+ *   list, and the study book list, reading plan, subjects, tips, suggestions, findings, problems and weekly
+ *   challenges) keeps its amounts and dates. A challenge loses the person's join only.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
  *
@@ -146,6 +146,7 @@ const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_REFERENCE: AnonymizePlan = { emails: ['reviewedByEmail'] };
+const STUDY_CHALLENGE: AnonymizePlan = { emails: ['setByEmail'] };
 /** A discussion thread on a book: who started it. */
 const STUDY_THREAD: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A reply in a thread: who wrote it. */
@@ -552,6 +553,17 @@ export async function purgeMemberContent(
         batch.update(work.ref, { [countField]: FieldValue.increment(-1) });
         await batch.commit();
       }
+    }
+
+    // A week's challenge keeps its kind and target under the stand-in for the admin who set it. The person's join
+    // comes out, so the challenge stops listing them, and the step runs again safely: each delete happens only when
+    // the join is there.
+    const challenges = subject.ref.collection('challenges');
+    await applyToQuery(db, challenges, anonymize(STUDY_CHALLENGE, email, standIn));
+    const weeks = await challenges.get();
+    for (const week of weeks.docs) {
+      const join = week.ref.collection('joins').doc(email);
+      if ((await join.get()).exists) await join.delete();
     }
   }
 

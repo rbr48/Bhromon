@@ -289,6 +289,21 @@ async function seed() {
     createdAt: new Date('2026-11-02T10:00:00Z'),
   });
 
+  // A week's challenge the leaver set as an admin, and a join each of the leaver and another member made. The
+  // challenge keeps its kind and target under the stand-in. The leaver's join comes out, and the other member's stays.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09`, {
+    kind: 'problems',
+    target: 5,
+    setByEmail: LEAVER,
+    setAt: new Date('2026-11-09T06:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09/joins/${LEAVER}`, {
+    joinedAt: new Date('2026-11-09T07:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09/joins/${OTHER}`, {
+    joinedAt: new Date('2026-11-09T07:30:00Z'),
+  });
+
   // A proposed book the leaver and another member would read, and a listed book's chapter that
   // the leaver and another member have marked read. The votes and read marks are each member's
   // own, so the leaver's go and the others' stay. The chapter is the admin's record and stays.
@@ -785,6 +800,15 @@ describe('tour content purge', () => {
       rightCount: 0,
       gapCount: 0,
     });
+    // A week's challenge keeps its kind and target under the stand-in. The leaver's join comes out, and another
+    // member's stays.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09`)).toMatchObject({
+      kind: 'problems',
+      target: 5,
+      setByEmail: STAND_IN,
+    });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09/joins/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/challenges/2026-11-09/joins/${OTHER}`)).toBe(true);
   });
 
   it('a leaver’s votes and read marks go, the others’ stay, and the chapter stays', async () => {

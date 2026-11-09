@@ -27,7 +27,8 @@ enum StudyModuleKey {
       this == StudyModuleKey.tips ||
       this == StudyModuleKey.suggestions ||
       this == StudyModuleKey.findings ||
-      this == StudyModuleKey.problems;
+      this == StudyModuleKey.problems ||
+      this == StudyModuleKey.challenges;
 
   /// The module with [name], or null for a name the app does not know.
   static StudyModuleKey? fromName(Object? raw) {

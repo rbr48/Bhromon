@@ -248,13 +248,15 @@ void main() {
   });
 
   group('modules and posts as stored', () {
-    test('tips, suggestions, shared findings and problems are live', () {
+    test('tips, suggestions, shared findings, problems and challenges are live',
+        () {
       final live = StudyModuleKey.values.where((k) => k.isLive).toList();
       expect(live, [
         StudyModuleKey.tips,
         StudyModuleKey.suggestions,
         StudyModuleKey.findings,
         StudyModuleKey.problems,
+        StudyModuleKey.challenges,
       ]);
     });
 
