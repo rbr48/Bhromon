@@ -3271,6 +3271,22 @@ class TourGroupRepository {
           .collection('problem_sets')
           .doc(setId);
 
+  /// A set's per-member due dates: one document for each member an admin set a date for, keyed by email.
+  CollectionReference<Map<String, dynamic>> _memberDeadlinesRef(
+    String tourId,
+    String subjectId,
+    String setId,
+  ) =>
+      _problemSetRef(tourId, subjectId, setId).collection('member_deadlines');
+
+  DocumentReference<Map<String, dynamic>> _memberDeadlineRef(
+    String tourId,
+    String subjectId,
+    String setId,
+    String email,
+  ) =>
+      _memberDeadlinesRef(tourId, subjectId, setId).doc(email);
+
   CollectionReference<Map<String, dynamic>> _problemsRef(
     String tourId,
     String subjectId,
@@ -3337,7 +3353,7 @@ class TourGroupRepository {
   }
 
   /// Deletes a problem set and takes its problems out of it in one batch, so no problem names a set that is gone.
-  /// The problems stay in the list. An admin does this.
+  /// The problems stay in the list, and the members' own due dates for the set go with it. An admin does this.
   Future<void> deleteStudyProblemSet(
     String tourId,
     String subjectId,
@@ -3347,12 +3363,94 @@ class TourGroupRepository {
     final members = await _problemsRef(tourId, subjectId)
         .where('setId', isEqualTo: setId)
         .get();
+    final deadlines = await _memberDeadlinesRef(tourId, subjectId, setId).get();
     final batch = _firestore.batch();
     for (final problem in members.docs) {
       batch.update(problem.reference, {'setId': FieldValue.delete()});
     }
+    for (final deadline in deadlines.docs) {
+      batch.delete(deadline.reference);
+    }
     batch.delete(_problemSetRef(tourId, subjectId, setId));
     await batch.commit();
+  }
+
+  /// The members' own due dates for a set, one for each member an admin set a date for. Only an admin reads them all;
+  /// a member reads their own with [loadMyProblemSetDeadlines].
+  Stream<List<StudyMemberDeadline>> watchMemberDeadlines(
+    String tourId,
+    String subjectId,
+    String setId,
+  ) {
+    return _memberDeadlinesRef(tourId, subjectId, setId)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyMemberDeadline.fromMap(
+                        d.id, _datesAsDateTimes(d.data()))
+                    case final deadline?)
+                  deadline,
+            ]);
+  }
+
+  /// The signed-in member's own due dates, by set id, for the sets given. A set with no date for them is left out.
+  Future<Map<String, DateTime>> loadMyProblemSetDeadlines(
+    String tourId,
+    String subjectId,
+    List<String> setIds,
+  ) async {
+    final email = _requireEmail();
+    final snaps = await Future.wait([
+      for (final id in setIds)
+        _memberDeadlineRef(tourId, subjectId, id, email).get(),
+    ]);
+    final dues = <String, DateTime>{};
+    for (var i = 0; i < setIds.length; i++) {
+      final deadline = StudyMemberDeadline.fromMap(
+        email,
+        _datesAsDateTimes(snaps[i].data() ?? const <String, dynamic>{}),
+      );
+      if (deadline != null) dues[setIds[i]] = deadline.dueAt;
+    }
+    return dues;
+  }
+
+  /// Sets a member's own due date for a set, to the start of [dueAt]'s day. An admin does this. A date that moves gets
+  /// a reminder of its own, so the stamp of the last one goes; saving the same day keeps the stamp.
+  Future<void> setStudyMemberDeadline(
+    String tourId,
+    String subjectId,
+    String setId,
+    String email, {
+    required DateTime dueAt,
+  }) async {
+    final me = _requireEmail();
+    final ref = _memberDeadlineRef(tourId, subjectId, setId, email);
+    final current = await ref.get();
+    final before = current.exists
+        ? StudyMemberDeadline.fromMap(
+            email,
+            _datesAsDateTimes(current.data() ?? const <String, dynamic>{}),
+          )
+        : null;
+    final moved = before != null && !before.dueAt.isAtSameMomentAs(dueAt);
+    await ref.set({
+      'dueAt': dueAt,
+      'setByEmail': me,
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (moved) 'reminderSentAt': FieldValue.delete(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Takes a member's own due date away, so the set's date is theirs again. An admin does this.
+  Future<void> clearStudyMemberDeadline(
+    String tourId,
+    String subjectId,
+    String setId,
+    String email,
+  ) async {
+    _requireEmail();
+    await _memberDeadlineRef(tourId, subjectId, setId, email).delete();
   }
 
   /// Puts a problem into a set, or takes it out of its set when [setId] is null. Only an admin does this.

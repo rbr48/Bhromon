@@ -216,3 +216,8 @@ bool problemSetDueMoved(DateTime? before, DateTime? after) {
   if (before == null || after == null) return before != after;
   return !before.isAtSameMomentAs(after);
 }
+
+/// The day a set is due for one viewer: the viewer's own date when an admin set one for them, otherwise the set's date.
+/// Null when neither is set.
+DateTime? problemSetDueFor({required StudyProblemSet set, DateTime? ownDue}) =>
+    ownDue ?? set.dueAt;

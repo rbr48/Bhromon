@@ -5,6 +5,11 @@ optional due time, `dueAt`, the start of the day it is due. The reminder goes ou
 claimed in a transaction (`reminderSentAt` on the set) before it is sent. It goes to the active members who have not
 written a working for each shown problem of the set. A subject that is not listed, is archived, or has its problems
 module off sends nothing. The job follows the session reminders (session_reminders.py).
+
+An admin can give one member a due date of their own for a set (tours/{id}/study_subjects/{id}/problem_sets/{id}/
+member_deadlines/{email}). That member is left out of the set's reminder and is reminded of their own date instead,
+24 hours before it, once: the claim is `reminderSentAt` on that document, and a moved date clears it, so the reminder
+goes out again for the new date.
 """
 
 from __future__ import annotations
@@ -25,6 +30,8 @@ POLL_SECONDS = 15 * 60
 PUSH_ACTION = "problem_set"
 SENT_FIELD = "reminderSentAt"
 PROBLEMS_MODULE = "problems"
+# A member's own due date for a set, a subcollection of the set keyed by the member's email.
+DEADLINES = "member_deadlines"
 
 
 def _moment(raw: Any) -> Optional[datetime]:
@@ -95,6 +102,21 @@ def _candidate_sets(db: Any, now: datetime) -> List[Any]:
     return list(query.stream())
 
 
+def _candidate_deadlines(db: Any, now: datetime) -> List[Any]:
+    """The members' own due dates within the lookahead window, from every study group."""
+    query = (
+        db.collection_group(DEADLINES)
+        .where("dueAt", ">=", now)
+        .where("dueAt", "<=", now + LOOKAHEAD)
+    )
+    return list(query.stream())
+
+
+def _personal_deadline_emails(set_ref: Any) -> Set[str]:
+    """The members an admin gave a due date of their own for this set. They are reminded of that date, not the set's."""
+    return {doc.id for doc in set_ref.collection(DEADLINES).stream()}
+
+
 def _subject_open_for_reminders(subject_ref: Any) -> bool:
     """A subject is listed, not archived, and has its problems module on."""
     subject = subject_ref.get()
@@ -144,7 +166,7 @@ def run_problem_set_reminders(
         lambda transaction, ref: claim_problem_set_reminder(transaction, ref, now)
     )
 
-    stats = {"due": 0, "reminded": 0, "pushes": 0, "errors": 0}
+    stats = {"due": 0, "deadlines": 0, "reminded": 0, "pushes": 0, "errors": 0}
     members_by_tour: Dict[str, List[str]] = {}
     for doc in _candidate_sets(db, now):
         stats["due"] += 1
@@ -161,7 +183,13 @@ def run_problem_set_reminders(
             members = members_by_tour[tour_id]
             problems = _shown_problems(subject_ref, set_ref.id)
             solvers = {problem.id: _solvers(problem) for problem in problems}
-            recipients = unfinished_members(members, [p.id for p in problems], solvers)
+            # A member with a date of their own is reminded of that date instead, by the pass below.
+            personal = _personal_deadline_emails(set_ref)
+            recipients = unfinished_members(
+                [email for email in members if email not in personal],
+                [p.id for p in problems],
+                solvers,
+            )
             record = claim(db.transaction(), set_ref)
             if record is None:
                 continue
@@ -183,6 +211,50 @@ def run_problem_set_reminders(
         except Exception as error:  # One bad set must not stop the others.
             stats["errors"] += 1
             logger.error("Problem-set reminder failed for %s: %s", doc.reference.path, error)
+    # A member's own due date for a set: the member is reminded of it once, if they have not worked every shown
+    # problem. A date for a set that is gone, for a member who has left, or in a subject that is closed sends nothing.
+    for doc in _candidate_deadlines(db, now):
+        stats["deadlines"] += 1
+        try:
+            deadline_ref = doc.reference
+            set_ref = deadline_ref.parent.parent
+            subject_ref = set_ref.parent.parent
+            tour_id = subject_ref.parent.parent.id
+            email = deadline_ref.id
+            if not _subject_open_for_reminders(subject_ref):
+                continue
+            set_snapshot = set_ref.get()
+            if not set_snapshot.exists:
+                continue
+            if tour_id not in members_by_tour:
+                members_by_tour[tour_id] = engine.get_active_tour_members(tour_id, "")
+            if email not in members_by_tour[tour_id]:
+                continue
+            problems = _shown_problems(subject_ref, set_ref.id)
+            solvers = {problem.id: _solvers(problem) for problem in problems}
+            recipients = unfinished_members([email], [p.id for p in problems], solvers)
+            record = claim(db.transaction(), deadline_ref)
+            if record is None:
+                continue
+            stats["reminded"] += 1
+            if not recipients:
+                continue
+            set_title = (set_snapshot.to_dict() or {}).get("title")
+            targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(recipients))
+            stats["pushes"] += engine.send_localized(
+                targets,
+                lambda language, title=set_title: problem_set_text({"title": title}, language),
+                {
+                    "action": PUSH_ACTION,
+                    "tourId": tour_id,
+                    "subjectId": subject_ref.id,
+                    "setId": set_ref.id,
+                },
+                high_priority=True,
+            )
+        except Exception as error:  # One bad date must not stop the others.
+            stats["errors"] += 1
+            logger.error("Problem-set due date reminder failed for %s: %s", doc.reference.path, error)
     return stats
 
 

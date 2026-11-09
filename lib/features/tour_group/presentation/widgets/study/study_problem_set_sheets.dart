@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'study_member_deadlines_sheet.dart';
 import 'study_modal.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -25,19 +26,21 @@ class StudyProblemSetChoice {
   final String? setId;
 }
 
-/// The due line of a set for the viewer, such as "Due 20 Nov 2026 · Due soon". The state words are shown only when
-/// they apply.
+/// The due line of a set for the viewer, such as "Due 20 Nov 2026 · Due soon". [ownDue] is the viewer's own date when an
+/// admin set one for them, which is shown in place of the set's. The state words are shown only when they apply.
 String problemSetDueLabel(
   BuildContext context,
   StudyProblemSet set, {
   DateTime? now,
+  DateTime? ownDue,
 }) {
   final l10n = context.l10n;
-  final at = set.dueAt;
+  final at = ownDue ?? set.dueAt;
   if (at == null) return l10n.translate('study_set_no_due');
-  final line = l10n.translate('study_set_due_line', args: {
-    'date': localizedDateFormat('d MMM yyyy').format(at),
-  });
+  final date = localizedDateFormat('d MMM yyyy').format(at);
+  final line = ownDue != null
+      ? l10n.translate('study_set_due_for_you', args: {'date': date})
+      : l10n.translate('study_set_due_line', args: {'date': date});
   final word =
       switch (problemSetDueState(dueAt: at, now: now ?? DateTime.now())) {
     ProblemSetDue.overdue => l10n.translate('study_set_overdue'),
@@ -397,6 +400,17 @@ class _StudyProblemSetsManagerState extends State<_StudyProblemSetsManager> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          IconButton(
+            icon: Icon(Icons.group_outlined, color: palette.text70),
+            tooltip: l10n.translate('study_member_deadlines_action'),
+            onPressed: () => showStudyMemberDeadlinesSheet(
+              context,
+              repository: widget.repository,
+              tourId: widget.tourId,
+              subjectId: widget.subjectId,
+              set: set,
+            ),
+          ),
           IconButton(
             icon: Icon(Icons.edit_outlined, color: palette.text70),
             tooltip: l10n.translate('study_set_edit'),

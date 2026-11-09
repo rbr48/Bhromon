@@ -316,5 +316,53 @@ void main() {
       );
       expect(line, isNull);
     });
+
+    test(
+        'a viewer\'s own due date replaces the set\'s, for whether it is due soon and for the date shown',
+        () {
+      // The set is due in ten days for everyone, but the viewer's own date for it is in two.
+      final line = nextDueProblemSet(
+        sets: [set('s1', 'Week 3', DateTime(2026, 11, 20))],
+        problems: [problem('p1', 's1')],
+        workedIds: const {},
+        viewerEmail: 'me@x.com',
+        isAdmin: false,
+        now: now,
+        ownDueBySetId: {'s1': dueSoon},
+      );
+      expect(line?.set.id, 's1');
+      expect(line?.due, dueSoon);
+    });
+
+    test(
+        'a later own date takes a set out of the window, even when the set is due soon for everyone else',
+        () {
+      final line = nextDueProblemSet(
+        sets: [set('s1', 'Week 3', dueSoon)],
+        problems: [problem('p1', 's1')],
+        workedIds: const {},
+        viewerEmail: 'me@x.com',
+        isAdmin: false,
+        now: now,
+        ownDueBySetId: {'s1': DateTime(2026, 11, 25)},
+      );
+      expect(line, isNull);
+    });
+
+    test(
+        'the order follows the viewer\'s own dates, so a set due sooner for everyone can come after one due sooner for the viewer',
+        () {
+      // Week 1 is due on 11 Nov for everyone, but the viewer's own date for it is 13 Nov; Week 2 is due on 12 Nov.
+      final line = nextDueProblemSet(
+        sets: [set('s1', 'Week 1', earlier), set('s2', 'Week 2', dueSoon)],
+        problems: [problem('p1', 's1'), problem('p2', 's2')],
+        workedIds: const {},
+        viewerEmail: 'me@x.com',
+        isAdmin: false,
+        now: now,
+        ownDueBySetId: {'s1': DateTime(2026, 11, 13)},
+      );
+      expect(line?.set.id, 's2');
+    });
   });
 }

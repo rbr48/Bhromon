@@ -4,7 +4,12 @@ import '../models/study_subject_models.dart';
 import '../models/study_today_models.dart';
 import 'study_finding_rules.dart' show canCheckFinding;
 import 'study_problem_rules.dart'
-    show ProblemSetDue, problemSetDueState, visibleStudyProblems, workedCount;
+    show
+        ProblemSetDue,
+        problemSetDueFor,
+        problemSetDueState,
+        visibleStudyProblems,
+        workedCount;
 import 'study_subject_rules.dart' show daysUntilExam;
 
 /// Exam mode starts this many days before a subject's exam.
@@ -39,24 +44,28 @@ List<TodayCardLine> todayCardLineOrder({required bool examMode}) => examMode
         TodayCardLine.challenge,
       ];
 
-/// The problem set the Today card shows for a viewer: the set due soon (see [problemSetDueState]) that has a problem the
-/// viewer can see and has not worked yet. [total] counts the problems of the set the viewer can see, and [worked] the
-/// ones among them the viewer has submitted a working for.
+/// The problem set the Today card shows for a viewer: the set due soon for them (see [problemSetDueState]) that has a
+/// problem the viewer can see and has not worked yet. [due] is the day it is due for the viewer: their own date when an
+/// admin set one for them, else the set's date. [total] counts the problems of the set the viewer can see, and [worked]
+/// the ones among them the viewer has submitted a working for.
 class DueProblemSet {
   const DueProblemSet({
     required this.set,
+    required this.due,
     required this.total,
     required this.worked,
   });
 
   final StudyProblemSet set;
+  final DateTime due;
   final int total;
   final int worked;
 }
 
-/// The nearest set that is due soon and that the viewer still has to work on, or null when there is none. [workedIds]
-/// holds the ids of the problems the viewer has submitted a working for. A set due sooner comes first; two that are due
-/// the same day come in the order of their names.
+/// The nearest set that is due soon for the viewer and that the viewer still has to work on, or null when there is none.
+/// [workedIds] holds the ids of the problems the viewer has submitted a working for, and [ownDueBySetId] the viewer's own
+/// due dates by set id (see [problemSetDueFor]). A set due sooner comes first; two that are due the same day come in the
+/// order of their names.
 DueProblemSet? nextDueProblemSet({
   required List<StudyProblemSet> sets,
   required List<StudyProblem> problems,
@@ -64,6 +73,7 @@ DueProblemSet? nextDueProblemSet({
   required String viewerEmail,
   required bool isAdmin,
   required DateTime now,
+  Map<String, DateTime> ownDueBySetId = const {},
 }) {
   final visible = visibleStudyProblems(
     problems: problems,
@@ -72,8 +82,9 @@ DueProblemSet? nextDueProblemSet({
   );
   DueProblemSet? next;
   for (final set in sets) {
-    if (problemSetDueState(dueAt: set.dueAt, now: now) !=
-        ProblemSetDue.dueSoon) {
+    final due = problemSetDueFor(set: set, ownDue: ownDueBySetId[set.id]);
+    if (due == null ||
+        problemSetDueState(dueAt: due, now: now) != ProblemSetDue.dueSoon) {
       continue;
     }
     final inSet = [
@@ -85,23 +96,22 @@ DueProblemSet? nextDueProblemSet({
     if (worked == inSet.length) continue;
     final candidate = DueProblemSet(
       set: set,
+      due: due,
       total: inSet.length,
       worked: worked,
     );
-    if (next == null || _dueSooner(candidate.set, next.set)) {
+    if (next == null || _dueSooner(candidate, next)) {
       next = candidate;
     }
   }
   return next;
 }
 
-/// Whether [a] is due before [b], or on the same day with a name that comes first. Both sets have a due date here.
-bool _dueSooner(StudyProblemSet a, StudyProblemSet b) {
-  final dueA = a.dueAt!;
-  final dueB = b.dueAt!;
-  if (dueA.isBefore(dueB)) return true;
-  if (dueB.isBefore(dueA)) return false;
-  return a.title.compareTo(b.title) < 0;
+/// Whether [a] is due before [b] for the viewer, or on the same day with a set whose name comes first.
+bool _dueSooner(DueProblemSet a, DueProblemSet b) {
+  if (a.due.isBefore(b.due)) return true;
+  if (b.due.isBefore(a.due)) return false;
+  return a.set.title.compareTo(b.set.title) < 0;
 }
 
 /// The findings a viewer may check and has not checked yet: the ones waiting for their check.

@@ -513,4 +513,22 @@ void main() {
       expect(problemSetDueMoved(null, day), isTrue);
     });
   });
+
+  group('the day a set is due for one viewer', () {
+    test(
+        'the viewer\'s own date is the day when an admin set one, and the set\'s date otherwise',
+        () {
+      final set = StudyProblemSet(
+          id: 's', title: 'Week', dueAt: DateTime(2026, 11, 20));
+      expect(problemSetDueFor(set: set, ownDue: DateTime(2026, 11, 13)),
+          DateTime(2026, 11, 13));
+      expect(problemSetDueFor(set: set), DateTime(2026, 11, 20));
+    });
+
+    test('nothing is due when neither the viewer nor the set has a date', () {
+      expect(
+          problemSetDueFor(set: const StudyProblemSet(id: 's', title: 'Week')),
+          isNull);
+    });
+  });
 }

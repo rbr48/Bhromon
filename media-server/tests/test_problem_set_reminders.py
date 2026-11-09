@@ -338,3 +338,104 @@ def test_the_run_needs_a_timezone():
     except ValueError:
         return
     raise AssertionError("a naive time must be refused")
+
+
+# A member's own due date for the set: the member is reminded of it on its own day, and the set's reminder leaves them out.
+DEADLINE_DUE = datetime(2026, 11, 14, 0, 0, tzinfo=timezone.utc)
+DEADLINE_REMINDER = DEADLINE_DUE - timedelta(hours=24)  # 2026-11-13 00:00
+
+
+def _deadline_path(email):
+    return f"{SET_PATH}/member_deadlines/{email}"
+
+
+def test_a_member_with_a_date_of_their_own_is_left_out_of_the_set_reminder_and_reminded_on_their_date():
+    docs = _tour()
+    docs[_deadline_path("cy@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    # At the set's reminder time only ben, who has not worked the second problem, is reminded: cy has a date of their own.
+    _run(db, engine, NOW)
+    assert [push["token"] for push in engine.pushes] == ["tok-uid-ben@x.com"]
+    # cy is reminded on their own date, once, and the stamp goes on their own date only.
+    engine.pushes.clear()
+    stats = _run(db, engine, DEADLINE_REMINDER)
+    assert stats["deadlines"] == 1
+    assert [push["token"] for push in engine.pushes] == ["tok-uid-cy@x.com"]
+    assert db.docs[_deadline_path("cy@x.com")]["reminderSentAt"] == DEADLINE_REMINDER
+
+
+def test_a_members_own_date_is_reminded_once():
+    docs = _tour()
+    docs[_deadline_path("cy@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    _run(db, engine, DEADLINE_REMINDER)
+    engine.pushes.clear()
+    _run(db, engine, DEADLINE_REMINDER + timedelta(hours=1))
+    assert engine.pushes == []
+
+
+def test_a_member_who_has_worked_every_shown_problem_is_stamped_and_sent_nothing():
+    docs = _tour()
+    docs[_deadline_path("ana@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    _run(db, engine, DEADLINE_REMINDER)
+    assert engine.pushes == []
+    assert db.docs[_deadline_path("ana@x.com")]["reminderSentAt"] == DEADLINE_REMINDER
+
+
+def test_a_date_for_someone_who_is_no_longer_an_active_member_sends_nothing_and_is_not_stamped():
+    docs = _tour()
+    docs[_deadline_path("gone@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)  # gone@x.com is not a member
+    _run(db, engine, DEADLINE_REMINDER)
+    assert engine.pushes == []
+    assert "reminderSentAt" not in db.docs[_deadline_path("gone@x.com")]
+
+
+def test_a_date_for_a_set_that_is_gone_sends_nothing():
+    docs = _tour()
+    del docs[SET_PATH]
+    docs[_deadline_path("cy@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    _run(db, engine, DEADLINE_REMINDER)
+    assert engine.pushes == []
+
+
+def test_a_date_in_a_subject_that_is_archived_sends_nothing():
+    docs = _tour(subject={"archived": True})
+    docs[_deadline_path("cy@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    _run(db, engine, DEADLINE_REMINDER)
+    assert engine.pushes == []
+
+
+def test_a_moved_date_with_its_stamp_cleared_is_reminded_for_the_new_day():
+    docs = _tour()
+    docs[_deadline_path("cy@x.com")] = {
+        "dueAt": DEADLINE_DUE,
+        "setByEmail": "admin@x.com",
+        "reminderSentAt": DEADLINE_REMINDER,
+    }
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    # The admin moved the date two days later and cleared the stamp with it.
+    new_due = DEADLINE_DUE + timedelta(days=2)
+    db.docs[_deadline_path("cy@x.com")] = {"dueAt": new_due, "setByEmail": "admin@x.com"}
+    _run(db, engine, new_due - timedelta(hours=24))
+    assert [push["token"] for push in engine.pushes] == ["tok-uid-cy@x.com"]
+
+
+def test_a_set_with_no_date_still_reminds_a_member_of_their_own_date():
+    docs = _tour()
+    docs[SET_PATH] = {"title": "Week 3", "createdByEmail": "admin@x.com"}  # no date for the set itself
+    docs[_deadline_path("cy@x.com")] = {"dueAt": DEADLINE_DUE, "setByEmail": "admin@x.com"}
+    db = FakeDb(docs)
+    engine = FakeEngine(MEMBERS)
+    _run(db, engine, DEADLINE_REMINDER)
+    assert [push["token"] for push in engine.pushes] == ["tok-uid-cy@x.com"]

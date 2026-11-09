@@ -180,6 +180,14 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
               subjectId,
               [for (final problem in problems) problem.id],
             );
+      // The viewer's own due dates for the sets: an admin may have given them a date of their own for one.
+      final ownDue = problemSets.isEmpty
+          ? const <String, DateTime>{}
+          : await _repository.loadMyProblemSetDeadlines(
+              tourId,
+              subjectId,
+              [for (final set in problemSets) set.id],
+            );
       final due = await _cardsDueNow();
       if (!mounted) return;
       setState(() {
@@ -191,6 +199,7 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
           viewerEmail: _me,
           isAdmin: widget.isAdmin,
           now: _today,
+          ownDueBySetId: ownDue,
         );
         _findingsWaiting = findingsWaitingForCheck(
           findings: findings,
@@ -301,7 +310,7 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
         icon: Icons.edit_note_rounded,
         text: l10n.translate('study_today_problem_set', args: {
           'title': problemSet.set.title,
-          'date': localizedDateFormat('d MMM').format(problemSet.set.dueAt!),
+          'date': localizedDateFormat('d MMM').format(problemSet.due),
           'worked': l10n.number(problemSet.worked),
           'total': l10n.number(problemSet.total),
         }),
