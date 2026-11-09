@@ -163,6 +163,41 @@ class StudyProblemSet {
   }
 }
 
+/// A member's own due date for a problem set, set by an admin for that member only. It replaces the set's date for
+/// that member. Stored under the set as member_deadlines/{email}; the member's email is the document's id.
+class StudyMemberDeadline {
+  const StudyMemberDeadline({
+    required this.email,
+    required this.dueAt,
+    this.setByEmail = '',
+    this.updatedAt,
+  });
+
+  /// The member the date is for.
+  final String email;
+
+  /// The start of the day the member's copy of the set is due.
+  final DateTime dueAt;
+
+  /// The admin who set the date.
+  final String setByEmail;
+
+  final DateTime? updatedAt;
+
+  /// Reads one stored due date. Returns null when it has no date, so a damaged entry does not break the list.
+  static StudyMemberDeadline? fromMap(String email, Map<String, dynamic> map) {
+    final due = map['dueAt'];
+    if (due is! DateTime) return null;
+    final updated = map['updatedAt'];
+    return StudyMemberDeadline(
+      email: email,
+      dueAt: due,
+      setByEmail: (map['setByEmail'] as String?) ?? '',
+      updatedAt: updated is DateTime ? updated : null,
+    );
+  }
+}
+
 /// The reference solution of a problem: an admin's answer, which carries the admin's name as the
 /// mark that an admin reviewed it.
 class StudyReferenceSolution {

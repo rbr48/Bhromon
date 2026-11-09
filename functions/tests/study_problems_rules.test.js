@@ -737,5 +737,105 @@ describe('problems, reference solutions, working and reviews', () => {
         updatedAt: serverTimestamp(),
       }));
     });
+
+    describe('a member\'s own due date for a set', () => {
+      const DEADLINE = Timestamp.fromDate(new Date('2026-11-18T00:00:00Z'));
+      const LATER = Timestamp.fromDate(new Date('2026-11-25T00:00:00Z'));
+      const deadlineRef = (f, setId, email, subjectId = SUBJECT) =>
+        doc(f, 'tours', STUDY, 'study_subjects', subjectId, 'problem_sets', setId, 'member_deadlines', email);
+      const deadlinesOf = (f, setId, subjectId = SUBJECT) =>
+        collection(f, 'tours', STUDY, 'study_subjects', subjectId, 'problem_sets', setId, 'member_deadlines');
+      // A deadline as an admin writes it: the date, the admin's name, and the server's time.
+      const newDeadline = (by, extra = {}) => ({
+        dueAt: DEADLINE,
+        setByEmail: by,
+        updatedAt: serverTimestamp(),
+        ...extra,
+      });
+      // Makes the set and a deadline for one member, as an admin does.
+      const setWithDeadline = async (email) => {
+        await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+        await assertSucceeds(setDoc(deadlineRef(db('admin'), SET_ONE, email), newDeadline(people.admin.email)));
+      };
+
+      test('an admin sets a member\'s due date for a set, under their own name', async () => {
+        await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+        await assertSucceeds(setDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), newDeadline(people.admin.email)));
+        await assertFails(setDoc(deadlineRef(db('admin'), SET_ONE, people.other.email), newDeadline(people.owner.email)));
+      });
+
+      test('a due date is only for a member of the group, and only for a set that exists', async () => {
+        await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+        await assertFails(setDoc(deadlineRef(db('admin'), SET_ONE, people.outsider.email), newDeadline(people.admin.email)));
+        await assertFails(setDoc(deadlineRef(db('admin'), 'no-such-set', people.member.email), newDeadline(people.admin.email)));
+      });
+
+      test('a member sets no due date, for themselves or for anyone else', async () => {
+        await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+        await assertFails(setDoc(deadlineRef(db('member'), SET_ONE, people.member.email), newDeadline(people.member.email)));
+        await assertFails(setDoc(deadlineRef(db('member'), SET_ONE, people.other.email), newDeadline(people.member.email)));
+      });
+
+      test('a due date is the start of a day, and is written without a reminder stamp', async () => {
+        await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+        await assertFails(setDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), newDeadline(people.admin.email, { dueAt: '2026-11-18' })));
+        await assertFails(setDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), newDeadline(people.admin.email, { reminderSentAt: PAST })));
+        await assertSucceeds(setDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), newDeadline(people.admin.email)));
+      });
+
+      test('the member reads their own due date; another member and an outsider do not; an admin reads any', async () => {
+        await setWithDeadline(people.member.email);
+        await assertSucceeds(getDoc(deadlineRef(db('member'), SET_ONE, people.member.email)));
+        await assertFails(getDoc(deadlineRef(db('other'), SET_ONE, people.member.email)));
+        await assertFails(getDoc(deadlineRef(db('outsider'), SET_ONE, people.member.email)));
+        await assertSucceeds(getDoc(deadlineRef(db('admin'), SET_ONE, people.member.email)));
+      });
+
+      test('only an admin lists the due dates of a set', async () => {
+        await setWithDeadline(people.member.email);
+        await assertFails(getDocs(deadlinesOf(db('member'), SET_ONE)));
+        await assertSucceeds(getDocs(deadlinesOf(db('admin'), SET_ONE)));
+      });
+
+      test('a moved due date needs the reminder stamp cleared with it; the same date keeps the stamp', async () => {
+        await setWithDeadline(people.member.email);
+        await env.withSecurityRulesDisabled(async (ctx) => {
+          await updateDoc(deadlineRef(ctx.firestore(), SET_ONE, people.member.email), { reminderSentAt: PAST });
+        });
+        // Saving the same date again keeps the stamp, so the member is not reminded twice for it.
+        await assertSucceeds(updateDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), {
+          setByEmail: people.admin.email,
+          updatedAt: serverTimestamp(),
+        }));
+        await assertFails(updateDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), {
+          dueAt: LATER,
+          updatedAt: serverTimestamp(),
+        }));
+        await assertSucceeds(updateDoc(deadlineRef(db('admin'), SET_ONE, people.member.email), {
+          dueAt: LATER,
+          reminderSentAt: deleteField(),
+          updatedAt: serverTimestamp(),
+        }));
+      });
+
+      test('an admin clears a member\'s due date; a member cannot', async () => {
+        await setWithDeadline(people.member.email);
+        await assertFails(deleteDoc(deadlineRef(db('member'), SET_ONE, people.member.email)));
+        await assertSucceeds(deleteDoc(deadlineRef(db('admin'), SET_ONE, people.member.email)));
+      });
+
+      test('a due date is not set while the problems module is off, nor in a subject that is not listed', async () => {
+        await setWithDeadline(people.member.email);
+        await env.withSecurityRulesDisabled(async (ctx) => {
+          await updateDoc(moduleRef(ctx.firestore()), { enabled: false });
+        });
+        await assertFails(setDoc(deadlineRef(db('admin'), SET_ONE, people.other.email), newDeadline(people.admin.email)));
+        await env.withSecurityRulesDisabled(async (ctx) => {
+          await updateDoc(moduleRef(ctx.firestore()), { enabled: true });
+          await updateDoc(subjectRef(ctx.firestore()), { approval: 'proposed' });
+        });
+        await assertFails(setDoc(deadlineRef(db('admin'), SET_ONE, people.other.email), newDeadline(people.admin.email)));
+      });
+    });
   });
 });

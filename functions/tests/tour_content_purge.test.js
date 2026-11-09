@@ -332,6 +332,18 @@ async function seed() {
     createdAt: new Date('2026-11-09T06:00:00Z'),
     updatedAt: new Date('2026-11-09T06:00:00Z'),
   });
+  // The leaver's own due date for that set goes with them. A date the leaver set for another member stays, with the
+  // leaver's name taken off it.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver/member_deadlines/${LEAVER}`, {
+    dueAt: new Date('2026-11-18T00:00:00Z'),
+    setByEmail: LEAVER,
+    updatedAt: new Date('2026-11-09T06:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver/member_deadlines/${OTHER}`, {
+    dueAt: new Date('2026-11-25T00:00:00Z'),
+    setByEmail: LEAVER,
+    updatedAt: new Date('2026-11-09T06:00:00Z'),
+  });
 
   // A proposed book the leaver and another member would read, and a listed book's chapter that
   // the leaver and another member have marked read. The votes and read marks are each member's
@@ -873,6 +885,11 @@ describe('tour content purge', () => {
     expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver`)).toMatchObject({
       title: 'Week one',
       createdByEmail: STAND_IN,
+    });
+    // The leaver's own due date for the set is gone; the one they set for another member stays, under the stand-in.
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver/member_deadlines/${LEAVER}`)).toBe(false);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problem_sets/set_leaver/member_deadlines/${OTHER}`)).toMatchObject({
+      setByEmail: STAND_IN,
     });
   });
 

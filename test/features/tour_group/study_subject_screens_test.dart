@@ -142,6 +142,14 @@ class _FakeSubjectRepo extends TourGroupRepository {
       const {};
 
   @override
+  Future<Map<String, DateTime>> loadMyProblemSetDeadlines(
+    String tourId,
+    String subjectId,
+    List<String> setIds,
+  ) async =>
+      const {};
+
+  @override
   Stream<List<StudyBook>> watchStudyBooks(String tourId) =>
       Stream.value(const []);
 

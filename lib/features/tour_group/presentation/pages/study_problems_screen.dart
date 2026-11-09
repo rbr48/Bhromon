@@ -50,6 +50,10 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
   Map<String, StudyProblemSolution> _myWork = {};
   final Set<String> _workAsked = {};
 
+  /// The signed-in member's own due dates for the sets, by set id, and the sets whose dates were asked for.
+  Map<String, DateTime> _myDues = {};
+  final Set<String> _duesAsked = {};
+
   String get _me => _repository.currentEmail;
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
@@ -76,6 +80,23 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
       if (mounted) setState(() => _myWork = {..._myWork, ...work});
     }, onError: (Object error, StackTrace stackTrace) {
       logWarning('Loading the study problem work failed', error, stackTrace);
+    });
+  }
+
+  /// Asks for the member's own due dates of the sets not asked for yet. Each set is asked once.
+  void _askDues(List<String> setIds) {
+    final missing = [
+      for (final id in setIds)
+        if (_duesAsked.add(id)) id
+    ];
+    if (missing.isEmpty) return;
+    _repository
+        .loadMyProblemSetDeadlines(widget.tourId, widget.subject.id, missing)
+        .then((dues) {
+      if (mounted) setState(() => _myDues = {..._myDues, ...dues});
+    }, onError: (Object error, StackTrace stackTrace) {
+      logWarning(
+          'Loading the study problem due dates failed', error, stackTrace);
     });
   }
 
@@ -198,6 +219,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
               builder: (context, setSnap) {
                 // Until the sets arrive, the problems are listed flat, as they were before sets existed.
                 final sets = setSnap.data ?? const <StudyProblemSet>[];
+                _askDues([for (final set in sets) set.id]);
                 // Nothing to list at all: say so, unless a set is there to show.
                 if (shown.isEmpty && sets.isEmpty) {
                   return Center(
@@ -290,7 +312,9 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 16)),
             const SizedBox(height: 4),
-            Text(problemSetDueLabel(context, section.set),
+            Text(
+                problemSetDueLabel(context, section.set,
+                    ownDue: _myDues[section.set.id]),
                 style: TextStyle(color: palette.text70)),
             const SizedBox(height: 4),
             Text(

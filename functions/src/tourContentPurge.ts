@@ -146,6 +146,8 @@ const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM_SET: AnonymizePlan = { emails: ['createdByEmail'] };
+/** A member's own due date for a problem set: who set it, for the admin who set it. */
+const STUDY_MEMBER_DEADLINE: AnonymizePlan = { emails: ['setByEmail'] };
 const STUDY_REFERENCE: AnonymizePlan = { emails: ['reviewedByEmail'] };
 const STUDY_CHALLENGE: AnonymizePlan = { emails: ['setByEmail'] };
 /** A discussion thread on a book: who started it. */
@@ -550,6 +552,15 @@ export async function purgeMemberContent(
     await applyToQuery(db, problems, anonymize(STUDY_PROBLEM, email, standIn));
     // A problem set keeps its name and due date under the stand-in for the admin who made it.
     await applyToQuery(db, subject.ref.collection('problem_sets'), anonymize(STUDY_PROBLEM_SET, email, standIn));
+    // A member's own due date for a set goes with the member. A date the member set for someone else keeps its date,
+    // under the stand-in for the admin who set it.
+    const setDocs = await subject.ref.collection('problem_sets').get();
+    for (const set of setDocs.docs) {
+      const deadlines = set.ref.collection('member_deadlines');
+      const own = deadlines.doc(email);
+      if ((await own.get()).exists) await own.delete();
+      await applyToQuery(db, deadlines, anonymize(STUDY_MEMBER_DEADLINE, email, standIn));
+    }
     const problemDocs = await problems.get();
     for (const problem of problemDocs.docs) {
       await removeReport(db, problem.ref, email);

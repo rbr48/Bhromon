@@ -23,6 +23,7 @@ class _FakeProblemRepo extends TourGroupRepository {
     this.workList = const [],
     this.problemList = const [],
     this.setList = const [],
+    this.ownDues = const {},
   });
 
   final TourRole? role;
@@ -37,6 +38,9 @@ class _FakeProblemRepo extends TourGroupRepository {
   /// The problems of the subject, and its problem sets, as the streams report them.
   final List<StudyProblem> problemList;
   final List<StudyProblemSet> setList;
+
+  /// The signed-in member's own due dates, by set id.
+  final Map<String, DateTime> ownDues;
 
   /// The signed-in member's review of each working, by the solver's email.
   final Map<String, StudyWorkReview> reviews = const {};
@@ -57,6 +61,17 @@ class _FakeProblemRepo extends TourGroupRepository {
       {
         for (final id in problemIds)
           if (myWork[id] != null) id: myWork[id]!,
+      };
+
+  @override
+  Future<Map<String, DateTime>> loadMyProblemSetDeadlines(
+    String tourId,
+    String subjectId,
+    List<String> setIds,
+  ) async =>
+      {
+        for (final id in setIds)
+          if (ownDues[id] != null) id: ownDues[id]!,
       };
 
   @override
@@ -527,6 +542,33 @@ void main() {
       tester.getTopLeft(find.text('Week zero')).dy,
       lessThan(tester.getTopLeft(find.text('Week one')).dy),
     );
+  });
+
+  testWidgets(
+      'a set header shows the viewer\'s own due date, in place of the set\'s, when an admin set one for them',
+      (tester) async {
+    final repo = _FakeProblemRepo(
+      role: TourRole.member,
+      setList: [
+        StudyProblemSet(
+            id: 's-one', title: 'Week one', dueAt: DateTime(2999, 1, 1)),
+      ],
+      problemList: [
+        StudyProblem(
+          id: 'pa',
+          text: 'A problem in week one',
+          createdByEmail: 'admin@x.com',
+          createdAt: DateTime(2026, 11, 1),
+          releaseAt: DateTime(2020, 1, 1),
+          setId: 's-one',
+        ),
+      ],
+      ownDues: {'s-one': DateTime(2999, 2, 2)},
+    );
+    await _pumpList(tester, repo);
+
+    expect(find.text('Your due date: 2 Feb 2999'), findsOneWidget);
+    expect(find.textContaining('1 Jan 2999'), findsNothing);
   });
 
   testWidgets(

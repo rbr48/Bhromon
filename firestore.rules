@@ -1010,6 +1010,21 @@ service cloud.firestore {
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp && d.updatedAt is timestamp;
     }
+    // A member's own due date for a problem set: the start of a day, who set it, and when. The reminder stamp is the
+    // media server's, so it is only ever present, or cleared, as the rules below allow.
+    function validStudyMemberDeadline(d) {
+      return d.keys().hasOnly(['dueAt', 'setByEmail', 'updatedAt', 'reminderSentAt']) &&
+             d.dueAt is timestamp &&
+             (d.get('reminderSentAt', null) == null || d.reminderSentAt is timestamp) &&
+             d.setByEmail is string && d.setByEmail.size() <= 254 &&
+             d.updatedAt is timestamp;
+    }
+    // Whether an email is an active member of a tour. The signed-in user's own membership is tourMemberPath; this is for
+    // the member a due date is set for.
+    function activeMemberOf(tId, email) {
+      return exists(/databases/$(database)/documents/memberships/$(tId + '__' + email)) &&
+             get(/databases/$(database)/documents/memberships/$(tId + '__' + email)).data.status == 'active';
+    }
     // Whether a member may add a problem: the same rule as a finding's (the module's post policy).
     function studyProblemCreateAllowed(tourId, subjectId, d) {
       let byAdmin = isTourAdmin(tourId);
@@ -2067,6 +2082,35 @@ service cloud.firestore {
                              request.resource.data.get('reminderSentAt', null) == null)) &&
                            validStudyProblemSet(request.resource.data);
           allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+
+          // A member's own due date for this set, set by an admin for that member only; the set's date stays for everyone
+          // else. A member reads their own; an admin reads and lists them all. The media server writes the reminder stamp,
+          // so a client may not add one, and may clear it only with a moved date, as the set does.
+          match /member_deadlines/{memberEmail} {
+            allow get: if isActiveMember(tourId) && (isTourAdmin(tourId) || memberEmail == tourUserEmail());
+            allow list: if isActiveMember(tourId) && isTourAdmin(tourId);
+            allow create: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                             studySubjectListed(tourId, subjectId) &&
+                             studyModuleOn(tourId, subjectId, 'problems') &&
+                             exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problem_sets/$(setId)) &&
+                             activeMemberOf(tourId, memberEmail) &&
+                             request.resource.data.setByEmail == tourUserEmail() &&
+                             request.resource.data.updatedAt == request.time &&
+                             request.resource.data.get('reminderSentAt', null) == null &&
+                             validStudyMemberDeadline(request.resource.data);
+            allow update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
+                             studySubjectListed(tourId, subjectId) &&
+                             studyModuleOn(tourId, subjectId, 'problems') &&
+                             request.resource.data.setByEmail == tourUserEmail() &&
+                             request.resource.data.updatedAt == request.time &&
+                             // The stamp stays only while the date does; a moved date needs the stamp cleared with it.
+                             ((request.resource.data.get('dueAt', null) == resource.data.get('dueAt', null) &&
+                               request.resource.data.get('reminderSentAt', null) == resource.data.get('reminderSentAt', null)) ||
+                              (request.resource.data.get('dueAt', null) != resource.data.get('dueAt', null) &&
+                               request.resource.data.get('reminderSentAt', null) == null)) &&
+                             validStudyMemberDeadline(request.resource.data);
+            allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+          }
         }
 
         // Problems a group works through. A member submits their own working; the reference solution is written by

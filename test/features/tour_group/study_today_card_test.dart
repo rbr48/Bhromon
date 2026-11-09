@@ -23,6 +23,7 @@ class _FakeTodayRepo extends TourGroupRepository {
     this.problemSets = const [],
     this.problems = const [],
     this.myWork = const {},
+    this.ownDues = const {},
   });
 
   final StudyChallenge? challenge;
@@ -34,6 +35,20 @@ class _FakeTodayRepo extends TourGroupRepository {
   final List<StudyProblemSet> problemSets;
   final List<StudyProblem> problems;
   final Map<String, StudyProblemSolution> myWork;
+
+  /// The signed-in member's own due dates, by set id.
+  final Map<String, DateTime> ownDues;
+
+  @override
+  Future<Map<String, DateTime>> loadMyProblemSetDeadlines(
+    String tourId,
+    String subjectId,
+    List<String> setIds,
+  ) async =>
+      {
+        for (final id in setIds)
+          if (ownDues[id] != null) id: ownDues[id]!,
+      };
 
   @override
   String get currentEmail => 'me@x.com';
@@ -393,6 +408,42 @@ void main() {
     await tester.tap(find.text(line));
     await tester.pumpAndSettle();
     expect(opened.map((m) => m.key), [StudyModuleKey.problems]);
+  });
+
+  testWidgets(
+      'a set the group has not due soon is due soon for a viewer whose own date is, and the line shows that date',
+      (tester) async {
+    final opened = <StudyModuleSettings>[];
+    await _pump(
+      tester,
+      StudyTodayCard(
+        tourId: 't1',
+        subject: _subject,
+        repository: _FakeTodayRepo(
+          problemSets: [
+            StudyProblemSet(
+              id: 's1',
+              title: 'Week 3',
+              dueAt: DateTime(2026, 11, 20),
+            ),
+          ],
+          problems: const [
+            StudyProblem(id: 'p1', text: 'Solve one', setId: 's1'),
+          ],
+          ownDues: {'s1': DateTime(2026, 11, 12)},
+        ),
+        today: _tuesday,
+        problemsModule: _problemsModule,
+        onOpenModule: opened.add,
+        cardsDue: () async => 0,
+      ),
+    );
+
+    expect(
+      find.text('Problem set Week 3 is due 12 Nov: 0 of 1 worked.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('20 Nov'), findsNothing);
   });
 
   testWidgets(
