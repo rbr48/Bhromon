@@ -383,7 +383,7 @@ void main() {
         reportCount: 1,
         reportedAt: DateTime(2026, 11, 1),
       );
-      final plain = StudyProblem(id: 'plain', text: 'Plain', shown: false);
+      const plain = StudyProblem(id: 'plain', text: 'Plain', shown: false);
       expect(
         reportedProblemsForReview([newer, plain, older, restored])
             .map((p) => p.id),
