@@ -147,6 +147,8 @@ const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_THREAD: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A reply in a thread: who wrote it. */
 const STUDY_REPLY: AnonymizePlan = { emails: ['createdByEmail'] };
+/** A study material: who filed it. */
+const STUDY_MATERIAL: AnonymizePlan = { emails: ['createdByEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -535,6 +537,23 @@ export async function purgeMemberContent(
         }
       }
     }
+  }
+
+  // Materials keep their title and file under the stand-in. The person's reports come out, and each
+  // count drops by the report removed. Their open markers come out too.
+  const materials = tour.collection('study_materials');
+  await applyToQuery(db, materials, anonymize(STUDY_MATERIAL, email, standIn));
+  const materialDocs = await materials.get();
+  for (const material of materialDocs.docs) {
+    const report = material.ref.collection('reports').doc(email);
+    if ((await report.get()).exists) {
+      const batch = db.batch();
+      batch.delete(report);
+      batch.update(material.ref, { reportCount: FieldValue.increment(-1) });
+      await batch.commit();
+    }
+    const open = material.ref.collection('opens').doc(email);
+    if ((await open.get()).exists) await open.delete();
   }
 
   // What only the person used goes: luggage they own, seats and rooms they hold,

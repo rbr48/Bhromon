@@ -264,6 +264,40 @@ async function seed() {
     createdAt: new Date('2026-11-02T13:00:00Z'),
   });
 
+  // Study materials: the person's own material keeps its title under the stand-in. Another member's
+  // material is reported and opened by the person: the report and the open marker come out, and the
+  // report count falls with the report.
+  await set(`tours/${TOUR}/study_materials/mat_leaver`, {
+    title: 'Chapter 1 notes',
+    kind: 'link',
+    bookId: 'sb_other',
+    url: 'https://example.com/notes',
+    status: 'published',
+    rightsConfirmed: true,
+    reportCount: 0,
+    createdByEmail: LEAVER,
+    createdAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_materials/mat_other`, {
+    title: 'Summary of chapter 2',
+    kind: 'note',
+    bookId: 'sb_other',
+    body: 'Anna meets Vronsky at the station.',
+    status: 'hidden',
+    rightsConfirmed: true,
+    reportCount: 1,
+    reportedAt: new Date('2026-11-02T13:00:00Z'),
+    createdByEmail: OTHER,
+    createdAt: new Date('2026-11-02T09:30:00Z'),
+  });
+  await set(`tours/${TOUR}/study_materials/mat_other/reports/${LEAVER}`, {
+    reason: 'wrong',
+    createdAt: new Date('2026-11-02T13:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_materials/mat_other/opens/${LEAVER}`, {
+    openedAt: new Date('2026-11-02T14:00:00Z'),
+  });
+
   // The group's shared record: money, notices and route stops.
   await set(`tours/${TOUR}/expenses/e_leaver`, {
     title: 'Lunch',
@@ -596,6 +630,25 @@ describe('tour content purge', () => {
       number: 1,
       title: 'Part one',
     });
+  });
+
+  it('a leaver’s material keeps its title under the stand-in, and their report and open marker come out', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    expect(await read(`tours/${TOUR}/study_materials/mat_leaver`)).toMatchObject({
+      title: 'Chapter 1 notes',
+      createdByEmail: STAND_IN,
+    });
+    const other = `tours/${TOUR}/study_materials/mat_other`;
+    expect(await read(other)).toMatchObject({
+      body: 'Anna meets Vronsky at the station.',
+      createdByEmail: OTHER,
+      reportCount: 0,
+    });
+    expect(await exists(`${other}/reports/${LEAVER}`)).toBe(false);
+    expect(await exists(`${other}/opens/${LEAVER}`)).toBe(false);
   });
 
   it('a leaver’s thread keeps its words under the stand-in, and their marks and reports come out', async () => {

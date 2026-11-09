@@ -22,9 +22,11 @@ import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/study_models.dart';
+import '../domain/models/study_material_models.dart';
 import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/services/study_chapter_rules.dart';
+import '../domain/services/study_material_rules.dart';
 import '../domain/models/meal_log.dart';
 import '../domain/models/samity_models.dart';
 import '../domain/models/service_request_models.dart';
@@ -3184,6 +3186,178 @@ class TourGroupRepository {
     }
     batch.delete(thread);
     await batch.commit();
+  }
+
+  // Study materials: notes, files, links and recordings filed under a book. A member's material waits
+  // for an admin unless the group publishes directly (tours/{id}.studyPolicy). The rules in
+  // firestore.rules say who may write each change.
+
+  CollectionReference<Map<String, dynamic>> _materialsCol(String tourId) =>
+      _sub(tourId, 'study_materials');
+
+  DocumentReference<Map<String, dynamic>> _materialDoc(
+    String tourId,
+    String materialId,
+  ) =>
+      _materialsCol(tourId).doc(materialId);
+
+  /// Whether a member's material waits for an admin. On unless the group publishes directly.
+  Stream<bool> watchMaterialsNeedApproval(String tourId) {
+    return _firestore.collection('tours').doc(tourId).snapshots().map((s) {
+      final policy = s.data()?['studyPolicy'];
+      final value = policy is Map ? policy['materialsNeedApproval'] : null;
+      return value is bool ? value : true;
+    });
+  }
+
+  /// Turns the approval of members' materials on or off. Only an owner or admin does this.
+  Future<void> setMaterialsNeedApproval(
+    String tourId, {
+    required bool needsApproval,
+  }) async {
+    _requireEmail();
+    await _firestore.collection('tours').doc(tourId).update({
+      'studyPolicy.materialsNeedApproval': needsApproval,
+    });
+  }
+
+  /// The materials filed under a book, in no particular order; the screen sorts and filters them.
+  Stream<List<StudyMaterial>> watchStudyMaterials(
+      String tourId, String bookId) {
+    return _materialsCol(tourId)
+        .where('bookId', isEqualTo: bookId)
+        .limit(500)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyMaterial.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final material?)
+                  material,
+            ]);
+  }
+
+  /// Files a material under a book. Its file, when it has one, is uploaded first and its address
+  /// passed here; the caller commits the upload once this returns. The signed-in member is its author.
+  /// The status comes from the group's policy: an admin's material is published at once.
+  Future<void> addStudyMaterial(
+    String tourId, {
+    required String bookId,
+    required StudyMaterialKind kind,
+    required String title,
+    required bool isAdmin,
+    required bool needsApproval,
+    String? chapterId,
+    String? url,
+    String? fileName,
+    int? sizeBytes,
+    String? body,
+    String? replacesId,
+  }) async {
+    final email = _requireEmail();
+    final status = initialStudyMaterialStatus(
+      isAdmin: isAdmin,
+      needsApproval: needsApproval,
+    );
+    final material = StudyMaterial(
+      id: '',
+      title: title.trim(),
+      kind: kind,
+      bookId: bookId,
+      chapterId: chapterId,
+      url: url,
+      fileName: fileName,
+      sizeBytes: sizeBytes,
+      body: body?.trim(),
+      status: status,
+      createdByEmail: email,
+      replacesId: replacesId,
+    );
+    await _materialsCol(tourId).add({
+      ...material.toFields(status: status),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Changes a material's title. Its uploader or an admin does this.
+  Future<void> setStudyMaterialTitle(
+    String tourId,
+    String materialId,
+    String title,
+  ) async {
+    _requireEmail();
+    await _materialDoc(tourId, materialId).update({'title': title.trim()});
+  }
+
+  /// Publishes a pending material, or restores a hidden one. Only an admin does this.
+  Future<void> publishStudyMaterial(String tourId, String materialId) async {
+    _requireEmail();
+    await _materialDoc(tourId, materialId).update({'status': 'published'});
+  }
+
+  /// Reports a material, once for each member. The report, the count and the hiding change in one
+  /// transaction. The first report starts the 24 hours an admin has to decide.
+  Future<void> reportStudyMaterial(
+    String tourId,
+    String materialId, {
+    required StudyMaterialReportReason reason,
+  }) async {
+    final email = _requireEmail();
+    final material = _materialDoc(tourId, materialId);
+    final report = material.collection('reports').doc(email);
+    await _firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(material);
+      final alreadyReported = snapshot.data()?['reportedAt'] != null;
+      tx.set(report, {
+        'reason': reason.name,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      tx.update(material, {
+        'reportCount': FieldValue.increment(1),
+        'status': 'hidden',
+        if (!alreadyReported) 'reportedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// Removes a material and the file it uploaded. Its uploader or an admin does this. An admin also
+  /// clears its reports and opens, which only an admin may delete. A file that cannot be deleted now is
+  /// retried by the media journal.
+  Future<void> removeStudyMaterial(
+    String tourId,
+    StudyMaterial material, {
+    required bool isAdmin,
+  }) async {
+    _requireEmail();
+    final doc = _materialDoc(tourId, material.id);
+    final batch = _firestore.batch();
+    if (isAdmin) {
+      for (final report in (await doc.collection('reports').get()).docs) {
+        batch.delete(report.reference);
+      }
+      for (final open in (await doc.collection('opens').get()).docs) {
+        batch.delete(open.reference);
+      }
+    }
+    batch.delete(doc);
+    await batch.commit();
+    final url = material.url;
+    final ref = url == null ? null : TourMediaRef.tryParse(url);
+    if (ref != null) {
+      final journal = TourMediaJournal.instance;
+      await journal.markDelete(ref);
+      if (await TourMediaUploader.deleteMedia(ref.url)) {
+        await journal.resolve(ref.url);
+      }
+    }
+  }
+
+  /// Records that the signed-in member opened a published material, once.
+  Future<void> markStudyMaterialOpened(String tourId, String materialId) async {
+    final email = _requireEmail();
+    final mark =
+        _materialDoc(tourId, materialId).collection('opens').doc(email);
+    if ((await mark.get()).exists) return;
+    await mark.set({'openedAt': FieldValue.serverTimestamp()});
   }
 
   // ---------------------------------------------------------------------------
