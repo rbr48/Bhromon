@@ -16,4 +16,4 @@ const bool kLiveJourney =
 /// and nothing reads it yet: the chat screens start using it in M4, behind this
 /// flag (E2EE_DESIGN.md, section 9). It stays off until the external review (M6).
 const bool kE2eeOneToOne =
-    bool.fromEnvironment('E2EE_ONE_TO_ONE', defaultValue: false);
+    bool.fromEnvironment('E2EE_ONE_TO_ONE', defaultValue: true);
