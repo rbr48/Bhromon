@@ -60,6 +60,8 @@ class _FakeTourGroupRepository extends TourGroupRepository {
   Stream<List<SamityPayout>> watchSamityPayouts(String tourId) =>
       Stream.value(const []);
 
+// The mess card reads today's bazar duty and the caller's role when it opens. Without these overrides the
+  // real repository reaches Firestore, which the test does not set up.
   @override
   Stream<MessBazarSchedule?> watchBazarScheduleForDay(
           String tourId, String dateKey) =>

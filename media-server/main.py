@@ -39,6 +39,7 @@ import news
 from chat import chat_db, chat_is_encrypted, chat_router
 from ack_reminders import AckReminderScheduler, run_ack_reminders
 from family_dates import FamilyDateReminderScheduler
+from session_reminders import SessionReminderScheduler, run_session_reminders
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from call_cleanup import run_call_cleanup
@@ -102,6 +103,11 @@ notification_watcher = FirestoreNotificationWatcher(notification_engine)
 family_date_scheduler = FamilyDateReminderScheduler(notification_engine)
 ack_reminder_scheduler = AckReminderScheduler(
     lambda: run_ack_reminders(
+        backend._client(), notification_engine, datetime.now(timezone.utc)
+    )
+)
+session_reminder_scheduler = SessionReminderScheduler(
+    lambda: run_session_reminders(
         backend._client(), notification_engine, datetime.now(timezone.utc)
     )
 )
@@ -171,12 +177,14 @@ async def lifespan(app: FastAPI):
         family_date_scheduler.start()
         story_cleanup_scheduler.start()
         ack_reminder_scheduler.start()
+        session_reminder_scheduler.start()
     # The live relay drops members who have been silent for two minutes.
     live_sweep = asyncio.create_task(live.sweep_forever())
     yield
     # Stop them on shutdown
     live_sweep.cancel()
     ack_reminder_scheduler.stop()
+    session_reminder_scheduler.stop()
     story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
     notification_watcher.stop()

@@ -9,6 +9,7 @@ import '../../domain/models/study_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_rules.dart';
 import '../widgets/study/reading_session_editor.dart';
+import 'study_session_screen.dart';
 
 /// A study or book club's reading plan: the sessions the group has planned, upcoming ones
 /// first. Any member plans a session. Its creator or an admin changes or removes it.
@@ -99,6 +100,7 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
           notes: draft.notes,
           createdByEmail: session.createdByEmail,
         ),
+        startChanged: draft.startsAt != session.startsAt,
       ),
       'study_session_saved',
     );
@@ -249,7 +251,13 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        onTap: canEdit ? () => _edit(session, books) : null,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => StudySessionScreen(
+            tourId: widget.tourId,
+            session: session,
+            repository: _repository,
+          ),
+        )),
         title: Text(session.title,
             style: TextStyle(color: palette.text, fontWeight: FontWeight.w600)),
         subtitle: Text(details, style: TextStyle(color: palette.text54)),
