@@ -240,18 +240,30 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
       }
     }
 
-    // 2. Add checkpoint markers
-    for (final cp in widget.checkpoints) {
+    // 2. Add checkpoint markers with sequential numbering
+    for (int i = 0; i < widget.checkpoints.length; i++) {
+      final cp = widget.checkpoints[i];
       if (cp.hasLocation) {
+        final pos = maplibre.LatLng(cp.lat!, cp.lng!);
         controller.addCircle(
           maplibre.CircleOptions(
-            geometry: maplibre.LatLng(cp.lat!, cp.lng!),
-            circleRadius: 8.5,
+            geometry: pos,
+            circleRadius: 10.0,
             circleColor: '#FFB703',
             circleStrokeWidth: 2.0,
             circleStrokeColor: '#142428',
             circleOpacity: 1.0,
             circleStrokeOpacity: 1.0,
+          ),
+        );
+        controller.addSymbol(
+          maplibre.SymbolOptions(
+            geometry: pos,
+            textField: '${i + 1}',
+            textSize: 11.0,
+            textColor: '#142428',
+            textHaloColor: '#FFFFFF',
+            textHaloWidth: 0.5,
           ),
         );
       }

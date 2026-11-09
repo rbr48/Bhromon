@@ -1970,6 +1970,25 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       }
 
       if (existing == null || duplicate) {
+        final trxId = draft.mfsInfo?.trxId?.trim().toUpperCase();
+        if (trxId != null &&
+            trxId.isNotEmpty &&
+            (draft.mfsInfo?.provider.requiresTrxId ?? false)) {
+          final isRegistered =
+              await _repository.isMfsTrxRegistered(widget.tourId, trxId);
+          if (isRegistered) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content:
+                      Text(context.l10n.translate('fund_mfs_duplicate_trxid')),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            }
+            return;
+          }
+        }
         await _repository.addExpense(
           tourId: widget.tourId,
           title: draft.title,
@@ -2393,6 +2412,19 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 onTap: () => Navigator.of(sheetCtx).pop('month'),
               ),
               ListTile(
+                leading: const Icon(Icons.history_rounded,
+                    color: AppColors.mintGreen),
+                title: Text(
+                  'সম্পূর্ণ ট্যুর / গ্রুপ ইতিহাস (সব খরচ ও জমা)',
+                  style: TextStyle(
+                    fontFamily: 'NotoSansBengali',
+                    fontFamilyFallback: const ['HindSiliguri', 'Roboto'],
+                    color: context.forest.text,
+                  ),
+                ),
+                onTap: () => Navigator.of(sheetCtx).pop('all'),
+              ),
+              ListTile(
                 leading: const Icon(Icons.date_range_rounded,
                     color: AppColors.mintGreen),
                 title: Text(
@@ -2416,7 +2448,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     DateTime? customStart;
     DateTime? customEnd;
 
-    if (choice == 'custom') {
+    if (choice == 'all') {
+      customStart = DateTime(1900, 1, 1);
+      customEnd = DateTime(2100, 12, 31);
+    } else if (choice == 'custom') {
       final now = DateTime.now();
       final pickedRange = await showDateRangePicker(
         context: context,

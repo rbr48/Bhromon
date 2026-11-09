@@ -32,7 +32,8 @@ const Duration _connectTimeout = Duration(seconds: 30);
 const Duration _reconnectGrace = Duration(seconds: 4);
 
 /// How long one rebuild may wait for the other side before the call ends.
-const Duration _reconnectTimeout = Duration(seconds: 15);
+/// Tuned to 10 seconds per Sprint 8 (ROADMAP.md).
+const Duration _reconnectTimeout = Duration(seconds: 10);
 
 /// How often a rebuild request is sent again until the other side answers. The
 /// relay drops what is sent while a socket is down, so one request is not enough.

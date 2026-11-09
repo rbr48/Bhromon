@@ -96,4 +96,13 @@ void main() {
       expect(text.contains('টিপস ও সতর্কতা'), isTrue);
     });
   });
+
+  group('LocalFareGuide Sourced Audit (Task 9.2)', () {
+    test('every catalog route carries a verified source and audit date', () {
+      for (final r in LocalFareGuide.catalog) {
+        expect(r.source, isNotEmpty);
+        expect(r.asOf, isNotEmpty);
+      }
+    });
+  });
 }
