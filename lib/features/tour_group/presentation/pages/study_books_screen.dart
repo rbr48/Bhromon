@@ -8,10 +8,12 @@ import '../../domain/models/study_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_rules.dart';
 import '../widgets/study/study_book_editor.dart';
+import '../widgets/study/study_decline_dialog.dart';
 import '../widgets/study/study_labels.dart';
 
-/// A study or book club's shared book list. Any member adds a book and moves it along
-/// its statuses. The book's creator or an admin changes its details or removes it.
+/// A study or book club's shared book list. A member proposes a book, and an admin lists it
+/// or declines it. Anyone moves a listed book along its statuses. A book's creator or an
+/// admin changes its details or removes it.
 class StudyBooksScreen extends StatefulWidget {
   const StudyBooksScreen({super.key, required this.tourId, this.repository});
 
@@ -48,6 +50,7 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
     }, onError: (Object _) {});
   }
 
+  /// An admin adds a book straight to the list.
   Future<void> _add() async {
     final draft = await showStudyBookEditor(context);
     if (draft == null || !mounted) return;
@@ -58,8 +61,26 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
         author: draft.author,
         notes: draft.notes,
         status: draft.status,
+        approval: StudyBookApproval.listed,
       ),
       'study_book_saved',
+    );
+  }
+
+  /// A member proposes a book, which waits for an admin to list it or decline it.
+  Future<void> _propose() async {
+    final draft = await showStudyBookEditor(context, proposal: true);
+    if (draft == null || !mounted) return;
+    await _run(
+      () => _repository.addStudyBook(
+        widget.tourId,
+        title: draft.title,
+        author: draft.author,
+        notes: draft.notes,
+        status: draft.status,
+        approval: StudyBookApproval.proposed,
+      ),
+      'study_book_proposal_sent',
     );
   }
 
@@ -86,6 +107,30 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
       'study_book_status_changed',
     );
   }
+
+  /// An admin lists a proposed or declined book.
+  Future<void> _approve(StudyBook book) async {
+    await _run(
+      () => _repository.approveStudyBook(widget.tourId, book.id),
+      'study_book_listed',
+    );
+  }
+
+  /// An admin declines a proposal, with an optional note for the person who proposed it.
+  Future<void> _decline(StudyBook book) async {
+    final note = await _askDeclineNote();
+    if (note == null || !mounted) return;
+    await _run(
+      () => _repository.declineStudyBook(widget.tourId, book.id, note: note),
+      'study_book_declined_done',
+    );
+  }
+
+  /// Asks an admin for the optional note. Null when the admin cancels.
+  Future<String?> _askDeclineNote() => showDialog<String>(
+        context: context,
+        builder: (_) => const StudyDeclineDialog(),
+      );
 
   Future<void> _remove(StudyBook book) async {
     final l10n = context.l10n;
@@ -148,9 +193,10 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _add,
+        onPressed: _isAdmin ? _add : _propose,
         icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('study_books_add')),
+        label: Text(l10n
+            .translate(_isAdmin ? 'study_books_add' : 'study_books_propose')),
       ),
       body: StreamBuilder<List<StudyBook>>(
         stream: _books,
@@ -170,34 +216,138 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  l10n.translate('study_books_empty'),
+                  l10n.translate(_isAdmin
+                      ? 'study_books_empty'
+                      : 'study_books_empty_member'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: palette.text70),
                 ),
               ),
             );
           }
+          final proposals = studyBookProposals(books);
           final groups = groupStudyBooks(books);
+          final declined = studyBookDeclined(books);
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             children: [
+              if (proposals.isNotEmpty) ...[
+                _header(l10n.translate('study_book_proposed_section')),
+                for (final book in proposals)
+                  _pendingTile(book, _proposalSubtitle(book)),
+              ],
               for (final status in kStudyBookSectionOrder)
                 if (groups[status]!.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12, bottom: 6),
-                    child: Text(
-                      l10n.translate(studyBookStatusKey(status)),
-                      style: TextStyle(
-                          color: palette.accentText,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  _header(l10n.translate(studyBookStatusKey(status))),
                   for (final book in groups[status]!) _tile(book),
                 ],
+              if (declined.isNotEmpty) ...[
+                _header(l10n.translate('study_book_declined_section')),
+                for (final book in declined)
+                  _pendingTile(book, _declinedSubtitle(book)),
+              ],
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _header(String text) {
+    final palette = context.forest;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      child: Text(
+        text,
+        style:
+            TextStyle(color: palette.accentText, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  String _proposalSubtitle(StudyBook book) {
+    final l10n = context.l10n;
+    return [
+      if (book.author.isNotEmpty) book.author,
+      l10n.translate('study_book_waiting'),
+    ].join(' · ');
+  }
+
+  String _declinedSubtitle(StudyBook book) {
+    final l10n = context.l10n;
+    return book.declineNote.isEmpty
+        ? l10n.translate('study_book_declined_plain')
+        : l10n.translate('study_book_declined_with_note',
+            args: {'note': book.declineNote});
+  }
+
+  /// A book that is not on the list: a proposal, or one an admin declined. An admin lists
+  /// it, and declines a proposal.
+  Widget _pendingTile(StudyBook book, String subtitle) {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    return Card(
+      color: palette.card,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            onTap: _canEdit(book) ? () => _edit(book) : null,
+            title: Text(book.title,
+                style: TextStyle(
+                    color: palette.text, fontWeight: FontWeight.w600)),
+            subtitle: Text(subtitle, style: TextStyle(color: palette.text54)),
+            trailing: _creatorMenu(book),
+          ),
+          if (_isAdmin)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  FilledButton(
+                    onPressed: () => _approve(book),
+                    child: Text(l10n.translate('study_book_approve')),
+                  ),
+                  if (book.isProposed)
+                    TextButton(
+                      onPressed: () => _decline(book),
+                      child: Text(l10n.translate('study_book_decline')),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The edit and remove options of a book its viewer may change. Null when they may not.
+  Widget? _creatorMenu(StudyBook book) {
+    if (!_canEdit(book)) return null;
+    final l10n = context.l10n;
+    final palette = context.forest;
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded, color: palette.text54),
+      tooltip: l10n.translate('study_book_menu'),
+      onSelected: (value) {
+        if (value == 'edit') {
+          _edit(book);
+        } else {
+          _remove(book);
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Text(l10n.translate('study_edit')),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Text(l10n.translate('study_remove')),
+        ),
+      ],
     );
   }
 

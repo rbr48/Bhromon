@@ -2328,11 +2328,13 @@ class TourGroupRepository {
         ]);
   }
 
-  /// Adds a book to the list. The signed-in member is recorded as its creator and as
-  /// the one who set its status.
+  /// Adds a book to the list. An admin lists it at once; a member's book is a proposal
+  /// until an admin lists it or declines it. The signed-in member is recorded as its
+  /// creator and as the one who set its status.
   Future<void> addStudyBook(
     String tourId, {
     required String title,
+    required StudyBookApproval approval,
     String author = '',
     String notes = '',
     StudyBookStatus status = StudyBookStatus.toRead,
@@ -2346,12 +2348,13 @@ class TourGroupRepository {
       status: status,
       createdByEmail: email,
       statusByEmail: email,
+      approval: approval,
     );
     await _sub(tourId, 'study_books').add(book.toFields());
   }
 
-  /// Moves a book to another status. Any member may do this, and the change is recorded
-  /// under the signed-in member's name.
+  /// Moves a listed book to another status. Any member may do this, and the change is
+  /// recorded under the signed-in member's name.
   Future<void> setStudyBookStatus(
     String tourId,
     String bookId,
@@ -2390,6 +2393,31 @@ class TourGroupRepository {
   Future<void> deleteStudyBook(String tourId, String bookId) async {
     _requireEmail();
     await _sub(tourId, 'study_books').doc(bookId).delete();
+  }
+
+  /// Lists a proposed or declined book. Only an admin does this. The note of a declined
+  /// book goes, since the book is on the list.
+  Future<void> approveStudyBook(String tourId, String bookId) async {
+    _requireEmail();
+    await _sub(tourId, 'study_books').doc(bookId).update({
+      'approval': StudyBookApproval.listed.name,
+      'declineNote': FieldValue.delete(),
+    });
+  }
+
+  /// Declines a proposed book, with an optional note for the person who proposed it. Only
+  /// an admin does this.
+  Future<void> declineStudyBook(
+    String tourId,
+    String bookId, {
+    String note = '',
+  }) async {
+    _requireEmail();
+    final cleanNote = note.trim();
+    await _sub(tourId, 'study_books').doc(bookId).update({
+      'approval': StudyBookApproval.declined.name,
+      'declineNote': cleanNote.isEmpty ? FieldValue.delete() : cleanNote,
+    });
   }
 
   Stream<List<ReadingSession>> watchReadingSessions(String tourId) {

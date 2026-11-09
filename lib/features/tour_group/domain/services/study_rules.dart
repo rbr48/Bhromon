@@ -40,13 +40,14 @@ bool canEditStudyItem({
   return (upcoming: upcoming, past: past);
 }
 
-/// The books grouped by status. Every status has a list, even an empty one. Each list
-/// is sorted by title, ignoring case.
+/// The listed books grouped by status. Every status has a list, even an empty one. A
+/// proposal or a declined book is in no status section. Each list is sorted by title,
+/// ignoring case.
 Map<StudyBookStatus, List<StudyBook>> groupStudyBooks(List<StudyBook> books) {
   final groups = {
     for (final status in StudyBookStatus.values) status: <StudyBook>[],
   };
-  for (final book in books) {
+  for (final book in books.where((b) => b.isListed)) {
     groups[book.status]!.add(book);
   }
   for (final group in groups.values) {
@@ -55,3 +56,14 @@ Map<StudyBookStatus, List<StudyBook>> groupStudyBooks(List<StudyBook> books) {
   }
   return groups;
 }
+
+/// The proposals waiting for an admin, sorted by title, ignoring case.
+List<StudyBook> studyBookProposals(List<StudyBook> books) =>
+    _byTitle(books.where((b) => b.isProposed));
+
+/// The declined proposals, sorted by title, ignoring case.
+List<StudyBook> studyBookDeclined(List<StudyBook> books) =>
+    _byTitle(books.where((b) => b.isDeclined));
+
+List<StudyBook> _byTitle(Iterable<StudyBook> books) => books.toList()
+  ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
