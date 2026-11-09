@@ -31,6 +31,7 @@ import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/models/study_finding_models.dart';
+import '../domain/models/study_problem_models.dart';
 import '../domain/services/study_chapter_rules.dart';
 import '../domain/services/study_material_rules.dart';
 import '../domain/models/meal_log.dart';
@@ -2892,6 +2893,327 @@ class TourGroupRepository {
     final batch = _firestore.batch();
     batch.delete(finding.collection('checks').doc(email));
     batch.update(finding, {countField: FieldValue.increment(-1)});
+    await batch.commit();
+  }
+
+  // Problem solving: problems a group works through, each with a reference solution an admin writes
+  // and the members' own working. A member sees and reviews the working only after submitting their
+  // own. The rules say who may read and write each (firestore.rules).
+  // ---------------------------------------------------------------------------
+
+  /// A problem's document in a subject.
+  DocumentReference<Map<String, dynamic>> _problemRef(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) =>
+      _sub(tourId, 'study_subjects')
+          .doc(subjectId)
+          .collection('problems')
+          .doc(problemId);
+
+  /// A member's working on a problem, by the member's email.
+  DocumentReference<Map<String, dynamic>> _workRef(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+  ) =>
+      _problemRef(tourId, subjectId, problemId)
+          .collection('solutions')
+          .doc(solverEmail);
+
+  /// The problems of a subject, newest first.
+  Stream<List<StudyProblem>> watchStudyProblems(
+    String tourId,
+    String subjectId,
+  ) {
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('problems')
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyProblem.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final problem?)
+                  problem,
+            ]);
+  }
+
+  /// Adds a problem. [shown] is false for a problem an admin still has to show. [releaseAt] is when
+  /// the reference solution opens to members; null leaves it unset.
+  Future<void> addStudyProblem(
+    String tourId,
+    String subjectId, {
+    required String text,
+    required String title,
+    required DateTime? releaseAt,
+    required bool shown,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('problems')
+        .add({
+      'text': text.trim(),
+      if (title.trim().isNotEmpty) 'title': title.trim(),
+      'createdByEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      if (releaseAt != null) 'releaseAt': releaseAt,
+      'shown': shown,
+      'pinned': false,
+    });
+  }
+
+  /// Changes a problem's words or title. Its author does this.
+  Future<void> editStudyProblem(
+    String tourId,
+    String subjectId,
+    StudyProblem original, {
+    required String text,
+    required String title,
+  }) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, original.id).update({
+      'text': text.trim(),
+      'title': title.trim().isEmpty ? FieldValue.delete() : title.trim(),
+    });
+  }
+
+  /// Shows a waiting problem, or pins or unpins one. Only an admin does this.
+  Future<void> setStudyProblemFlags(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    bool? shown,
+    bool? pinned,
+  }) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, problemId).update({
+      if (shown != null) 'shown': shown,
+      if (pinned != null) 'pinned': pinned,
+    });
+  }
+
+  /// Sets when the reference solution opens to members, or clears the release time. Only an admin
+  /// does this.
+  Future<void> setStudyProblemRelease(
+    String tourId,
+    String subjectId,
+    String problemId,
+    DateTime? releaseAt,
+  ) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, problemId).update({
+      'releaseAt': releaseAt ?? FieldValue.delete(),
+    });
+  }
+
+  /// Removes a problem. Its author or an admin does this. The reference solution, the working and
+  /// the reviews under it stay in the database, unread, as a deleted post's marks do.
+  Future<void> deleteStudyProblem(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, problemId).delete();
+  }
+
+  /// The reference solution of a problem, or null when there is none, or when it has not opened to
+  /// this member yet. A member who may not read it yet gets an error from the server, so the caller
+  /// treats an error the same way.
+  Future<StudyReferenceSolution?> loadStudyReference(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) async {
+    _requireEmail();
+    final snap = await _problemRef(tourId, subjectId, problemId)
+        .collection('reference')
+        .doc('solution')
+        .get();
+    final data = snap.data();
+    if (!snap.exists || data == null) return null;
+    return StudyReferenceSolution.fromMap(_datesAsDateTimes(data));
+  }
+
+  /// Writes the reference solution of a problem. The admin who writes it is its reviewer, which is
+  /// the mark that an admin reviewed it. Only an admin does this.
+  Future<void> saveStudyReference(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    required String text,
+  }) async {
+    final email = _requireEmail();
+    await _problemRef(tourId, subjectId, problemId)
+        .collection('reference')
+        .doc('solution')
+        .set({
+      'text': text.trim(),
+      'reviewedByEmail': email,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Removes the reference solution of a problem. Only an admin does this.
+  Future<void> deleteStudyReference(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) async {
+    _requireEmail();
+    await _problemRef(tourId, subjectId, problemId)
+        .collection('reference')
+        .doc('solution')
+        .delete();
+  }
+
+  /// The signed-in member's own working on each listed problem, by problem id. A problem the
+  /// member has not worked on has no entry.
+  Future<Map<String, StudyProblemSolution>> loadMyWork(
+    String tourId,
+    String subjectId,
+    List<String> problemIds,
+  ) async {
+    final email = _requireEmail();
+    final snaps = await Future.wait([
+      for (final id in problemIds) _workRef(tourId, subjectId, id, email).get(),
+    ]);
+    final work = <String, StudyProblemSolution>{};
+    for (var i = 0; i < problemIds.length; i++) {
+      final snap = snaps[i];
+      if (!snap.exists) continue;
+      final solution = StudyProblemSolution.fromMap(
+        email,
+        _datesAsDateTimes(snap.data() ?? const {}),
+      );
+      if (solution != null) work[problemIds[i]] = solution;
+    }
+    return work;
+  }
+
+  /// The working of a problem's members, newest first. The rules let a member read it only after
+  /// they have submitted their own working, so the caller subscribes only then.
+  Stream<List<StudyProblemSolution>> watchStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+  ) {
+    return _problemRef(tourId, subjectId, problemId)
+        .collection('solutions')
+        .orderBy('updatedAt', descending: true)
+        .limit(200)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyProblemSolution.fromMap(
+                        d.id, _datesAsDateTimes(d.data()))
+                    case final work?)
+                  work,
+            ]);
+  }
+
+  /// Submits the signed-in member's working on a problem. There is one working per member, so a
+  /// second submission is refused; the member edits it instead.
+  Future<void> submitStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    required String text,
+  }) async {
+    final email = _requireEmail();
+    await _workRef(tourId, subjectId, problemId, email).set({
+      'text': text.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'rightCount': 0,
+      'gapCount': 0,
+    });
+  }
+
+  /// Changes the signed-in member's own working on a problem.
+  Future<void> editStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    required String text,
+  }) async {
+    final email = _requireEmail();
+    await _workRef(tourId, subjectId, problemId, email).update({
+      'text': text.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// The signed-in member's own review of each listed working, by the solver's email. A working the
+  /// member has not reviewed has no entry.
+  Future<Map<String, StudyWorkReview>> loadMyWorkReviews(
+    String tourId,
+    String subjectId,
+    String problemId,
+    List<String> solverEmails,
+  ) async {
+    final email = _requireEmail();
+    final snaps = await Future.wait([
+      for (final solver in solverEmails)
+        _workRef(tourId, subjectId, problemId, solver)
+            .collection('reviews')
+            .doc(email)
+            .get(),
+    ]);
+    final reviews = <String, StudyWorkReview>{};
+    for (var i = 0; i < solverEmails.length; i++) {
+      final snap = snaps[i];
+      if (!snap.exists) continue;
+      final review = StudyWorkReview.fromMap(email, snap.data() ?? const {});
+      if (review != null) reviews[solverEmails[i]] = review;
+    }
+    return reviews;
+  }
+
+  /// Gives a verdict on a peer's working, once per member. The review and the count it moves are
+  /// written in one batch.
+  Future<void> reviewStudyWork(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail, {
+    required WorkVerdict verdict,
+    String note = '',
+  }) async {
+    final email = _requireEmail();
+    final work = _workRef(tourId, subjectId, problemId, solverEmail);
+    final cleanNote = note.trim();
+    final countField = verdict == WorkVerdict.right ? 'rightCount' : 'gapCount';
+    final batch = _firestore.batch();
+    batch.set(work.collection('reviews').doc(email), {
+      'verdict': verdict.name,
+      if (cleanNote.isNotEmpty) 'note': cleanNote,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(work, {countField: FieldValue.increment(1)});
+    await batch.commit();
+  }
+
+  /// Takes the signed-in member's own review of a working back. The review goes and its count
+  /// falls, in one batch.
+  Future<void> withdrawStudyWorkReview(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+    WorkVerdict verdict,
+  ) async {
+    final email = _requireEmail();
+    final work = _workRef(tourId, subjectId, problemId, solverEmail);
+    final countField = verdict == WorkVerdict.right ? 'rightCount' : 'gapCount';
+    final batch = _firestore.batch();
+    batch.delete(work.collection('reviews').doc(email));
+    batch.update(work, {countField: FieldValue.increment(-1)});
     await batch.commit();
   }
 

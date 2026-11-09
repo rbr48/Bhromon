@@ -1,7 +1,8 @@
 // A study group's subjects: what the group studies. An admin adds a subject and turns on its
 // modules, and members use them. A subject is stored under tours/{id}/study_subjects, its
-// modules under .../modules, and its posts under .../tips, .../suggestions and .../findings (the
-// findings have their own model in study_finding_models.dart). A subject
+// modules under .../modules, and its posts under .../tips, .../suggestions, .../findings and .../problems
+// (the findings and the problems have their own models in study_finding_models.dart and
+// study_problem_models.dart). A subject
 // reuses the approval of a book: a member proposes it, and an admin lists or declines it.
 
 import 'study_models.dart';
@@ -25,7 +26,8 @@ enum StudyModuleKey {
   bool get isLive =>
       this == StudyModuleKey.tips ||
       this == StudyModuleKey.suggestions ||
-      this == StudyModuleKey.findings;
+      this == StudyModuleKey.findings ||
+      this == StudyModuleKey.problems;
 
   /// The module with [name], or null for a name the app does not know.
   static StudyModuleKey? fromName(Object? raw) {

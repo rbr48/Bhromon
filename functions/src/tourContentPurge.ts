@@ -51,7 +51,7 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list, reading plan, subjects, tips, suggestions and findings) keeps its
+ *   list, and the study book list, reading plan, subjects, tips, suggestions, findings and problems) keeps its
  *   amounts and dates.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
@@ -144,6 +144,8 @@ const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A tip or a suggestion in a subject: who posted it. */
 const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_PROBLEM: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_REFERENCE: AnonymizePlan = { emails: ['reviewedByEmail'] };
 /** A discussion thread on a book: who started it. */
 const STUDY_THREAD: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A reply in a thread: who wrote it. */
@@ -522,6 +524,34 @@ export async function purgeMemberContent(
       batch.delete(check);
       batch.update(finding.ref, { [countField]: FieldValue.increment(-1) });
       await batch.commit();
+    }
+
+    // Problems keep their statement under the stand-in, and a reference solution keeps its text with the admin who
+    // wrote it under the stand-in. The person's own working is their attempt, so it goes with the reviews of it, as
+    // their attempts do. Their reviews of other members' working go too, and each working's counts follow them.
+    const problems = subject.ref.collection('problems');
+    await applyToQuery(db, problems, anonymize(STUDY_PROBLEM, email, standIn));
+    const problemDocs = await problems.get();
+    for (const problem of problemDocs.docs) {
+      await applyToQuery(db, problem.ref.collection('reference'), anonymize(STUDY_REFERENCE, email, standIn));
+      const solutions = problem.ref.collection('solutions');
+      const own = solutions.doc(email);
+      if ((await own.get()).exists) {
+        const ownReviews = await own.collection('reviews').get();
+        for (const review of ownReviews.docs) await review.ref.delete();
+        await own.delete();
+      }
+      const workDocs = await solutions.get();
+      for (const work of workDocs.docs) {
+        const review = work.ref.collection('reviews').doc(email);
+        const snap = await review.get();
+        if (!snap.exists) continue;
+        const countField = snap.get('verdict') === 'right' ? 'rightCount' : 'gapCount';
+        const batch = db.batch();
+        batch.delete(review);
+        batch.update(work.ref, { [countField]: FieldValue.increment(-1) });
+        await batch.commit();
+      }
     }
   }
 

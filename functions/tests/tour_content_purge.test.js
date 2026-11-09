@@ -244,6 +244,50 @@ async function seed() {
     note: 'The answer key is out of date.',
     createdAt: new Date('2026-11-02T10:00:00Z'),
   });
+  // Problems in the same subject: one the leaver posted, and another member's with a reference solution the
+  // leaver reviewed. The leaver's own working goes with the reviews of it; their review of another member's
+  // working comes out, and that working's count follows it.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_leaver`, {
+    text: 'Show that the series converges.',
+    createdByEmail: LEAVER,
+    shown: true,
+    pinned: false,
+    createdAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other`, {
+    text: 'Find the area under the curve.',
+    createdByEmail: OTHER,
+    shown: true,
+    pinned: false,
+    createdAt: new Date('2026-11-02T09:30:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/reference/solution`, {
+    text: 'The area is 4.',
+    reviewedByEmail: LEAVER,
+    updatedAt: new Date('2026-11-02T09:40:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${LEAVER}`, {
+    text: 'My own working, which goes.',
+    createdAt: new Date('2026-11-02T09:50:00Z'),
+    updatedAt: new Date('2026-11-02T09:50:00Z'),
+    rightCount: 0,
+    gapCount: 1,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${LEAVER}/reviews/${OTHER}`, {
+    verdict: 'gap',
+    createdAt: new Date('2026-11-02T10:10:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}`, {
+    text: 'The working that the leaver reviewed.',
+    createdAt: new Date('2026-11-02T09:55:00Z'),
+    updatedAt: new Date('2026-11-02T09:55:00Z'),
+    rightCount: 1,
+    gapCount: 0,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reviews/${LEAVER}`, {
+    verdict: 'right',
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
 
   // A proposed book the leaver and another member would read, and a listed book's chapter that
   // the leaver and another member have marked read. The votes and read marks are each member's
@@ -720,6 +764,26 @@ describe('tour content purge', () => {
       createdByEmail: OTHER,
       confirmCount: 0,
       challengeCount: 1,
+    });
+    // Their problem keeps its statement under the stand-in. The reference solution they wrote keeps its text,
+    // with the stand-in as the reviewer.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_leaver`)).toMatchObject({
+      text: 'Show that the series converges.',
+      createdByEmail: STAND_IN,
+    });
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/reference/solution`)).toMatchObject({
+      text: 'The area is 4.',
+      reviewedByEmail: STAND_IN,
+    });
+    // Their own working goes, with the review another member gave it. Their review of another member's working
+    // comes out, and that working's right count falls with it.
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${LEAVER}/reviews/${OTHER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reviews/${LEAVER}`)).toBe(false);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}`)).toMatchObject({
+      text: 'The working that the leaver reviewed.',
+      rightCount: 0,
+      gapCount: 0,
     });
   });
 
