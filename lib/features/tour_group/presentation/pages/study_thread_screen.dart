@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -324,22 +325,26 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
   Widget build(BuildContext context) {
     final palette = context.forest;
     final thread = _thread;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(thread?.title ?? widget.bookTitle,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-        actions: [if (thread != null) _threadMenu(thread)],
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(thread?.title ?? widget.bookTitle,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+          actions: [if (thread != null) _threadMenu(thread)],
+        ),
+        body: _body(thread),
       ),
-      body: _body(thread),
     );
   }
 

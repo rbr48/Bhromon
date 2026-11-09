@@ -1,3 +1,4 @@
+import '../group_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:uuid/uuid.dart';
@@ -128,115 +129,120 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final days = localizedDateFormat('d MMM');
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
-      appBar: AppBar(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
-        foregroundColor: context.forest.text,
-        title: Text(l10n.translate('itin_title'),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        actions: [
-          IconButton(
-            tooltip: 'পরিকল্পনা PDF ডাউনলোড',
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            onPressed: () => exportItineraryPdf(
-              context,
-              group: widget.group,
-            ),
-          ),
-          IconButton(
-            tooltip: 'লোকাল পরিবহন ভাড়া গাইড',
-            icon: const Icon(Icons.calculate_outlined),
-            onPressed: () => showLocalFareGuideSheet(context),
-          ),
-          TextButton(
-            onPressed: _stops.isEmpty
-                ? null
-                : () => Navigator.pop(context,
-                    ItineraryEdit(stops: _stops, returnHome: _returnHome)),
-            child: Text(l10n.translate('tour_save'),
-                style: TextStyle(
-                    color: context.forest.accentText,
-                    fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: AppColors.darkGreen,
-        onPressed: _add,
-        icon: const Icon(Icons.add_location_alt_rounded),
-        label: Text(l10n.translate('itin_add_stop')),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-        children: [
-          Text(l10n.translate('itin_help'),
-              style: TextStyle(color: context.forest.text60, fontSize: 12)),
-          const SizedBox(height: 12),
-          _point(Icons.home_rounded, widget.group.originCity,
-              l10n.translate('itin_start')),
-          for (var i = 0; i < _stops.length; i++)
-            Card(
-              color: context.forest.surfaceFor(const Color(0xFF142428)),
-              margin: const EdgeInsets.only(top: 10),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
-                  child: Icon(tourTypeIcon(_stops[i].kind),
-                      color: context.forest.accentText),
-                ),
-                title: Text(
-                    _stops[i].name.isEmpty
-                        ? l10n.translate('itin_unnamed')
-                        : _stops[i].name,
-                    style: TextStyle(
-                        color: context.forest.text,
-                        fontWeight: FontWeight.bold)),
-                subtitle: Text(
-                  [
-                    '${days.format(_stops[i].arrive)} – ${days.format(_stops[i].leave)}',
-                    l10n.translate('itin_nights',
-                        args: {'n': l10n.number(_stops[i].nights)}),
-                    if (_stops[i].stay.isNotEmpty) _stops[i].stay,
-                  ].join(' · '),
-                  style: TextStyle(color: context.forest.text60, fontSize: 12),
-                ),
-                trailing: IconButton(
-                  tooltip: l10n.translate('itin_remove'),
-                  icon: Icon(Icons.delete_outline,
-                      color: context.forest.readable(Colors.redAccent)),
-                  onPressed: _stops.length == 1
-                      ? null
-                      : () => setState(() => _stops.removeAt(i)),
-                ),
-                onTap: () async {
-                  final edited = await _editStop(_stops[i]);
-                  if (edited == null) return;
-                  setState(() {
-                    _stops[i] = edited;
-                    _sort();
-                  });
-                },
+    return GroupPopScope(
+      tourId: widget.group.id,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.group.id),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          foregroundColor: context.forest.text,
+          title: Text(l10n.translate('itin_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          actions: [
+            IconButton(
+              tooltip: 'পরিকল্পনা PDF ডাউনলোড',
+              icon: const Icon(Icons.picture_as_pdf_rounded),
+              onPressed: () => exportItineraryPdf(
+                context,
+                group: widget.group,
               ),
             ),
-          const SizedBox(height: 10),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _returnHome,
-            activeThumbColor: AppColors.mintGreen,
-            title: Text(
-                l10n.translate('itin_return_home',
-                    args: {'origin': widget.group.originCity}),
-                style: TextStyle(color: context.forest.text)),
-            onChanged: (v) => setState(() => _returnHome = v),
-          ),
-        ],
+            IconButton(
+              tooltip: 'লোকাল পরিবহন ভাড়া গাইড',
+              icon: const Icon(Icons.calculate_outlined),
+              onPressed: () => showLocalFareGuideSheet(context),
+            ),
+            TextButton(
+              onPressed: _stops.isEmpty
+                  ? null
+                  : () => Navigator.pop(context,
+                      ItineraryEdit(stops: _stops, returnHome: _returnHome)),
+              child: Text(l10n.translate('tour_save'),
+                  style: TextStyle(
+                      color: context.forest.accentText,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: AppColors.darkGreen,
+          onPressed: _add,
+          icon: const Icon(Icons.add_location_alt_rounded),
+          label: Text(l10n.translate('itin_add_stop')),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+          children: [
+            Text(l10n.translate('itin_help'),
+                style: TextStyle(color: context.forest.text60, fontSize: 12)),
+            const SizedBox(height: 12),
+            _point(Icons.home_rounded, widget.group.originCity,
+                l10n.translate('itin_start')),
+            for (var i = 0; i < _stops.length; i++)
+              Card(
+                color: context.forest.surfaceFor(const Color(0xFF142428)),
+                margin: const EdgeInsets.only(top: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
+                    child: Icon(tourTypeIcon(_stops[i].kind),
+                        color: context.forest.accentText),
+                  ),
+                  title: Text(
+                      _stops[i].name.isEmpty
+                          ? l10n.translate('itin_unnamed')
+                          : _stops[i].name,
+                      style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                    [
+                      '${days.format(_stops[i].arrive)} – ${days.format(_stops[i].leave)}',
+                      l10n.translate('itin_nights',
+                          args: {'n': l10n.number(_stops[i].nights)}),
+                      if (_stops[i].stay.isNotEmpty) _stops[i].stay,
+                    ].join(' · '),
+                    style:
+                        TextStyle(color: context.forest.text60, fontSize: 12),
+                  ),
+                  trailing: IconButton(
+                    tooltip: l10n.translate('itin_remove'),
+                    icon: Icon(Icons.delete_outline,
+                        color: context.forest.readable(Colors.redAccent)),
+                    onPressed: _stops.length == 1
+                        ? null
+                        : () => setState(() => _stops.removeAt(i)),
+                  ),
+                  onTap: () async {
+                    final edited = await _editStop(_stops[i]);
+                    if (edited == null) return;
+                    setState(() {
+                      _stops[i] = edited;
+                      _sort();
+                    });
+                  },
+                ),
+              ),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _returnHome,
+              activeThumbColor: AppColors.mintGreen,
+              title: Text(
+                  l10n.translate('itin_return_home',
+                      args: {'origin': widget.group.originCity}),
+                  style: TextStyle(color: context.forest.text)),
+              onChanged: (v) => setState(() => _returnHome = v),
+            ),
+          ],
+        ),
       ),
     );
   }

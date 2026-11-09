@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -109,59 +110,66 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final today = DateUtils.dateOnly(DateTime.now());
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(_bg),
-      appBar: AppBar(
-        title: Text(_screenTitle(l10n),
-            style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        backgroundColor: context.forest.surfaceFor(_card),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: l10n.translate('fd_holiday_add'),
-            icon: const Icon(Icons.flag_rounded),
-            onPressed: _addHoliday,
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: AppColors.darkGreen,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('fd_add')),
-        onPressed: _add,
-      ),
-      body: StreamBuilder<List<FamilyDate>>(
-        stream: _dates,
-        builder: (context, snap) {
-          if (snap.hasError) return _message(l10n.translate('fd_load_failed'));
-          final dates = snap.data;
-          if (dates == null) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.mintGreen));
-          }
-          final sections = FamilyDateRules.sections(dates, today);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-            children: [
-              Text(_introText(l10n),
-                  style: TextStyle(color: context.forest.text60, fontSize: 13)),
-              const SizedBox(height: 8),
-              if (dates.isEmpty)
-                _message(groupDateEmptyText(_group, l10n))
-              else
-                for (final section in sections) ...[
-                  _sectionHeader(
-                      l10n.translate('fd_section_${section.timing.name}')),
-                  for (final date in section.items) _tile(date, today),
-                ],
-            ],
-          );
-        },
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(_screenTitle(l10n),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+          actions: [
+            IconButton(
+              tooltip: l10n.translate('fd_holiday_add'),
+              icon: const Icon(Icons.flag_rounded),
+              onPressed: _addHoliday,
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: AppColors.darkGreen,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate('fd_add')),
+          onPressed: _add,
+        ),
+        body: StreamBuilder<List<FamilyDate>>(
+          stream: _dates,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return _message(l10n.translate('fd_load_failed'));
+            }
+            final dates = snap.data;
+            if (dates == null) {
+              return const Center(
+                  child: CircularProgressIndicator(color: AppColors.mintGreen));
+            }
+            final sections = FamilyDateRules.sections(dates, today);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+              children: [
+                Text(_introText(l10n),
+                    style:
+                        TextStyle(color: context.forest.text60, fontSize: 13)),
+                const SizedBox(height: 8),
+                if (dates.isEmpty)
+                  _message(groupDateEmptyText(_group, l10n))
+                else
+                  for (final section in sections) ...[
+                    _sectionHeader(
+                        l10n.translate('fd_section_${section.timing.name}')),
+                    for (final date in section.items) _tile(date, today),
+                  ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }

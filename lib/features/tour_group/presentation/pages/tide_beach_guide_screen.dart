@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import '../../domain/services/tide_schedule_engine.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
@@ -61,212 +62,217 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     final dest =
         _tourGroup?.destination ?? context.l10n.translate('tide_default_area');
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-      appBar: AppBar(
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
         backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-        elevation: 0,
-        title: Text(
-          _isBeachView
-              ? context.l10n.translate('tide_title_beach')
-              : context.l10n
-                  .translate('tide_title_nature', args: {'dest': dest}),
-          style: TextStyle(
-              color: context.forest.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 16),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-                _isBeachView ? Icons.landscape_rounded : Icons.waves_rounded,
-                color: context.forest.accentText),
-            tooltip: _isBeachView
-                ? context.l10n.translate('tide_view_hills')
-                : context.l10n.translate('tide_view_beach'),
-            onPressed: () {
-              setState(() => _isBeachView = !_isBeachView);
-            },
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          elevation: 0,
+          title: Text(
+            _isBeachView
+                ? context.l10n.translate('tide_title_beach')
+                : context.l10n
+                    .translate('tide_title_nature', args: {'dest': dest}),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16),
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Mode Switcher Banner
-          Container(
-            padding: const EdgeInsets.all(4),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.black38,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => setState(() => _isBeachView = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _isBeachView ? AppColors.mintGreen : null,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: Text(
-                          context.l10n.translate('tide_tab_sea'),
-                          style: TextStyle(
-                            color: _isBeachView ? Colors.black : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => setState(() => _isBeachView = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color:
-                            !_isBeachView ? Colors.tealAccent.shade700 : null,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: Text(
-                          context.l10n.translate('tide_tab_hills'),
-                          style: TextStyle(
-                            color:
-                                !_isBeachView ? Colors.black : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          if (_isBeachView) ...[
-            // ── Beach View ──
-            _buildLiveSafetyBanner(safety),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.translate('tide_schedule_disclaimer'),
-              style: TextStyle(
-                  color: context.forest.readable(Colors.amberAccent),
-                  fontSize: 11),
-            ),
-            const SizedBox(height: 20),
-
-            Text(
-              context.l10n.translate('tide_today_schedule'),
-              style: TextStyle(
-                  color: context.forest.text,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15),
-            ),
-            const SizedBox(height: 10),
-            ...tides.map((t) => _buildTideCard(t, safety.currentWindow == t)),
-
-            const SizedBox(height: 24),
-
-            Text(
-              context.l10n.translate('tide_beach_safety_title'),
-              style: TextStyle(
-                  color: context.forest.text,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15),
-            ),
-            const SizedBox(height: 12),
-            _buildSafetyWarningCard(
-              title: context.l10n.translate('tide_quicksand_title'),
-              desc: context.l10n.translate('tide_quicksand_body'),
-              icon: Icons.warning_amber_rounded,
-              color: Colors.redAccent,
-            ),
-            const SizedBox(height: 10),
-            _buildSafetyWarningCard(
-              title: context.l10n.translate('tide_flag_title'),
-              desc: context.l10n.translate('tide_flag_body'),
-              icon: Icons.flag_rounded,
-              color: AppColors.gold,
-            ),
-          ] else ...[
-            // ── Mountain, Forest & Nature View ──
-            _buildMountainSafetyBanner(dest),
-            const SizedBox(height: 20),
-
-            Text(
-              context.l10n.translate('tide_sun_title'),
-              style: TextStyle(
-                  color: context.forest.text,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15),
-            ),
-            const SizedBox(height: 10),
-            _buildSunEventCard(
-                context.l10n.translate('tide_dawn_time'),
-                context.l10n.translate('tide_sunrise_clouds'),
-                context.l10n.translate('tide_sunrise_tip'),
-                Icons.wb_twilight_rounded,
-                Colors.orangeAccent),
-            const SizedBox(height: 8),
-            _buildSunEventCard(
-                context.l10n.translate('tide_evening_time'),
-                context.l10n.translate('tide_golden_title'),
-                context.l10n.translate('tide_golden_tip'),
-                Icons.wb_sunny_rounded,
-                Colors.amber),
-
-            const SizedBox(height: 24),
-
-            Text(
-              context.l10n
-                  .translate('tide_mountain_title', args: {'dest': dest}),
-              style: TextStyle(
-                  color: context.forest.text,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15),
-            ),
-            const SizedBox(height: 12),
-            _buildSafetyWarningCard(
-              title: context.l10n.translate('tide_waterfall_title'),
-              desc: context.l10n.translate('tide_waterfall_body'),
-              icon: Icons.water_drop_rounded,
-              color: Colors.lightBlueAccent,
-            ),
-            const SizedBox(height: 10),
-            _buildSafetyWarningCard(
-              title: context.l10n.translate('tide_flash_title'),
-              desc: context.l10n.translate('tide_flash_body'),
-              icon: Icons.thunderstorm_rounded,
-              color: Colors.redAccent,
-            ),
-            const SizedBox(height: 10),
-            _buildSafetyWarningCard(
-              title: context.l10n.translate('tide_jeep_title'),
-              desc: context.l10n.translate('tide_jeep_body'),
-              icon: Icons.directions_bus_rounded,
-              color: AppColors.gold,
+          actions: [
+            IconButton(
+              icon: Icon(
+                  _isBeachView ? Icons.landscape_rounded : Icons.waves_rounded,
+                  color: context.forest.accentText),
+              tooltip: _isBeachView
+                  ? context.l10n.translate('tide_view_hills')
+                  : context.l10n.translate('tide_view_beach'),
+              onPressed: () {
+                setState(() => _isBeachView = !_isBeachView);
+              },
             ),
           ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Mode Switcher Banner
+            Container(
+              padding: const EdgeInsets.all(4),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.black38,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _isBeachView = true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _isBeachView ? AppColors.mintGreen : null,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            context.l10n.translate('tide_tab_sea'),
+                            style: TextStyle(
+                              color:
+                                  _isBeachView ? Colors.black : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _isBeachView = false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color:
+                              !_isBeachView ? Colors.tealAccent.shade700 : null,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            context.l10n.translate('tide_tab_hills'),
+                            style: TextStyle(
+                              color:
+                                  !_isBeachView ? Colors.black : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-          const SizedBox(height: 10),
-          _buildSafetyWarningCard(
-            title: context.l10n.translate('tide_contacts_title'),
-            desc: context.l10n.translate('tide_contacts_body'),
-            icon: Icons.support_agent_rounded,
-            color: const Color(0xFF38BDF8),
-          ),
-        ],
+            if (_isBeachView) ...[
+              // ── Beach View ──
+              _buildLiveSafetyBanner(safety),
+              const SizedBox(height: 8),
+              Text(
+                context.l10n.translate('tide_schedule_disclaimer'),
+                style: TextStyle(
+                    color: context.forest.readable(Colors.amberAccent),
+                    fontSize: 11),
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                context.l10n.translate('tide_today_schedule'),
+                style: TextStyle(
+                    color: context.forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              ...tides.map((t) => _buildTideCard(t, safety.currentWindow == t)),
+
+              const SizedBox(height: 24),
+
+              Text(
+                context.l10n.translate('tide_beach_safety_title'),
+                style: TextStyle(
+                    color: context.forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+              const SizedBox(height: 12),
+              _buildSafetyWarningCard(
+                title: context.l10n.translate('tide_quicksand_title'),
+                desc: context.l10n.translate('tide_quicksand_body'),
+                icon: Icons.warning_amber_rounded,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 10),
+              _buildSafetyWarningCard(
+                title: context.l10n.translate('tide_flag_title'),
+                desc: context.l10n.translate('tide_flag_body'),
+                icon: Icons.flag_rounded,
+                color: AppColors.gold,
+              ),
+            ] else ...[
+              // ── Mountain, Forest & Nature View ──
+              _buildMountainSafetyBanner(dest),
+              const SizedBox(height: 20),
+
+              Text(
+                context.l10n.translate('tide_sun_title'),
+                style: TextStyle(
+                    color: context.forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              _buildSunEventCard(
+                  context.l10n.translate('tide_dawn_time'),
+                  context.l10n.translate('tide_sunrise_clouds'),
+                  context.l10n.translate('tide_sunrise_tip'),
+                  Icons.wb_twilight_rounded,
+                  Colors.orangeAccent),
+              const SizedBox(height: 8),
+              _buildSunEventCard(
+                  context.l10n.translate('tide_evening_time'),
+                  context.l10n.translate('tide_golden_title'),
+                  context.l10n.translate('tide_golden_tip'),
+                  Icons.wb_sunny_rounded,
+                  Colors.amber),
+
+              const SizedBox(height: 24),
+
+              Text(
+                context.l10n
+                    .translate('tide_mountain_title', args: {'dest': dest}),
+                style: TextStyle(
+                    color: context.forest.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+              const SizedBox(height: 12),
+              _buildSafetyWarningCard(
+                title: context.l10n.translate('tide_waterfall_title'),
+                desc: context.l10n.translate('tide_waterfall_body'),
+                icon: Icons.water_drop_rounded,
+                color: Colors.lightBlueAccent,
+              ),
+              const SizedBox(height: 10),
+              _buildSafetyWarningCard(
+                title: context.l10n.translate('tide_flash_title'),
+                desc: context.l10n.translate('tide_flash_body'),
+                icon: Icons.thunderstorm_rounded,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 10),
+              _buildSafetyWarningCard(
+                title: context.l10n.translate('tide_jeep_title'),
+                desc: context.l10n.translate('tide_jeep_body'),
+                icon: Icons.directions_bus_rounded,
+                color: AppColors.gold,
+              ),
+            ],
+
+            const SizedBox(height: 10),
+            _buildSafetyWarningCard(
+              title: context.l10n.translate('tide_contacts_title'),
+              desc: context.l10n.translate('tide_contacts_body'),
+              icon: Icons.support_agent_rounded,
+              color: const Color(0xFF38BDF8),
+            ),
+          ],
+        ),
       ),
     );
   }

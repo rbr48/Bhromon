@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -89,55 +90,59 @@ class _MealsScreenState extends State<MealsScreen> {
       builder: (context, memberSnap) {
         final members = [...?memberSnap.data]..sort((a, b) =>
             _nameOf(a).toLowerCase().compareTo(_nameOf(b).toLowerCase()));
-        return Scaffold(
-          backgroundColor: context.forest.surfaceFor(_bg),
-          appBar: AppBar(
+        return GroupPopScope(
+          tourId: widget.tourId,
+          child: Scaffold(
             backgroundColor: context.forest.surfaceFor(_bg),
-            iconTheme: IconThemeData(color: context.forest.text),
-            title: Text(l10n.translate('meals_title'),
-                style: TextStyle(color: context.forest.text)),
-            actions: [
-              IconButton(
-                tooltip: l10n.translate('mess_bazar_duty_title'),
-                icon: const Icon(Icons.storefront_rounded),
-                onPressed: () => showMessBazarSheet(
-                  context,
-                  tourId: widget.tourId,
-                  isAdmin: _isAdmin,
-                  members: members,
-                  initialDateKey: _selectedKey,
+            appBar: AppBar(
+              leading: GroupBackButton(tourId: widget.tourId),
+              backgroundColor: context.forest.surfaceFor(_bg),
+              iconTheme: IconThemeData(color: context.forest.text),
+              title: Text(l10n.translate('meals_title'),
+                  style: TextStyle(color: context.forest.text)),
+              actions: [
+                IconButton(
+                  tooltip: l10n.translate('mess_bazar_duty_title'),
+                  icon: const Icon(Icons.storefront_rounded),
+                  onPressed: () => showMessBazarSheet(
+                    context,
+                    tourId: widget.tourId,
+                    isAdmin: _isAdmin,
+                    members: members,
+                    initialDateKey: _selectedKey,
+                  ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'মেস মিল ও বাজার হিসাব বিবরণী',
-                icon: const Icon(Icons.receipt_long_rounded),
-                onPressed: () => showMessBalanceSheet(
-                  context,
-                  tourId: widget.tourId,
-                  month: _month,
+                IconButton(
+                  tooltip: 'মেস মিল ও বাজার হিসাব বিবরণী',
+                  icon: const Icon(Icons.receipt_long_rounded),
+                  onPressed: () => showMessBalanceSheet(
+                    context,
+                    tourId: widget.tourId,
+                    month: _month,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          body: StreamBuilder<List<MealLog>>(
-            stream: _logs,
-            builder: (context, logSnap) {
-              if (logSnap.hasError) {
-                return _message(l10n.translate('meals_load_failed'));
-              }
-              final logs = logSnap.data;
-              if (logs == null || memberSnap.data == null) {
-                return const Center(
-                    child:
-                        CircularProgressIndicator(color: AppColors.mintGreen));
-              }
-              return SwipeStep(
-                onStep: _stepDay,
-                nextLabel: l10n.translate('meals_next_day'),
-                previousLabel: l10n.translate('meals_prev_day'),
-                child: _body(members, logs, l10n),
-              );
-            },
+              ],
+            ),
+            body: StreamBuilder<List<MealLog>>(
+              stream: _logs,
+              builder: (context, logSnap) {
+                if (logSnap.hasError) {
+                  return _message(l10n.translate('meals_load_failed'));
+                }
+                final logs = logSnap.data;
+                if (logs == null || memberSnap.data == null) {
+                  return const Center(
+                      child: CircularProgressIndicator(
+                          color: AppColors.mintGreen));
+                }
+                return SwipeStep(
+                  onStep: _stepDay,
+                  nextLabel: l10n.translate('meals_next_day'),
+                  previousLabel: l10n.translate('meals_prev_day'),
+                  child: _body(members, logs, l10n),
+                );
+              },
+            ),
           ),
         );
       },

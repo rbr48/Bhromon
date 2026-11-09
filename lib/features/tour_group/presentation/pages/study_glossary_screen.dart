@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -195,26 +196,30 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_glossary_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_glossary_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _addTerm,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate(
+              _isAdmin ? 'study_glossary_add_admin' : 'study_glossary_add')),
+        ),
+        body: _body(),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addTerm,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate(
-            _isAdmin ? 'study_glossary_add_admin' : 'study_glossary_add')),
-      ),
-      body: _body(),
     );
   }
 

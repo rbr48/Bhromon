@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -354,7 +355,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           book: widget.book,
           repository: _repository,
         ),
-      _LearningTool.flashcards => StudyFlashcardsScreen(book: widget.book),
+      _LearningTool.flashcards => StudyFlashcardsScreen(
+          book: widget.book,
+          tourId: widget.tourId,
+        ),
       _LearningTool.progress => StudyProgressScreen(
           tourId: widget.tourId,
           book: widget.book,
@@ -426,50 +430,54 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(widget.book.title,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: l10n.translate('study_material_title'),
-            icon: const Icon(Icons.folder_open_rounded),
-            onPressed: _openMaterials,
-          ),
-          IconButton(
-            tooltip: l10n.translate('study_discussion_title'),
-            icon: const Icon(Icons.forum_rounded),
-            onPressed: _openDiscussion,
-          ),
-          IconButton(
-            tooltip: l10n.translate('study_learning_title'),
-            icon: const Icon(Icons.school_rounded),
-            onPressed: _openLearning,
-          ),
-          if (_isAdmin && _chapters.isNotEmpty)
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(widget.book.title,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+          actions: [
             IconButton(
-              tooltip: l10n.translate('study_pace_action'),
-              icon: const Icon(Icons.timeline_rounded),
-              onPressed: _setPace,
+              tooltip: l10n.translate('study_material_title'),
+              icon: const Icon(Icons.folder_open_rounded),
+              onPressed: _openMaterials,
             ),
-        ],
+            IconButton(
+              tooltip: l10n.translate('study_discussion_title'),
+              icon: const Icon(Icons.forum_rounded),
+              onPressed: _openDiscussion,
+            ),
+            IconButton(
+              tooltip: l10n.translate('study_learning_title'),
+              icon: const Icon(Icons.school_rounded),
+              onPressed: _openLearning,
+            ),
+            if (_isAdmin && _chapters.isNotEmpty)
+              IconButton(
+                tooltip: l10n.translate('study_pace_action'),
+                icon: const Icon(Icons.timeline_rounded),
+                onPressed: _setPace,
+              ),
+          ],
+        ),
+        floatingActionButton: _isAdmin
+            ? FloatingActionButton.extended(
+                onPressed: _addChapter,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.translate('study_chapter_add')),
+              )
+            : null,
+        body: _body(),
       ),
-      floatingActionButton: _isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: _addChapter,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.translate('study_chapter_add')),
-            )
-          : null,
-      body: _body(),
     );
   }
 

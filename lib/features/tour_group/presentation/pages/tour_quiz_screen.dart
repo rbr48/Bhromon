@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/vps_quiz_service.dart';
@@ -202,30 +203,34 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
-      appBar: AppBar(
-        title: Text(
-          context.l10n.translate('tq_title_master'),
-          style: TextStyle(
-              color: context.forest.text,
-              fontWeight: FontWeight.bold,
-              fontSize: 16),
-        ),
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'নতুন প্রশ্ন আনুন',
-            icon: Icon(Icons.refresh,
-                color: context.forest.readable(Colors.tealAccent)),
-            onPressed: _restartQuiz,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(
+            context.l10n.translate('tq_title_master'),
+            style: TextStyle(
+                color: context.forest.text,
+                fontWeight: FontWeight.bold,
+                fontSize: 16),
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: _buildBody(),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+          actions: [
+            IconButton(
+              tooltip: 'নতুন প্রশ্ন আনুন',
+              icon: Icon(Icons.refresh,
+                  color: context.forest.readable(Colors.tealAccent)),
+              onPressed: _restartQuiz,
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: _buildBody(),
+        ),
       ),
     );
   }

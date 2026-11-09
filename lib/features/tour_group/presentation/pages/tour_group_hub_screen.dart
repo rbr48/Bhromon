@@ -1076,8 +1076,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       rawQuery: _searchQuery,
     );
     final hasSearchQuery = _searchQuery.trim().isNotEmpty;
+    final canCloseExpandedGroup = effectiveExpandedId != null;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: context.forest.background,
       appBar: _hubAppBar(context),
       body: Center(
@@ -1191,6 +1192,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         ),
       ),
       bottomNavigationBar: const BhromonBottomNav(selectedIndex: 0),
+    );
+
+    return PopScope(
+      canPop: !canCloseExpandedGroup,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (canCloseExpandedGroup) {
+          setState(() {
+            _expandedGroupId = null;
+          });
+          if (widget.initialTourId != null &&
+              widget.initialTourId!.isNotEmpty) {
+            context.go('/group-hub');
+          }
+        }
+      },
+      child: scaffold,
     );
   }
 
@@ -1468,11 +1486,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         routeId.isNotEmpty &&
         routeId != oldWidget.initialTourId) {
       unawaited(_active.select(routeId));
+      setState(() {
+        _expandedGroupId = routeId;
+      });
     }
   }
 
   /// The hub's app bar: the logo and title, and the menu to add or join a group.
   PreferredSizeWidget _hubAppBar(BuildContext context) {
+    final effectiveExpandedId = _expandedGroupId;
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: Center(
@@ -1482,6 +1504,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             backgroundColor: context.forest.background,
             elevation: 0,
             automaticallyImplyLeading: false,
+            leading: effectiveExpandedId != null
+                ? IconButton(
+                    tooltip: context.l10n.translate('group_back_to_list'),
+                    icon: Icon(Icons.arrow_back_rounded,
+                        color: context.forest.text),
+                    onPressed: () {
+                      setState(() {
+                        _expandedGroupId = null;
+                      });
+                      if (widget.initialTourId != null &&
+                          widget.initialTourId!.isNotEmpty) {
+                        context.go('/group-hub');
+                      }
+                    },
+                  )
+                : null,
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -153,27 +154,31 @@ class _StudyQuizzesScreenState extends State<StudyQuizzesScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final canAdd = _isAdmin && _chapters.isNotEmpty;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_quizzes_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_quizzes_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: canAdd
+            ? FloatingActionButton.extended(
+                onPressed: _addQuiz,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.translate('study_quiz_add')),
+              )
+            : null,
+        body: _body(),
       ),
-      floatingActionButton: canAdd
-          ? FloatingActionButton.extended(
-              onPressed: _addQuiz,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.translate('study_quiz_add')),
-            )
-          : null,
-      body: _body(),
     );
   }
 

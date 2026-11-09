@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../widgets/group_back_button.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as maplibre;
 import 'package:url_launcher/url_launcher.dart';
@@ -423,181 +424,187 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
     final isBn = l10n.locale.languageCode == 'bn';
     final regionTitle = isBn ? widget.region.nameBn : widget.region.nameEn;
 
-    return Scaffold(
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
-      appBar: AppBar(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241F)),
-        foregroundColor: context.forest.text,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              regionTitle,
-              style: TextStyle(
-                  color: context.forest.text,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
+    return GroupPopScope(
+      tourId: '',
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        appBar: AppBar(
+          leading: const GroupBackButton(tourId: ''),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241F)),
+          foregroundColor: context.forest.text,
+          elevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                regionTitle,
+                style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${widget.region.division} · ~${widget.region.estimatedMb} MB · ${isBn ? "অফলাইন ম্যাপ" : "Offline Map"}',
+                style: TextStyle(fontSize: 11, color: context.forest.text54),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              tooltip: isBn ? 'জরুরি হেল্পলাইন' : 'Emergency Contacts',
+              icon: const Icon(Icons.phone_in_talk_rounded,
+                  color: AppColors.mintGreen),
+              onPressed: _showEmergencySheet,
             ),
-            Text(
-              '${widget.region.division} · ~${widget.region.estimatedMb} MB · ${isBn ? "অফলাইন ম্যাপ" : "Offline Map"}',
-              style: TextStyle(fontSize: 11, color: context.forest.text54),
+            IconButton(
+              tooltip: _isRadarMode
+                  ? (isBn ? 'ম্যাপ ভিউ' : 'Map View')
+                  : (isBn ? 'রাডার ভিউ' : 'Radar View'),
+              icon: Icon(
+                _isRadarMode ? Icons.map_rounded : Icons.radar_rounded,
+                color: AppColors.mintGreen,
+              ),
+              onPressed: () => setState(() => _isRadarMode = !_isRadarMode),
+            ),
+            IconButton(
+              tooltip: isBn ? 'সম্পূর্ণ অঞ্চল' : 'Fit Region',
+              icon: const Icon(Icons.crop_free_rounded),
+              onPressed: _fitRegionBounds,
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: isBn ? 'জরুরি হেল্পলাইন' : 'Emergency Contacts',
-            icon: const Icon(Icons.phone_in_talk_rounded,
-                color: AppColors.mintGreen),
-            onPressed: _showEmergencySheet,
-          ),
-          IconButton(
-            tooltip: _isRadarMode
-                ? (isBn ? 'ম্যাপ ভিউ' : 'Map View')
-                : (isBn ? 'রাডার ভিউ' : 'Radar View'),
-            icon: Icon(
-              _isRadarMode ? Icons.map_rounded : Icons.radar_rounded,
-              color: AppColors.mintGreen,
+        body: Stack(
+          children: [
+            // 1. Map Canvas or Waypoint Radar
+            Positioned.fill(
+              child: _isRadarMode
+                  ? _buildRadarView()
+                  : _buildMapWithRadarFallback(),
             ),
-            onPressed: () => setState(() => _isRadarMode = !_isRadarMode),
-          ),
-          IconButton(
-            tooltip: isBn ? 'সম্পূর্ণ অঞ্চল' : 'Fit Region',
-            icon: const Icon(Icons.crop_free_rounded),
-            onPressed: _fitRegionBounds,
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // 1. Map Canvas or Waypoint Radar
-          Positioned.fill(
-            child:
-                _isRadarMode ? _buildRadarView() : _buildMapWithRadarFallback(),
-          ),
 
-          // 2. Offline Status Banner / Chip
-          Positioned(
-            top: 12,
-            left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: context.forest
-                    .surfaceFor(const Color(0xFF14241F))
-                    .withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.4),
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.offline_pin_rounded,
-                      color: AppColors.mintGreen, size: 14),
-                  const SizedBox(width: 5),
-                  Text(
-                    isBn ? 'অফলাইন প্যাক সক্রিয়' : 'Offline Pack Active',
-                    style: TextStyle(
-                      color: context.forest.text,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 3. Floating GPS Locator Button
-          Positioned(
-            right: 14,
-            bottom: _selectedWaypoint != null ? 220 : 120,
-            child: FloatingActionButton.small(
-              heroTag: 'offline_map_gps_fab',
-              backgroundColor:
-                  context.forest.surfaceFor(const Color(0xFF1E3326)),
-              foregroundColor:
-                  _isLocating ? Colors.orangeAccent : AppColors.mintGreen,
-              onPressed: _recenterOnUser,
-              tooltip: isBn ? 'আমার অবস্থান' : 'My Location',
-              child: _isLocating
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.mintGreen,
-                      ),
-                    )
-                  : const Icon(Icons.my_location_rounded),
-            ),
-          ),
-
-          // 4. Horizontal Waypoints Carousel (bottom docked)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: _selectedWaypoint != null ? 140 : 16,
-            child: SizedBox(
-              height: 44,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.region.waypoints.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final wp = widget.region.waypoints[index];
-                  final isSelected = _selectedWaypoint == wp;
-                  return ActionChip(
-                    avatar: Text(wp.categoryEmoji,
-                        style: const TextStyle(fontSize: 13)),
-                    label: Text(
-                      isBn ? wp.nameBn : wp.nameEn,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected
-                            ? AppColors.darkGreen
-                            : context.forest.text,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
-                      ),
-                    ),
-                    backgroundColor: isSelected
-                        ? AppColors.mintGreen
-                        : context.forest
-                            .surfaceFor(const Color(0xFF14241F))
-                            .withValues(alpha: 0.9),
-                    side: BorderSide(
-                      color: isSelected
-                          ? AppColors.mintGreen
-                          : context.forest.text24,
-                    ),
-                    onPressed: () => _focusWaypoint(wp),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // 5. Selected Waypoint Details Card
-          if (_selectedWaypoint != null)
+            // 2. Offline Status Banner / Chip
             Positioned(
-              left: 14,
-              right: 14,
-              bottom: 16,
-              child: _buildWaypointCard(_selectedWaypoint!, isBn),
+              top: 12,
+              left: 12,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: context.forest
+                      .surfaceFor(const Color(0xFF14241F))
+                      .withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.mintGreen.withValues(alpha: 0.4),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.offline_pin_rounded,
+                        color: AppColors.mintGreen, size: 14),
+                    const SizedBox(width: 5),
+                    Text(
+                      isBn ? 'অফলাইন প্যাক সক্রিয়' : 'Offline Pack Active',
+                      style: TextStyle(
+                        color: context.forest.text,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-        ],
+
+            // 3. Floating GPS Locator Button
+            Positioned(
+              right: 14,
+              bottom: _selectedWaypoint != null ? 220 : 120,
+              child: FloatingActionButton.small(
+                heroTag: 'offline_map_gps_fab',
+                backgroundColor:
+                    context.forest.surfaceFor(const Color(0xFF1E3326)),
+                foregroundColor:
+                    _isLocating ? Colors.orangeAccent : AppColors.mintGreen,
+                onPressed: _recenterOnUser,
+                tooltip: isBn ? 'আমার অবস্থান' : 'My Location',
+                child: _isLocating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.mintGreen,
+                        ),
+                      )
+                    : const Icon(Icons.my_location_rounded),
+              ),
+            ),
+
+            // 4. Horizontal Waypoints Carousel (bottom docked)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: _selectedWaypoint != null ? 140 : 16,
+              child: SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.region.waypoints.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final wp = widget.region.waypoints[index];
+                    final isSelected = _selectedWaypoint == wp;
+                    return ActionChip(
+                      avatar: Text(wp.categoryEmoji,
+                          style: const TextStyle(fontSize: 13)),
+                      label: Text(
+                        isBn ? wp.nameBn : wp.nameEn,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isSelected
+                              ? AppColors.darkGreen
+                              : context.forest.text,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                      backgroundColor: isSelected
+                          ? AppColors.mintGreen
+                          : context.forest
+                              .surfaceFor(const Color(0xFF14241F))
+                              .withValues(alpha: 0.9),
+                      side: BorderSide(
+                        color: isSelected
+                            ? AppColors.mintGreen
+                            : context.forest.text24,
+                      ),
+                      onPressed: () => _focusWaypoint(wp),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // 5. Selected Waypoint Details Card
+            if (_selectedWaypoint != null)
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 16,
+                child: _buildWaypointCard(_selectedWaypoint!, isBn),
+              ),
+          ],
+        ),
       ),
     );
   }

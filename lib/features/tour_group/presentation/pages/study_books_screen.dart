@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -192,76 +193,80 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.translate('study_books_title'),
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isAdmin ? _add : _propose,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n
-            .translate(_isAdmin ? 'study_books_add' : 'study_books_propose')),
-      ),
-      body: StreamBuilder<List<StudyBook>>(
-        stream: _books,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(l10n.translate('study_failed'),
-                  style: TextStyle(color: palette.text70)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final books = snap.data!;
-          if (books.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.translate(_isAdmin
-                      ? 'study_books_empty'
-                      : 'study_books_empty_member'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: palette.text70),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_books_title'),
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _isAdmin ? _add : _propose,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n
+              .translate(_isAdmin ? 'study_books_add' : 'study_books_propose')),
+        ),
+        body: StreamBuilder<List<StudyBook>>(
+          stream: _books,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                child: Text(l10n.translate('study_failed'),
+                    style: TextStyle(color: palette.text70)),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final books = snap.data!;
+            if (books.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    l10n.translate(_isAdmin
+                        ? 'study_books_empty'
+                        : 'study_books_empty_member'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: palette.text70),
+                  ),
                 ),
-              ),
-            );
-          }
-          final proposals = studyBookProposals(books);
-          final groups = groupStudyBooks(books);
-          final declined = studyBookDeclined(books);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [
-              if (proposals.isNotEmpty) ...[
-                _header(l10n.translate('study_book_proposed_section')),
-                for (final book in proposals)
-                  _pendingTile(book, _proposalSubtitle(book)),
-              ],
-              for (final status in kStudyBookSectionOrder)
-                if (groups[status]!.isNotEmpty) ...[
-                  _header(l10n.translate(studyBookStatusKey(status))),
-                  for (final book in groups[status]!) _tile(book),
+              );
+            }
+            final proposals = studyBookProposals(books);
+            final groups = groupStudyBooks(books);
+            final declined = studyBookDeclined(books);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [
+                if (proposals.isNotEmpty) ...[
+                  _header(l10n.translate('study_book_proposed_section')),
+                  for (final book in proposals)
+                    _pendingTile(book, _proposalSubtitle(book)),
                 ],
-              if (declined.isNotEmpty) ...[
-                _header(l10n.translate('study_book_declined_section')),
-                for (final book in declined)
-                  _pendingTile(book, _declinedSubtitle(book)),
+                for (final status in kStudyBookSectionOrder)
+                  if (groups[status]!.isNotEmpty) ...[
+                    _header(l10n.translate(studyBookStatusKey(status))),
+                    for (final book in groups[status]!) _tile(book),
+                  ],
+                if (declined.isNotEmpty) ...[
+                  _header(l10n.translate('study_book_declined_section')),
+                  for (final book in declined)
+                    _pendingTile(book, _declinedSubtitle(book)),
+                ],
               ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

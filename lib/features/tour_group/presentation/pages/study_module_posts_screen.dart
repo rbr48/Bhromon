@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -176,62 +177,66 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
     final palette = context.forest;
     final canPost =
         canPostInStudyModule(settings: widget.settings, isAdmin: _isAdmin);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(widget.settings.name,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-      ),
-      floatingActionButton: canPost
-          ? FloatingActionButton.extended(
-              onPressed: _add,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.translate(_withLink
-                  ? 'study_post_add_suggestion'
-                  : 'study_post_add_tip')),
-            )
-          : null,
-      body: StreamBuilder<List<StudyPost>>(
-        stream: _posts,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-              child: Text(l10n.translate('study_failed'),
-                  style: TextStyle(color: palette.text70)),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final posts = sortStudyPosts(visibleStudyPosts(
-            posts: snap.data!,
-            viewerEmail: _me,
-            isAdmin: _isAdmin,
-          ));
-          if (posts.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.translate('study_post_empty'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: palette.text70),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(widget.settings.name,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+        ),
+        floatingActionButton: canPost
+            ? FloatingActionButton.extended(
+                onPressed: _add,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.translate(_withLink
+                    ? 'study_post_add_suggestion'
+                    : 'study_post_add_tip')),
+              )
+            : null,
+        body: StreamBuilder<List<StudyPost>>(
+          stream: _posts,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                child: Text(l10n.translate('study_failed'),
+                    style: TextStyle(color: palette.text70)),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final posts = sortStudyPosts(visibleStudyPosts(
+              posts: snap.data!,
+              viewerEmail: _me,
+              isAdmin: _isAdmin,
+            ));
+            if (posts.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    l10n.translate('study_post_empty'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: palette.text70),
+                  ),
                 ),
-              ),
+              );
+            }
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [for (final post in posts) _postCard(post)],
             );
-          }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [for (final post in posts) _postCard(post)],
-          );
-        },
+          },
+        ),
       ),
     );
   }

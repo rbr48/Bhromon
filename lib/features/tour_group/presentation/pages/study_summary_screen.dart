@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -232,25 +233,29 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.forest;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(
-          l10n.translate('study_summary_title'),
-          style: TextStyle(
-              color: palette.text, fontWeight: FontWeight.bold, fontSize: 18),
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(
+            l10n.translate('study_summary_title'),
+            style: TextStyle(
+                color: palette.text, fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
         ),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _addRevision,
+          icon: const Icon(Icons.edit_note_rounded),
+          label: Text(l10n.translate('study_summary_add')),
+        ),
+        body: _body(),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addRevision,
-        icon: const Icon(Icons.edit_note_rounded),
-        label: Text(l10n.translate('study_summary_add')),
-      ),
-      body: _body(),
     );
   }
 

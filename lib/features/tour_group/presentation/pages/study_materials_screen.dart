@@ -1,3 +1,4 @@
+import '../widgets/group_back_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -120,67 +121,71 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
         published.isEmpty;
     final now = DateTime.now();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.translate('study_material_title')),
-        actions: [
-          if (_isAdmin)
-            IconButton(
-              tooltip: l10n.translate('study_material_policy_title'),
-              icon: const Icon(Icons.tune_rounded),
-              onPressed: _editPolicy,
-            ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addMaterial,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.translate('study_material_add')),
-      ),
-      body: !_loaded
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              children: [
-                _chapterFilter(context),
-                if (review.isNotEmpty)
-                  _section(
-                    context,
-                    l10n.translate('study_material_review_heading'),
-                    [
-                      for (final m in review)
-                        _tile(context, m,
-                            overdue: isStudyReportOverdue(m, now: now)),
-                    ],
-                  ),
-                if (approval.isNotEmpty)
-                  _section(
-                    context,
-                    l10n.translate('study_material_approval_heading'),
-                    [for (final m in approval) _tile(context, m)],
-                  ),
-                if (yours.isNotEmpty)
-                  _section(
-                    context,
-                    l10n.translate('study_material_yours_heading'),
-                    [for (final m in yours) _tile(context, m)],
-                  ),
-                if (published.isNotEmpty)
-                  _section(
-                    context,
-                    l10n.translate('study_material_shared_heading'),
-                    [for (final m in published) _tile(context, m)],
-                  ),
-                if (empty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    child: Text(
-                      l10n.translate('study_material_empty'),
-                      textAlign: TextAlign.center,
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(l10n.translate('study_material_title')),
+          actions: [
+            if (_isAdmin)
+              IconButton(
+                tooltip: l10n.translate('study_material_policy_title'),
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: _editPolicy,
+              ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _addMaterial,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.translate('study_material_add')),
+        ),
+        body: !_loaded
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                children: [
+                  _chapterFilter(context),
+                  if (review.isNotEmpty)
+                    _section(
+                      context,
+                      l10n.translate('study_material_review_heading'),
+                      [
+                        for (final m in review)
+                          _tile(context, m,
+                              overdue: isStudyReportOverdue(m, now: now)),
+                      ],
                     ),
-                  ),
-              ],
-            ),
+                  if (approval.isNotEmpty)
+                    _section(
+                      context,
+                      l10n.translate('study_material_approval_heading'),
+                      [for (final m in approval) _tile(context, m)],
+                    ),
+                  if (yours.isNotEmpty)
+                    _section(
+                      context,
+                      l10n.translate('study_material_yours_heading'),
+                      [for (final m in yours) _tile(context, m)],
+                    ),
+                  if (published.isNotEmpty)
+                    _section(
+                      context,
+                      l10n.translate('study_material_shared_heading'),
+                      [for (final m in published) _tile(context, m)],
+                    ),
+                  if (empty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Text(
+                        l10n.translate('study_material_empty'),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+              ),
+      ),
     );
   }
 
