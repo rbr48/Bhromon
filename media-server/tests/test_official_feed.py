@@ -207,3 +207,27 @@ def test_the_topic_push_goes_to_the_topic_subscribers():
     assert result == {"status": "success", "messageId": "projects/x/messages/1"}
     assert messaging.Message.call_args.kwargs["topic"] == "official_instafeed"
     assert messaging.Notification.call_args.kwargs == {"title": "Bhromon", "body": "Hello"}
+
+
+def test_reel_generates_poster_when_no_cover_provided(published, monkeypatch):
+    client, firestore, pushes = published
+
+    def fake_generate_poster(video_path, poster_path, *args, **kwargs):
+        poster_path.parent.mkdir(parents=True, exist_ok=True)
+        poster_path.write_bytes(b"RIFF....WEBPVP8")
+        return True
+
+    monkeypatch.setattr(main.media_utils, "generate_video_poster", fake_generate_poster)
+
+    response = client.post(
+        "/official/posts",
+        files=[_part("reel.mp4", "video/mp4")],
+        data={"caption": "Reel with auto poster"},
+        headers={"X-Official-Key": "the-publish-key"},
+    )
+
+    assert response.status_code == 200
+    post_id = response.json()["id"]
+    expected_cover = f"{main.BASE_URL.rstrip('/')}/official/covers/{post_id}.webp"
+    assert response.json()["coverUrl"] == expected_cover
+    assert firestore.writes[("official_instafeed", post_id)]["coverUrl"] == expected_cover
