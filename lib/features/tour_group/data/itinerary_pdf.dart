@@ -82,8 +82,36 @@ class BanglaItineraryFormatter {
     }
   }
 
-  static String checkpointKindBangla(CheckpointKind kind) =>
-      kind.label(isBn: true);
+  static String checkpointKindBangla(CheckpointKind kind) {
+    switch (kind) {
+      case CheckpointKind.food:
+        return 'খাবার ও রিফ্রেশমেন্ট';
+      case CheckpointKind.prayer:
+        return 'নামাজ ও বিশ্রাম';
+      case CheckpointKind.fuel:
+        return 'ফুয়েল স্টেশন';
+      case CheckpointKind.washroom:
+        return 'ওয়াশরুম';
+      case CheckpointKind.viewpoint:
+        return 'ভিউ পয়েন্ট / ফটোস্পট';
+      case CheckpointKind.checkpost:
+        return 'আর্মি / বিজিবি চেকপোস্ট';
+      case CheckpointKind.ferry:
+        return 'ফেরিঘাট';
+      case CheckpointKind.toll:
+        return 'টোল প্লাজা';
+      case CheckpointKind.hospital:
+        return 'হাসপাতাল / ফার্মেসি';
+      case CheckpointKind.police:
+        return 'থানা / হাইওয়ে পুলিশ';
+      case CheckpointKind.hotel:
+        return 'হোটেল / রিসোর্ট';
+      case CheckpointKind.shopping:
+        return 'শপিং / স্যুভেনিয়ার';
+      case CheckpointKind.custom:
+        return 'সাধারণ বিরতি';
+    }
+  }
 }
 
 /// Generates a comprehensive, printable multi-stop itinerary and route roadmap PDF.

@@ -1059,7 +1059,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                       ),
                     ),
                     Text(
-                      '${cp.kind.label(isBn: isBn)} · ${cp.kmFromStart} km'
+                      '${context.l10n.translate(cp.kind.translationKey)} · ${cp.kmFromStart} km'
                       '${isVisited ? (isBn ? " · ভ্রমণ সম্পন্ন" : " · Visited") : ""}',
                       style: TextStyle(
                         color: isVisited
