@@ -22,6 +22,7 @@ const people = {
 };
 
 describe('Tour Group Firestore rules', () => {
+  jest.setTimeout(60000);
   let env;
   const db = (who) => env.authenticatedContext(people[who].uid, { email: people[who].email, email_verified: true }).firestore();
   const anon = () => env.unauthenticatedContext().firestore();
@@ -35,10 +36,12 @@ describe('Tour Group Firestore rules', () => {
         port: 8080,
       },
     });
-  });
+  }, 60000);
 
   afterAll(async () => {
-    await env.cleanup();
+    if (env) {
+      await env.cleanup();
+    }
   });
 
   beforeEach(async () => {

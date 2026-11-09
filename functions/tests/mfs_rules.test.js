@@ -33,6 +33,7 @@ const bkash = (overrides = {}) => ({
 });
 
 describe('MFS payment rules', () => {
+  jest.setTimeout(60000);
   let env;
   const db = (who) => env.authenticatedContext(people[who].uid, { email: people[who].email, email_verified: true }).firestore();
 
@@ -48,7 +49,9 @@ describe('MFS payment rules', () => {
   });
 
   afterAll(async () => {
-    await env.cleanup();
+    if (env) {
+      await env.cleanup();
+    }
   });
 
   beforeEach(async () => {
