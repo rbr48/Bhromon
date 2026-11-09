@@ -12,6 +12,28 @@ const int kExamModeDays = 14;
 bool examModeOn(int? daysLeft) =>
     daysLeft != null && daysLeft >= 0 && daysLeft <= kExamModeDays;
 
+/// The lines of the Today card, in the order they can appear.
+enum TodayCardLine { exam, deadline, findings, cards, challenge }
+
+/// The order of the Today card's lines. Outside exam mode the next deadline leads, then the findings, the cards
+/// due and the challenge. In exam mode the exam comes first and then the cards due and the deadline, so revision
+/// comes before the other work.
+List<TodayCardLine> todayCardLineOrder({required bool examMode}) => examMode
+    ? const [
+        TodayCardLine.exam,
+        TodayCardLine.cards,
+        TodayCardLine.deadline,
+        TodayCardLine.findings,
+        TodayCardLine.challenge,
+      ]
+    : const [
+        TodayCardLine.exam,
+        TodayCardLine.deadline,
+        TodayCardLine.findings,
+        TodayCardLine.cards,
+        TodayCardLine.challenge,
+      ];
+
 /// The findings a viewer may check and has not checked yet: the ones waiting for their check.
 /// [checkedIds] holds the ids of the findings the viewer has checked.
 int findingsWaitingForCheck({

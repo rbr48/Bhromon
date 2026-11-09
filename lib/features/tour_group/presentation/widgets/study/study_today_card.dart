@@ -187,75 +187,93 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
     final palette = context.forest;
     final lines = <_TodayLine>[];
 
+    // Each line is built here, then placed in the order the rules give for the day (todayCardLineOrder).
     final exam = widget.subject.examDate;
     final daysLeft = exam == null ? null : daysUntilExam(exam, _today);
+    _TodayLine? examLine;
     if (daysLeft != null && daysLeft == 0) {
-      lines.add(_TodayLine(
+      examLine = _TodayLine(
         icon: Icons.event_rounded,
         text: l10n.translate('study_subject_exam_today'),
-      ));
+      );
     } else if (daysLeft != null && daysLeft > 0) {
-      lines.add(_TodayLine(
+      examLine = _TodayLine(
         icon: examModeOn(daysLeft) ? Icons.school_rounded : Icons.event_rounded,
         text: examModeOn(daysLeft)
             ? l10n.translate('study_today_exam_mode',
                 args: {'days': l10n.number(daysLeft)})
             : l10n.translate('study_subject_exam_in',
                 args: {'days': l10n.number(daysLeft)}),
-      ));
+      );
     }
 
     final deadline = _deadline;
+    _TodayLine? deadlineLine;
     if (deadline != null) {
-      lines.add(_TodayLine(
+      deadlineLine = _TodayLine(
         icon: Icons.event_note_rounded,
         text: l10n.translate('study_today_next_deadline', args: {
           'chapter': deadline.chapterTitle,
           'book': deadline.bookTitle,
           'date': localizedDateFormat('d MMM').format(deadline.dueOn),
         }),
-      ));
+      );
     }
 
     final findingsModule = widget.findingsModule;
+    _TodayLine? findingsLine;
     if (findingsModule != null && _findingsWaiting > 0) {
-      lines.add(_TodayLine(
+      findingsLine = _TodayLine(
         icon: Icons.fact_check_rounded,
         text: l10n.translate('study_today_findings_waiting',
             args: {'count': l10n.number(_findingsWaiting)}),
         onTap: () => widget.onOpenModule(findingsModule),
-      ));
+      );
     }
 
+    _TodayLine? cardsLine;
     if (_cardsDue > 0) {
-      lines.add(_TodayLine(
+      cardsLine = _TodayLine(
         icon: Icons.style_rounded,
         text: l10n.translate('study_today_cards_due',
             args: {'count': l10n.number(_cardsDue)}),
-      ));
+      );
     }
 
     final challenge = _challenge;
     final challengeModule = widget.challengeModule;
+    _TodayLine? challengeLine;
     if (challenge != null && challengeModule != null) {
       final joined = _joins.contains(_me);
       final done = _challengeDone;
       if (joined && done != null) {
-        lines.add(_TodayLine(
+        challengeLine = _TodayLine(
           icon: Icons.flag_rounded,
           text: l10n.translate('study_today_challenge_progress', args: {
             'done': l10n.number(challengeDone(done, challenge.target)),
             'target': l10n.number(challenge.target),
           }),
           onTap: () => widget.onOpenModule(challengeModule),
-        ));
+        );
       } else if (!joined && challengeIsOpen(weekStart: _week, now: _today)) {
-        lines.add(_TodayLine(
+        challengeLine = _TodayLine(
           icon: Icons.flag_outlined,
           text: l10n.translate('study_today_challenge_join'),
           onTap: () => widget.onOpenModule(challengeModule),
-        ));
+        );
       }
+    }
+
+    final byLine = <TodayCardLine, _TodayLine?>{
+      TodayCardLine.exam: examLine,
+      TodayCardLine.deadline: deadlineLine,
+      TodayCardLine.findings: findingsLine,
+      TodayCardLine.cards: cardsLine,
+      TodayCardLine.challenge: challengeLine,
+    };
+    for (final line in todayCardLineOrder(examMode: examModeOn(daysLeft))) {
+      final entry = byLine[line];
+      if (entry != null) lines.add(entry);
     }
 
     if (lines.isEmpty) {

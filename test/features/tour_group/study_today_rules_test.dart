@@ -160,4 +160,37 @@ void main() {
       expect(nearest?.id, 's1');
     });
   });
+
+  group('the order of the Today card', () {
+    test('outside exam mode the deadline leads, and the challenge comes last',
+        () {
+      expect(todayCardLineOrder(examMode: false), [
+        TodayCardLine.exam,
+        TodayCardLine.deadline,
+        TodayCardLine.findings,
+        TodayCardLine.cards,
+        TodayCardLine.challenge,
+      ]);
+    });
+
+    test(
+        'in exam mode the cards due and the deadline come before the findings and the challenge',
+        () {
+      expect(todayCardLineOrder(examMode: true), [
+        TodayCardLine.exam,
+        TodayCardLine.cards,
+        TodayCardLine.deadline,
+        TodayCardLine.findings,
+        TodayCardLine.challenge,
+      ]);
+    });
+
+    test('each mode lists every line exactly once', () {
+      for (final examMode in [true, false]) {
+        final order = todayCardLineOrder(examMode: examMode);
+        expect(order.toSet(), TodayCardLine.values.toSet());
+        expect(order.length, TodayCardLine.values.length);
+      }
+    });
+  });
 }
