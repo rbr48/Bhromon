@@ -58,7 +58,6 @@ android {
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
-        main.jniLibs.srcDirs += ['src/main/jniLibs', '../../native/e2ee_olm/dist/android']
     }
 
     defaultConfig {

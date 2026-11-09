@@ -203,6 +203,7 @@ jobs:
         working-directory: .
         run: |
           bash tool/package_e2ee_android.sh
+          rm -rf native/e2ee_olm/dist/android
 
       - name: Set up Java 17
         uses: actions/setup-java@v6
