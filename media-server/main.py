@@ -35,6 +35,7 @@ import cdn
 import chat
 import limits
 import media_access
+import media_utils
 import news
 from chat import chat_db, chat_is_encrypted, chat_router
 from ack_reminders import AckReminderScheduler, run_ack_reminders
@@ -719,13 +720,19 @@ async def upload_media(
     finally:
         part.unlink(missing_ok=True)
 
-    return {
+    res_data = {
         "status": "success",
         "url": f"{BASE_URL.rstrip('/')}/{tourId}/{folder}/{filename}",
         "filename": filename,
         "bytes": total_bytes,
         "contentType": file.content_type,
     }
+    if ext in VIDEO_EXTENSIONS and folder in ("reels", "posts", "channels"):
+        stem = Path(filename).stem
+        poster_path = target_dir / f"{stem}_poster.webp"
+        if await run_in_threadpool(media_utils.generate_video_poster, target, poster_path):
+            res_data["posterUrl"] = f"{BASE_URL.rstrip('/')}/{tourId}/{folder}/{stem}_poster.webp"
+    return res_data
 
 
 def _require_official_publisher(provided_key: Optional[str], authorization: Optional[str]) -> None:
@@ -813,6 +820,11 @@ async def publish_official_post(
         cover_url = None
         if cover_ext:
             cover_url = await store_official_file(cover, "covers", f"{post_id}{cover_ext}", MAX_IMAGE_BYTES)
+        else:
+            video_path = MEDIA_ROOT / "official" / "reels" / f"{post_id}{ext}"
+            poster_path = MEDIA_ROOT / "official" / "covers" / f"{post_id}.webp"
+            if await run_in_threadpool(media_utils.generate_video_poster, video_path, poster_path):
+                cover_url = f"{BASE_URL.rstrip('/')}/official/covers/{post_id}.webp"
         await run_in_threadpool(
             create_official_post,
             post_id,
