@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../data/notice_ping_client.dart';
 import '../../data/notice_read_aloud.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/itinerary_models.dart';
@@ -48,7 +49,14 @@ String noticeCountdown(AppLocalizations l10n, DateTime at, DateTime now) {
 class NoticeBoardScreen extends StatefulWidget {
   final String tourId;
 
-  const NoticeBoardScreen({super.key, required this.tourId});
+  /// Sends an admin's reminder to the members who have not answered a notice.
+  final NoticePingClient pingClient;
+
+  NoticeBoardScreen({
+    super.key,
+    required this.tourId,
+    NoticePingClient? pingClient,
+  }) : pingClient = pingClient ?? NoticePingClient();
 
   @override
   State<NoticeBoardScreen> createState() => _NoticeBoardScreenState();
@@ -479,6 +487,35 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     }
   }
 
+  /// Notices with a reminder on its way, so a second tap does not send another.
+  final Set<String> _pinging = {};
+
+  /// Asks the media server to remind the members who have not answered [n] yet,
+  /// and says what came of it.
+  Future<void> _ping(TourNotice n) async {
+    if (!_pinging.add(n.id)) return;
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result =
+          await widget.pingClient.ping(tourId: widget.tourId, noticeId: n.id);
+      final text = switch (result.status) {
+        NoticePingStatus.sent => l10n.translate('notice_ping_sent',
+            args: {'n': l10n.number(result.waiting)}),
+        NoticePingStatus.tooSoon => l10n.translate('notice_ping_too_soon',
+              args: {
+                'n': l10n.number((result.retryAfter.inSeconds / 60).ceil())
+              }),
+        NoticePingStatus.nobodyWaiting => l10n.translate('notice_ping_nobody'),
+        NoticePingStatus.closed => l10n.translate('notice_ping_closed'),
+        NoticePingStatus.failed => l10n.translate('notice_ping_failed'),
+      };
+      messenger.showSnackBar(SnackBar(content: Text(text)));
+    } finally {
+      _pinging.remove(n.id);
+    }
+  }
+
   Future<void> _answer(TourNotice n, bool answered, {String? email}) async {
     try {
       await _repository.answerNotice(widget.tourId, n.id,
@@ -667,6 +704,16 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               color: context.forest.readable(AppColors.gold))),
                     ),
                   ]),
+                  if (_isAdmin && !NoticeEngine.isArchived(n, _now))
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _ping(n),
+                        icon: const Icon(Icons.notifications_active_outlined,
+                            size: 18),
+                        label: Text(l10n.translate('notice_ping')),
+                      ),
+                    ),
                   for (final m in a.waiting)
                     ListTile(
                       dense: true,

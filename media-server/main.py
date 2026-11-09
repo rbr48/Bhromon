@@ -38,7 +38,7 @@ import media_access
 import media_utils
 import news
 from chat import chat_db, chat_is_encrypted, chat_router
-from ack_reminders import AckReminderScheduler, run_ack_reminders
+from ack_reminders import AckReminderScheduler, PingRefused, run_ack_reminders, send_ack_ping
 from family_dates import FamilyDateReminderScheduler
 from session_reminders import SessionReminderScheduler, run_session_reminders
 from news import router as news_router
@@ -1060,6 +1060,56 @@ async def run_ack_reminders_now(x_ack_reminder_key: Optional[str] = Header(None)
     return await run_in_threadpool(
         run_ack_reminders, backend._client(), notification_engine, datetime.now(timezone.utc)
     )
+
+
+NOTICE_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,128}")
+
+
+class NoticePingRequest(BaseModel):
+    tourId: str
+    noticeId: str
+
+
+@app.post("/notify/notice/ping")
+async def ping_notice(
+    body: NoticePingRequest,
+    authorization: Optional[str] = Header(None),
+):
+    """An owner or admin reminds the members who have not answered a notice, now.
+
+    The push is the scheduled answer reminder's. A notice can be pinged once every
+    30 minutes (ack_reminders.PING_GAP); an earlier ping gets 429 with Retry-After.
+    """
+    caller = await run_in_threadpool(authenticate, authorization)
+    check_tour_id(body.tourId)
+    if not NOTICE_ID_PATTERN.fullmatch(body.noticeId):
+        raise HTTPException(status_code=400, detail="Invalid notice id.")
+    role = await run_in_threadpool(backend.role_for, body.tourId, caller.email)
+    if role not in {"owner", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the group's owner or an admin can send a reminder.",
+        )
+    try:
+        return await run_in_threadpool(
+            send_ack_ping,
+            backend._client(),
+            notification_engine,
+            body.tourId,
+            body.noticeId,
+            datetime.now(timezone.utc),
+        )
+    except PingRefused as refused:
+        detail = {"reason": refused.reason, "retryAfter": refused.retry_after}
+        if refused.reason == "not_found":
+            raise HTTPException(status_code=404, detail=detail)
+        if refused.reason == "too_soon":
+            raise HTTPException(
+                status_code=429,
+                detail=detail,
+                headers={"Retry-After": str(refused.retry_after)},
+            )
+        raise HTTPException(status_code=409, detail=detail)
 
 
 @app.api_route("/internal/media-auth", methods=["GET", "HEAD"])

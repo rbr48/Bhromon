@@ -57,7 +57,7 @@ Formulas: meal rate = total bazar ÷ total logged meals; member owed = member's 
 
 **Task 9.3 — Office and campus acknowledgements.** Remaining:
 - A progress ring and counter on notices that need an answer.
-- A pending-member drawer, with an admin ping to members who have not answered. This needs a new VPS endpoint, `POST /notify/notice/ping`.
+- Done: the progress ring and the pending-member drawer (#425), and the admin ping to members who have not answered (`POST /notify/notice/ping`).
 - A picnic and event contribution tracker. Scope to be confirmed (decision 4).
 
 **Task 9.4 — Samity receipts.** Remaining:
