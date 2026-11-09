@@ -1,58 +1,40 @@
-# Implementation Plan: Group Important Dates, Leave Calendar Profile-Only & Dynamic Meeting Points
+# Implementation Plan: E2EE Android Native Packaging (M4) & Test Build Delivery
 
 ## Objective
-Address the three core user requirements:
-1. **Remove Leave Calendar from All Groups & Keep in Profile Only**:
-   - Remove the `HolidayCalendarScreen` tab from `TourLogisticsHubScreen` (`tour_logistics_hub_screen.dart`).
-   - Remove/redirect `/group/:tourId/calendar` to the group's Important Dates screen.
-   - Keep `/holiday-calendar` intact in the Profile section (`explorer_profile_screen.dart`).
-2. **Add Dynamic Important Dates to Each & Every Group**:
-   - Replace the legacy `'calendar'` module with dynamic dates for ALL groups in `hub_modules.dart` and `tour_group_hub_screen.dart`.
-   - Update `FamilyDateKind` and add group-specific date kinds (Meeting, Deadline, Exam, Rent, Maintenance, Installment, Payout, Event, etc.) with custom emojis.
-   - Adapt UI copy, headers, and quick presets dynamically per group kind/preset (Family, Office, Campus, Mess, Society, Samity, Study, Trip).
-   - Support adding past dates beyond year 2000 (`firstDate: DateTime(1900)`, year picker, original start year display).
-   - Update Firestore Security Rules via `firestore-rules-author` subagent to permit all active group members and allow new kinds.
-3. **Dynamic Default Meeting Points**:
-   - Replace the hardcoded "Hotel Lobby" default with group-aware defaults (Office conference room/reception, Campus main gate/canteen, Mess dining/common room, Society community hall, Samity venue, Study lounge, Trip landmark) in `notice_board_screen.dart` and `tour_translation_keys.dart`.
+Fulfill Milestone M4 of `E2EE_DESIGN.md`:
+1. Package the precompiled and verified `libe2ee_olm.so` native binaries (built from `native/e2ee_olm` via the `vodozemac` Rust Olm engine) into Android's `jniLibs` for all 3 supported ABIs (`arm64-v8a`, `armeabi-v7a`, `x86_64`).
+2. Configure `android/app/build.gradle` so Gradle automatically packages `libe2ee_olm.so` into the APK/AAB `lib/<abi>/` directories.
+3. Update `.github/workflows/e2ee_native.yml` to build and package an E2EE-enabled test APK (`--dart-define=E2EE_ONE_TO_ONE=true`) and publish it as a downloadable GitHub Actions artifact for internal testing and dogfooding (M5).
+4. Update `E2EE_DESIGN.md` to reflect the completion of Milestone M4 packaging.
+5. Monotonically increment version in `pubspec.yaml` to `1.8.153+207`.
+6. Pass all quality gates (`flutter analyze`, unit tests, GitHub CI checks) and create PR.
 
 ---
 
 ## Atomic Tasks
 
-### Phase 1: Leave Calendar Removal from Groups
-- [ ] **Task 1.1: Logistics Hub Tab Update**
-  - In `tour_logistics_hub_screen.dart`, remove `HolidayCalendarScreen` and `tour_tab_calendar`. Change tab length from 4 to 3.
-- [ ] **Task 1.2: App Router Clean-up**
-  - In `router.dart`, redirect `/group/:tourId/calendar` to `/group/:tourId/family-dates` (or `/important-dates`). Verify profile route `/holiday-calendar` remains accessible.
+### Phase 1: Native Library Packaging & Gradle Configuration
+- [x] **Task 1.1: Copy Native Libraries to Android `jniLibs`**
+  - Place `libe2ee_olm.so` into `android/app/src/main/jniLibs/{arm64-v8a, armeabi-v7a, x86_64}/`.
+  - Add helper scripts `tool/package_e2ee_android.sh` and `scripts/package_e2ee_android.ps1` to automate copying from `native/e2ee_olm/dist/android/`.
+- [x] **Task 1.2: Configure Gradle SourceSets**
+  - In `android/app/build.gradle`, ensure `sourceSets.main.jniLibs.srcDirs` explicitly includes `src/main/jniLibs` and `../../native/e2ee_olm/dist/android` when available.
 
-### Phase 2: Dynamic Important Dates Engine & Past Date Support
-- [ ] **Task 2.1: Model & Enum Expansion (`family_date_models.dart`)**
-  - Add group-tailored kinds to `FamilyDateKind`: `meeting` (🤝), `deadline` (⏳), `exam` (📝), `rent` (🏠), `maintenance` (🛠️), `installment` (💰), `payout` (🎁), `event` (🎉).
-  - Add helper methods to return relevant kinds and suggested presets by `TourGroup`.
-- [ ] **Task 2.2: Past Date Selection & Year Display (`family_date_editor.dart` & `family_dates_screen.dart`)**
-  - In `family_date_editor.dart`, change `firstDate: DateTime(1900)` and `lastDate: DateTime(2100)`.
-  - In `family_dates_screen.dart`, display the originating year/anniversary for past dates (e.g. `(Since 1985)` or `(41st Year)` for recurring dates).
-- [ ] **Task 2.3: Dynamic Hub Tile & Modules (`hub_modules.dart`, `tour_group_hub_screen.dart`)**
-  - Enable Important Dates module for every group type in `hub_modules.dart`.
-  - In `tour_group_hub_screen.dart`, customize the tile title and subtitle based on group type (Family, Office, Campus, Mess, Society, Samity, Study, Trip).
-  - Update `hub_modules_golden.json` golden test.
+### Phase 2: CI Test Build Pipeline
+- [x] **Task 2.1: Update `.github/workflows/e2ee_native.yml`**
+  - In the `android` job, after building the `.so` files, copy them into `android/app/src/main/jniLibs/`.
+  - Add Flutter setup and build step: `flutter build apk --debug --dart-define=E2EE_ONE_TO_ONE=true`.
+  - Upload `build/app/outputs/flutter-apk/app-debug.apk` as artifact `bhromon-e2ee-test-apk`.
 
-### Phase 3: Dynamic Meeting Points
-- [ ] **Task 3.1: Group-Aware Meeting Points (`notice_board_screen.dart`, `tour_translation_keys.dart`)**
-  - Update default title and map search query based on `group.isOffice`, `group.isCampus`, `group.isMess`, `group.isSociety`, `group.isSamity`, `group.isStudy`, `group.isHousehold`, `group.isFamily`, and Trips.
-  - Add localized strings for each group type's default meeting point.
-
-### Phase 4: Firestore Security Rules Update (Specialist Subagent)
-- [ ] **Task 4.1: Subagent Delegation for `firestore.rules`**
-  - Invoke `firestore-rules-author` subagent to allow active members of ANY tour group (`isActiveMember(tourId)`) to create/update/delete dates in `family_dates`.
-  - Expand `validFamilyDate` to validate the new kinds (`meeting`, `deadline`, `exam`, `rent`, `maintenance`, `installment`, `payout`, `event`).
-  - Run rules emulator tests to confirm security policies.
-
-### Phase 5: Automated Verification, PR & Deployment
-- [ ] **Task 5.1: Test Suite & Analysis Verification**
-  - Run `flutter analyze` and `flutter test`.
-  - Commit changes atomically.
-- [ ] **Task 5.2: Monotonic Version Bump & PR Gate**
-  - Monotonically increment version in `pubspec.yaml` to `1.8.151+205`.
-  - Open PR via `gh pr create --base main` and await 100% green CI.
-  - Deploy rules, web hosting, and VPS updates.
+### Phase 3: Documentation & Verification
+- [x] **Task 3.1: Update `E2EE_DESIGN.md`**
+  - Document that M4 Android packaging is completed.
+- [x] **Task 3.2: Version Bump & Static Analysis**
+  - Increment `pubspec.yaml` version to `1.8.153+207`.
+  - Run `flutter analyze` to ensure 0 errors and 0 warnings (Passed, 0 issues).
+  - Run unit tests to verify no regressions (Passed, 96/96 E2EE tests & all golden tests).
+- [ ] **Task 3.3: GitHub PR & CI Verification**
+  - Commit changes with descriptive commit messages.
+  - Push branch `feat/e2ee-m4-android-packaging` to remote.
+  - Open Pull Request via `gh pr create --base main`.
+  - Verify all GitHub Actions CI checks turn green.
