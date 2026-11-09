@@ -6,10 +6,12 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ## Strict Merging Invariant & Dual-Agent Review Gate (MANDATORY)
-1. **Mutual Peer Review Required**: Even when all CI checks are 100% green, **NEVER merge any PR to `main` before Antigravity and Claude review each other's PR on GitHub.**
+1. **Mutual Peer Review Required**: Even when all CI checks are green, **NEVER merge any PR to `main` before Antigravity and Claude review each other's PR on GitHub.**
 2. **Exchanged Sign-Off**: Mutual peer review comments, guidance, and explicit sign-offs must be documented in PR comments prior to merge.
-3. **100% Green CI Required**: Zero tolerance for failing or in-progress checks at merge time (`Dart Format`, `Analyze`, `Build Web`, `Test`, `Build Android`).
-4. **Zero Direct Main Commits**: Every change must go through a dedicated topic branch and PR.
+3. **Green Required CI Checks**: Zero tolerance for failing or in-progress checks on required workflows at merge time (`Dart Format`, `Analyze`, `Build Web (release)`, `Test`, and `Build Android (debug APK)` when triggered). Note: Intentionally skipped jobs (such as `Build iOS (no codesign)`) do not block merge.
+4. **Zero Direct Main Commits**: Every change must go through a dedicated topic branch and PR via GitHub PR tools or `gh pr create --base main`.
+5. **Branch Isolation**: Track A (Claude) uses `claude/*` branches; Track B/C (Antigravity) uses `feat/*`, `fix/*`, or `docs/*` branches.
+6. **Mandatory Pre-Push Checks**: Run `dart format .`, `dart analyze`, and `pytest media-server/tests` (for media-server changes) prior to pushing to ensure zero regressions before GitHub Actions CI executes.
 
 ---
 
