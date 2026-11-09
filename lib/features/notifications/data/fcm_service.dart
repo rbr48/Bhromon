@@ -216,7 +216,9 @@ class FcmService {
             final tourId = data['tourId'] as String?;
 
             // 1. Post local system tray notification (Android/iOS)
-            if (!kIsWeb) {
+            // Chat pushes are handled by FCM directly from the VPS notification engine.
+            // Suppress local system tray notifications for 'chat' actions to prevent duplicate stacked notifications.
+            if (!kIsWeb && action != 'chat') {
               showLocalNotification(
                 id: doc.id.hashCode,
                 title: title,

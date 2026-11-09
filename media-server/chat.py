@@ -837,15 +837,19 @@ class PushNotificationDispatcher:
                 if localize
                 else (title, body)
             )
+            chat_id = data.get("chatId") if data else None
+            android_tag = f"chat_{chat_id}" if chat_id else None
             try:
                 android_config = messaging.AndroidConfig(
                     priority="high",
+                    collapse_key=android_tag,
                     notification=messaging.AndroidNotification(
                         title=entry_title,
                         body=entry_body,
                         sound="default",
                         channel_id="bhromon_general",
                         image=image_url,
+                        tag=android_tag,
                     ),
                 )
                 web_config = messaging.WebpushConfig(
