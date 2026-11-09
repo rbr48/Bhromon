@@ -51,7 +51,7 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list, reading plan, subjects, tips and suggestions) keeps its
+ *   list, and the study book list, reading plan, subjects, tips, suggestions and findings) keeps its
  *   amounts and dates.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
@@ -143,6 +143,7 @@ const STUDY_SESSION: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A tip or a suggestion in a subject: who posted it. */
 const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A discussion thread on a book: who started it. */
 const STUDY_THREAD: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A reply in a thread: who wrote it. */
@@ -505,6 +506,22 @@ export async function purgeMemberContent(
         batch.update(post.ref, { helpfulCount: FieldValue.increment(-1) });
         await batch.commit();
       }
+    }
+
+    // Shared findings keep their words under the stand-in. The person's checks come out, and each
+    // finding's count drops by the check removed, so the counts stay true.
+    const findings = subject.ref.collection('findings');
+    await applyToQuery(db, findings, anonymize(STUDY_FINDING, email, standIn));
+    const found = await findings.get();
+    for (const finding of found.docs) {
+      const check = finding.ref.collection('checks').doc(email);
+      const snap = await check.get();
+      if (!snap.exists) continue;
+      const countField = snap.get('verdict') === 'confirm' ? 'confirmCount' : 'challengeCount';
+      const batch = db.batch();
+      batch.delete(check);
+      batch.update(finding.ref, { [countField]: FieldValue.increment(-1) });
+      await batch.commit();
     }
   }
 

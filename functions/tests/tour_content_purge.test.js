@@ -215,6 +215,35 @@ async function seed() {
   await set(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other/helpful/third@x.com`, {
     createdAt: new Date('2026-11-02T10:00:00Z'),
   });
+  // Shared findings in the same subject: one the leaver posted, and another member's that the leaver
+  // confirmed and a third member challenged. The leaver's check comes out and the counts follow it.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_leaver`, {
+    text: 'The sample gives 4.2 at 25 degrees.',
+    method: 'Repeated three times on the lab bench.',
+    createdByEmail: LEAVER,
+    confirmCount: 0,
+    challengeCount: 0,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_other`, {
+    text: 'The second column is the one to use.',
+    method: 'Checked against the answer key.',
+    createdByEmail: OTHER,
+    confirmCount: 1,
+    challengeCount: 1,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_other/checks/${LEAVER}`, {
+    verdict: 'confirm',
+    createdAt: new Date('2026-11-02T09:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_other/checks/third@x.com`, {
+    verdict: 'challenge',
+    note: 'The answer key is out of date.',
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
 
   // A proposed book the leaver and another member would read, and a listed book's chapter that
   // the leaver and another member have marked read. The votes and read marks are each member's
@@ -678,6 +707,19 @@ describe('tour content purge', () => {
       text: 'Past papers for the last five years.',
       createdByEmail: OTHER,
       helpfulCount: 1,
+    });
+    // Their finding keeps its words under the stand-in. Their check on another member's finding comes
+    // out and the confirmation count falls by one; the challenge stays and its count stays.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_leaver`)).toMatchObject({
+      text: 'The sample gives 4.2 at 25 degrees.',
+      createdByEmail: STAND_IN,
+    });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_other/checks/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_other/checks/third@x.com`)).toBe(true);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_other`)).toMatchObject({
+      createdByEmail: OTHER,
+      confirmCount: 0,
+      challengeCount: 1,
     });
   });
 

@@ -30,6 +30,7 @@ import '../domain/services/study_quiz_rules.dart';
 import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_subject_models.dart';
+import '../domain/models/study_finding_models.dart';
 import '../domain/services/study_chapter_rules.dart';
 import '../domain/services/study_material_rules.dart';
 import '../domain/models/meal_log.dart';
@@ -2726,6 +2727,172 @@ class TourGroupRepository {
     batch.update(post, {'helpfulCount': FieldValue.increment(1)});
     await batch.commit();
     return true;
+  }
+
+  // Shared findings: a result a member reached and how it was checked. Others confirm or
+  // challenge it, once each. A check and the count it moves are written in one batch, which
+  // firestore.rules checks (study_finding_models.dart).
+  // ---------------------------------------------------------------------------
+
+  /// A finding's document in a subject.
+  DocumentReference<Map<String, dynamic>> _findingRef(
+    String tourId,
+    String subjectId,
+    String findingId,
+  ) =>
+      _sub(tourId, 'study_subjects')
+          .doc(subjectId)
+          .collection('findings')
+          .doc(findingId);
+
+  /// The findings of a subject, newest first.
+  Stream<List<StudyFinding>> watchStudyFindings(
+    String tourId,
+    String subjectId,
+  ) {
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('findings')
+        .orderBy('createdAt', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyFinding.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final finding?)
+                  finding,
+            ]);
+  }
+
+  /// The signed-in member's own check of each listed finding, by finding id. A finding the
+  /// member has not checked has no entry.
+  Future<Map<String, StudyFindingCheck>> loadMyFindingChecks(
+    String tourId,
+    String subjectId,
+    List<String> findingIds,
+  ) async {
+    final email = _requireEmail();
+    final snaps = await Future.wait([
+      for (final id in findingIds)
+        _findingRef(tourId, subjectId, id)
+            .collection('checks')
+            .doc(email)
+            .get(),
+    ]);
+    final checks = <String, StudyFindingCheck>{};
+    for (var i = 0; i < findingIds.length; i++) {
+      final snap = snaps[i];
+      if (!snap.exists) continue;
+      final check = StudyFindingCheck.fromMap(email, snap.data() ?? const {});
+      if (check != null) checks[findingIds[i]] = check;
+    }
+    return checks;
+  }
+
+  /// Posts a finding. [shown] is false for a finding an admin still has to show.
+  Future<void> addStudyFinding(
+    String tourId,
+    String subjectId, {
+    required String text,
+    required String method,
+    required bool shown,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('findings')
+        .add({
+      'text': text.trim(),
+      'method': method.trim(),
+      'createdByEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'confirmCount': 0,
+      'challengeCount': 0,
+      'shown': shown,
+      'pinned': false,
+    });
+  }
+
+  /// Changes a finding's result or its method. Its author does this.
+  Future<void> editStudyFinding(
+    String tourId,
+    String subjectId,
+    StudyFinding original, {
+    required String text,
+    required String method,
+  }) async {
+    _requireEmail();
+    await _findingRef(tourId, subjectId, original.id).update({
+      'text': text.trim(),
+      'method': method.trim(),
+    });
+  }
+
+  /// Shows a waiting finding, or pins or unpins one. Only an admin does this.
+  Future<void> setStudyFindingFlags(
+    String tourId,
+    String subjectId,
+    String findingId, {
+    bool? shown,
+    bool? pinned,
+  }) async {
+    _requireEmail();
+    await _findingRef(tourId, subjectId, findingId).update({
+      if (shown != null) 'shown': shown,
+      if (pinned != null) 'pinned': pinned,
+    });
+  }
+
+  /// Removes a finding. Its author or an admin does this. Its checks stay in the database,
+  /// unread, as the marks of a deleted post do.
+  Future<void> deleteStudyFinding(
+    String tourId,
+    String subjectId,
+    String findingId,
+  ) async {
+    _requireEmail();
+    await _findingRef(tourId, subjectId, findingId).delete();
+  }
+
+  /// Confirms or challenges a finding, once per member. The check and the count it moves are
+  /// written in one batch. The note is optional and is kept only when it has words.
+  Future<void> checkStudyFinding(
+    String tourId,
+    String subjectId,
+    String findingId, {
+    required FindingVerdict verdict,
+    String note = '',
+  }) async {
+    final email = _requireEmail();
+    final finding = _findingRef(tourId, subjectId, findingId);
+    final cleanNote = note.trim();
+    final countField =
+        verdict == FindingVerdict.confirm ? 'confirmCount' : 'challengeCount';
+    final batch = _firestore.batch();
+    batch.set(finding.collection('checks').doc(email), {
+      'verdict': verdict.name,
+      if (cleanNote.isNotEmpty) 'note': cleanNote,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.update(finding, {countField: FieldValue.increment(1)});
+    await batch.commit();
+  }
+
+  /// Takes a member's own check back. The check goes and its count falls, in one batch.
+  Future<void> withdrawStudyFindingCheck(
+    String tourId,
+    String subjectId,
+    String findingId,
+    FindingVerdict verdict,
+  ) async {
+    final email = _requireEmail();
+    final finding = _findingRef(tourId, subjectId, findingId);
+    final countField =
+        verdict == FindingVerdict.confirm ? 'confirmCount' : 'challengeCount';
+    final batch = _firestore.batch();
+    batch.delete(finding.collection('checks').doc(email));
+    batch.update(finding, {countField: FieldValue.increment(-1)});
+    await batch.commit();
   }
 
   Stream<List<ReadingSession>> watchReadingSessions(String tourId) {

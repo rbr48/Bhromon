@@ -9,6 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath, arrayUnion, arrayRemove, deleteField } = require('firebase/firestore');
 
+// Starting the emulator and loading the rules can take longer than Jest's default five-second hook timeout.
+jest.setTimeout(120000);
+
 const PROJECT_ID = 'bhromon-rules-test-project';
 const TOUR = 't1';
 const CODE = 'ABCDEFGH';

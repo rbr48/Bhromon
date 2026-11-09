@@ -805,7 +805,7 @@ service cloud.firestore {
     }
     // The modules a study subject can turn on. Only these are live; the rest are coming.
     function studyModuleLive(key) {
-      return key in ['tips', 'suggestions'];
+      return key in ['tips', 'suggestions', 'findings'];
     }
     // A module's settings: on or off, its name, and who may post in it.
     function validStudyModule(d) {
@@ -882,6 +882,74 @@ service cloud.firestore {
                  !studyMarkAfter(tourId, subjectId, moduleKey, postId)))) ||
               ((byAdmin || oldData.createdByEmail == tourUserEmail()) &&
                (byAdmin || changed.hasOnly(['text', 'title', 'url']))));
+    }
+
+    // A shared finding: the result a member reached, how it was checked, how many members
+    // confirmed and challenged it, and whether it is shown and pinned.
+    function validStudyFinding(d) {
+      return d.keys().hasOnly(['text', 'method', 'createdByEmail', 'createdAt', 'confirmCount', 'challengeCount', 'shown', 'pinned']) &&
+             d.text is string && d.text.size() >= 1 && d.text.size() <= 1000 &&
+             d.method is string && d.method.size() >= 1 && d.method.size() <= 500 &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp &&
+             d.confirmCount is int && d.confirmCount >= 0 &&
+             d.challengeCount is int && d.challengeCount >= 0 &&
+             d.shown is bool && d.pinned is bool;
+    }
+    // A member's check of a finding: a confirmation or a challenge, and an optional note.
+    function validStudyCheck(d) {
+      return d.keys().hasOnly(['verdict', 'note', 'createdAt']) &&
+             d.verdict in ['confirm', 'challenge'] &&
+             (d.get('note', null) == null || (d.note is string && d.note.size() <= 300)) &&
+             d.createdAt is timestamp;
+    }
+    // Whether a member may add a finding to a listed subject whose findings module is on. An
+    // admin's finding is always shown; a member's is shown when the module lets members post
+    // directly, as a tip is. The counts start at zero.
+    function studyFindingCreateAllowed(tourId, subjectId, d) {
+      let byAdmin = isTourAdmin(tourId);
+      return isStudyTour(tourId) && isActiveMember(tourId) &&
+             d.createdByEmail == tourUserEmail() &&
+             d.confirmCount == 0 && d.challengeCount == 0 && d.pinned == false &&
+             d.createdAt == request.time &&
+             validStudyFinding(d) &&
+             studySubjectListed(tourId, subjectId) &&
+             studyModuleOn(tourId, subjectId, 'findings') &&
+             (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/findings).data.postPolicy != 'admins') &&
+             d.shown == (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/findings).data.postPolicy == 'members');
+    }
+    // Whether a member's check of a finding is, now or after the batch being written, a check of
+    // the given verdict. The check is the member's own, by its document id.
+    function studyCheckNowIs(tourId, subjectId, findingId, verdict) {
+      return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(tourUserEmail())) &&
+             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(tourUserEmail())).data.verdict == verdict;
+    }
+    function studyCheckAfterIs(tourId, subjectId, findingId, verdict) {
+      return existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(tourUserEmail())) &&
+             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(tourUserEmail())).data.verdict == verdict;
+    }
+    // Whether a finding's counts move only with this member's check in the same batch: a
+    // confirmation or a challenge is added or taken back, and the other count stays where it is.
+    function studyCountsMoveOk(tourId, subjectId, findingId, newData, oldData) {
+      let dConfirm = newData.confirmCount - oldData.confirmCount;
+      let dChallenge = newData.challengeCount - oldData.challengeCount;
+      return (dConfirm == 0 && dChallenge == 0) ||
+             (dConfirm == 1 && dChallenge == 0 && !studyCheckNowIs(tourId, subjectId, findingId, 'confirm') && studyCheckAfterIs(tourId, subjectId, findingId, 'confirm')) ||
+             (dConfirm == 0 && dChallenge == 1 && !studyCheckNowIs(tourId, subjectId, findingId, 'challenge') && studyCheckAfterIs(tourId, subjectId, findingId, 'challenge')) ||
+             (dConfirm == -1 && dChallenge == 0 && studyCheckNowIs(tourId, subjectId, findingId, 'confirm') && !studyCheckAfterIs(tourId, subjectId, findingId, 'confirm')) ||
+             (dConfirm == 0 && dChallenge == -1 && studyCheckNowIs(tourId, subjectId, findingId, 'challenge') && !studyCheckAfterIs(tourId, subjectId, findingId, 'challenge'));
+    }
+    // Whether an update to a finding is allowed. Its counts move only with a check
+    // (studyCountsMoveOk). An admin shows it or pins it; its author changes its words and method.
+    function studyFindingUpdateAllowed(tourId, subjectId, findingId, newData, oldData) {
+      let byAdmin = isTourAdmin(tourId);
+      let changed = newData.diff(oldData).affectedKeys();
+      return newData.createdByEmail == oldData.createdByEmail &&
+             validStudyFinding(newData) &&
+             ((changed.hasOnly(['confirmCount', 'challengeCount']) &&
+               studyCountsMoveOk(tourId, subjectId, findingId, newData, oldData)) ||
+              (byAdmin && changed.hasOnly(['text', 'method', 'shown', 'pinned'])) ||
+              (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'method'])));
     }
 
     // Whether an update to a study book is allowed. The admin check reads the member record,
@@ -1676,6 +1744,42 @@ service cloud.firestore {
                              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/suggestions/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/suggestions/$(postId)).data.helpfulCount + 1;
             allow delete: if isActiveMember(tourId) && voter == tourUserEmail() &&
                              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/suggestions/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/suggestions/$(postId)).data.helpfulCount - 1;
+          }
+        }
+
+        // Shared findings. A member posts a finding in a module that is on, as the post policy allows.
+        // Others confirm or challenge it, once each (the checks below).
+        match /findings/{findingId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if studyFindingCreateAllowed(tourId, subjectId, request.resource.data);
+          allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           studyFindingUpdateAllowed(tourId, subjectId, findingId, request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+          // A member's check: confirmed or challenged, once. Never on their own finding, and never on one
+          // an admin has not shown. The finding's count moves in the same batch (studyCountsMoveOk).
+          match /checks/{voter} {
+            allow read: if isActiveMember(tourId);
+            allow create: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                             validStudyCheck(request.resource.data) &&
+                             request.resource.data.createdAt == request.time &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.createdByEmail != tourUserEmail() &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.shown == true &&
+                             ((request.resource.data.verdict == 'confirm' &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount + 1 &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount) ||
+                              (request.resource.data.verdict == 'challenge' &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount + 1 &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount));
+            // A member takes their own check back, and the count falls in the same batch.
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                             ((resource.data.verdict == 'confirm' &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount - 1 &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount) ||
+                              (resource.data.verdict == 'challenge' &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount - 1 &&
+                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount));
           }
         }
       }
