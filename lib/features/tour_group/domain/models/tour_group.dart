@@ -366,6 +366,158 @@ class TourGroup {
     return null;
   }
 
+  static bool _matchesAnyKeyword(String text, List<String> keywords) {
+    for (final kw in keywords) {
+      if (text.contains(kw)) return true;
+    }
+    return false;
+  }
+
+  /// Resolves the preset either from the explicit [preset] attribute, or inferred
+  /// from the group's [name] when [preset] is unset.
+  String? get effectivePreset {
+    if (!isFamily) return null;
+    if (preset != null && preset!.trim().isNotEmpty) return preset;
+    final lower = name.toLowerCase().trim();
+    if (_matchesAnyKeyword(lower, const [
+      'friend',
+      'বন্ধু',
+      'ফ্রেন্ড',
+      'দোস্ত',
+      'আড্ডা',
+      'dost',
+      'gang',
+      'squad',
+      'buddy',
+      'buddies',
+    ])) {
+      return friendsPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'office',
+      'অফিস',
+      'team',
+      'টিম',
+      'work',
+      'কোম্পানি',
+      'company',
+      'corp',
+      'colleague',
+      'সহকর্মী',
+    ])) {
+      return officePreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'campus',
+      'ক্যাম্পাস',
+      'varsity',
+      'ভার্সিটি',
+      'university',
+      'বিশ্ববিদ্যালয়',
+      'college',
+      'কলেজ',
+      'batch',
+      'ব্যাচ',
+      'class',
+      'ক্লাস',
+      'dept',
+      'department',
+    ])) {
+      return campusPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'mess',
+      'মেস',
+      'hostel',
+      'হোস্টেল',
+      'flat',
+      'ফ্ল্যাট',
+      'roommate',
+      'রুমমেট',
+      'bachelor',
+      'ব্যাচেলর',
+    ])) {
+      return messPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'society',
+      'সোসাইটি',
+      'building',
+      'বিল্ডিং',
+      'apartment',
+      'অ্যাপার্টমেন্ট',
+      'tower',
+      'টাওয়ার',
+      'housing',
+      'হাউজিং',
+    ])) {
+      return societyPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'samity',
+      'সমিতি',
+      'savings',
+      'সঞ্চয়',
+      'dps',
+      'kisti',
+      'কিস্তি',
+    ])) {
+      return samityPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'school',
+      'স্কুল',
+      'coaching',
+      'কোচিং',
+      'madrasa',
+      'মাদ্রাসা',
+      'academy',
+      'একাডেমি',
+    ])) {
+      return schoolPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'sports',
+      'খেলা',
+      'football',
+      'ফুটবল',
+      'cricket',
+      'ক্রিকেট',
+      'gym',
+      'জিম',
+      'fitness',
+      'ফিটনেস',
+      'club',
+      'ক্লাব',
+      'badminton',
+      'ব্যাডমিন্টন',
+    ])) {
+      return sportsPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'study',
+      'বই',
+      'পাঠচক্র',
+      'reading',
+      'library',
+      'লাইব্রেরি',
+      'book club',
+    ])) {
+      return studyPreset;
+    }
+    if (_matchesAnyKeyword(lower, const [
+      'committee',
+      'কমিটি',
+      'council',
+      'পরিষদ',
+      'association',
+      'সমিতি পরিষদ',
+    ])) {
+      return committeePreset;
+    }
+    return null;
+  }
+
   /// An office or team: a family-style circle where only admins write notices.
   bool get isOffice => preset == officePreset;
 

@@ -173,7 +173,8 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isOffice) {
+  final effective = group.effectivePreset;
+  if (effective == TourGroup.officePreset) {
     return const [
       FamilyDateKind.deadline,
       FamilyDateKind.meeting,
@@ -183,7 +184,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isCampus) {
+  if (effective == TourGroup.campusPreset) {
     return const [
       FamilyDateKind.exam,
       FamilyDateKind.deadline,
@@ -193,7 +194,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isMess) {
+  if (effective == TourGroup.messPreset) {
     return const [
       FamilyDateKind.rent,
       FamilyDateKind.bill,
@@ -202,7 +203,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isSociety) {
+  if (effective == TourGroup.societyPreset) {
     return const [
       FamilyDateKind.maintenance,
       FamilyDateKind.meeting,
@@ -211,7 +212,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isSamity) {
+  if (effective == TourGroup.samityPreset) {
     return const [
       FamilyDateKind.installment,
       FamilyDateKind.payout,
@@ -221,7 +222,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isStudy) {
+  if (effective == TourGroup.studyPreset) {
     return const [
       FamilyDateKind.deadline,
       FamilyDateKind.exam,
@@ -230,7 +231,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isFriends) {
+  if (effective == TourGroup.friendsPreset) {
     return const [
       FamilyDateKind.event,
       FamilyDateKind.birthday,
@@ -241,7 +242,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isSchool) {
+  if (effective == TourGroup.schoolPreset) {
     return const [
       FamilyDateKind.exam,
       FamilyDateKind.meeting,
@@ -251,7 +252,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isSports) {
+  if (effective == TourGroup.sportsPreset) {
     return const [
       FamilyDateKind.event,
       FamilyDateKind.meeting,
@@ -260,7 +261,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isCommittee) {
+  if (effective == TourGroup.committeePreset) {
     return const [
       FamilyDateKind.meeting,
       FamilyDateKind.maintenance,
@@ -280,7 +281,7 @@ List<FamilyDateKind> kindsForGroup(TourGroup? group) {
       FamilyDateKind.custom,
     ];
   }
-  if (group.isHousehold) {
+  if (group.isHousehold && effective == null) {
     return const [
       FamilyDateKind.birthday,
       FamilyDateKind.anniversary,
@@ -342,7 +343,8 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isOffice) {
+  final effective = group.effectivePreset;
+  if (effective == TourGroup.officePreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Project Sprint Deadline',
@@ -391,7 +393,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isCampus) {
+  if (effective == TourGroup.campusPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Final Examination',
@@ -440,7 +442,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isMess) {
+  if (effective == TourGroup.messPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Monthly House Rent',
@@ -480,7 +482,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isSociety) {
+  if (effective == TourGroup.societyPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Monthly Maintenance Service Charge',
@@ -529,7 +531,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isSamity) {
+  if (effective == TourGroup.samityPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Monthly Installment Due',
@@ -569,7 +571,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isStudy) {
+  if (effective == TourGroup.studyPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Book Discussion Session',
@@ -609,7 +611,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isFriends) {
+  if (effective == TourGroup.friendsPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Weekend Adda & Dinner',
@@ -658,7 +660,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isSchool) {
+  if (effective == TourGroup.schoolPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Term Final Examination',
@@ -698,7 +700,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isSports) {
+  if (effective == TourGroup.sportsPreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Tournament Match Day',
@@ -729,7 +731,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isCommittee) {
+  if (effective == TourGroup.committeePreset) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Committee General Meeting',
@@ -810,7 +812,7 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
       ),
     ];
   }
-  if (group.isHousehold) {
+  if (group.isHousehold && effective == null) {
     return const [
       GroupDatePresetTemplate(
         titleEn: 'Birthday',
@@ -903,18 +905,41 @@ List<GroupDatePresetTemplate> presetTemplatesFor(TourGroup? group) {
 /// Returns the localized title of the Important Dates / Calendar screen for [group].
 String groupDateScreenTitle(TourGroup? group, AppLocalizations l10n) {
   if (group != null) {
-    if (group.isOffice) return l10n.translate('hub_module_dates_office');
-    if (group.isCampus) return l10n.translate('hub_module_dates_campus');
-    if (group.isMess) return l10n.translate('hub_module_dates_mess');
-    if (group.isSociety) return l10n.translate('hub_module_dates_society');
-    if (group.isSamity) return l10n.translate('hub_module_dates_samity');
-    if (group.isStudy) return l10n.translate('hub_module_dates_study');
-    if (group.isFriends) return l10n.translate('hub_module_dates_friends');
-    if (group.isSchool) return l10n.translate('hub_module_dates_school');
-    if (group.isSports) return l10n.translate('hub_module_dates_sports');
-    if (group.isCommittee) return l10n.translate('hub_module_dates_committee');
+    final effective = group.effectivePreset;
+    if (effective == TourGroup.officePreset) {
+      return l10n.translate('hub_module_dates_office');
+    }
+    if (effective == TourGroup.campusPreset) {
+      return l10n.translate('hub_module_dates_campus');
+    }
+    if (effective == TourGroup.messPreset) {
+      return l10n.translate('hub_module_dates_mess');
+    }
+    if (effective == TourGroup.societyPreset) {
+      return l10n.translate('hub_module_dates_society');
+    }
+    if (effective == TourGroup.samityPreset) {
+      return l10n.translate('hub_module_dates_samity');
+    }
+    if (effective == TourGroup.studyPreset) {
+      return l10n.translate('hub_module_dates_study');
+    }
+    if (effective == TourGroup.friendsPreset) {
+      return l10n.translate('hub_module_dates_friends');
+    }
+    if (effective == TourGroup.schoolPreset) {
+      return l10n.translate('hub_module_dates_school');
+    }
+    if (effective == TourGroup.sportsPreset) {
+      return l10n.translate('hub_module_dates_sports');
+    }
+    if (effective == TourGroup.committeePreset) {
+      return l10n.translate('hub_module_dates_committee');
+    }
     if (!group.isFamily) return l10n.translate('hub_module_dates_trip');
-    if (group.isHousehold) return l10n.translate('hub_module_family_dates');
+    if (group.isHousehold && effective == null) {
+      return l10n.translate('hub_module_family_dates');
+    }
   }
   return l10n.translate('hub_module_dates_general');
 }
@@ -922,59 +947,102 @@ String groupDateScreenTitle(TourGroup? group, AppLocalizations l10n) {
 /// Returns the localized subtitle or introduction for the Important Dates / Calendar screen.
 String groupDateScreenSubtitle(TourGroup? group, AppLocalizations l10n) {
   if (group != null) {
-    if (group.isOffice) return l10n.translate('hub_module_dates_office_sub');
-    if (group.isCampus) return l10n.translate('hub_module_dates_campus_sub');
-    if (group.isMess) return l10n.translate('hub_module_dates_mess_sub');
-    if (group.isSociety) return l10n.translate('hub_module_dates_society_sub');
-    if (group.isSamity) return l10n.translate('hub_module_dates_samity_sub');
-    if (group.isStudy) return l10n.translate('hub_module_dates_study_sub');
-    if (group.isFriends) return l10n.translate('hub_module_dates_friends_sub');
-    if (group.isSchool) return l10n.translate('hub_module_dates_school_sub');
-    if (group.isSports) return l10n.translate('hub_module_dates_sports_sub');
-    if (group.isCommittee) {
+    final effective = group.effectivePreset;
+    if (effective == TourGroup.officePreset) {
+      return l10n.translate('hub_module_dates_office_sub');
+    }
+    if (effective == TourGroup.campusPreset) {
+      return l10n.translate('hub_module_dates_campus_sub');
+    }
+    if (effective == TourGroup.messPreset) {
+      return l10n.translate('hub_module_dates_mess_sub');
+    }
+    if (effective == TourGroup.societyPreset) {
+      return l10n.translate('hub_module_dates_society_sub');
+    }
+    if (effective == TourGroup.samityPreset) {
+      return l10n.translate('hub_module_dates_samity_sub');
+    }
+    if (effective == TourGroup.studyPreset) {
+      return l10n.translate('hub_module_dates_study_sub');
+    }
+    if (effective == TourGroup.friendsPreset) {
+      return l10n.translate('hub_module_dates_friends_sub');
+    }
+    if (effective == TourGroup.schoolPreset) {
+      return l10n.translate('hub_module_dates_school_sub');
+    }
+    if (effective == TourGroup.sportsPreset) {
+      return l10n.translate('hub_module_dates_sports_sub');
+    }
+    if (effective == TourGroup.committeePreset) {
       return l10n.translate('hub_module_dates_committee_sub');
     }
     if (!group.isFamily) return l10n.translate('hub_module_dates_trip_sub');
-    if (group.isHousehold) return l10n.translate('hub_module_family_dates_sub');
+    if (group.isHousehold && effective == null) {
+      return l10n.translate('hub_module_family_dates_sub');
+    }
   }
   return l10n.translate('hub_module_dates_general_sub');
 }
 
-/// Returns the group-aware title for the date editor modal bottom sheet.
 String groupDateModalHeader(
   TourGroup? group,
   AppLocalizations l10n, {
   required bool isAdd,
   required bool canEdit,
 }) {
+  final isHousehold =
+      group?.isHousehold == true && group?.effectivePreset == null;
   if (!canEdit && !isAdd) {
-    if (group?.isHousehold == true) return l10n.translate('fd_view_title');
+    if (isHousehold) return l10n.translate('fd_view_title');
     return l10n.translate('fd_view_general');
   }
   if (!isAdd) {
-    if (group?.isHousehold == true) return l10n.translate('fd_edit_title');
+    if (isHousehold) return l10n.translate('fd_edit_title');
     return l10n.translate('fd_edit_general');
   }
   if (group != null) {
-    if (group.isOffice) return l10n.translate('fd_add_office');
-    if (group.isCampus) return l10n.translate('fd_add_campus');
-    if (group.isMess) return l10n.translate('fd_add_mess');
-    if (group.isSociety) return l10n.translate('fd_add_society');
-    if (group.isSamity) return l10n.translate('fd_add_samity');
-    if (group.isStudy) return l10n.translate('fd_add_study');
-    if (group.isFriends) return l10n.translate('fd_add_friends');
-    if (group.isSchool) return l10n.translate('fd_add_school');
-    if (group.isSports) return l10n.translate('fd_add_sports');
-    if (group.isCommittee) return l10n.translate('fd_add_committee');
+    final effective = group.effectivePreset;
+    if (effective == TourGroup.officePreset) {
+      return l10n.translate('fd_add_office');
+    }
+    if (effective == TourGroup.campusPreset) {
+      return l10n.translate('fd_add_campus');
+    }
+    if (effective == TourGroup.messPreset) return l10n.translate('fd_add_mess');
+    if (effective == TourGroup.societyPreset) {
+      return l10n.translate('fd_add_society');
+    }
+    if (effective == TourGroup.samityPreset) {
+      return l10n.translate('fd_add_samity');
+    }
+    if (effective == TourGroup.studyPreset) {
+      return l10n.translate('fd_add_study');
+    }
+    if (effective == TourGroup.friendsPreset) {
+      return l10n.translate('fd_add_friends');
+    }
+    if (effective == TourGroup.schoolPreset) {
+      return l10n.translate('fd_add_school');
+    }
+    if (effective == TourGroup.sportsPreset) {
+      return l10n.translate('fd_add_sports');
+    }
+    if (effective == TourGroup.committeePreset) {
+      return l10n.translate('fd_add_committee');
+    }
     if (!group.isFamily) return l10n.translate('fd_add_trip');
-    if (group.isHousehold) return l10n.translate('fd_add_title');
+    if (isHousehold) return l10n.translate('fd_add_title');
   }
   return l10n.translate('fd_add_general');
 }
 
 /// Returns the localized empty state message for the dates list.
 String groupDateEmptyText(TourGroup? group, AppLocalizations l10n) {
-  if (group?.isHousehold == true) {
+  final isHousehold =
+      group?.isHousehold == true && group?.effectivePreset == null;
+  if (isHousehold) {
     return l10n.translate('fd_empty');
   }
   return l10n.translate('fd_empty_general');

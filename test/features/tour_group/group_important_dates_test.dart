@@ -127,6 +127,32 @@ void main() {
           'Add hangout or friends date');
     });
 
+    test('group with preset null but friends in name infers friends preset',
+        () {
+      final friendsByName = TourGroup(
+        id: 'f_null_preset',
+        name: 'Notre Dame College Friends',
+        kind: GroupKind.family,
+        preset: null,
+        ownerEmail: 'ndc@bhromon.fun',
+        inviteCode: 'NDC12345',
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 12, 31),
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      expect(friendsByName.effectivePreset, TourGroup.friendsPreset);
+      expect(friendsByName.preset, isNull);
+
+      final l10nBn = AppLocalizations(const Locale('bn'));
+      expect(
+          groupDateScreenTitle(friendsByName, l10nBn), 'আড্ডা ও বিশেষ তারিখ');
+      expect(
+          groupDateModalHeader(friendsByName, l10nBn,
+              isAdd: true, canEdit: true),
+          'নতুন আড্ডা বা বিশেষ তারিখ');
+    });
+
     test('household group vs other presets show correct headers', () {
       final household = TourGroup(
         id: 'home_1',

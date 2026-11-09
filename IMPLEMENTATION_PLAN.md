@@ -41,22 +41,22 @@ Deliver Sprint 7 specializations across everyday circles (Mess, Society, Office/
   - Add morning duty reminder logic in `media-server/notifications.py`.
 
 ### Phase 2: Society Service Requests Upgrades (Task 9.2)
-- [ ] **Task 2.1: Photo Attachments in Service Requests**
+- [x] **Task 2.1: Photo Attachments in Service Requests**
   - Add `photos: List<String>` to `ServiceRequest` model.
   - Add image picker & uploader in request creation dialog in `society_requests_screen.dart`.
-- [ ] **Task 2.2: Status Timeline & Maintenance Ledger Booking**
+- [x] **Task 2.2: Status Timeline & Maintenance Ledger Booking**
   - Render 3-step visual status timeline with admin note in `society_requests_screen.dart`.
   - Add "Book to Ledger" action on resolved requests prefilling the Maintenance category.
 
 ### Phase 3: Office & Campus Notice Progress Ring (Task 9.3)
-- [ ] **Task 3.1: Response Progress Ring on Notices**
+- [x] **Task 3.1: Response Progress Ring on Notices**
   - Calculate response count and total active members in `TourNoticesScreen`.
   - Display circular progress ring showing acknowledgment percentage.
-- [ ] **Task 3.2: Pending Members Drawer**
+- [x] **Task 3.2: Pending Members Drawer**
   - Add bottom sheet / drawer showing who answered and who is pending.
 
 ### Phase 4: Samity Receipts & Verification (Task 9.4)
-- [ ] **Task 4.1: Samity Payout Receipt Upload & Verification**
+- [x] **Task 4.1: Samity Payout Receipt Upload & Verification**
   - Add receipt photo URL and `isVerified` flag to `SamityPayout`.
   - Add receipt viewer and beneficiary "Confirm Received" verification button in `SamitySheet`.
 

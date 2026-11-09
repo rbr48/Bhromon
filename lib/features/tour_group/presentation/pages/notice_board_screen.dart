@@ -160,7 +160,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       if (g.isSociety) return l10n.translate('tour_meeting_point_society');
       if (g.isSamity) return l10n.translate('tour_meeting_point_samity');
       if (g.isStudy) return l10n.translate('tour_meeting_point_study');
-      if (g.isFamily) return l10n.translate('tour_meeting_point_family');
+      if (g.isFriends) return l10n.translate('tour_meeting_point_friends');
+      if (g.isSchool) return l10n.translate('tour_meeting_point_school');
+      if (g.isSports) return l10n.translate('tour_meeting_point_sports');
+      if (g.isCommittee) return l10n.translate('tour_meeting_point_committee');
+      if (g.isHousehold) return l10n.translate('tour_meeting_point_family');
     }
     return l10n.translate('tour_meeting_point_default', args: {
       'destination': _effectiveDestination(l10n),
@@ -183,7 +187,15 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         fallback = '${g.name} Meeting Venue';
       } else if (g.isStudy) {
         fallback = '${g.name} Library';
-      } else if (g.isFamily) {
+      } else if (g.isFriends) {
+        fallback = '${g.name} Hangout Spot';
+      } else if (g.isSchool) {
+        fallback = '${g.name} School';
+      } else if (g.isSports) {
+        fallback = '${g.name} Sports Ground';
+      } else if (g.isCommittee) {
+        fallback = '${g.name} Community Center';
+      } else if (g.isHousehold) {
         fallback = '${g.name} Residence';
       } else {
         final cur = g.currentDestination(_now);
@@ -273,7 +285,67 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               'Seminar Hall'
             ];
     }
-    if (g.isFamily) {
+    if (g.isFriends) {
+      return isBn
+          ? const [
+              'প্রিয় ক্যাফে ও আড্ডার স্থান',
+              'টিএসসি বা আড্ডার মোড়',
+              'রেস্তোরাঁ ও ফুড কোর্ট',
+              'দোস্তের বাসা বা ছাদ'
+            ]
+          : const [
+              'Favorite Cafe & Hangout',
+              'Campus Hangout Corner',
+              'Food Court & Restaurant',
+              "Friend's Place / Rooftop"
+            ];
+    }
+    if (g.isSchool) {
+      return isBn
+          ? const [
+              'স্কুল অডিটোরিয়াম',
+              'প্রধান ফটক',
+              'স্টাফ রুম',
+              'মাঠের প্যাভিলিয়ন'
+            ]
+          : const [
+              'School Auditorium',
+              'Main Gate',
+              'Staff Room',
+              'School Field & Pavilion'
+            ];
+    }
+    if (g.isSports) {
+      return isBn
+          ? const [
+              'ড্রেসিং রুম',
+              'ক্লাব হাউজ',
+              'স্টেডিয়াম গ্যালারি',
+              'জিমনেসিয়াম'
+            ]
+          : const [
+              'Dressing Room',
+              'Club House',
+              'Stadium Gallery',
+              'Gymnasium'
+            ];
+    }
+    if (g.isCommittee) {
+      return isBn
+          ? const [
+              'কমিটি কনফারেন্স রুম',
+              'কমিউনিটি হল',
+              'অ্যাসোসিয়েশন অফিস',
+              'পার্ক প্রাঙ্গণ'
+            ]
+          : const [
+              'Committee Conference Room',
+              'Community Hall',
+              'Association Office',
+              'Park / Plaza'
+            ];
+    }
+    if (g.isHousehold) {
       return isBn
           ? const ['ড্রয়িং রুম', 'পারিবারিক বাসভবন', 'ডাইনিং স্পেস', 'বাগান']
           : const ['Living Room', 'Family Residence', 'Dining Area', 'Garden'];
@@ -562,7 +634,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         fontSize: 18,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                _progress(l10n, a, rollcall),
+                _progressRing(l10n, a, rollcall),
                 const SizedBox(height: 12),
                 if (a.waiting.isNotEmpty) ...[
                   Row(children: [
@@ -1002,6 +1074,88 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     );
   }
 
+  Widget _progressRing(AppLocalizations l10n, NoticeAnswers a, bool rollcall) {
+    final pct = (a.ratio * 100).round();
+    final isDone = a.waiting.isEmpty && a.total > 0;
+    final ringColor = isDone ? AppColors.mintGreen : AppColors.gold;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: context.forest.divider10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 38,
+            height: 38,
+            child: Stack(
+              fit: StackFit.expand,
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: a.ratio,
+                  strokeWidth: 3.5,
+                  color: ringColor,
+                  backgroundColor: context.forest.divider10,
+                ),
+                Center(
+                  child: Text(
+                    '$pct%',
+                    style: TextStyle(
+                      color: ringColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.translate(
+                      rollcall ? 'notice_present_of' : 'notice_answered_of',
+                      args: {
+                        'n': l10n.number(a.answered.length),
+                        'total': l10n.number(a.total),
+                      }),
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  a.waiting.isEmpty
+                      ? l10n.translate(rollcall
+                          ? 'notice_progress_all_present'
+                          : 'notice_progress_all_done')
+                      : l10n.translate('notice_pending_count',
+                          args: {'n': l10n.number(a.waiting.length)}),
+                  style: TextStyle(
+                    color: isDone ? AppColors.mintGreen : context.forest.text54,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded,
+              size: 16, color: context.forest.text38),
+        ],
+      ),
+    );
+  }
+
   Widget _progress(AppLocalizations l10n, NoticeAnswers a, bool rollcall) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1201,10 +1355,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     Expanded(
                       child: InkWell(
                         onTap: () => _answersSheet(n),
-                        child: _progress(
-                            l10n,
-                            NoticeEngine.answers(n, _members),
-                            n.kind == NoticeKind.rollcall),
+                        child: (_group?.isManaged ?? false)
+                            ? _progressRing(
+                                l10n,
+                                NoticeEngine.answers(n, _members),
+                                n.kind == NoticeKind.rollcall)
+                            : _progress(l10n, NoticeEngine.answers(n, _members),
+                                n.kind == NoticeKind.rollcall),
                       ),
                     ),
                   ]),
