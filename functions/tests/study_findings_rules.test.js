@@ -207,9 +207,9 @@ describe('shared findings and the checks on them', () => {
 
     test('a finding needs a result and a method, within their limits', async () => {
       await assertFails(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { method: '' })));
-      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { text: 'x'.repeat(1001) })));
-      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { method: 'x'.repeat(501) })));
-      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-new'), newFinding(people.member.email, { text: 'x'.repeat(1000) })));
+      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-long-text'), newFinding(people.member.email, { text: 'x'.repeat(1001) })));
+      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-long-method'), newFinding(people.member.email, { method: 'x'.repeat(501) })));
+      await assertSucceeds(setDoc(findingRef(db('member'), 'fd-long-1000'), newFinding(people.member.email, { text: 'x'.repeat(1000) })));
     });
 
     test('a finding cannot be posted when its module is off, by a member or an admin', async () => {
@@ -301,7 +301,7 @@ describe('shared findings and the checks on them', () => {
     test('a check has a verdict of confirm or challenge, and a note of any length', async () => {
       await assertFails(checkBatch('other', F_MEMBER, 'maybe'));
       await assertSucceeds(checkBatch('other', F_MEMBER, 'confirm', SUBJECT, { note: 'x'.repeat(301) }));
-      await assertSucceeds(checkBatch('other', F_MEMBER, 'confirm', SUBJECT, { note: 'x'.repeat(300) }));
+      await assertSucceeds(checkBatch('admin', F_MEMBER, 'confirm', SUBJECT, { note: 'x'.repeat(300) }));
     });
   });
 

@@ -534,6 +534,17 @@ class FcmService {
           GoRouter.of(context).go('/group/$tourId/family-dates');
         }
         break;
+      case 'problem_set':
+        if (tourId != null) {
+          GoRouter.of(context).go('/group/$tourId/study-subjects');
+        }
+        break;
+      case 'study_reply':
+      case 'study_material':
+        if (tourId != null) {
+          GoRouter.of(context).go('/group/$tourId/study-books');
+        }
+        break;
       case 'ledger':
       case 'expense':
         if (tourId != null) GoRouter.of(context).go('/group/$tourId/ledger');

@@ -246,6 +246,35 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertSucceeds(updateDoc(materialRef(db('admin'), HIDDEN), { status: 'published' }));
     });
 
+    test('an admin\'s publish carries its stamp: the server time, and the admin as the publisher', async () => {
+      await assertSucceeds(updateDoc(materialRef(db('admin'), PENDING), {
+        status: 'published',
+        publishedAt: serverTimestamp(),
+        publishedByEmail: people.admin.email,
+      }));
+      await assertFails(updateDoc(materialRef(db('admin'), HIDDEN), {
+        status: 'published',
+        publishedAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')),
+        publishedByEmail: people.admin.email,
+      }));
+      await assertFails(updateDoc(materialRef(db('admin'), HIDDEN), {
+        status: 'published',
+        publishedAt: serverTimestamp(),
+        publishedByEmail: people.owner.email,
+      }));
+    });
+
+    test('a material filed as published at once carries the same stamp', async () => {
+      await assertSucceeds(setDoc(materialRef(db('admin'), 'new-stamped'), {
+        ...linkFields(people.admin.email, { status: 'published', publishedAt: serverTimestamp(), publishedByEmail: people.admin.email }),
+        createdAt: serverTimestamp(),
+      }));
+      await assertFails(setDoc(materialRef(db('admin'), 'new-stamped-bad'), {
+        ...linkFields(people.admin.email, { status: 'published', publishedAt: serverTimestamp(), publishedByEmail: people.owner.email }),
+        createdAt: serverTimestamp(),
+      }));
+    });
+
     test('a material\'s book, kind, address and author do not change after filing', async () => {
       await assertFails(updateDoc(materialRef(db('admin'), PENDING), { url: 'https://example.com/other' }));
       await assertFails(updateDoc(materialRef(db('admin'), PENDING), { kind: 'note', body: 'x', url: null }));

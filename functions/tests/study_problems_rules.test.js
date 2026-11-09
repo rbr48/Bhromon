@@ -240,9 +240,9 @@ describe('problems, reference solutions, working and reviews', () => {
 
     test('a problem statement is required and can be any length, and so can its title', async () => {
       await assertFails(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: '' })));
-      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: 'x'.repeat(1001) })));
-      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { title: 'x'.repeat(121) })));
-      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-new'), newProblem(people.member.email, { text: 'x'.repeat(1000) })));
+      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-long-text'), newProblem(people.member.email, { text: 'x'.repeat(1001) })));
+      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-long-title'), newProblem(people.member.email, { title: 'x'.repeat(121) })));
+      await assertSucceeds(setDoc(problemRef(db('member'), 'pr-long-1000'), newProblem(people.member.email, { text: 'x'.repeat(1000) })));
     });
 
     test('a problem cannot be posted when its module is off, by a member or an admin', async () => {
@@ -404,7 +404,7 @@ describe('problems, reference solutions, working and reviews', () => {
     test('a note can be any length, and the verdict is right or gap', async () => {
       await assertSucceeds(reviewBatch('member', P_REVIEW, people.other.email, 'right', SUBJECT, { note: 'x'.repeat(301) }));
       await assertFails(reviewBatch('member', P_REVIEW, people.other.email, 'maybe'));
-      await assertSucceeds(reviewBatch('member', P_REVIEW, people.other.email, 'gap', SUBJECT, { note: 'x'.repeat(300) }));
+      await assertSucceeds(reviewBatch('admin', P_REVIEW, people.other.email, 'gap', SUBJECT, { note: 'x'.repeat(300) }));
     });
 
     test('a member reviews a working once: a second review is refused', async () => {
@@ -714,6 +714,28 @@ describe('problems, reference solutions, working and reviews', () => {
       batch.update(problemRef(f, P_ADMIN), { setId: deleteField() });
       batch.delete(setRef(f, SET_ONE));
       await assertSucceeds(batch.commit());
+    });
+
+    test('a set is made without a reminder stamp, which the media server writes', async () => {
+      await assertFails(setDoc(setRef(db('admin'), 'set-stamped'), newSet(people.admin.email, { reminderSentAt: PAST })));
+      await assertSucceeds(setDoc(setRef(db('admin'), 'set-clean'), newSet(people.admin.email)));
+    });
+
+    test('the reminder stamp stays with its due date: a moved date must clear it, and an admin cannot add one', async () => {
+      await assertSucceeds(setDoc(setRef(db('admin'), SET_ONE), newSet(people.admin.email)));
+      await assertFails(updateDoc(setRef(db('admin'), SET_ONE), { reminderSentAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await updateDoc(setRef(ctx.firestore(), SET_ONE), { reminderSentAt: PAST });
+      });
+      // Renaming keeps the stamp, so the reminder is not sent again.
+      await assertSucceeds(updateDoc(setRef(db('admin'), SET_ONE), { title: 'Week two', updatedAt: serverTimestamp() }));
+      // Moving the date while the stamp stays is refused; moving it and clearing the stamp is allowed.
+      await assertFails(updateDoc(setRef(db('admin'), SET_ONE), { dueAt: FUTURE, updatedAt: serverTimestamp() }));
+      await assertSucceeds(updateDoc(setRef(db('admin'), SET_ONE), {
+        dueAt: FUTURE,
+        reminderSentAt: deleteField(),
+        updatedAt: serverTimestamp(),
+      }));
     });
   });
 });

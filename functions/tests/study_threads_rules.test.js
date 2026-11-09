@@ -240,9 +240,9 @@ describe('study discussions: threads, replies, helpful marks and reports', () =>
       await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), reportCount: 1 }));
     });
 
-    test('a reply is 1 to 1000 characters', async () => {
+    test('a reply is 1 character or more, with no upper limit', async () => {
       await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: '' }));
-      await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1001) }));
+      await assertSucceeds(setDoc(replyRef(db('other'), 'new-reply-long'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1001) }));
       await assertSucceeds(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1000) }));
     });
 

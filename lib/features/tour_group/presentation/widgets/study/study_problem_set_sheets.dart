@@ -278,6 +278,7 @@ class _StudyProblemSetsManagerState extends State<_StudyProblemSetsManager> {
         set.id,
         title: draft.title,
         dueAt: draft.dueAt,
+        dueChanged: problemSetDueMoved(set.dueAt, draft.dueAt),
       ),
       'study_set_saved',
     );

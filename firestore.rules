@@ -1003,9 +1003,10 @@ service cloud.firestore {
     }
     // A problem set: a name of up to 120 characters, an optional due date (the start of its day), and who made it and when.
     function validStudyProblemSet(d) {
-      return d.keys().hasOnly(['title', 'dueAt', 'createdByEmail', 'createdAt', 'updatedAt']) &&
+      return d.keys().hasOnly(['title', 'dueAt', 'createdByEmail', 'createdAt', 'updatedAt', 'reminderSentAt']) &&
              d.title is string && d.title.size() >= 1 &&
              (d.get('dueAt', null) == null || d.dueAt is timestamp) &&
+             (d.get('reminderSentAt', null) == null || d.reminderSentAt is timestamp) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp && d.updatedAt is timestamp;
     }
@@ -1281,7 +1282,7 @@ service cloud.firestore {
     // A material: its title, kind, book and optional chapter, its address or text, whether it waits or is
     // published or hidden, the member's confirmation of rights, and its reports.
     function validStudyMaterial(tourId, d) {
-      return d.keys().hasOnly(['title', 'kind', 'bookId', 'chapterId', 'url', 'fileName', 'sizeBytes', 'body', 'status', 'rightsConfirmed', 'reportCount', 'reportedAt', 'createdByEmail', 'createdAt', 'replacesId']) &&
+      return d.keys().hasOnly(['title', 'kind', 'bookId', 'chapterId', 'url', 'fileName', 'sizeBytes', 'body', 'status', 'rightsConfirmed', 'reportCount', 'reportedAt', 'createdByEmail', 'createdAt', 'replacesId', 'publishedAt', 'publishedByEmail']) &&
              d.title is string && d.title.size() >= 1 &&
              d.kind in ['file', 'image', 'audio', 'video', 'link', 'note'] &&
              d.bookId is string && d.bookId.size() >= 1 && d.bookId.size() <= 40 &&
@@ -1294,6 +1295,8 @@ service cloud.firestore {
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
              (d.get('reportedAt', null) == null || d.reportedAt is timestamp) &&
+             (d.get('publishedAt', null) == null || d.publishedAt is timestamp) &&
+             (d.get('publishedByEmail', null) == null || (d.publishedByEmail is string && d.publishedByEmail.size() <= 254)) &&
              studyMaterialShapeOk(tourId, d);
     }
     // A report of a material: one of the reasons, and when it was made.
@@ -1305,6 +1308,12 @@ service cloud.firestore {
     // Whether the group publishes materials without an admin's approval. Off unless an admin turns it on.
     function studyMaterialPublishesDirectly(tourId) {
       return get(/databases/$(database)/documents/tours/$(tourId)).data.get('studyPolicy', {}).get('materialsNeedApproval', true) == false;
+    }
+    // The publish stamp of a material: when an admin published it, and who did. Optional, so a publish from an
+    // earlier app still works; the media server tells the group once, from the stamp.
+    function studyPublishStampOk(d) {
+      return (d.get('publishedAt', null) == null || d.publishedAt == request.time) &&
+             (d.get('publishedByEmail', null) == null || d.publishedByEmail == tourUserEmail());
     }
     // Whether an update to a material is allowed. An admin publishes a pending material or restores a hidden
     // one. The uploader or an admin edits the title. A member's report hides it at once, with its count and
@@ -1325,8 +1334,8 @@ service cloud.firestore {
              newData.get('fileName', null) == oldData.get('fileName', null) &&
              newData.get('replacesId', null) == oldData.get('replacesId', null) &&
              (
-               (byAdmin && changed.hasOnly(['status']) && oldData.status == 'pending' && newData.status == 'published') ||
-               (byAdmin && changed.hasOnly(['status']) && oldData.status == 'hidden' && newData.status == 'published') ||
+               (byAdmin && changed.hasOnly(['status', 'publishedAt', 'publishedByEmail']) && oldData.status == 'pending' && newData.status == 'published' && studyPublishStampOk(newData)) ||
+               (byAdmin && changed.hasOnly(['status', 'publishedAt', 'publishedByEmail']) && oldData.status == 'hidden' && newData.status == 'published' && studyPublishStampOk(newData)) ||
                ((byAdmin || byUploader) && changed.hasOnly(['title'])) ||
                (!byUploader && oldData.status in ['published', 'hidden'] && changed.hasOnly(['status', 'reportCount', 'reportedAt']) &&
                 newData.status == 'hidden' && newData.reportCount == oldData.reportCount + 1 &&
@@ -1852,6 +1861,8 @@ service cloud.firestore {
                          request.resource.data.createdAt == request.time &&
                          request.resource.data.reportCount == 0 &&
                          request.resource.data.get('reportedAt', null) == null &&
+                         (request.resource.data.get('publishedAt', null) == null || request.resource.data.publishedAt == request.time) &&
+                         (request.resource.data.get('publishedByEmail', null) == null || request.resource.data.publishedByEmail == tourUserEmail()) &&
                          validStudyMaterial(tourId, request.resource.data) &&
                          (request.resource.data.status == 'pending' ||
                           (request.resource.data.status == 'published' &&
@@ -2041,6 +2052,7 @@ service cloud.firestore {
                            request.resource.data.createdByEmail == tourUserEmail() &&
                            request.resource.data.createdAt == request.time &&
                            request.resource.data.updatedAt == request.time &&
+                           request.resource.data.get('reminderSentAt', null) == null &&
                            validStudyProblemSet(request.resource.data);
           allow update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
                            studySubjectListed(tourId, subjectId) &&
@@ -2048,6 +2060,11 @@ service cloud.firestore {
                            request.resource.data.createdByEmail == resource.data.createdByEmail &&
                            request.resource.data.createdAt == resource.data.createdAt &&
                            request.resource.data.updatedAt == request.time &&
+                           // The stamp stays only while the date does; a moved date needs the stamp cleared with it.
+                           ((request.resource.data.get('reminderSentAt', null) == resource.data.get('reminderSentAt', null) &&
+                             request.resource.data.get('dueAt', null) == resource.data.get('dueAt', null)) ||
+                            (request.resource.data.get('dueAt', null) != resource.data.get('dueAt', null) &&
+                             request.resource.data.get('reminderSentAt', null) == null)) &&
                            validStudyProblemSet(request.resource.data);
           allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
         }

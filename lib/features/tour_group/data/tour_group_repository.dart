@@ -3324,12 +3324,15 @@ class TourGroupRepository {
     String setId, {
     required String title,
     required DateTime? dueAt,
+    bool dueChanged = false,
   }) async {
     _requireEmail();
     await _problemSetRef(tourId, subjectId, setId).update({
       'title': title.trim(),
       'dueAt': dueAt ?? FieldValue.delete(),
       'updatedAt': FieldValue.serverTimestamp(),
+      // A moved due date gets a reminder of its own, so the stamp of the last one goes.
+      if (dueChanged) 'reminderSentAt': FieldValue.delete(),
     });
   }
 
@@ -4371,9 +4374,15 @@ class TourGroupRepository {
       createdByEmail: email,
       replacesId: replacesId,
     );
+    // A material published at once carries its publish stamp, which the media server reads to tell the group.
+    final published = status == StudyMaterialStatus.published;
     await _materialsCol(tourId).add({
       ...material.toFields(status: status),
       'createdAt': FieldValue.serverTimestamp(),
+      if (published) ...{
+        'publishedAt': FieldValue.serverTimestamp(),
+        'publishedByEmail': email,
+      },
     });
   }
 
@@ -4389,8 +4398,12 @@ class TourGroupRepository {
 
   /// Publishes a pending material, or restores a hidden one. Only an admin does this.
   Future<void> publishStudyMaterial(String tourId, String materialId) async {
-    _requireEmail();
-    await _materialDoc(tourId, materialId).update({'status': 'published'});
+    final email = _requireEmail();
+    await _materialDoc(tourId, materialId).update({
+      'status': 'published',
+      'publishedAt': FieldValue.serverTimestamp(),
+      'publishedByEmail': email,
+    });
   }
 
   /// Reports a material, once for each member. The report, the count and the hiding change in one

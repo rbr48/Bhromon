@@ -117,7 +117,10 @@ void main() {
       expect(isStudyLinkValid('https://'), isFalse);
       expect(isStudyLinkValid('example.com'), isFalse);
       expect(isStudyLinkValid(''), isFalse);
-      expect(isStudyLinkValid('https://example.com/${'x' * 2000}'), isFalse);
+    });
+
+    test('a long link is still a link: study text has no length limit', () {
+      expect(isStudyLinkValid('https://example.com/${'x' * 2000}'), isTrue);
     });
 
     test('the domain is the host without a leading www.', () {
