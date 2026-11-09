@@ -237,4 +237,25 @@ void main() {
     // The page does not even ask for a reference it may not read yet.
     expect(waiting.calls, isNot(contains('reference')));
   });
+  testWidgets(
+      'an admin with no working of their own sees the review buttons on a member\'s working, and reviews it',
+      (tester) async {
+    final repo = _FakeProblemRepo(
+      role: TourRole.admin,
+      workList: [_theirs],
+    );
+    await _pump(tester, _screen(repo, _released));
+
+    expect(find.text('Working of b@x.com'), findsOneWidget);
+    expect(find.text('Looks right'), findsOneWidget);
+    expect(find.text('Found a gap'), findsOneWidget);
+
+    await tester.tap(find.text('Looks right'));
+    await tester.pumpAndSettle();
+
+    expect(
+      repo.calls.where((call) => call.startsWith('review')),
+      ['review b@x.com right -'],
+    );
+  });
 }
