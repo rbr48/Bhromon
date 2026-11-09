@@ -18,6 +18,15 @@ class StudySessionLimits {
 
   /// The focus timer a session starts with: 25 minutes.
   static const int focusSeconds = 25 * 60;
+
+  /// The most people a study room holds. A voice room is a mesh, so each person connects to every other.
+  static const int roomMax = 6;
+
+  /// How long a session is taken to run from its start, unless its focus timer runs later.
+  static const Duration assumedLength = Duration(hours: 2);
+
+  /// How long after a session ends its study room stays open.
+  static const Duration roomGrace = Duration(hours: 24);
 }
 
 /// A member's answer to a session. Stored by name.

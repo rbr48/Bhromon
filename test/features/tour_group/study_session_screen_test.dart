@@ -118,6 +118,8 @@ void main() {
 
       expect(find.text('Read chapter one and note the train scene.'),
           findsOneWidget);
+      expect(find.text('The study room opens when the session starts.'),
+          findsOneWidget);
       await _tap(tester, find.text('Going (0)'));
 
       expect(repo.calls, ['answer going']);
@@ -135,6 +137,8 @@ void main() {
         StudySessionScreen(tourId: 'T', session: _future, repository: early),
       );
       expect(find.text('The session has not started yet.'), findsOneWidget);
+      expect(find.text('The study room opens when the session starts.'),
+          findsOneWidget);
       expect(find.text('I am here'), findsNothing);
 
       final late = _FakeSessionRepo(session: _started, role: TourRole.member);
@@ -142,6 +146,7 @@ void main() {
         tester,
         StudySessionScreen(tourId: 'T', session: _started, repository: late),
       );
+      expect(find.text('The study room has closed.'), findsOneWidget);
       await _tap(tester, find.text('I am here'));
 
       expect(late.calls, ['checkin']);

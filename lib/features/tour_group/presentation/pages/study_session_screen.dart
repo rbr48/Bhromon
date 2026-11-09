@@ -2,14 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/voice_room_service.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/models/study_session_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/study_room_rules.dart';
 import '../../domain/services/study_session_rules.dart';
 
 /// One reading session: when and where it is, the agenda and the link, each member's answer and check-in,
@@ -56,6 +59,15 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
 
   StreamSubscription<List<ReadingSession>>? _sessionsSub;
   StreamSubscription<List<StudySessionRsvp>>? _answersSub;
+  StreamSubscription<void>? _voiceSub;
+
+  // The study room's voice connection. The page shows the room, and leaves it when the page closes.
+  final VoiceRoomService _voice = VoiceRoomService();
+  late final Stream<List<VoiceParticipant>> _roomSeats =
+      _voice.watchParticipants(
+    widget.tourId,
+    studyRoomChannelId(widget.session.id),
+  );
 
   String get _me => _repository.currentEmail;
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -87,6 +99,9 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     }, onError: (Object error, StackTrace stackTrace) {
       logWarning('The answers could not be read', error, stackTrace);
     });
+    _voiceSub = _voice.changes.listen((_) {
+      if (mounted) setState(() {});
+    });
     _syncTicker();
   }
 
@@ -94,7 +109,10 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   void dispose() {
     _sessionsSub?.cancel();
     _answersSub?.cancel();
+    _voiceSub?.cancel();
     _ticker?.cancel();
+    // Leaving the page leaves this session's room, so no microphone stays on where nobody can see it.
+    if (_inRoom) unawaited(_voice.leaveVoiceRoom());
     super.dispose();
   }
 
@@ -222,6 +240,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                 ),
               ),
             ),
+          ..._roomSection(context),
           ..._timerSection(context, canManage),
           if (recap != null && !recap.isEmpty || canRecap)
             _recapSection(context, recap, canRecap),
@@ -335,11 +354,155 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     }
   }
 
-  void _say(String key) {
+  void _say(String key, {Map<String, Object> args = const {}}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(context.l10n.translate(key)),
+      content: Text(context.l10n.translate(key, args: args)),
       backgroundColor: Colors.redAccent,
     ));
+  }
+
+  /// Whether the voice service is connected to this session's study room, in this tour.
+  bool get _inRoom =>
+      _voice.isConnected &&
+      _voice.currentTourId == widget.tourId &&
+      _voice.currentChannelId == studyRoomChannelId(_session.id);
+
+  /// The study room: a voice room for this session's meeting, six people at most. It opens when the session
+  /// starts and closes 24 hours after the session is taken to end.
+  List<Widget> _roomSection(BuildContext context) {
+    final l10n = context.l10n;
+    final now = DateTime.now();
+    return [
+      const SizedBox(height: 16),
+      Text(
+        l10n.translate('study_room_title'),
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      if (_inRoom)
+        ..._roomControls(context)
+      else if (studyRoomClosed(_session, now: now))
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(l10n.translate('study_room_closed')),
+        )
+      else if (!studyRoomOpen(_session, now: now))
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(l10n.translate('study_room_opens')),
+        )
+      else
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: FilledButton.icon(
+            onPressed: _joinRoom,
+            icon: const Icon(Icons.headset_mic_rounded),
+            label: Text(l10n.translate('study_room_join')),
+          ),
+        ),
+    ];
+  }
+
+  /// Who is in the room, with their microphones, and the mute and leave controls. The other people's audio
+  /// plays through the renderers at the end, so they stay mounted while the room is open.
+  List<Widget> _roomControls(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      StreamBuilder<List<VoiceParticipant>>(
+        stream: _roomSeats,
+        builder: (context, snapshot) {
+          final people = snapshot.data ?? const <VoiceParticipant>[];
+          return Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(l10n.translate('study_room_people', args: {
+                  'count': l10n.number(people.length),
+                  'max': l10n.number(StudySessionLimits.roomMax),
+                })),
+                for (final person in people)
+                  Chip(
+                    avatar: Icon(
+                      person.isAudioMuted
+                          ? Icons.mic_off_rounded
+                          : Icons.mic_rounded,
+                      size: 16,
+                    ),
+                    label: Text(person.displayName),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _toggleMute,
+            icon: Icon(
+              _voice.isAudioMuted ? Icons.mic_rounded : Icons.mic_off_rounded,
+            ),
+            label: Text(l10n.translate(
+              _voice.isAudioMuted ? 'study_room_unmute' : 'study_room_mute',
+            )),
+          ),
+          TextButton.icon(
+            onPressed: () => _voice.leaveVoiceRoom(),
+            icon: const Icon(Icons.call_end_rounded),
+            label: Text(l10n.translate('study_room_leave')),
+          ),
+        ],
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          l10n.translate('study_room_stay'),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+      for (final renderer in _voice.remoteRenderers.values)
+        SizedBox(
+          width: 1,
+          height: 1,
+          child: RTCVideoView(renderer),
+        ),
+    ];
+  }
+
+  /// Joins this session's study room. A full room says how many it holds. The voice service leaves any other
+  /// room first.
+  Future<void> _joinRoom() async {
+    try {
+      await _voice.joinVoiceRoom(
+        tourId: widget.tourId,
+        channelId: studyRoomChannelId(_session.id),
+        myEmail: _me,
+        myName: _repository.currentDisplayName,
+        myUid: _repository.currentUid,
+        capacity: StudySessionLimits.roomMax,
+      );
+    } on VoiceRoomFullException catch (error) {
+      if (mounted) {
+        _say('study_room_full',
+            args: {'count': context.l10n.number(error.capacity)});
+      }
+    } catch (error, stackTrace) {
+      logWarning('The study room could not be joined', error, stackTrace);
+      if (mounted) _say('study_room_failed');
+    }
+  }
+
+  Future<void> _toggleMute() async {
+    try {
+      await _voice.toggleAudio();
+    } catch (error, stackTrace) {
+      logWarning('The microphone could not be switched', error, stackTrace);
+    }
   }
 
   Future<void> _answer(StudySessionResponse response) => _run(

@@ -186,6 +186,8 @@ class VoiceRoomService {
     String? photoUrl,
     required String myUid,
     bool enableVideo = false,
+    // A study room holds fewer people than a channel's voice room.
+    int capacity = kVoiceRoomMaxParticipants,
   }) async {
     // If already in a room, leave it first
     if (isConnected) {
@@ -203,8 +205,8 @@ class VoiceRoomService {
       exceptEmail: normalizeEmail(myEmail),
       now: DateTime.now(),
     );
-    if (taken >= kVoiceRoomMaxParticipants) {
-      throw const VoiceRoomFullException(kVoiceRoomMaxParticipants);
+    if (taken >= capacity) {
+      throw VoiceRoomFullException(capacity);
     }
 
     _activeTourId = tourId;
