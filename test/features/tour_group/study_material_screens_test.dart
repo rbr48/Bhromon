@@ -151,6 +151,15 @@ final _hidden = StudyMaterial(
   createdAt: DateTime(2029, 12, 30),
 );
 
+/// Taps a control after scrolling it into view. The composer grows as errors appear, which pushes the
+/// Share button below the test window's default height.
+Future<void> _tap(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('the materials of a book', () {
     testWidgets(
@@ -237,9 +246,9 @@ void main() {
       await tester.enterText(find.byType(TextField).at(0), 'My summary');
       await tester.enterText(
           find.byType(TextField).at(1), 'Anna meets Vronsky.');
-      await tester.tap(find.byType(CheckboxListTile));
+      await _tap(tester, find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Share with the group'));
+      await _tap(tester, find.text('Share with the group'));
       await tester.pumpAndSettle();
 
       expect(repo.calls, ['add note My summary Anna meets Vronsky.']);
@@ -250,6 +259,10 @@ void main() {
     testWidgets(
         'it refuses a blank title and an unconfirmed note, then returns the draft',
         (tester) async {
+      // A window tall enough to show the whole sheet, so each field and button can be tapped.
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
       StudyMaterialDraft? saved;
       await _pump(
         tester,
@@ -272,27 +285,27 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Share with the group'));
+      await _tap(tester, find.text('Share with the group'));
       await tester.pumpAndSettle();
       expect(find.text('Give the material a title.'), findsOneWidget);
       expect(saved, isNull);
 
       await tester.enterText(find.byType(TextField).at(0), 'Chapter notes');
-      await tester.tap(find.text('Share with the group'));
+      await _tap(tester, find.text('Share with the group'));
       await tester.pumpAndSettle();
       expect(find.text('Write the note first.'), findsOneWidget);
 
       await tester.enterText(
           find.byType(TextField).at(1), 'The train appears three times.');
-      await tester.tap(find.text('Share with the group'));
+      await _tap(tester, find.text('Share with the group'));
       await tester.pumpAndSettle();
       expect(find.text('Confirm that you have the right to share it.'),
           findsOneWidget);
       expect(saved, isNull);
 
-      await tester.tap(find.byType(CheckboxListTile));
+      await _tap(tester, find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Share with the group'));
+      await _tap(tester, find.text('Share with the group'));
       await tester.pumpAndSettle();
       expect(saved?.title, 'Chapter notes');
       expect(saved?.kind, StudyMaterialKind.note);
@@ -301,6 +314,9 @@ void main() {
     });
 
     testWidgets('a link must be a web address', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
       await _pump(
         tester,
         Scaffold(
@@ -321,9 +337,9 @@ void main() {
       await tester.enterText(find.byType(TextField).at(0), 'Reference');
       await tester.enterText(
           find.byType(TextField).at(1), 'ftp://example.com/x');
-      await tester.tap(find.byType(CheckboxListTile));
+      await _tap(tester, find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Share with the group'));
+      await _tap(tester, find.text('Share with the group'));
       await tester.pumpAndSettle();
 
       expect(
