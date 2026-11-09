@@ -5,6 +5,8 @@ import 'package:bhromon/features/tour_group/domain/models/study_subject_models.d
 import 'package:bhromon/features/tour_group/domain/models/study_thread_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_problem_screen.dart';
+import 'package:bhromon/features/tour_group/presentation/pages/study_problems_screen.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +62,13 @@ class _FakeProblemRepo extends TourGroupRepository {
     calls.add('reference');
     return reference;
   }
+
+  @override
+  Stream<List<StudyProblem>> watchStudyProblems(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(const []);
 
   @override
   Stream<List<StudyProblemSolution>> watchStudyWork(
@@ -413,5 +422,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.calls, contains('restore work b@x.com'));
+  });
+
+  testWidgets(
+      'StudyProblemsScreen and StudyProblemScreen have GroupPopScope and GroupBackButton',
+      (tester) async {
+    final repo = _FakeProblemRepo(role: TourRole.member);
+    await _pump(tester, _screen(repo, _released));
+
+    // Verify StudyProblemScreen has GroupPopScope and GroupBackButton
+    expect(find.byType(GroupPopScope), findsOneWidget);
+    expect(find.byType(GroupBackButton), findsOneWidget);
+
+    // Verify StudyProblemsScreen has GroupPopScope and GroupBackButton
+    await _pump(
+      tester,
+      MaterialApp(
+        supportedLocales: const [Locale('en'), Locale('bn')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        home: StudyProblemsScreen(
+          tourId: 't1',
+          subject: const StudySubject(id: 'sub1', title: 'Math'),
+          settings: const StudyModuleSettings(
+            key: StudyModuleKey.problems,
+            name: 'Problems',
+            enabled: true,
+            postPolicy: StudyPostPolicy.members,
+          ),
+          repository: repo,
+        ),
+      ),
+    );
+
+    expect(find.byType(GroupPopScope), findsOneWidget);
+    expect(find.byType(GroupBackButton), findsOneWidget);
   });
 }

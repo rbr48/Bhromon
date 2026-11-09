@@ -11,6 +11,7 @@ import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_problem_rules.dart';
+import '../widgets/group_back_button.dart';
 import '../widgets/study/study_problem_composer.dart';
 
 /// One problem: its statement, its reference solution once it has opened, the member's own working,
@@ -612,94 +613,99 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
     final heading = _problem.title.isEmpty
         ? l10n.translate('study_problem_screen_title')
         : _problem.title;
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(heading,
-            style: TextStyle(
-                color: palette.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        backgroundColor: palette.card,
-        foregroundColor: palette.text,
-        iconTheme: IconThemeData(color: palette.text),
-        elevation: 0,
-        actions: [
-          if (_canManage || _canReportProblem)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded, color: palette.text),
-              tooltip: l10n.translate('study_post_menu'),
-              onSelected: (value) {
-                switch (value) {
-                  case 'report':
-                    _reportProblem();
-                  case 'edit':
-                    _editProblem();
-                  case 'show':
-                    _setShown();
-                  case 'pin':
-                    _togglePinned();
-                  case 'release':
-                    _pickRelease();
-                  case 'clear_release':
-                    _clearRelease();
-                  case 'delete':
-                    _remove();
-                }
-              },
-              itemBuilder: (_) => [
-                if (_canReportProblem)
-                  PopupMenuItem<String>(
-                    value: 'report',
-                    child: Text(l10n.translate('study_problem_report')),
-                  ),
-                if (_isAuthor)
-                  PopupMenuItem<String>(
-                    value: 'edit',
-                    child: Text(l10n.translate('study_edit')),
-                  ),
-                if (_isAdmin && !_problem.shown && !_problem.isReported)
-                  PopupMenuItem<String>(
-                    value: 'show',
-                    child: Text(l10n.translate('study_post_show')),
-                  ),
-                if (_isAdmin)
-                  PopupMenuItem<String>(
-                    value: 'pin',
-                    child: Text(l10n.translate(_problem.pinned
-                        ? 'study_post_unpin'
-                        : 'study_post_pin')),
-                  ),
-                if (_isAdmin)
-                  PopupMenuItem<String>(
-                    value: 'release',
-                    child: Text(l10n.translate('study_problem_release_set')),
-                  ),
-                if (_isAdmin && _problem.releaseAt != null)
-                  PopupMenuItem<String>(
-                    value: 'clear_release',
-                    child: Text(l10n.translate('study_problem_release_clear')),
-                  ),
-                if (_canManage)
-                  PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Text(l10n.translate('study_remove')),
-                  ),
-              ],
-            ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          _statementCard(),
-          const SizedBox(height: 8),
-          _referenceCard(now),
-          const SizedBox(height: 8),
-          _ownWorkCard(),
-          const SizedBox(height: 8),
-          _othersWorkSection(),
-        ],
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: palette.background,
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(heading,
+              style: TextStyle(
+                  color: palette.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18)),
+          backgroundColor: palette.card,
+          foregroundColor: palette.text,
+          iconTheme: IconThemeData(color: palette.text),
+          elevation: 0,
+          actions: [
+            if (_canManage || _canReportProblem)
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded, color: palette.text),
+                tooltip: l10n.translate('study_post_menu'),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'report':
+                      _reportProblem();
+                    case 'edit':
+                      _editProblem();
+                    case 'show':
+                      _setShown();
+                    case 'pin':
+                      _togglePinned();
+                    case 'release':
+                      _pickRelease();
+                    case 'clear_release':
+                      _clearRelease();
+                    case 'delete':
+                      _remove();
+                  }
+                },
+                itemBuilder: (_) => [
+                  if (_canReportProblem)
+                    PopupMenuItem<String>(
+                      value: 'report',
+                      child: Text(l10n.translate('study_problem_report')),
+                    ),
+                  if (_isAuthor)
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Text(l10n.translate('study_edit')),
+                    ),
+                  if (_isAdmin && !_problem.shown && !_problem.isReported)
+                    PopupMenuItem<String>(
+                      value: 'show',
+                      child: Text(l10n.translate('study_post_show')),
+                    ),
+                  if (_isAdmin)
+                    PopupMenuItem<String>(
+                      value: 'pin',
+                      child: Text(l10n.translate(_problem.pinned
+                          ? 'study_post_unpin'
+                          : 'study_post_pin')),
+                    ),
+                  if (_isAdmin)
+                    PopupMenuItem<String>(
+                      value: 'release',
+                      child: Text(l10n.translate('study_problem_release_set')),
+                    ),
+                  if (_isAdmin && _problem.releaseAt != null)
+                    PopupMenuItem<String>(
+                      value: 'clear_release',
+                      child:
+                          Text(l10n.translate('study_problem_release_clear')),
+                    ),
+                  if (_canManage)
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Text(l10n.translate('study_remove')),
+                    ),
+                ],
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            _statementCard(),
+            const SizedBox(height: 8),
+            _referenceCard(now),
+            const SizedBox(height: 8),
+            _ownWorkCard(),
+            const SizedBox(height: 8),
+            _othersWorkSection(),
+          ],
+        ),
       ),
     );
   }
