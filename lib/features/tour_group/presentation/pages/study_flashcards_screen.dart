@@ -10,6 +10,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../data/study_activity_log.dart';
 import '../../data/study_flashcard_store.dart';
 import '../../domain/models/study_flashcard_models.dart';
 import '../../domain/models/study_models.dart';
@@ -26,7 +27,11 @@ class StudyFlashcardsScreen extends StatefulWidget {
     required this.book,
     this.store,
     this.today,
+    this.activity,
   });
+
+  /// Where reviews are counted for the streak and the progress card. Null in the app; tests pass one.
+  final StudyActivityLog? activity;
 
   final StudyBook book;
 
@@ -135,6 +140,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
         cards: due,
         store: _store,
         today: widget.today,
+        activity: widget.activity,
       ),
     ));
     if (mounted) await _load();

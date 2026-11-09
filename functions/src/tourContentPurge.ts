@@ -152,6 +152,7 @@ const STUDY_MATERIAL: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_QUIZ: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_QUESTION: AnonymizePlan = { emails: ['proposedByEmail'] };
 const STUDY_TERM: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_SUMMARY: AnonymizePlan = { emails: ['editorEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -517,6 +518,8 @@ export async function purgeMemberContent(
     for (const chapter of chapters.docs) {
       const read = chapter.ref.collection('reads').doc(email);
       if ((await read.get()).exists) await read.delete();
+      // Summary revisions keep their words under the stand-in, so the group's history stays whole.
+      await applyToQuery(db, chapter.ref.collection('summaries'), anonymize(STUDY_SUMMARY, email, standIn));
     }
   }
 

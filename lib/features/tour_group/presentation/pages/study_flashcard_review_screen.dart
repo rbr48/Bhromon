@@ -5,6 +5,7 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/study_flashcard_store.dart';
 import '../../domain/models/study_flashcard_models.dart';
+import '../../data/study_activity_log.dart';
 import '../../domain/services/study_flashcard_rules.dart';
 
 /// Reviews the cards that are due. The member sees the question, shows the answer, and says whether they knew it.
@@ -16,7 +17,11 @@ class StudyFlashcardReviewScreen extends StatefulWidget {
     required this.cards,
     required this.store,
     this.today,
+    this.activity,
   });
+
+  /// Where each review is counted for the streak and the progress card. Null in the app; tests pass one.
+  final StudyActivityLog? activity;
 
   /// The cards due, in the order they are shown.
   final List<StudyFlashcard> cards;
@@ -39,7 +44,19 @@ class _StudyFlashcardReviewScreenState
   bool _busy = false;
   bool _failed = false;
 
+  late final StudyActivityLog _activity = widget.activity ?? StudyActivityLog();
+
   StudyFlashcard get _card => widget.cards[_index];
+
+  /// Counts the review for the day. Best effort: the review is already saved, so a failure here only logs.
+  Future<void> _countReview() async {
+    try {
+      await _activity.recordReview(DateTime.now());
+    } catch (error, stackTrace) {
+      logWarning('A card review could not be counted', error, stackTrace);
+    }
+  }
+
   bool get _finished => _index >= widget.cards.length;
 
   Future<void> _answer({required bool recalled}) async {
@@ -65,6 +82,7 @@ class _StudyFlashcardReviewScreenState
       }
       return;
     }
+    await _countReview();
     if (!mounted) return;
     setState(() {
       _busy = false;

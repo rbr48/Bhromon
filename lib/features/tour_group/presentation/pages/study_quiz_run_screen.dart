@@ -5,6 +5,7 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_quiz_models.dart';
+import '../../data/study_activity_log.dart';
 import '../../domain/services/study_quiz_rules.dart';
 
 /// Takes a quiz one question at a time. A choice or a true-or-false answer is marked as soon as it is picked. An
@@ -19,7 +20,11 @@ class StudyQuizRunScreen extends StatefulWidget {
     required this.title,
     required this.questions,
     this.repository,
+    this.activity,
   });
+
+  /// Where a saved attempt is counted for the streak. Null in the app; tests pass one.
+  final StudyActivityLog? activity;
 
   final String tourId;
   final String bookId;
@@ -93,6 +98,17 @@ class _StudyQuizRunScreenState extends State<StudyQuizRunScreen> {
     });
   }
 
+  late final StudyActivityLog _activity = widget.activity ?? StudyActivityLog();
+
+  /// Counts the saved attempt for the day. Best effort: the score is already saved, so a failure only logs.
+  Future<void> _countAttempt() async {
+    try {
+      await _activity.recordQuiz(DateTime.now());
+    } catch (error, stackTrace) {
+      logWarning('A quiz attempt could not be counted', error, stackTrace);
+    }
+  }
+
   Future<void> _save() async {
     setState(() {
       _saving = true;
@@ -106,6 +122,7 @@ class _StudyQuizRunScreenState extends State<StudyQuizRunScreen> {
         correct: _correct,
         total: widget.questions.length,
       );
+      await _countAttempt();
       if (!mounted) return;
       setState(() {
         _saved = attempt;

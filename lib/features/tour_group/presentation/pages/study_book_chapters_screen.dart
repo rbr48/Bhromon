@@ -18,10 +18,13 @@ import 'study_discussion_screen.dart';
 import 'study_flashcards_screen.dart';
 import 'study_glossary_screen.dart';
 import 'study_materials_screen.dart';
+import 'study_pack_share.dart';
+import 'study_progress_screen.dart';
 import 'study_quizzes_screen.dart';
+import 'study_summary_screen.dart';
 
 /// The learning tools a book offers, from the sheet on its chapters.
-enum _LearningTool { quizzes, glossary, flashcards }
+enum _LearningTool { quizzes, glossary, flashcards, progress, studyPack }
 
 /// One book's chapters in reading order. Each has its due date and guide questions. A member
 /// marks a chapter read in their own name, and can keep a place in the book on this device.
@@ -311,11 +314,35 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               onTap: () =>
                   Navigator.of(sheetContext).pop(_LearningTool.flashcards),
             ),
+            ListTile(
+              leading: Icon(Icons.insights_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_progress_title'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.progress),
+            ),
+            ListTile(
+              leading:
+                  Icon(Icons.picture_as_pdf_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_pack_action'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.studyPack),
+            ),
           ],
         ),
       ),
     );
     if (tool == null || !mounted) return;
+    if (tool == _LearningTool.studyPack) {
+      await shareStudyPack(
+        context: context,
+        repository: _repository,
+        tourId: widget.tourId,
+        book: widget.book,
+      );
+      return;
+    }
     final Widget page = switch (tool) {
       _LearningTool.quizzes => StudyQuizzesScreen(
           tourId: widget.tourId,
@@ -328,8 +355,27 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           repository: _repository,
         ),
       _LearningTool.flashcards => StudyFlashcardsScreen(book: widget.book),
+      _LearningTool.progress => StudyProgressScreen(
+          tourId: widget.tourId,
+          book: widget.book,
+          repository: _repository,
+        ),
+      // The study pack opens a share sheet, not a page, so it returned above.
+      _LearningTool.studyPack => const SizedBox.shrink(),
     };
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  /// The shared summary of a chapter: the revision the group reads, and the older ones.
+  void _openSummary(StudyChapter chapter) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => StudySummaryScreen(
+        tourId: widget.tourId,
+        book: widget.book,
+        chapter: chapter,
+        repository: _repository,
+      ),
+    ));
   }
 
   /// A guide question starts a thread on its chapter, with the question as its title. The
@@ -604,6 +650,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             if (mark != null) _toggleCounted(chapter, mark);
           case 'here':
             _setHere(chapter);
+          case 'summary':
+            _openSummary(chapter);
           case 'edit':
             _editChapter(chapter);
           case 'delete':
@@ -627,6 +675,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           value: 'here',
           child: Text(l10n.translate(
               here ? 'study_chapter_clear_here' : 'study_chapter_set_here')),
+        ),
+        PopupMenuItem<String>(
+          value: 'summary',
+          child: Text(l10n.translate('study_summary_title')),
         ),
         if (_isAdmin) ...[
           const PopupMenuDivider(),

@@ -25,6 +25,7 @@ import '../domain/models/study_models.dart';
 import '../domain/models/study_glossary_models.dart';
 import '../domain/models/study_material_models.dart';
 import '../domain/models/study_quiz_models.dart';
+import '../domain/models/study_summary_models.dart';
 import '../domain/services/study_quiz_rules.dart';
 import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
@@ -5086,5 +5087,190 @@ class TourGroupRepository {
   ) async {
     _requireEmail();
     await _glossaryCol(tourId, bookId).doc(termId).delete();
+  }
+
+  // Progress and shared summaries (Phase 6). A chapter summary is a shared page written as revisions: a member adds
+  // one, nothing is overwritten, and an admin pins the revision the group reads. Totals and a member's own record are
+  // counted from what the rules already let members read: counted reads, takerCount, threads and replies, and the
+  // member's own attempts.
+
+  CollectionReference<Map<String, dynamic>> _summariesCol(
+    String tourId,
+    String bookId,
+    String chapterId,
+  ) =>
+      _studyBookDoc(tourId, bookId)
+          .collection('chapters')
+          .doc(chapterId)
+          .collection('summaries');
+
+  /// The revisions of a chapter's summary, newest first.
+  Stream<List<StudySummaryRevision>> watchSummaries(
+    String tourId,
+    String bookId,
+    String chapterId,
+  ) {
+    return _summariesCol(tourId, bookId, chapterId)
+        .orderBy('createdAt', descending: true)
+        .limit(200)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudySummaryRevision.fromMap(
+                  d.id,
+                  _datesAsDateTimes(d.data()),
+                )
+                    case final revision?)
+                  revision,
+            ]);
+  }
+
+  /// Adds a revision of a chapter's summary in the signed-in member's name. [restoredFromId] names the revision this
+  /// one restores: its text is written again as a new revision, so nothing is overwritten.
+  Future<void> addSummaryRevision(
+    String tourId,
+    String bookId,
+    String chapterId, {
+    required String text,
+    String? restoredFromId,
+  }) async {
+    final email = _requireEmail();
+    final name = currentDisplayName.trim();
+    final revision = StudySummaryRevision(
+      id: '',
+      text: text.trim(),
+      editorEmail: email,
+      editorName: name.length > StudySummaryLimits.nameMax
+          ? name.substring(0, StudySummaryLimits.nameMax)
+          : name,
+      restoredFromId: restoredFromId,
+    );
+    await _summariesCol(tourId, bookId, chapterId).add({
+      ...revision.toFields(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Pins a revision of a chapter's summary for the group, or unpins it when [revisionId] is null. Only an admin
+  /// does this. The pin is written on its own, so a chapter edit does not clear it.
+  Future<void> setChapterPin(
+    String tourId,
+    String bookId,
+    String chapterId, {
+    String? revisionId,
+  }) async {
+    _requireEmail();
+    await _studyBookDoc(tourId, bookId)
+        .collection('chapters')
+        .doc(chapterId)
+        .update({
+      'pinnedSummaryId': revisionId ?? FieldValue.delete(),
+    });
+  }
+
+  /// The counted flag of every read mark the member can see on each chapter. An uncounted mark is visible only to
+  /// its own member, so the group's total is made of counted marks alone.
+  Future<Map<String, List<bool>>> loadReadFlags(
+    String tourId,
+    String bookId,
+    Iterable<String> chapterIds,
+  ) async {
+    final result = <String, List<bool>>{};
+    for (final chapterId in chapterIds) {
+      final snap = await _studyBookDoc(tourId, bookId)
+          .collection('chapters')
+          .doc(chapterId)
+          .collection('reads')
+          .get();
+      result[chapterId] = [
+        for (final d in snap.docs) d.data()['counted'] == true,
+      ];
+    }
+    return result;
+  }
+
+  /// Every reply of each thread in [threadIds], read once, in time order.
+  Future<Map<String, List<StudyReply>>> loadReplies(
+    String tourId,
+    String bookId,
+    Iterable<String> threadIds,
+  ) async {
+    final result = <String, List<StudyReply>>{};
+    for (final threadId in threadIds) {
+      final snap = await _threadDoc(tourId, bookId, threadId)
+          .collection('replies')
+          .orderBy('createdAt')
+          .limit(1000)
+          .get();
+      result[threadId] = [
+        for (final d in snap.docs)
+          if (StudyReply.fromMap(d.id, _datesAsDateTimes(d.data()))
+              case final reply?)
+            reply,
+      ];
+    }
+    return result;
+  }
+
+  /// How many of [quizIds] the signed-in member has taken: each quiz with an attempt of their own.
+  Future<int> countMyQuizAttempts(
+    String tourId,
+    String bookId,
+    Iterable<String> quizIds,
+  ) async {
+    final email = currentEmail;
+    if (email.isEmpty) return 0;
+    var count = 0;
+    for (final quizId in quizIds) {
+      final snap = await _quizzesCol(tourId, bookId)
+          .doc(quizId)
+          .collection('attempts')
+          .doc(email)
+          .get();
+      if (snap.exists) count++;
+    }
+    return count;
+  }
+
+  /// The revisions of each chapter's summary, read once, for the study pack.
+  Future<Map<String, List<StudySummaryRevision>>> loadSummaryRevisions(
+    String tourId,
+    String bookId,
+    Iterable<String> chapterIds,
+  ) async {
+    final result = <String, List<StudySummaryRevision>>{};
+    for (final chapterId in chapterIds) {
+      final snap = await _summariesCol(tourId, bookId, chapterId).get();
+      result[chapterId] = [
+        for (final d in snap.docs)
+          if (StudySummaryRevision.fromMap(d.id, _datesAsDateTimes(d.data()))
+              case final revision?)
+            revision,
+      ];
+    }
+    return result;
+  }
+
+  /// The accepted answer of each thread that has one: the question the thread asked, and the reply accepted.
+  Future<List<({String question, String answer})>> loadAcceptedAnswers(
+    String tourId,
+    String bookId,
+    Iterable<StudyThread> threads,
+  ) async {
+    final result = <({String question, String answer})>[];
+    for (final thread in threads) {
+      final acceptedId = thread.acceptedReplyId;
+      if (acceptedId == null) continue;
+      final snap = await _threadDoc(tourId, bookId, thread.id)
+          .collection('replies')
+          .doc(acceptedId)
+          .get();
+      final data = snap.data();
+      if (!snap.exists || data == null) continue;
+      final reply = StudyReply.fromMap(snap.id, _datesAsDateTimes(data));
+      if (reply == null) continue;
+      result.add((question: thread.title, answer: reply.text));
+    }
+    return result;
   }
 }
