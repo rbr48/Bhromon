@@ -14,14 +14,36 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../widgets/group_back_button.dart';
 
+/// Represents a distinct section or question in a Markdown document.
+class _MarkdownSection {
+  final String title;
+  final String cleanTitle;
+  final String rawText;
+  final GlobalKey key;
+  final bool isQuestion;
+
+  _MarkdownSection({
+    required this.title,
+    required this.cleanTitle,
+    required this.rawText,
+    required this.key,
+    this.isQuestion = false,
+  });
+}
+
 /// Fullscreen in-app reader for Markdown documents (.md, .txt, .log)
 /// supporting remote URLs, local file paths, and preloaded text content.
+/// Includes an interactive Question Navigator (Table of Contents) and
+/// instant 1-tap bilingual toggling between English and Bangla solutions.
 class MarkdownViewerScreen extends StatefulWidget {
   final String title;
   final String? filePath;
   final String? fileUrl;
   final String? rawContent;
   final String? tourId;
+  final String? alternateRawContent;
+  final String? alternateTitle;
+  final String? alternateLanguageLabel;
 
   const MarkdownViewerScreen({
     super.key,
@@ -30,6 +52,9 @@ class MarkdownViewerScreen extends StatefulWidget {
     this.fileUrl,
     this.rawContent,
     this.tourId,
+    this.alternateRawContent,
+    this.alternateTitle,
+    this.alternateLanguageLabel,
   });
 
   /// Helper to push the viewer onto the navigation stack.
@@ -40,6 +65,9 @@ class MarkdownViewerScreen extends StatefulWidget {
     String? fileUrl,
     String? rawContent,
     String? tourId,
+    String? alternateRawContent,
+    String? alternateTitle,
+    String? alternateLanguageLabel,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
@@ -49,6 +77,9 @@ class MarkdownViewerScreen extends StatefulWidget {
           fileUrl: fileUrl,
           rawContent: rawContent,
           tourId: tourId,
+          alternateRawContent: alternateRawContent,
+          alternateTitle: alternateTitle,
+          alternateLanguageLabel: alternateLanguageLabel,
         ),
       ),
     );
@@ -59,9 +90,23 @@ class MarkdownViewerScreen extends StatefulWidget {
 }
 
 class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
-  String? _content;
+  String? _primaryContent;
+  bool _showingAlternate = false;
   bool _isLoading = true;
   String? _errorMessage;
+  List<_MarkdownSection> _sections = const [];
+
+  String get _currentContent => _showingAlternate
+      ? (widget.alternateRawContent ?? '')
+      : (_primaryContent ?? '');
+
+  String get _currentTitle => _showingAlternate
+      ? (widget.alternateTitle ?? widget.title)
+      : widget.title;
+
+  bool get _hasAlternate =>
+      widget.alternateRawContent != null &&
+      widget.alternateRawContent!.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -72,9 +117,10 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   Future<void> _loadContent() async {
     if (widget.rawContent != null) {
       setState(() {
-        _content = widget.rawContent;
+        _primaryContent = widget.rawContent;
         _isLoading = false;
         _errorMessage = null;
+        _parseSections();
       });
       return;
     }
@@ -91,8 +137,9 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           final text = await XFile(widget.filePath!).readAsString();
           if (mounted) {
             setState(() {
-              _content = text;
+              _primaryContent = text;
               _isLoading = false;
+              _parseSections();
             });
             return;
           }
@@ -113,8 +160,9 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
         );
         if (mounted) {
           setState(() {
-            _content = response.data ?? '';
+            _primaryContent = response.data ?? '';
             _isLoading = false;
+            _parseSections();
           });
           return;
         }
@@ -132,9 +180,244 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     }
   }
 
+  void _parseSections() {
+    final text = _currentContent;
+    if (text.isEmpty) {
+      _sections = const [];
+      return;
+    }
+
+    // Pattern to detect Question headings or Exam section headers:
+    // ### Question 1 [Marks: 5 + 5 = 10]
+    // ### প্রশ্ন ১ [মান: ১০ + ১০ = ২০]
+    // ## PART A: BROAD QUESTIONS
+    // ## ক বিভাগ
+    // ## GROUP A
+    final questionPattern = RegExp(
+      r'^(#{1,3})\s+(.*?(?:Question|প্রশ্ন|PART|GROUP|বিভাগ).*?)$',
+      multiLine: true,
+      caseSensitive: false,
+    );
+
+    var matches = questionPattern.allMatches(text).toList();
+
+    // If no exam questions matched, fall back to general markdown headings (## or ###)
+    if (matches.isEmpty) {
+      final generalPattern = RegExp(
+        r'^(#{1,3})\s+(.+)$',
+        multiLine: true,
+      );
+      final generalMatches = generalPattern.allMatches(text).toList();
+      if (generalMatches.length >= 2) {
+        matches = generalMatches;
+      }
+    }
+
+    if (matches.isEmpty) {
+      _sections = [
+        _MarkdownSection(
+          title: '',
+          cleanTitle: '',
+          rawText: text,
+          key: GlobalKey(),
+          isQuestion: false,
+        ),
+      ];
+      return;
+    }
+
+    final sections = <_MarkdownSection>[];
+
+    // Text before the first heading (preamble / exam metadata)
+    final firstStart = matches.first.start;
+    if (firstStart > 0) {
+      final preamble = text.substring(0, firstStart).trim();
+      if (preamble.isNotEmpty) {
+        sections.add(
+          _MarkdownSection(
+            title: '',
+            cleanTitle: '',
+            rawText: preamble,
+            key: GlobalKey(),
+            isQuestion: false,
+          ),
+        );
+      }
+    }
+
+    for (int i = 0; i < matches.length; i++) {
+      final match = matches[i];
+      final headingText = match.group(2)?.trim() ?? '';
+      final start = match.start;
+      final end = (i + 1 < matches.length) ? matches[i + 1].start : text.length;
+      final sectionText = text.substring(start, end).trim();
+
+      final isQ =
+          RegExp(r'(?:Question|প্রশ্ন)\s*[\d০-৯]+', caseSensitive: false)
+              .hasMatch(headingText);
+
+      // Clean title from backslash escaped brackets like \[Marks: ...\]
+      final clean = headingText
+          .replaceAll(r'\[', '[')
+          .replaceAll(r'\]', ']')
+          .replaceAll('**', '');
+
+      sections.add(
+        _MarkdownSection(
+          title: headingText,
+          cleanTitle: clean,
+          rawText: sectionText,
+          key: GlobalKey(),
+          isQuestion: isQ,
+        ),
+      );
+    }
+
+    _sections = sections;
+  }
+
+  void _openQuestionNavigator() {
+    final navSections =
+        _sections.where((s) => s.cleanTitle.isNotEmpty).toList();
+    if (navSections.isEmpty) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF141E18)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (bottomSheetContext) {
+        final l10n = context.l10n;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.forest.text54.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.format_list_bulleted_rounded,
+                        color: AppColors.mintGreen, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.translate('viewer_question_navigator'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      l10n.translate('viewer_questions_count',
+                          args: {'count': '${navSections.length}'}),
+                      style: TextStyle(
+                        color: context.forest.text54,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Colors.white12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: navSections.length,
+                  separatorBuilder: (_, __) => const Divider(
+                      height: 1, indent: 56, color: Colors.white10),
+                  itemBuilder: (context, index) {
+                    final section = navSections[index];
+                    final isQ = section.isQuestion;
+
+                    return ListTile(
+                      dense: true,
+                      leading: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: isQ
+                              ? AppColors.mintGreen.withValues(alpha: 0.15)
+                              : const Color(0xFF2E7D32).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isQ
+                                ? AppColors.mintGreen.withValues(alpha: 0.4)
+                                : Colors.white24,
+                            width: 0.8,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          isQ
+                              ? Icons.quiz_outlined
+                              : Icons.bookmark_outline_rounded,
+                          color: isQ ? AppColors.mintGreen : Colors.white70,
+                          size: 18,
+                        ),
+                      ),
+                      title: Text(
+                        section.cleanTitle,
+                        style: TextStyle(
+                          color: isQ ? Colors.white : Colors.white70,
+                          fontSize: 13.5,
+                          fontWeight: isQ ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        Navigator.of(bottomSheetContext).pop();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final targetCtx = section.key.currentContext;
+                          if (targetCtx != null) {
+                            Scrollable.ensureVisible(
+                              targetCtx,
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeInOut,
+                              alignment: 0.05,
+                            );
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _targetLanguageLabel() {
+    final targetText = _showingAlternate
+        ? (widget.rawContent ?? _primaryContent ?? '')
+        : (widget.alternateRawContent ?? '');
+    final isBangla = targetText.contains('বাংলা') ||
+        targetText.contains('সমাধান') ||
+        RegExp(r'[\u0980-\u09FF]').hasMatch(targetText);
+    return isBangla ? '🇧🇩 বাংলা' : '🇬🇧 English';
+  }
+
   Future<void> _copyContent() async {
-    if (_content == null || _content!.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: _content!));
+    final content = _currentContent;
+    if (content.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: content));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -147,16 +430,17 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   }
 
   Future<void> _shareDocument() async {
-    // ignore: deprecated_member_use
+    final title = _currentTitle;
+    final content = _currentContent;
     if (widget.filePath != null && !kIsWeb) {
       // ignore: deprecated_member_use
-      await Share.shareXFiles([XFile(widget.filePath!)], text: widget.title);
-    } else if (widget.fileUrl != null) {
+      await Share.shareXFiles([XFile(widget.filePath!)], text: title);
+    } else if (widget.fileUrl != null && !_showingAlternate) {
       // ignore: deprecated_member_use
-      await Share.share(signedMediaUrl(widget.fileUrl!), subject: widget.title);
-    } else if (_content != null) {
+      await Share.share(signedMediaUrl(widget.fileUrl!), subject: title);
+    } else if (content.isNotEmpty) {
       // ignore: deprecated_member_use
-      await Share.share(_content!, subject: widget.title);
+      await Share.share(content, subject: title);
     }
   }
 
@@ -181,6 +465,8 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final bgColor = context.forest.surfaceFor(const Color(0xFF0F1713));
+    final hasContent = _currentContent.isNotEmpty;
+    final hasNavSections = _sections.any((s) => s.cleanTitle.isNotEmpty);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -213,8 +499,8 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                widget.title.isNotEmpty
-                    ? widget.title
+                _currentTitle.isNotEmpty
+                    ? _currentTitle
                     : l10n.translate('viewer_markdown_title'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -228,7 +514,49 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           ],
         ),
         actions: [
-          if (_content != null && _content!.isNotEmpty) ...[
+          if (_hasAlternate)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _showingAlternate = !_showingAlternate;
+                      _parseSections();
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.mintGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.mintGreen.withValues(alpha: 0.5),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      _targetLanguageLabel(),
+                      style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (hasNavSections)
+            IconButton(
+              tooltip: l10n.translate('viewer_question_navigator'),
+              icon: const Icon(Icons.format_list_bulleted_rounded,
+                  color: AppColors.mintGreen, size: 21),
+              onPressed: _openQuestionNavigator,
+            ),
+          if (hasContent) ...[
             IconButton(
               tooltip: l10n.translate('viewer_copy_content'),
               icon: const Icon(Icons.copy_rounded,
@@ -306,20 +634,28 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       );
     }
 
-    final content = _content ?? '';
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 820),
         child: SelectionArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-            child: ChatRichText(
-              text: content,
-              baseStyle: TextStyle(
-                color: context.forest.text,
-                fontSize: 14.5,
-                height: 1.55,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final section in _sections)
+                  Container(
+                    key: section.key,
+                    child: ChatRichText(
+                      text: section.rawText,
+                      baseStyle: TextStyle(
+                        color: context.forest.text,
+                        fontSize: 14.5,
+                        height: 1.55,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

@@ -105,6 +105,62 @@ void main() {
       expect(find.text('মার্কডাউন ডকুমেন্ট'), findsOneWidget);
       expect(find.text('আবার চেষ্টা করুন'), findsOneWidget);
     });
+
+    testWidgets(
+        'renders Question Navigator button when questions exist, opens bottom sheet',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: 'Exam Solutions',
+            rawContent: '''
+# Exam Solutions Guide
+
+### Question 1 [Marks: 10]
+Answer to question 1.
+
+### Question 2 [Marks: 10]
+Answer to question 2.
+''',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.format_list_bulleted_rounded), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Question Navigator'), findsOneWidget);
+      expect(find.text('Question 1 [Marks: 10]'), findsNWidgets(2));
+      expect(find.text('Question 2 [Marks: 10]'), findsNWidgets(2));
+    });
+
+    testWidgets(
+        'renders bilingual toggle and switches between English and Bangla solutions on tap',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: '98th BPE - Accounting (English)',
+            rawContent: '### Question 1\nEnglish answer here.',
+            alternateRawContent: '### প্রশ্ন ১\nবাংলা সমাধান এখানে।',
+            alternateTitle: '৯৮তম বিপিই - অ্যাকাউন্টিং (বাংলা)',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+      expect(find.textContaining('English answer here.'), findsOneWidget);
+
+      await tester.tap(find.text('🇧🇩 বাংলা'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('🇬🇧 English'), findsOneWidget);
+      expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
+    });
   });
 
   group('PdfViewerScreen', () {
