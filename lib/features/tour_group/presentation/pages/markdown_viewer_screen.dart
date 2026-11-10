@@ -13,7 +13,9 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../domain/models/study_syllabus_models.dart';
+import '../../domain/services/study_tts_controller.dart';
 import '../widgets/group_back_button.dart';
+import '../widgets/study/study_commute_audio_bar.dart';
 
 /// Represents a distinct section or question in a Markdown document.
 class _MarkdownSection {
@@ -111,6 +113,8 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   late final ScrollController _primaryScrollController;
   late final ScrollController _alternateScrollController;
   bool _isSyncingScroll = false;
+  StudyTtsController? _ttsController;
+  bool _isAudioBarVisible = false;
 
   List<_MarkdownSection> _primarySections = const [];
   List<_MarkdownSection> _alternateSections = const [];
@@ -188,6 +192,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
 
   @override
   void dispose() {
+    _ttsController?.dispose();
     _primaryScrollController.dispose();
     _alternateScrollController.dispose();
     super.dispose();
@@ -759,6 +764,23 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     return isBangla ? '🇧🇩 বাংলা' : '🇬🇧 English';
   }
 
+  void _toggleAudioPlayer() {
+    if (_isAudioBarVisible) {
+      setState(() => _isAudioBarVisible = false);
+      return;
+    }
+
+    _ttsController ??= StudyTtsController();
+    final activeSections = _sections;
+    final tracks = StudyTtsController.buildTracksFromSections([
+      for (final s in activeSections)
+        {'title': s.cleanTitle, 'rawText': s.rawText},
+    ]);
+    _ttsController!.setTracks(tracks);
+    setState(() => _isAudioBarVisible = true);
+    _ttsController!.play();
+  }
+
   Future<void> _copyContent() async {
     final content = _currentContent;
     if (content.isEmpty) return;
@@ -820,64 +842,73 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
         backgroundColor: palette.surfaceFor(const Color(0xFF141E18)),
         leading: GroupBackButton(tourId: widget.tourId ?? ''),
         titleSpacing: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: palette.accentText.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(
-                  color: palette.accentText.withValues(alpha: 0.5),
-                  width: 0.8,
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final showBadge = constraints.maxWidth > 140;
+            return Row(
+              children: [
+                if (showBadge) ...[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: palette.accentText.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: palette.accentText.withValues(alpha: 0.5),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      'MD',
+                      style: TextStyle(
+                        color: palette.accentText,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    _currentTitle.isNotEmpty
+                        ? _currentTitle
+                        : l10n.translate('viewer_markdown_title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: palette.text,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                'MD',
-                style: TextStyle(
-                  color: palette.accentText,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _currentTitle.isNotEmpty
-                    ? _currentTitle
-                    : l10n.translate('viewer_markdown_title'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: palette.text,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
         actions: [
           if (_hasAlternate) ...[
-            IconButton(
-              tooltip: _isSplit(context)
-                  ? l10n.translate('viewer_single_view')
-                  : l10n.translate('viewer_split_view'),
-              icon: Icon(
-                _isSplit(context)
-                    ? Icons.view_agenda_outlined
-                    : Icons.vertical_split_rounded,
-                color: palette.accentText,
-                size: 21,
+            if (MediaQuery.sizeOf(context).width >= 720 || _isSplit(context))
+              IconButton(
+                tooltip: _isSplit(context)
+                    ? l10n.translate('viewer_single_view')
+                    : l10n.translate('viewer_split_view'),
+                icon: Icon(
+                  _isSplit(context)
+                      ? Icons.view_agenda_outlined
+                      : Icons.vertical_split_rounded,
+                  color: palette.accentText,
+                  size: 21,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _userSplitOverride = !_isSplit(context);
+                  });
+                },
               ),
-              onPressed: () {
-                setState(() {
-                  _userSplitOverride = !_isSplit(context);
-                });
-              },
-            ),
             if (!_isSplit(context))
               Center(
                 child: Padding(
@@ -886,6 +917,15 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                     onTap: () {
                       setState(() {
                         _showingAlternate = !_showingAlternate;
+                        if (_isAudioBarVisible && _ttsController != null) {
+                          final tracks =
+                              StudyTtsController.buildTracksFromSections([
+                            for (final s in _sections)
+                              {'title': s.cleanTitle, 'rawText': s.rawText},
+                          ]);
+                          _ttsController!.setTracks(tracks);
+                          _ttsController!.play();
+                        }
                       });
                     },
                     borderRadius: BorderRadius.circular(16),
@@ -913,13 +953,27 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                 ),
               ),
           ],
-          if (hasNavSections)
+          if (hasNavSections) ...[
+            IconButton(
+              tooltip: l10n.translate('study_audio_listen'),
+              icon: Icon(
+                _isAudioBarVisible
+                    ? Icons.headphones_rounded
+                    : Icons.headphones_outlined,
+                color: _isAudioBarVisible
+                    ? AppColors.mintGreen
+                    : palette.accentText,
+                size: 21,
+              ),
+              onPressed: _toggleAudioPlayer,
+            ),
             IconButton(
               tooltip: l10n.translate('viewer_question_navigator'),
               icon: Icon(Icons.format_list_bulleted_rounded,
                   color: palette.accentText, size: 21),
               onPressed: _openQuestionNavigator,
             ),
+          ],
           if (hasContent) ...[
             IconButton(
               tooltip: l10n.translate('viewer_copy_content'),
@@ -943,6 +997,21 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
         ],
       ),
       body: _buildBody(_isSplit(context)),
+      bottomNavigationBar: _isAudioBarVisible && _ttsController != null
+          ? SafeArea(
+              child: StudyCommuteAudioBar(
+                controller: _ttsController!,
+                onClose: () => setState(() => _isAudioBarVisible = false),
+                onTrackChanged: (trackIndex) {
+                  final active = _sections;
+                  if (trackIndex >= 0 && trackIndex < active.length) {
+                    _scrollToSection(active[trackIndex],
+                        isSplit: _isSplit(context));
+                  }
+                },
+              ),
+            )
+          : null,
     );
   }
 
