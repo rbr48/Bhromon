@@ -19,6 +19,7 @@ import '../widgets/group_back_button.dart';
 class _MarkdownSection {
   final String title;
   final String cleanTitle;
+  final String? topic;
   final String rawText;
   final GlobalKey key;
   final bool isQuestion;
@@ -27,6 +28,7 @@ class _MarkdownSection {
   _MarkdownSection({
     required this.title,
     required this.cleanTitle,
+    this.topic,
     required this.rawText,
     required this.key,
     this.isQuestion = false,
@@ -47,6 +49,8 @@ class MarkdownViewerScreen extends StatefulWidget {
   final String? alternateRawContent;
   final String? alternateTitle;
   final String? alternateLanguageLabel;
+  final String? subjectTitle;
+  final String? chapterTitle;
 
   const MarkdownViewerScreen({
     super.key,
@@ -58,6 +62,8 @@ class MarkdownViewerScreen extends StatefulWidget {
     this.alternateRawContent,
     this.alternateTitle,
     this.alternateLanguageLabel,
+    this.subjectTitle,
+    this.chapterTitle,
   });
 
   /// Helper to push the viewer onto the navigation stack.
@@ -71,6 +77,8 @@ class MarkdownViewerScreen extends StatefulWidget {
     String? alternateRawContent,
     String? alternateTitle,
     String? alternateLanguageLabel,
+    String? subjectTitle,
+    String? chapterTitle,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
@@ -83,6 +91,8 @@ class MarkdownViewerScreen extends StatefulWidget {
           alternateRawContent: alternateRawContent,
           alternateTitle: alternateTitle,
           alternateLanguageLabel: alternateLanguageLabel,
+          subjectTitle: subjectTitle,
+          chapterTitle: chapterTitle,
         ),
       ),
     );
@@ -109,9 +119,18 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       ? (widget.alternateRawContent ?? '')
       : (_primaryContent ?? '');
 
-  String get _currentTitle => _showingAlternate
-      ? (widget.alternateTitle ?? widget.title)
-      : widget.title;
+  String get _currentTitle {
+    final base = _showingAlternate
+        ? (widget.alternateTitle ?? widget.title)
+        : widget.title;
+    if (widget.chapterTitle != null && widget.chapterTitle!.trim().isNotEmpty) {
+      if (base.isEmpty || base == widget.chapterTitle) {
+        return widget.chapterTitle!;
+      }
+      return '${widget.chapterTitle} · $base';
+    }
+    return base;
+  }
 
   bool get _hasAlternate =>
       widget.alternateRawContent != null &&
@@ -325,14 +344,43 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           .replaceAll(r'\]', ']')
           .replaceAll('**', '');
 
+      final matchSubject =
+          widget.subjectTitle ?? widget.chapterTitle ?? widget.title;
       final mod = isQ
-          ? StudySyllabusCatalog.identifyModule(widget.title, sectionText)
+          ? StudySyllabusCatalog.identifyModule(matchSubject, sectionText)
           : null;
+
+      String? topic;
+      if (isQ) {
+        final lines = sectionText.split('\n');
+        for (int j = 1; j < lines.length; j++) {
+          final line = lines[j].trim();
+          if (line.isEmpty || line.startsWith('#')) continue;
+          var cleaned = line
+              .replaceAll(RegExp(r'\*\*|__|`'), '')
+              .replaceAll(r'\[', '[')
+              .replaceAll(r'\]', ']');
+          cleaned = cleaned
+              .replaceFirst(
+                RegExp(
+                    r'^(?:[০-৯\d]+[\.\(\)a-zA-Zক-হ]+\s*|\([০-৯\d\wক-হ]+\)\s*)'),
+                '',
+              )
+              .trim();
+          if (cleaned.length > 3) {
+            topic = cleaned.length > 90
+                ? '${cleaned.substring(0, 87)}...'
+                : cleaned;
+            break;
+          }
+        }
+      }
 
       sections.add(
         _MarkdownSection(
           title: headingText,
           cleanTitle: clean,
+          topic: topic,
           rawText: sectionText,
           key: GlobalKey(),
           isQuestion: isQ,
@@ -424,7 +472,9 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
             .toList();
     if (navSections.isEmpty) return;
     final palette = context.forest;
-    final modules = StudySyllabusCatalog.modulesFor(widget.title);
+    final modules = StudySyllabusCatalog.modulesFor(
+      widget.subjectTitle ?? widget.chapterTitle ?? widget.title,
+    );
     String? selectedModuleCode;
 
     showModalBottomSheet<void>(
@@ -468,7 +518,9 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                           child: Text(
                             l10n.translate('viewer_question_navigator'),
                             style: TextStyle(
-                              color: palette.text,
+                              color: palette.isDark
+                                  ? Colors.white
+                                  : AppColors.darkText,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -478,7 +530,9 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                           l10n.translate('viewer_questions_count',
                               args: {'count': '${filteredSections.length}'}),
                           style: TextStyle(
-                            color: palette.text54,
+                            color: palette.isDark
+                                ? Colors.white70
+                                : AppColors.grayText,
                             fontSize: 12,
                           ),
                         ),
@@ -650,9 +704,9 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                       child: Text(
                                         section.cleanTitle,
                                         style: TextStyle(
-                                          color: isQ
-                                              ? palette.text
-                                              : palette.text70,
+                                          color: palette.isDark
+                                              ? Colors.white
+                                              : AppColors.darkText,
                                           fontSize: 13.5,
                                           fontWeight: isQ
                                               ? FontWeight.w600
@@ -664,14 +718,17 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                     ),
                                   ],
                                 ),
-                                subtitle: mod != null
+                                subtitle: (section.topic?.isNotEmpty == true ||
+                                        mod != null)
                                     ? Text(
-                                        mod.title,
+                                        section.topic ?? mod!.title,
                                         style: TextStyle(
-                                          color: palette.text54,
-                                          fontSize: 11,
+                                          color: palette.isDark
+                                              ? Colors.white70
+                                              : AppColors.grayText,
+                                          fontSize: 11.5,
                                         ),
-                                        maxLines: 1,
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       )
                                     : null,
