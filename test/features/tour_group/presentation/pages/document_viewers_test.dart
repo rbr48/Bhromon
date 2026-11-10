@@ -1,4 +1,5 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_rich_text.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/markdown_viewer_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/pdf_viewer_screen.dart';
@@ -8,9 +9,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Widget buildTestApp(Widget child, {Locale locale = const Locale('en')}) {
+  Widget buildTestApp(
+    Widget child, {
+    Locale locale = const Locale('en'),
+    ThemeData? theme,
+  }) {
     return MaterialApp(
       locale: locale,
+      theme: theme,
       supportedLocales: const [Locale('en'), Locale('bn')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -161,9 +167,84 @@ Answer to question 2.
       expect(find.text('🇬🇧 English'), findsOneWidget);
       expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
     });
+
+    testWidgets(
+        'adapts AppBar title and Question Navigator contrast in Light mode',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: 'Light Mode Title',
+            rawContent: '### Question 1 [Marks: 10]\nAnswer here.',
+          ),
+          theme: ThemeData.light(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final titleText = tester.widget<Text>(find.text('Light Mode Title'));
+      expect(titleText.style?.color, AppColors.darkText);
+
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
+      await tester.pumpAndSettle();
+
+      final sheetTitle = tester.widget<Text>(find.text('Question Navigator'));
+      expect(sheetTitle.style?.color, AppColors.darkText);
+    });
+
+    testWidgets('uses white title and Question Navigator text in Dark mode',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: 'Dark Mode Title',
+            rawContent: '### Question 1 [Marks: 10]\nAnswer here.',
+          ),
+          theme: ThemeData.dark(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final titleText = tester.widget<Text>(find.text('Dark Mode Title'));
+      expect(titleText.style?.color, Colors.white);
+
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
+      await tester.pumpAndSettle();
+
+      final sheetTitle = tester.widget<Text>(find.text('Question Navigator'));
+      expect(sheetTitle.style?.color, Colors.white);
+    });
   });
 
   group('PdfViewerScreen', () {
+    testWidgets('adapts AppBar title color in Light and Dark mode',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const PdfViewerScreen(
+            title: 'Light Document.pdf',
+          ),
+          theme: ThemeData.light(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final lightTitle = tester.widget<Text>(find.text('Light Document.pdf'));
+      expect(lightTitle.style?.color, AppColors.darkText);
+
+      await tester.pumpWidget(
+        buildTestApp(
+          const PdfViewerScreen(
+            title: 'Dark Document.pdf',
+          ),
+          theme: ThemeData.dark(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final darkTitle = tester.widget<Text>(find.text('Dark Document.pdf'));
+      expect(darkTitle.style?.color, Colors.white);
+    });
     testWidgets('renders PDF badge in AppBar and error state for invalid input',
         (tester) async {
       await tester.pumpWidget(

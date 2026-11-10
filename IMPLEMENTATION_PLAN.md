@@ -167,3 +167,23 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - 100% green required CI checks (`Dart Format`, `Analyze`, `Test`, `Build Web`, `Build Android`).
   - Squash-merged to `main`.
   - Deployed to Flutter Web (Firebase Hosting at `app.bhromon.fun`) and deployed release APK to Hostinger VPS.
+
+---
+
+### Track J: Document Viewers & Question Navigator Theme Contrast & Readability
+- [x] **Task J1: Theme-Adaptive Typography & Contrast in Markdown Viewer (`markdown_viewer_screen.dart`)**:
+  - Replace hardcoded `Colors.white` in AppBar title with `palette.text` so topic name is crisp and visible in both light and dark modes.
+  - In `_openQuestionNavigator` bottom sheet, replace hardcoded `Colors.white`, `Colors.white70`, and `Colors.white12/10` with `palette.text`, `palette.text70`, and `palette.divider12/10`.
+  - Update Question Navigator leading icon containers, border colors, and badge colors with `palette.accentText` and `palette.readable(...)`.
+  - Update AppBar action icons and language toggle badge to use `palette.accentText` for high contrast against light surfaces.
+- [x] **Task J2: Theme-Adaptive Typography in PDF Viewer (`pdf_viewer_screen.dart`)**:
+  - Replace hardcoded `Colors.white` in AppBar title and bottom page indicator with `palette.text` and `palette.card`.
+  - Use `palette.accentText` for AppBar action icons and controls.
+- [x] **Task J3: High-Contrast Solution Action Buttons in Chapters Screen (`study_book_chapters_screen.dart`)**:
+  - Adapt `English Solution` and `বাংলা সমাধান` button styles to theme: light tinted background with dark readable text in light mode, deep forest green with mint text in dark mode.
+- [x] **Task J4: Test Verification & Version Bump**:
+  - Add light mode and dark mode contrast tests to `document_viewers_test.dart` and `study_chapter_screens_test.dart`.
+  - Bump version to `1.8.172+226`.
+- [ ] **Task J5: Dual-Agent Review Gate, Merge & Deployment**:
+  - Open PR, run Claude CLI peer review, ensure 100% green CI, merge to `main`.
+  - Deploy to Firebase Hosting and release APK to Hostinger VPS.
