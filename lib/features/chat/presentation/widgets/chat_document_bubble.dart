@@ -9,6 +9,8 @@ import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/media/media_access.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../tour_group/presentation/pages/markdown_viewer_screen.dart';
+import '../../../tour_group/presentation/pages/pdf_viewer_screen.dart';
 
 /// WhatsApp-style document attachment card.
 class ChatDocumentBubble extends StatefulWidget {
@@ -104,8 +106,28 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
   Future<void> _openOrDownload() async {
     if (widget.documentUrl.isEmpty) return;
 
-    final signedUrl = signedMediaUrl(widget.documentUrl);
+    final ext = _getFileExtension(widget.fileName);
+    final isMd = ext == 'MD' || ext == 'TXT' || ext == 'LOG';
+    final isPdf = ext == 'PDF';
+
     if (kIsWeb) {
+      if (isMd) {
+        await MarkdownViewerScreen.open(
+          context,
+          title: widget.fileName,
+          fileUrl: widget.documentUrl,
+        );
+        return;
+      }
+      if (isPdf) {
+        await PdfViewerScreen.open(
+          context,
+          title: widget.fileName,
+          fileUrl: widget.documentUrl,
+        );
+        return;
+      }
+      final signedUrl = signedMediaUrl(widget.documentUrl);
       final uri = Uri.parse(signedUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -124,6 +146,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
       final file = File(localFilePath);
 
       if (!await file.exists()) {
+        final signedUrl = signedMediaUrl(widget.documentUrl);
         await Dio().download(
           signedUrl,
           localFilePath,
@@ -139,7 +162,23 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
 
       if (mounted) {
         setState(() => _isDownloading = false);
-        await OpenFilex.open(localFilePath);
+        if (isMd) {
+          await MarkdownViewerScreen.open(
+            context,
+            title: widget.fileName,
+            filePath: localFilePath,
+            fileUrl: widget.documentUrl,
+          );
+        } else if (isPdf) {
+          await PdfViewerScreen.open(
+            context,
+            title: widget.fileName,
+            filePath: localFilePath,
+            fileUrl: widget.documentUrl,
+          );
+        } else {
+          await OpenFilex.open(localFilePath);
+        }
       }
     } catch (e) {
       logError('Error downloading/opening document: $e');

@@ -18,6 +18,8 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/media_rules.dart';
 import '../../domain/services/study_material_rules.dart';
 import '../widgets/study/study_material_composer.dart';
+import 'markdown_viewer_screen.dart';
+import 'pdf_viewer_screen.dart';
 
 /// The materials of one book: notes, files, links and recordings the members filed. An admin approves
 /// the waiting ones and decides the reported ones. A report hides a material at once, from everyone but
@@ -349,8 +351,8 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
     }
   }
 
-  /// Shows a note in place, or opens a file or link outside the app. Then records the open for a
-  /// published material that someone else filed.
+  /// Shows a note in place, or opens a file or link in-app (for PDF/Markdown) or externally.
+  /// Then records the open for a published material that someone else filed.
   Future<void> _open(StudyMaterial m) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
@@ -364,6 +366,18 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
           ),
           actions: [
             TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                MarkdownViewerScreen.open(
+                  context,
+                  title: m.title,
+                  rawContent: m.body ?? '',
+                  tourId: widget.tourId,
+                );
+              },
+              child: Text(l10n.translate('viewer_markdown_title')),
+            ),
+            TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: Text(l10n.translate('study_material_close')),
             ),
@@ -374,17 +388,39 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       final url = m.url;
       if (url == null) return;
       final target = m.kind.isUpload ? signedMediaUrl(url) : url;
+      final name = (m.fileName ?? url).toLowerCase();
+      final isMd = name.endsWith('.md') ||
+          name.endsWith('.txt') ||
+          name.endsWith('.log');
+      final isPdf = name.endsWith('.pdf');
+
       try {
-        final opened = await launchUrl(
-          Uri.parse(target),
-          mode: LaunchMode.externalApplication,
-        );
-        if (!opened) {
-          messenger.showSnackBar(SnackBar(
-            content: Text(l10n.translate('study_material_open_failed')),
-            backgroundColor: Colors.redAccent,
-          ));
-          return;
+        if (isMd) {
+          await MarkdownViewerScreen.open(
+            context,
+            title: m.title.isNotEmpty ? m.title : (m.fileName ?? 'Document'),
+            fileUrl: target,
+            tourId: widget.tourId,
+          );
+        } else if (isPdf) {
+          await PdfViewerScreen.open(
+            context,
+            title: m.title.isNotEmpty ? m.title : (m.fileName ?? 'Document'),
+            fileUrl: target,
+            tourId: widget.tourId,
+          );
+        } else {
+          final opened = await launchUrl(
+            Uri.parse(target),
+            mode: LaunchMode.externalApplication,
+          );
+          if (!opened) {
+            messenger.showSnackBar(SnackBar(
+              content: Text(l10n.translate('study_material_open_failed')),
+              backgroundColor: Colors.redAccent,
+            ));
+            return;
+          }
         }
       } catch (error, stackTrace) {
         logWarning('A study material could not be opened', error, stackTrace);
