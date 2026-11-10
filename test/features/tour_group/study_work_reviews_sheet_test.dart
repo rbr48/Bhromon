@@ -67,8 +67,9 @@ void main() {
     await _pump(
       tester,
       _FakeReviewsRepo([
-        StudyWorkReview(reviewerEmail: 'a@x.com', verdict: WorkVerdict.right),
-        StudyWorkReview(
+        const StudyWorkReview(
+            reviewerEmail: 'a@x.com', verdict: WorkVerdict.right),
+        const StudyWorkReview(
           reviewerEmail: 'b@x.com',
           verdict: WorkVerdict.gap,
           note: 'Step three is missing.',
@@ -86,8 +87,10 @@ void main() {
       'taking a review back asks first, then removes it and shows the list again',
       (tester) async {
     final repo = _FakeReviewsRepo([
-      StudyWorkReview(reviewerEmail: 'a@x.com', verdict: WorkVerdict.right),
-      StudyWorkReview(reviewerEmail: 'b@x.com', verdict: WorkVerdict.right),
+      const StudyWorkReview(
+          reviewerEmail: 'a@x.com', verdict: WorkVerdict.right),
+      const StudyWorkReview(
+          reviewerEmail: 'b@x.com', verdict: WorkVerdict.right),
     ]);
     await _pump(tester, repo);
 

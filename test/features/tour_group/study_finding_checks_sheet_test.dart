@@ -64,8 +64,9 @@ void main() {
     await _pump(
       tester,
       _FakeChecksRepo([
-        StudyFindingCheck(email: 'a@x.com', verdict: FindingVerdict.confirm),
-        StudyFindingCheck(
+        const StudyFindingCheck(
+            email: 'a@x.com', verdict: FindingVerdict.confirm),
+        const StudyFindingCheck(
           email: 'b@x.com',
           verdict: FindingVerdict.challenge,
           note: 'The sample was too warm.',
@@ -83,8 +84,10 @@ void main() {
       'withdrawing asks first, then takes the check back and shows the list again',
       (tester) async {
     final repo = _FakeChecksRepo([
-      StudyFindingCheck(email: 'a@x.com', verdict: FindingVerdict.confirm),
-      StudyFindingCheck(email: 'b@x.com', verdict: FindingVerdict.confirm),
+      const StudyFindingCheck(
+          email: 'a@x.com', verdict: FindingVerdict.confirm),
+      const StudyFindingCheck(
+          email: 'b@x.com', verdict: FindingVerdict.confirm),
     ]);
     await _pump(tester, repo);
 
