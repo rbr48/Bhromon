@@ -380,4 +380,29 @@ void main() {
           canFileStudyMaterial(isAdmin: false, onlyAdminsPost: true), isFalse);
     });
   });
+
+  group('the library groups materials by chapter', () {
+    test('whole-book materials first, then chapters in order, newest first',
+        () {
+      final groups = groupStudyMaterialsByChapter([
+        _material('c2', chapterId: 'ch2'),
+        _material('old', chapterId: 'ch1', createdAt: DateTime(2030, 1, 1)),
+        _material('new', chapterId: 'ch1', createdAt: DateTime(2030, 1, 2)),
+        _material('book'),
+      ], [
+        'ch1',
+        'ch2',
+        'ch3'
+      ]);
+      expect([for (final g in groups) g.chapterId], [null, 'ch1', 'ch2']);
+      expect([for (final m in groups[1].materials) m.id], ['new', 'old']);
+    });
+
+    test('a material of a chapter that is gone sits with the whole book', () {
+      final groups = groupStudyMaterialsByChapter(
+          [_material('lost', chapterId: 'removed')], ['ch1']);
+      expect(groups.single.chapterId, isNull);
+      expect(groups.single.materials.single.id, 'lost');
+    });
+  });
 }

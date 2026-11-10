@@ -109,13 +109,15 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
     await draft.upload?.commit();
   }
 
-  /// Opens a link of a post. A Markdown or PDF file in the group's study folder opens in the app, as the study
-  /// materials do. Any other link opens outside the app, and a study-folder file with its signed link.
+  /// Opens a link of a post. A Markdown or PDF file in this group's study folder opens in the app, as the study
+  /// materials do. Any other link opens outside the app. A media-server link opens with its signed address.
   Future<void> _openLink(String url, String title) async {
-    final isStudyFile = url.contains('/media/');
     final reader = studyFileReader(url);
-    if (isStudyFile && reader != StudyFileReader.none) {
-      final name = title.isNotEmpty ? title : 'Document';
+    if (reader != StudyFileReader.none &&
+        isStudyFolderFile(url, widget.tourId)) {
+      final name = title.isNotEmpty
+          ? title
+          : context.l10n.translate('study_document_untitled');
       if (reader == StudyFileReader.pdf) {
         await PdfViewerScreen.open(
           context,
@@ -133,7 +135,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       }
       return;
     }
-    final target = isStudyFile ? signedMediaUrl(url) : url;
+    final target = signedMediaUrl(url);
     final uri = Uri.tryParse(target);
     if (uri == null) return;
     try {

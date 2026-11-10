@@ -10,10 +10,13 @@ const String _mediaPrefix = 'https://bhromon.fun/media/';
 const String _signingPrefix = 'v1|';
 
 /// The paths the media server serves: /media/{space}/{folder}/{file}, with the file names it
-/// issues. Any other URL is not signed, and is used as it is.
+/// issues. Any other URL is not signed, and is used as it is. The file types are those the media server accepts
+/// (ALLOWED_EXTENSIONS in media-server/main.py).
 final RegExp _signablePath = RegExp(
   r'^/media/[A-Za-z0-9_-]{1,128}/[a-z_]{1,32}/[0-9a-f]{32}\.'
-  r'(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv|m4a|mp3|aac|wav|ogg|opus|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)$',
+  r'(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv|m4a|mp3|aac|wav|ogg|opus'
+  r'|pdf|doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp|rtf|txt|log|csv|tsv|epub'
+  r'|zip|rar|7z|tar|gz|md|json|yaml|yml|xml|sql)$',
 );
 final RegExp _safeUid = RegExp(r'^[A-Za-z0-9_-]{1,128}$');
 

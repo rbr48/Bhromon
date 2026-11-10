@@ -3256,8 +3256,9 @@ class TourTranslationKeys {
       'study_exam_model_answer': 'Examiner Model Answer',
       'study_exam_self_score': 'Award Marks',
       'study_exam_total_score': 'Score: {score} / {total} ({percent}%)',
-      'study_exam_pass': 'PASSED (>= 50%)',
-      'study_exam_fail': 'NEEDS IMPROVEMENT (< 50%)',
+      'study_exam_pass': 'PASSED (>= {percent}%)',
+      'study_exam_fail': 'NEEDS IMPROVEMENT (< {percent}%)',
+      'study_document_untitled': 'Document',
       'study_exam_warning_30m': '30 minutes remaining!',
       'study_exam_warning_10m': '10 minutes remaining! Finalize your outlines.',
       'study_exam_time_expired':
@@ -6909,8 +6910,9 @@ class TourTranslationKeys {
       'study_exam_model_answer': 'পরীক্ষকের আদর্শ উত্তর',
       'study_exam_self_score': 'নম্বর প্রদান করুন',
       'study_exam_total_score': 'মোট নম্বর: {score} / {total} ({percent}%)',
-      'study_exam_pass': 'উত্তীর্ণ (>= ৫০%)',
-      'study_exam_fail': 'আরও উন্নতি প্রয়োজন (< ৫০%)',
+      'study_exam_pass': 'উত্তীর্ণ (>= {percent}%)',
+      'study_exam_fail': 'আরও উন্নতি প্রয়োজন (< {percent}%)',
+      'study_document_untitled': 'ডকুমেন্ট',
       'study_exam_warning_30m': 'আর ৩০ মিনিট বাকি আছে!',
       'study_exam_warning_10m': 'আর ১০ মিনিট বাকি আছে! আপনার খাতা গুছিয়ে নিন।',
       'study_exam_time_expired':
