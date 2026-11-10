@@ -204,10 +204,13 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
 
     test('a file is stored in this group\'s study folder, with an extension and size of its kind', async () => {
       await assertSucceeds(setDoc(materialRef(db('other'), 'f1'), { ...fileFields(people.other.email), createdAt: serverTimestamp() }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'f-md'), { ...fileFields(people.other.email, { url: `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.md` }), createdAt: serverTimestamp() }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'f-epub'), { ...fileFields(people.other.email, { url: `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.epub` }), createdAt: serverTimestamp() }));
       // Another group\'s folder, another folder, or a kind\'s extension it does not have.
       await assertFails(setDoc(materialRef(db('other'), 'f2'), { ...fileFields(people.other.email, { url: `https://bhromon.fun/media/someoneelse/study/${FILE_HEX}.pdf` }), createdAt: serverTimestamp() }));
       await assertFails(setDoc(materialRef(db('other'), 'f3'), { ...fileFields(people.other.email, { url: `https://bhromon.fun/media/${STUDY}/posts/${FILE_HEX}.pdf` }), createdAt: serverTimestamp() }));
       await assertFails(setDoc(materialRef(db('other'), 'f4'), { ...fileFields(people.other.email, { url: `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.exe` }), createdAt: serverTimestamp() }));
+      await assertFails(setDoc(materialRef(db('other'), 'f-html'), { ...fileFields(people.other.email, { url: `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.html` }), createdAt: serverTimestamp() }));
       await assertFails(setDoc(materialRef(db('other'), 'f5'), { ...fileFields(people.other.email, { kind: 'image' }), createdAt: serverTimestamp() }));
     });
 
