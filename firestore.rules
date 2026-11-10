@@ -1335,7 +1335,7 @@ service cloud.firestore {
         (d.kind == 'image' && d.sizeBytes <= 10485760 && d.url.matches(folder + '(jpg|jpeg|png|webp|gif|heic|heif)')) ||
         (d.kind == 'audio' && d.sizeBytes <= 26214400 && d.url.matches(folder + '(m4a|mp3|aac|wav|ogg|opus)')) ||
         (d.kind == 'video' && d.sizeBytes <= 104857600 && d.url.matches(folder + '(mp4|mov|m4v|webm|3gp|mkv)')) ||
-        (d.kind == 'file' && d.sizeBytes <= 52428800 && d.url.matches(folder + '(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)'))
+        (d.kind == 'file' && d.sizeBytes <= 52428800 && d.url.matches(folder + '(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|log|csv|tsv|zip|rar|7z|tar|gz|md|json|yaml|yml|xml|sql|odt|ods|odp|rtf|epub)'))
       );
     }
     function studyMaterialShapeOk(tourId, d) {
