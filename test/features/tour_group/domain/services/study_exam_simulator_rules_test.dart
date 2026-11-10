@@ -209,5 +209,15 @@ Discuss the differences between a Cheque and a Bill of Exchange under Negotiable
       expect(read.scores['q_1'], 16);
       expect(read.scores['q_2'], 18);
     });
+
+    test('without an encryption service nothing is written to disk', () async {
+      await StudyExamAttemptStore().put(testAttempt);
+
+      expect(Hive.isBoxOpen(StudyExamAttemptStore.boxName), isFalse);
+      final boxFile =
+          File('${tempDir.path}/${StudyExamAttemptStore.boxName}.hive');
+      expect(boxFile.existsSync(), isFalse);
+      expect(await StudyExamAttemptStore().loadAll(), isEmpty);
+    });
   });
 }
