@@ -196,6 +196,21 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertFails(setDoc(materialRef(db('other'), 'new9'), { ...linkFields(people.other.email), createdAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')) }));
     });
 
+    test('a file material takes every document type the picker offers', async () => {
+      const types = ['md', 'json', 'epub', 'tsv', 'log', 'yaml', 'yml', 'xml', 'sql', 'odt', 'ods', 'odp', 'rtf', 'rar', '7z', 'tar', 'gz'];
+      for (const ext of types) {
+        const url = `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.${ext}`;
+        await assertSucceeds(setDoc(materialRef(db('other'), `doc-${ext}`), { ...fileFields(people.other.email, { url }), createdAt: serverTimestamp() }));
+      }
+    });
+
+    test('a file material of a web or executable type is refused', async () => {
+      for (const ext of ['html', 'js', 'svg', 'exe', 'apk', 'sh']) {
+        const url = `https://bhromon.fun/media/${STUDY}/study/${FILE_HEX}.${ext}`;
+        await assertFails(setDoc(materialRef(db('other'), `bad-${ext}`), { ...fileFields(people.other.email, { url }), createdAt: serverTimestamp() }));
+      }
+    });
+
     test('a link is an http or https address of any length', async () => {
       await assertFails(setDoc(materialRef(db('other'), 'new10'), { ...linkFields(people.other.email, { url: 'ftp://example.com/x' }), createdAt: serverTimestamp() }));
       await assertSucceeds(setDoc(materialRef(db('other'), 'new11'), { ...linkFields(people.other.email, { url: `https://example.com/${'x'.repeat(2000)}` }), createdAt: serverTimestamp() }));
