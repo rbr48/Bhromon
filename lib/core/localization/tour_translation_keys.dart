@@ -3259,8 +3259,7 @@ class TourTranslationKeys {
       'study_exam_pass': 'PASSED (>= 50%)',
       'study_exam_fail': 'NEEDS IMPROVEMENT (< 50%)',
       'study_exam_warning_30m': '30 minutes remaining!',
-      'study_exam_warning_10m':
-          '10 minutes remaining! Finalize your outlines.',
+      'study_exam_warning_10m': '10 minutes remaining! Finalize your outlines.',
       'study_exam_time_expired':
           'Time has expired! Submitting your exam paper...',
       'study_material_title': 'Materials',
@@ -6889,8 +6888,7 @@ class TourTranslationKeys {
       'study_exam_pass': 'উত্তীর্ণ (>= ৫০%)',
       'study_exam_fail': 'আরও উন্নতি প্রয়োজন (< ৫০%)',
       'study_exam_warning_30m': 'আর ৩০ মিনিট বাকি আছে!',
-      'study_exam_warning_10m':
-          'আর ১০ মিনিট বাকি আছে! আপনার খাতা গুছিয়ে নিন।',
+      'study_exam_warning_10m': 'আর ১০ মিনিট বাকি আছে! আপনার খাতা গুছিয়ে নিন।',
       'study_exam_time_expired':
           'সময় শেষ হয়ে গেছে! পরীক্ষার খাতা জমা নেওয়া হচ্ছে...',
       'study_material_title': 'উপকরণ',
