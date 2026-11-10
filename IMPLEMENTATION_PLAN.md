@@ -68,4 +68,32 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - Specified cryptographic tombstone protocol for admin message redaction.
 - [x] **Task E5: Test Suite Verification**:
   - Comprehensive unit test coverage across all E2EE modules (`e2ee_service_test.dart`, `e2ee_chat_controller_test.dart`, `verification_screen_test.dart`).
-- [ ] **Peer Review Gate**: Submit PR, wait for Claude's review and sign-off, verify 100% green CI before merge.
+- [x] **Peer Review Gate**: Submit PR, wait for Claude's review and sign-off, verify 100% green CI before merge ([PR #453](https://github.com/rbr48/Bhromon/pull/453)).
+
+---
+
+### Track F: Power Documents & Study Pack (Expanded Document Attachments)
+- [x] **Task F1: Domain & Service MIME Expansion (`media_rules.dart`, `study_material_rules.dart`)**:
+  - Added supported extensions and MIME types:
+    - Markdown & Text: `.md` (`text/markdown`), `.log` (`text/plain`)
+    - Data & Config: `.json` (`application/json`), `.yaml` / `.yml` (`application/x-yaml`), `.xml` (`application/xml`), `.sql` (`application/sql`)
+    - Open Document & Formatted: `.odt` (`application/vnd.oasis.opendocument.text`), `.ods` (`application/vnd.oasis.opendocument.spreadsheet`), `.odp` (`application/vnd.oasis.opendocument.presentation`), `.rtf` (`application/rtf`), `.tsv` (`text/tab-separated-values`)
+    - E-Books: `.epub` (`application/epub+zip`)
+    - Compressed Archives: `.rar` (`application/x-rar-compressed`), `.7z` (`application/x-7z-compressed`), `.tar` (`application/x-tar`), `.gz` (`application/gzip`)
+  - Exposed `kSupportedDocExtensions` canonical list (27 extensions).
+- [x] **Task F2: UI Attachment Pickers & Visual Bubbles (`chat_attachment_sheet.dart`, `group_channels_screen.dart`, `study_material_composer.dart`, `chat_document_bubble.dart`)**:
+  - Unified allowed extensions across 1-on-1 chats, group channels, and study materials using `kSupportedDocExtensions`.
+  - Added presentation support (`ppt`, `pptx`, `odp`) to 1-on-1 chat picker.
+  - Enriched `ChatDocumentBubble` extension badge colors and labels for new document types.
+- [x] **Task F3: Firebase Storage Rules & VPS Media Server Update (`storage.rules`, `media-server/main.py`)**:
+  - Expanded `storage.rules` `contentType.matches(...)` pattern for documents.
+  - Added new extensions to `DOC_EXTENSIONS` and `FILENAME_PATTERN` in `media-server/main.py`.
+- [x] **Task F4: Automated Verification & Unit Tests**:
+  - Unit tests in `media_formats_test.dart` and `study_material_rules_test.dart` (all 29 tests passing).
+  - Python tests for media server upload validation (`test_media_server.py`, all 502 suite tests passing).
+  - Version monotonically incremented to `1.8.168+222`.
+- [ ] **Task F5: Peer Review, Merge & Deploy**:
+  - Create feature branch `feat/power-documents-pack`.
+  - Push branch, open PR, request peer review from Claude, await 100% green CI.
+  - Merge after mutual review sign-off.
+  - Deploy Storage rules, update VPS media server, deploy web, build APK/AAB.

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:file_picker/file_picker.dart';
@@ -43,16 +44,7 @@ class ChatAttachmentSheet extends StatelessWidget {
     try {
       final res = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: [
-          'pdf',
-          'doc',
-          'docx',
-          'xls',
-          'xlsx',
-          'txt',
-          'zip',
-          'csv'
-        ],
+        allowedExtensions: kSupportedDocExtensions,
         // On web the picker returns no path, only bytes, so the bytes are asked for here.
         withData: kIsWeb,
       );

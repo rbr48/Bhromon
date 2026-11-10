@@ -1,4 +1,5 @@
 from pathlib import Path
+import uuid
 
 import pytest
 
@@ -129,6 +130,19 @@ def test_an_unsupported_extension_is_refused(client):
         headers=bearer("tok-alice"),
     )
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("filename", ["notes.md", "config.json", "query.sql", "book.epub", "bundle.7z"])
+def test_power_document_extensions_are_accepted(client, filename):
+    obj_id = uuid.uuid4().hex
+    response = client.post(
+        "/upload",
+        files={"file": (filename, b"test-document-content", "application/octet-stream")},
+        data={"tourId": "t1", "folder": "chat_docs", "objectId": obj_id},
+        headers=bearer("tok-alice"),
+    )
+    assert response.status_code == 200, response.text
+
 
 
 def test_an_oversized_file_is_refused_and_removed(client, monkeypatch):

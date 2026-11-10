@@ -2689,18 +2689,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         }
         final res = await FilePicker.pickFiles(
           type: FileType.custom,
-          allowedExtensions: [
-            'pdf',
-            'doc',
-            'docx',
-            'xls',
-            'xlsx',
-            'ppt',
-            'pptx',
-            'txt',
-            'zip',
-            'csv'
-          ],
+          allowedExtensions: kSupportedDocExtensions,
           allowMultiple: true,
           withData: kIsWeb,
         );

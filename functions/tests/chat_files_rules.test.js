@@ -63,6 +63,8 @@ describe('Chat documents and voice notes in Storage', () => {
 
   test('someone who is not in the chat cannot read or add its files', async () => {
     await assertSucceeds(who('ann@x.com').ref(`chat_docs/${CHAT}/d1.pdf`).put(BYTES, { contentType: 'application/pdf' }));
+    await assertSucceeds(who('ann@x.com').ref(`chat_docs/${CHAT}/notes.md`).put(BYTES, { contentType: 'text/markdown' }));
+    await assertSucceeds(who('ann@x.com').ref(`chat_docs/${CHAT}/config.json`).put(BYTES, { contentType: 'application/json' }));
     await assertFails(who('eve@x.com').ref(`chat_docs/${CHAT}/d1.pdf`).getDownloadURL());
     await assertFails(who('eve@x.com').ref(`chat_voice/${CHAT}/v2.m4a`).put(BYTES, { contentType: 'audio/m4a' }));
   });

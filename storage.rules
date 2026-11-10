@@ -116,7 +116,7 @@ service firebase.storage {
       // be served from this origin as a page.
       allow create: if inChat(chatId) &&
                        request.resource.size < 50 * 1024 * 1024 &&
-                       request.resource.contentType.matches('(application/(pdf|msword|vnd\\..*|zip|x-zip-compressed|octet-stream)|text/(plain|csv))');
+                       request.resource.contentType.matches('(application/(pdf|msword|vnd\\..*|zip|x-zip-compressed|x-rar-compressed|x-7z-compressed|x-tar|gzip|epub\\+zip|json|x-yaml|xml|sql|rtf|octet-stream)|text/(plain|csv|markdown|tab-separated-values|xml|yaml))');
     }
 
     match /chat_voice/{chatId}/{allPaths=**} {
