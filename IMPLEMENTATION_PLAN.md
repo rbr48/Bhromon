@@ -160,9 +160,10 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - Add translation keys for reader tools and chapter actions in `tour_translation_keys.dart`.
   - Write widget and unit tests for TOC parser, direct chapter card buttons, and reader language toggle.
   - Run `flutter test test/features/tour_group/presentation/pages/document_viewers_test.dart` and `test/features/tour_group/study_material_screens_test.dart`.
-- [ ] **Task I6: Version Bump, Dual-Agent Review Gate, Merge & Deployment**:
-  - Increment version to `1.8.171+225` in `pubspec.yaml`.
-  - Push feature branch `feat/exam-study-portal-redesign`, open PR with `gh pr create`.
-  - Request and obtain formal peer review sign-off with Claude CLI.
-  - Verify 100% green required CI checks and squash-merge to `main`.
-  - Deploy to Flutter Web (Firebase Hosting) and compile Android release artifacts.
+- [x] **Task I6: Version Bump, Dual-Agent Review Gate, Merge & Deployment**:
+  - Incremented version to `1.8.171+225` in `pubspec.yaml`.
+  - Pushed feature branch `feat/exam-study-portal-redesign`, opened [PR #463](https://github.com/rbr48/Bhromon/pull/463).
+  - Formal peer review sign-off by Claude CLI completed and approved.
+  - 100% green required CI checks (`Dart Format`, `Analyze`, `Test`, `Build Web`, `Build Android`).
+  - Squash-merged to `main`.
+  - Deployed to Flutter Web (Firebase Hosting at `app.bhromon.fun`) and deployed release APK to Hostinger VPS.
