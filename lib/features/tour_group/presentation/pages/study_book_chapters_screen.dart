@@ -673,7 +673,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               if (response.data != null) {
                 solutionTexts[m.id] = response.data!;
               }
-            } catch (_) {}
+            } catch (_) {
+              // Safe fallback when fetching a remote markdown solution fails.
+            }
           }
         }
       }
@@ -686,7 +688,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           tourName = group.name;
           inviteCode = group.inviteCode;
         }
-      } catch (_) {}
+      } catch (_) {
+        // Safe fallback when tour group details cannot be read.
+      }
 
       final content = StudyBookletPdfGenerator.extractContent(
         subjectTitle: widget.book.title,
@@ -761,7 +765,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           tourDescription = group.description;
           inviteCode = group.inviteCode;
         }
-      } catch (_) {}
+      } catch (_) {
+        // Safe fallback when tour group details cannot be read.
+      }
 
       final content = StudyBookletContent(
         subjectTitle: widget.book.title,
