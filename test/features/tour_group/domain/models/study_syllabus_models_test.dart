@@ -106,5 +106,43 @@ void main() {
       );
       expect(mod, isNull);
     });
+
+    test('a short code matches only as a whole word', () {
+      // "OM" sits inside "INCOME" and "COMMERCE", and "BA" inside "BANGLA" and "DATABASE".
+      for (final title in [
+        'Income Tax',
+        'Computer Science',
+        'Comprehensive Finance',
+        'Commerce',
+        'Economic Geography',
+        'Bangla',
+        'Database Systems',
+        'Bangladesh Studies',
+      ]) {
+        expect(StudySyllabusCatalog.modulesFor(title), isEmpty, reason: title);
+      }
+
+      expect(
+        StudySyllabusCatalog.identifyModule(
+          'Income Tax',
+          'What is the income tax rate for a salary?',
+        ),
+        isNull,
+      );
+    });
+
+    test(
+        'Basic Accounting is the BA course, and Management Accounting stays MAFS',
+        () {
+      expect(
+        StudySyllabusCatalog.modulesFor('Basic Accounting').map((m) => m.id),
+        StudySyllabusCatalog.modulesFor('BA').map((m) => m.id),
+      );
+      expect(
+        StudySyllabusCatalog.modulesFor('Management Accounting')
+            .map((m) => m.id),
+        StudySyllabusCatalog.modulesFor('MAFS').map((m) => m.id),
+      );
+    });
   });
 }
