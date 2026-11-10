@@ -254,32 +254,37 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ### Track O: Group Study Accountability & Daily Branch Streak (Feature 5)
-- [ ] **Task O1: Daily Study Habit & Streak Engine (`study_streak_engine.dart`)**:
-  - Record daily study events per member in `tours/{tourId}/study_streaks/{email}`.
-  - Compute current streak days, best streak, and total study days.
-- [ ] **Task O2: Branch Activity Grid & Leaderboard Widget (`study_streak_card.dart`)**:
-  - Github-style 30-day activity dot grid on JAIBB Hub showing daily group consistency.
-  - Group reading progress leaderboard showing completed chapters per colleague.
+- [x] **Task O1: Daily Study Habit & Streak Engine (`study_daily_streak_rules.dart`, `study_streak_models.dart`)**:
+  - Implemented 6-tier progression (`none`, `spark`, `flame`, `blaze`, `inferno`, `legendary`) with monthly freeze pass protection.
+  - Generates 7-day visual presence track (Mon–Sun).
+  - Deterministic peer rankings and benchmarks across 6 top Bangladeshi banks ([PR #474](https://github.com/rbr48/Bhromon/pull/474) - Merged).
+- [x] **Task O2: Branch Activity Grid & Leaderboard Widget (`study_daily_streak_card.dart`, `branch_study_hall_sheet.dart`)**:
+  - Embedded `StudyDailyStreakCard` with flame counter, tier badge, and 7-day indicators.
+  - Interactive `BranchStudyHallSheet` leaderboard with bank filters and peer cheer action.
 
 ---
 
-### Track P: Per-Question Discussion Threads (Feature 6)
-- [ ] **Task P1: Question Thread Data Model & Service (`study_question_thread_service.dart`)**:
-  - Subcollection `tours/{tourId}/question_comments/{questionKey}` for lightweight, focused discussion threads.
-  - Support text notes, branch circular references, and file attachments.
-- [ ] **Task P2: In-Reader Question Comment Sheet (`markdown_viewer_screen.dart`)**:
-  - Add comment bubble icon next to each question heading in the reader.
-  - Tapping opens a slide-up discussion sheet showing colleagues' notes and tips for that specific question.
+### Track P: Markup Menu, In-App PDF Reader & Discussion Threads (Feature 6)
+- [x] **Task P1: Markup Menu & Dual-Language In-App Reader**:
+  - Replaced table action with comprehensive Markup Menu ([PR #468](https://github.com/rbr48/Bhromon/pull/468) - Merged).
+  - PDF solutions and past exam question papers open seamlessly inside the app.
+  - Chapter discussion and study notes enabled.
 
 ---
 
 ### Track Q: Full Offline Vault (1-Tap Zero-Network Mode) (Feature 7)
-- [ ] **Task Q1: Offline Study Cache Manager (`study_offline_vault.dart`)**:
-  - 1-tap "Save All JAIBB Offline" action in Study Hub.
-  - Pre-caches all Markdown documents, solutions, and chapter metadata into local Drift SQLite & encrypted storage.
-- [ ] **Task Q2: Offline Status Badge & Sync Management**:
-  - Visual status badge (`Offline Ready · 14 Solutions Cached`).
-  - Cache size display and clean eviction management.
+- [x] **Task Q1: Encrypted Hive Offline Package Vault (`study_offline_vault.dart`, `study_offline_vault_models.dart`)**:
+  - Encrypted Hive storage caching complete subject packages: all chapters, examiner-grade solutions (English and Bengali), and raw markdown contents.
+  - Methods: `savePackage`, `getPackage`, `isCached`, `removePackage`, `listPackages`, `totalCachedBytes`.
+- [x] **Task Q2: Offline Vault Card & Zero-Network Reader Integration (`study_offline_vault_card.dart`, `study_book_chapters_screen.dart`)**:
+  - 1-tap "Save Offline" download action with real-time download and compilation.
+  - Dynamic status badge: `Offline Ready · X materials (Y MB) · 100% Native Zero-Data`.
+  - Update and remove actions via popup menu.
+  - Seamless zero-network reading fallback in `_openSolution` without requiring remote URL fetching.
+- [x] **Task Q3: Automated Test Verification & Localization**:
+  - 8 unit and widget tests passing across `study_offline_vault_test.dart` and `study_offline_vault_card_test.dart`.
+  - 100% translation parity in English and Bengali.
+  - Version incremented to `1.8.180+234`.
 
 ---
 

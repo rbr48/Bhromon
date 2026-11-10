@@ -20,10 +20,15 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_daily_streak_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
+import 'package:bhromon/core/media/media_access.dart';
+import '../../data/study_offline_vault.dart';
+import '../../domain/models/study_offline_vault_models.dart';
 import '../widgets/study/branch_study_hall_sheet.dart';
 import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_daily_streak_card.dart';
+import '../widgets/study/study_offline_vault_card.dart';
 import '../widgets/study/study_pace_sheet.dart';
+import 'package:dio/dio.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'markdown_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
@@ -100,6 +105,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   late final List<SyllabusModule> _syllabusModules =
       StudySyllabusCatalog.modulesFor(widget.book.title);
 
+  StudyOfflinePackage? _cachedPackage;
+  bool _isDownloadingOffline = false;
+  final _offlineVault = StudyOfflineVault.instance;
+
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
   @override
@@ -147,6 +156,117 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       if (mounted) setState(() => _here = number);
     });
     _refreshStreak();
+    _refreshOfflineVault();
+  }
+
+  Future<void> _refreshOfflineVault() async {
+    try {
+      final pkg = await _offlineVault.getPackage(widget.tourId, widget.book.id);
+      if (mounted) setState(() => _cachedPackage = pkg);
+    } catch (_) {
+      // Safe fallback when local offline vault cannot be read.
+    }
+  }
+
+  Future<void> _downloadBookForOffline() async {
+    final l10n = context.l10n;
+    setState(() => _isDownloadingOffline = true);
+
+    try {
+      final readable = _materials
+          .where((m) => m.isPublished && isReadableSolution(m))
+          .toList();
+      if (readable.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.translate('study_offline_empty_solutions')),
+            ),
+          );
+          setState(() => _isDownloadingOffline = false);
+        }
+        return;
+      }
+
+      final contents = <String, String>{};
+      int totalBytes = 0;
+
+      for (final m in readable) {
+        String? text = m.body;
+        if ((text == null || text.trim().isEmpty) &&
+            m.url != null &&
+            m.url!.isNotEmpty) {
+          try {
+            final targetUrl = signedMediaUrl(m.url!);
+            final response = await Dio().get<String>(
+              targetUrl,
+              options: Options(responseType: ResponseType.plain),
+            );
+            text = response.data;
+          } catch (_) {
+            // Safe fallback when fetching a remote markdown solution file fails.
+          }
+        }
+        if (text != null && text.isNotEmpty) {
+          contents[m.id] = text;
+          totalBytes += m.sizeBytes ?? text.length;
+        }
+      }
+
+      final pkg = StudyOfflinePackage(
+        tourId: widget.tourId,
+        bookId: widget.book.id,
+        bookTitle: widget.book.title,
+        cachedAt: DateTime.now(),
+        totalSizeBytes: totalBytes,
+        chapters: _chapters,
+        materials: readable,
+        contents: contents,
+      );
+
+      await _offlineVault.savePackage(pkg);
+      await StudyActivityLog().recordAction(DateTime.now());
+      _refreshStreak();
+
+      if (mounted) {
+        setState(() {
+          _cachedPackage = pkg;
+          _isDownloadingOffline = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.translate('study_offline_success', args: {
+                'count': '${pkg.materialCount}',
+                'size': pkg.formattedSize,
+              }),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDownloadingOffline = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save offline vault: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeOfflinePackage() async {
+    final l10n = context.l10n;
+    try {
+      await _offlineVault.removePackage(widget.tourId, widget.book.id);
+      if (mounted) {
+        setState(() => _cachedPackage = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.translate('study_offline_removed'))),
+        );
+      }
+    } catch (_) {
+      // Safe fallback when removing offline vault data fails.
+    }
   }
 
   void _refreshStreak() {
@@ -617,9 +737,24 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             standings: _standings,
           ),
         ),
+        _offlineVaultSection(),
         _syllabusBlueprintCard(),
         for (final chapter in _chapters) _chapterCard(chapter, today),
       ],
+    );
+  }
+
+  Widget _offlineVaultSection() {
+    final hasSolutions =
+        _materials.any((m) => m.isPublished && isReadableSolution(m));
+    if (!hasSolutions && _cachedPackage == null) {
+      return const SizedBox.shrink();
+    }
+    return StudyOfflineVaultCard(
+      package: _cachedPackage,
+      isDownloading: _isDownloadingOffline,
+      onDownload: _downloadBookForOffline,
+      onRemove: _removeOfflinePackage,
     );
   }
 
@@ -857,14 +992,20 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       return;
     }
     final source = solutionSource(material, other);
+    final cachedPrimary = _cachedPackage?.contentFor(material.id);
+    final cachedAlternate =
+        other != null ? _cachedPackage?.contentFor(other.id) : null;
+    final primaryContent = source.rawContent ?? cachedPrimary;
+    final alternateContent = source.paired?.body ?? cachedAlternate;
+
     MarkdownViewerScreen.open(
       context,
       title: material.title,
-      rawContent: source.rawContent,
-      fileUrl: source.fileUrl,
+      rawContent: primaryContent,
+      fileUrl: primaryContent != null ? null : source.fileUrl,
       tourId: widget.tourId,
-      alternateRawContent: source.paired?.body,
-      alternateTitle: source.paired?.title,
+      alternateRawContent: alternateContent,
+      alternateTitle: source.paired?.title ?? other?.title,
       alternateLanguageLabel: isBanglaSolution(material) ? 'English' : 'বাংলা',
       subjectTitle: widget.book.title,
       chapterTitle: chapter?.title,
