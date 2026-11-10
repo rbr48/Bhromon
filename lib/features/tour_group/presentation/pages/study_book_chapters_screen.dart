@@ -656,11 +656,19 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                             fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E3A2B),
-                        foregroundColor: AppColors.mintGreen,
+                        backgroundColor: palette.isDark
+                            ? const Color(0xFF1E3A2B)
+                            : const Color(0xFFE8F5E9),
+                        foregroundColor: palette.isDark
+                            ? AppColors.mintGreen
+                            : const Color(0xFF1B5E20),
                         elevation: 0,
                         side: BorderSide(
-                            color: AppColors.mintGreen.withValues(alpha: 0.3)),
+                          color: (palette.isDark
+                                  ? AppColors.mintGreen
+                                  : const Color(0xFF2E7D32))
+                              .withValues(alpha: 0.4),
+                        ),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(
@@ -680,12 +688,19 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                             fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF193B28),
-                        foregroundColor: const Color(0xFF81C784),
+                        backgroundColor: palette.isDark
+                            ? const Color(0xFF193B28)
+                            : const Color(0xFFE8F5E9),
+                        foregroundColor: palette.isDark
+                            ? const Color(0xFF81C784)
+                            : const Color(0xFF2E7D32),
                         elevation: 0,
                         side: BorderSide(
-                            color:
-                                const Color(0xFF81C784).withValues(alpha: 0.3)),
+                          color: (palette.isDark
+                                  ? const Color(0xFF81C784)
+                                  : const Color(0xFF388E3C))
+                              .withValues(alpha: 0.4),
+                        ),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(

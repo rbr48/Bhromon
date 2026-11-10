@@ -154,12 +154,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final bgColor = context.forest.surfaceFor(const Color(0xFF0F1713));
+    final palette = context.forest;
+    final bgColor = palette.surfaceFor(const Color(0xFF0F1713));
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF141E18)),
+        backgroundColor: palette.surfaceFor(const Color(0xFF141E18)),
         leading: GroupBackButton(tourId: widget.tourId ?? ''),
         titleSpacing: 0,
         title: Row(
@@ -192,8 +193,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     : l10n.translate('viewer_pdf_title'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: palette.text,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -204,14 +205,14 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         actions: [
           IconButton(
             tooltip: l10n.translate('viewer_share'),
-            icon: const Icon(Icons.share_rounded,
-                color: AppColors.mintGreen, size: 20),
+            icon:
+                Icon(Icons.share_rounded, color: palette.accentText, size: 20),
             onPressed: _shareDocument,
           ),
           IconButton(
             tooltip: l10n.translate('viewer_open_external'),
-            icon: const Icon(Icons.open_in_new_rounded,
-                color: AppColors.mintGreen, size: 20),
+            icon: Icon(Icons.open_in_new_rounded,
+                color: palette.accentText, size: 20),
             onPressed: _openExternally,
           ),
         ],
@@ -221,17 +222,18 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   }
 
   Widget _buildBody() {
+    final palette = context.forest;
     if (_isLoading) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppColors.mintGreen),
+            CircularProgressIndicator(color: palette.accentText),
             const SizedBox(height: 16),
             Text(
               context.l10n.translate('viewer_loading'),
               style: TextStyle(
-                color: context.forest.text54,
+                color: palette.text54,
                 fontSize: 13,
               ),
             ),

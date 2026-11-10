@@ -280,10 +280,11 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     final navSections =
         _sections.where((s) => s.cleanTitle.isNotEmpty).toList();
     if (navSections.isEmpty) return;
+    final palette = context.forest;
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF141E18)),
+      backgroundColor: palette.surfaceFor(const Color(0xFF141E18)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -298,7 +299,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: context.forest.text54.withValues(alpha: 0.3),
+                  color: palette.text54.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -307,14 +308,14 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.format_list_bulleted_rounded,
-                        color: AppColors.mintGreen, size: 20),
+                    Icon(Icons.format_list_bulleted_rounded,
+                        color: palette.accentText, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.translate('viewer_question_navigator'),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: palette.text,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -324,21 +325,21 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                       l10n.translate('viewer_questions_count',
                           args: {'count': '${navSections.length}'}),
                       style: TextStyle(
-                        color: context.forest.text54,
+                        color: palette.text54,
                         fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: Colors.white12),
+              Divider(height: 1, color: palette.divider12),
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: navSections.length,
-                  separatorBuilder: (_, __) => const Divider(
-                      height: 1, indent: 56, color: Colors.white10),
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, indent: 56, color: palette.divider10),
                   itemBuilder: (context, index) {
                     final section = navSections[index];
                     final isQ = section.isQuestion;
@@ -350,13 +351,13 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                         height: 34,
                         decoration: BoxDecoration(
                           color: isQ
-                              ? AppColors.mintGreen.withValues(alpha: 0.15)
-                              : const Color(0xFF2E7D32).withValues(alpha: 0.2),
+                              ? palette.accentText.withValues(alpha: 0.15)
+                              : palette.divider10,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isQ
-                                ? AppColors.mintGreen.withValues(alpha: 0.4)
-                                : Colors.white24,
+                                ? palette.accentText.withValues(alpha: 0.45)
+                                : palette.divider12,
                             width: 0.8,
                           ),
                         ),
@@ -365,14 +366,14 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                           isQ
                               ? Icons.quiz_outlined
                               : Icons.bookmark_outline_rounded,
-                          color: isQ ? AppColors.mintGreen : Colors.white70,
+                          color: isQ ? palette.accentText : palette.text70,
                           size: 18,
                         ),
                       ),
                       title: Text(
                         section.cleanTitle,
                         style: TextStyle(
-                          color: isQ ? Colors.white : Colors.white70,
+                          color: isQ ? palette.text : palette.text70,
                           fontSize: 13.5,
                           fontWeight: isQ ? FontWeight.w600 : FontWeight.normal,
                         ),
@@ -464,14 +465,15 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final bgColor = context.forest.surfaceFor(const Color(0xFF0F1713));
+    final palette = context.forest;
+    final bgColor = palette.surfaceFor(const Color(0xFF0F1713));
     final hasContent = _currentContent.isNotEmpty;
     final hasNavSections = _sections.any((s) => s.cleanTitle.isNotEmpty);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF141E18)),
+        backgroundColor: palette.surfaceFor(const Color(0xFF141E18)),
         leading: GroupBackButton(tourId: widget.tourId ?? ''),
         titleSpacing: 0,
         title: Row(
@@ -479,17 +481,17 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+                color: palette.accentText.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(5),
                 border: Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.4),
+                  color: palette.accentText.withValues(alpha: 0.5),
                   width: 0.8,
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'MD',
                 style: TextStyle(
-                  color: AppColors.mintGreen,
+                  color: palette.accentText,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -504,8 +506,8 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                     : l10n.translate('viewer_markdown_title'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: palette.text,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -530,17 +532,17 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.mintGreen.withValues(alpha: 0.15),
+                      color: palette.accentText.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppColors.mintGreen.withValues(alpha: 0.5),
+                        color: palette.accentText.withValues(alpha: 0.5),
                         width: 0.8,
                       ),
                     ),
                     child: Text(
                       _targetLanguageLabel(),
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
+                      style: TextStyle(
+                        color: palette.accentText,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -552,28 +554,28 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           if (hasNavSections)
             IconButton(
               tooltip: l10n.translate('viewer_question_navigator'),
-              icon: const Icon(Icons.format_list_bulleted_rounded,
-                  color: AppColors.mintGreen, size: 21),
+              icon: Icon(Icons.format_list_bulleted_rounded,
+                  color: palette.accentText, size: 21),
               onPressed: _openQuestionNavigator,
             ),
           if (hasContent) ...[
             IconButton(
               tooltip: l10n.translate('viewer_copy_content'),
-              icon: const Icon(Icons.copy_rounded,
-                  color: AppColors.mintGreen, size: 20),
+              icon:
+                  Icon(Icons.copy_rounded, color: palette.accentText, size: 20),
               onPressed: _copyContent,
             ),
             IconButton(
               tooltip: l10n.translate('viewer_share'),
-              icon: const Icon(Icons.share_rounded,
-                  color: AppColors.mintGreen, size: 20),
+              icon: Icon(Icons.share_rounded,
+                  color: palette.accentText, size: 20),
               onPressed: _shareDocument,
             ),
           ],
           IconButton(
             tooltip: l10n.translate('viewer_open_external'),
-            icon: const Icon(Icons.open_in_new_rounded,
-                color: AppColors.mintGreen, size: 20),
+            icon: Icon(Icons.open_in_new_rounded,
+                color: palette.accentText, size: 20),
             onPressed: _openExternally,
           ),
         ],
