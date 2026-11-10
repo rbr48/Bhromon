@@ -6,10 +6,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/media/media_access.dart';
 import '../../../../core/utils/app_logger.dart';
-import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/tour_media_uploader.dart';
 import '../../domain/models/study_material_models.dart';
@@ -245,11 +245,55 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
     final canReport = canReportStudyMaterial(m, viewerEmail: _me);
     final canManage =
         canManageStudyMaterial(m, viewerEmail: _me, isAdmin: _isAdmin);
+    final isBangla = m.title.contains('বাংলা') ||
+        m.title.contains('সমাধান') ||
+        (m.fileName?.toLowerCase().contains('bangla') ?? false);
+    final isNoteOrDoc = m.kind == StudyMaterialKind.note ||
+        (m.fileName?.endsWith('.md') ?? false);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(_iconFor(m.kind)),
-        title: Text(m.title),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                m.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isNoteOrDoc) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isBangla
+                      ? const Color(0xFF193B28)
+                      : const Color(0xFF1E3A2B),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isBangla
+                        ? const Color(0xFF81C784).withValues(alpha: 0.4)
+                        : AppColors.mintGreen.withValues(alpha: 0.4),
+                    width: 0.7,
+                  ),
+                ),
+                child: Text(
+                  isBangla ? '🇧🇩 বাংলা' : '🇬🇧 English',
+                  style: TextStyle(
+                    color: isBangla
+                        ? const Color(0xFF81C784)
+                        : AppColors.mintGreen,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
         subtitle: Text(_subtitle(context, m, overdue: overdue)),
         onTap: () => _onAction(m, _MaterialAction.open),
         trailing: PopupMenuButton<_MaterialAction>(
@@ -351,38 +395,38 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
     }
   }
 
-  /// Shows a note in place, or opens a file or link in-app (for PDF/Markdown) or externally.
+  /// Opens a note or document in fullscreen reader, or opens a file/link in-app or externally.
   /// Then records the open for a published material that someone else filed.
   Future<void> _open(StudyMaterial m) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     if (m.kind == StudyMaterialKind.note) {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(m.title),
-          content: SingleChildScrollView(
-            child: ChatRichText(text: m.body ?? ''),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                MarkdownViewerScreen.open(
-                  context,
-                  title: m.title,
-                  rawContent: m.body ?? '',
-                  tourId: widget.tourId,
-                );
-              },
-              child: Text(l10n.translate('viewer_markdown_title')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.translate('study_material_close')),
-            ),
-          ],
-        ),
+      // Find paired alternate language note if exists for this chapter
+      StudyMaterial? alternate;
+      if (m.chapterId != null && m.chapterId!.isNotEmpty) {
+        final isBangla = m.title.contains('বাংলা') ||
+            m.title.contains('সমাধান') ||
+            (m.fileName?.toLowerCase().contains('bangla') ?? false);
+        for (final other in _materials) {
+          if (other.id != m.id && other.chapterId == m.chapterId) {
+            final otherBangla = other.title.contains('বাংলা') ||
+                other.title.contains('সমাধান') ||
+                (other.fileName?.toLowerCase().contains('bangla') ?? false);
+            if (otherBangla != isBangla) {
+              alternate = other;
+              break;
+            }
+          }
+        }
+      }
+
+      await MarkdownViewerScreen.open(
+        context,
+        title: m.title,
+        rawContent: m.body ?? '',
+        tourId: widget.tourId,
+        alternateRawContent: alternate?.body,
+        alternateTitle: alternate?.title,
       );
     } else {
       final url = m.url;

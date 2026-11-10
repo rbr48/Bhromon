@@ -134,6 +134,35 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - Add localized strings for viewer actions (`viewer_download`, `viewer_share`, `viewer_copy`, `viewer_open_external`, `viewer_page_count`).
   - Write widget and unit tests for both viewer screens (`document_viewers_test.dart` 6/6 passed).
   - Verify `tour_translation_test.dart` (9/9 passed) and full `dart analyze` (0 issues).
-- [ ] **Task H5: Version Bump, Peer Review & Merge**:
+- [x] **Task H5: Version Bump, Peer Review & Merge**:
   - Increment version to `1.8.170+224` in `pubspec.yaml` and update `AGENTS.md`.
-  - Push branch `feat/in-app-document-viewers`, open PR, peer review with Claude, merge on green CI.
+  - Push branch `feat/in-app-document-viewers`, open PR, peer review with Claude, merge on green CI ([PR #462](https://github.com/rbr48/Bhromon/pull/462)).
+
+---
+
+### Track I: Exam Question Bank & Direct Bilingual Reader Experience (Redesigned Presentation)
+- [x] **Task I1: Chapter Card Direct Action Buttons (`study_book_chapters_screen.dart`)**:
+  - Watch `study_materials` for the book and map materials by `chapterId`.
+  - On each chapter card (`_chapterCard`), display direct 1-tap action buttons:
+    - 🇬🇧 **[English Solution]** (with file size)
+    - 🇧🇩 **[বাংলা সমাধান]** (with file size)
+  - Tapping either button immediately opens `MarkdownViewerScreen.open(...)` in full-screen with zero intermediate popups.
+- [x] **Task I2: Fullscreen Direct Reading & Language Badges (`study_materials_screen.dart`)**:
+  - Remove cramped `AlertDialog` popup when tapping study notes; open full-screen `MarkdownViewerScreen` directly.
+  - Add clear visual language badges (`🇧🇩 বাংলা` / `🇬🇧 English`) on material cards.
+- [x] **Task I3: In-Reader Question Navigator (TOC) & 1-Tap Bilingual Toggle (`markdown_viewer_screen.dart`)**:
+  - Parse question headings (`### Question \d+`, `### প্রশ্ন \d+`, etc.) into an interactive Table of Contents.
+  - Add an AppBar action for "Questions" (প্রশ্নসমূহ) opening a bottom sheet to jump to any question.
+  - Add 1-tap language toggle button (`[বাংলায় দেখুন]` / `[View in English]`) to seamlessly switch between English and Bangla solutions.
+- [x] **Task I4: Direct Exam Papers Portal (`study_subject_screen.dart`)**:
+  - Route `StudyModuleKey.papers` directly to the subject's book chapters and solutions instead of empty posts screen.
+- [x] **Task I5: Localization & Automated Tests**:
+  - Add translation keys for reader tools and chapter actions in `tour_translation_keys.dart`.
+  - Write widget and unit tests for TOC parser, direct chapter card buttons, and reader language toggle.
+  - Run `flutter test test/features/tour_group/presentation/pages/document_viewers_test.dart` and `test/features/tour_group/study_material_screens_test.dart`.
+- [ ] **Task I6: Version Bump, Dual-Agent Review Gate, Merge & Deployment**:
+  - Increment version to `1.8.171+225` in `pubspec.yaml`.
+  - Push feature branch `feat/exam-study-portal-redesign`, open PR with `gh pr create`.
+  - Request and obtain formal peer review sign-off with Claude CLI.
+  - Verify 100% green required CI checks and squash-merge to `main`.
+  - Deploy to Flutter Web (Firebase Hosting) and compile Android release artifacts.

@@ -1,6 +1,7 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/study_reading_position.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_material_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_book_chapters_screen.dart';
@@ -19,12 +20,14 @@ class _FakeChapterRepo extends TourGroupRepository {
   _FakeChapterRepo({
     this.chapters = const [],
     this.marks = const {},
+    this.materials = const [],
     this.role,
     this.votes = StudyVoteTally.none,
   });
 
   final List<StudyChapter> chapters;
   final Map<String, StudyReadMark> marks;
+  final List<StudyMaterial> materials;
   final TourRole? role;
   final StudyVoteTally votes;
   final List<String> calls = [];
@@ -38,6 +41,11 @@ class _FakeChapterRepo extends TourGroupRepository {
   @override
   Stream<List<StudyChapter>> watchStudyChapters(String tourId, String bookId) =>
       Stream.value(chapters);
+
+  @override
+  Stream<List<StudyMaterial>> watchStudyMaterials(
+          String tourId, String bookId) =>
+      Stream.value(materials);
 
   @override
   Stream<Map<String, StudyReadMark>> watchMyReadMarks(
@@ -277,6 +285,53 @@ void main() {
       await tester.tap(find.text('Set due dates'));
       await tester.pumpAndSettle();
       expect(repo.calls, ['pace 2 2']);
+    });
+
+    testWidgets(
+        'renders direct 1-tap English and Bangla solution buttons on chapter card',
+        (tester) async {
+      const englishSol = StudyMaterial(
+        id: 'm1',
+        title: '98th BPE - Master Solutions (English)',
+        kind: StudyMaterialKind.note,
+        bookId: 'b1',
+        chapterId: 'c1',
+        status: StudyMaterialStatus.published,
+        fileName: 'JAIBB_Accounting_98th_BPE_Solutions.md',
+        body: 'English solution body',
+        sizeBytes: 25600,
+      );
+      const banglaSol = StudyMaterial(
+        id: 'm2',
+        title: '৯৮তম বিপিই - মাস্টার সমাধান (বাংলা)',
+        kind: StudyMaterialKind.note,
+        bookId: 'b1',
+        chapterId: 'c1',
+        status: StudyMaterialStatus.published,
+        fileName: 'JAIBB_Accounting_98th_BPE_Solutions_Bangla.md',
+        body: 'বাংলা সমাধান টেক্সট',
+        sizeBytes: 31200,
+      );
+
+      final repo = _FakeChapterRepo(
+        chapters: _chapters,
+        materials: [englishSol, banglaSol],
+      );
+
+      await _pump(
+        tester,
+        StudyBookChaptersScreen(
+          tourId: 'T',
+          book: _book,
+          repository: repo,
+          position: _FakePosition(),
+        ),
+      );
+
+      expect(find.text('English Solution (25 KB)'), findsOneWidget);
+      expect(find.text('বাংলা সমাধান (30 KB)'), findsOneWidget);
+      expect(find.text('🇬🇧'), findsOneWidget);
+      expect(find.text('🇧🇩'), findsOneWidget);
     });
   });
 

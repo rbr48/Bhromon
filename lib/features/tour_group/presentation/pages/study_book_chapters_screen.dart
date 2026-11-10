@@ -6,16 +6,19 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/study_reading_position.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/study_material_models.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_pace_sheet.dart';
 import '../widgets/study/study_thread_composer.dart';
+import 'markdown_viewer_screen.dart';
 import 'study_discussion_screen.dart';
 import 'study_flashcards_screen.dart';
 import 'study_glossary_screen.dart';
@@ -63,10 +66,12 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       widget.position ?? StudyReadingPosition();
   StreamSubscription<List<StudyChapter>>? _chapterSub;
   StreamSubscription<Map<String, StudyReadMark>>? _markSub;
+  StreamSubscription<List<StudyMaterial>>? _materialsSub;
 
   TourRole? _myRole;
   List<StudyChapter> _chapters = const [];
   Map<String, StudyReadMark> _marks = const {};
+  List<StudyMaterial> _materials = const [];
   bool _loaded = false;
   bool _failed = false;
 
@@ -102,6 +107,13 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       },
       onError: (Object _) {},
     );
+    _materialsSub =
+        _repository.watchStudyMaterials(widget.tourId, widget.book.id).listen(
+      (materials) {
+        if (mounted) setState(() => _materials = materials);
+      },
+      onError: (Object _) {},
+    );
     _position
         .load(tourId: widget.tourId, bookId: widget.book.id)
         .then((number) {
@@ -113,6 +125,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   void dispose() {
     _chapterSub?.cancel();
     _markSub?.cancel();
+    _materialsSub?.cancel();
     super.dispose();
   }
 
@@ -551,6 +564,28 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     );
   }
 
+  String _formatFileSize(int? bytes) {
+    if (bytes == null || bytes <= 0) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  void _openSolution(StudyMaterial material, StudyMaterial? alternate) {
+    final isBangla = material.title.contains('বাংলা') ||
+        material.title.contains('সমাধান') ||
+        (material.fileName?.toLowerCase().contains('bangla') ?? false);
+    MarkdownViewerScreen.open(
+      context,
+      title: material.title,
+      rawContent: material.body ?? '',
+      tourId: widget.tourId,
+      alternateRawContent: alternate?.body,
+      alternateTitle: alternate?.title,
+      alternateLanguageLabel: isBangla ? 'English' : 'বাংলা',
+    );
+  }
+
   Widget _chapterCard(StudyChapter chapter, DateTime today) {
     final l10n = context.l10n;
     final palette = context.forest;
@@ -558,6 +593,25 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     final read = mark != null;
     final overdue = isChapterOverdue(chapter, read: read, today: today);
     final here = _here == chapter.number;
+
+    final chapterMaterials = _materials
+        .where((m) => m.chapterId == chapter.id && m.isPublished)
+        .toList();
+
+    StudyMaterial? englishNote;
+    StudyMaterial? banglaNote;
+
+    for (final m in chapterMaterials) {
+      final isBangla = m.title.contains('বাংলা') ||
+          m.title.contains('সমাধান') ||
+          (m.fileName?.toLowerCase().contains('bangla') ?? false);
+      if (isBangla) {
+        banglaNote ??= m;
+      } else {
+        englishNote ??= m;
+      }
+    }
+
     return Card(
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
@@ -582,6 +636,65 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             subtitle: _chapterSubtitle(chapter, overdue: overdue, here: here),
             trailing: _chapterMenu(chapter, mark, here: here),
           ),
+          if (englishNote != null || banglaNote != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  if (englishNote != null)
+                    ElevatedButton.icon(
+                      onPressed: () => _openSolution(englishNote!, banglaNote),
+                      icon: const Text('🇬🇧', style: TextStyle(fontSize: 16)),
+                      label: Text(
+                        englishNote.sizeBytes != null &&
+                                englishNote.sizeBytes! > 0
+                            ? '${l10n.translate('study_solution_english')} (${_formatFileSize(englishNote.sizeBytes)})'
+                            : l10n.translate('study_solution_english'),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A2B),
+                        foregroundColor: AppColors.mintGreen,
+                        elevation: 0,
+                        side: BorderSide(
+                            color: AppColors.mintGreen.withValues(alpha: 0.3)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                      ),
+                    ),
+                  if (banglaNote != null)
+                    ElevatedButton.icon(
+                      onPressed: () => _openSolution(banglaNote!, englishNote),
+                      icon: const Text('🇧🇩', style: TextStyle(fontSize: 16)),
+                      label: Text(
+                        banglaNote.sizeBytes != null &&
+                                banglaNote.sizeBytes! > 0
+                            ? '${l10n.translate('study_solution_bangla')} (${_formatFileSize(banglaNote.sizeBytes)})'
+                            : l10n.translate('study_solution_bangla'),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF193B28),
+                        foregroundColor: const Color(0xFF81C784),
+                        elevation: 0,
+                        side: BorderSide(
+                            color:
+                                const Color(0xFF81C784).withValues(alpha: 0.3)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           if (chapter.guide.isNotEmpty)
             ExpansionTile(
               title: Text(l10n.translate('study_chapter_guide_section'),
