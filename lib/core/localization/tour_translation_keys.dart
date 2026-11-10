@@ -2731,7 +2731,12 @@ class TourTranslationKeys {
       'study_module_glossary': 'Glossary',
       'study_module_assignments': 'Assignments',
       'study_module_challenges': 'Weekly challenge',
-      'study_module_flashcards': 'Flashcards and quizzes',
+      'study_module_flashcards': 'Flashcards',
+      'study_module_quizzes': 'Quizzes',
+      'study_subject_book_needed':
+          'Choose a book for this subject to open this module.',
+      'study_subject_book_hint':
+          'Its discussion, glossary, flashcards, quizzes and study plan open this book.',
       'study_post_add_tip': 'Add a tip',
       'study_post_add_suggestion': 'Add a suggestion',
       'study_post_edit_title': 'Edit post',
@@ -6243,7 +6248,12 @@ class TourTranslationKeys {
       'study_module_glossary': 'শব্দকোষ',
       'study_module_assignments': 'অ্যাসাইনমেন্ট',
       'study_module_challenges': 'সাপ্তাহিক চ্যালেঞ্জ',
-      'study_module_flashcards': 'ফ্ল্যাশকার্ড ও কুইজ',
+      'study_module_flashcards': 'ফ্ল্যাশকার্ড',
+      'study_module_quizzes': 'কুইজ',
+      'study_subject_book_needed':
+          'এই মডিউল খুলতে এই বিষয়ের জন্য একটি বই বেছে নিন।',
+      'study_subject_book_hint':
+          'এর আলোচনা, শব্দকোষ, ফ্ল্যাশকার্ড, কুইজ ও পড়ার পরিকল্পনা এই বইয়ের জন্য খোলে।',
       'study_post_add_tip': 'টিপস যোগ করুন',
       'study_post_add_suggestion': 'পরামর্শ যোগ করুন',
       'study_post_edit_title': 'পোস্ট সম্পাদনা',

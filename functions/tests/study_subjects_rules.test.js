@@ -22,6 +22,8 @@ const {
   Timestamp,
 } = require('firebase/firestore');
 
+jest.setTimeout(120000);
+
 const PROJECT_ID = 'bhromon-rules-test-project';
 const STUDY = 'subjectclub';
 const HOUSEHOLD = 'subjectfamily';
@@ -30,6 +32,8 @@ const PROPOSED = 'chem';
 const TIP = 'tip-admin';
 const MEMBER_TIP = 'tip-member';
 const WAITING = 'sugg-waiting';
+const BOOK = 'phy-book';
+const DECLINED_BOOK = 'old-book';
 const people = {
   owner: { uid: 'subowner', email: 'subowner@x.com' },
   admin: { uid: 'subadmin', email: 'subadmin@x.com' },
@@ -50,6 +54,7 @@ const subject = (by, extra = {}) => ({
 });
 
 const moduleSettings = (extra = {}) => ({ enabled: true, name: 'Exam tips', postPolicy: 'members', ...extra });
+const bookRef = (f, bookId, tour = STUDY) => doc(f, 'tours', tour, 'study_books', bookId);
 
 // A post as it was stored earlier: a fixed time, so the server-time rule does not apply.
 const post = (by, extra = {}) => ({
@@ -147,6 +152,15 @@ describe('study subjects, modules and posts', () => {
       // A proposal, with its modules set up, to show that a proposal takes no posts.
       await setDoc(subjectRef(f, PROPOSED), subject(people.member.email, { title: 'Chemistry', code: null, approval: 'proposed' }));
       await setDoc(moduleRef(f, 'tips', PROPOSED), moduleSettings());
+      // A book on the group's list, and one an admin declined.
+      await setDoc(bookRef(f, BOOK), { title: 'Physics Vol 1', status: 'toRead', createdByEmail: people.admin.email, approval: 'listed' });
+      await setDoc(bookRef(f, DECLINED_BOOK), {
+        title: 'Old notes',
+        status: 'toRead',
+        createdByEmail: people.member.email,
+        approval: 'declined',
+        declineNote: 'Too old',
+      });
     });
   });
 
@@ -242,6 +256,64 @@ describe('study subjects, modules and posts', () => {
     });
   });
 
+  describe('the book of a subject', () => {
+    test('a subject names no book, or a listed book of its group', async () => {
+      await assertSucceeds(setDoc(subjectRef(db('admin'), 'bio2'), subject(people.admin.email, { bookId: BOOK })));
+      await assertSucceeds(setDoc(subjectRef(db('admin'), 'bio3'), subject(people.admin.email)));
+    });
+
+    test('a book that is declined, or that the group does not have, is refused', async () => {
+      await assertFails(setDoc(subjectRef(db('admin'), 'bio2'), subject(people.admin.email, { bookId: DECLINED_BOOK })));
+      await assertFails(setDoc(subjectRef(db('admin'), 'bio2'), subject(people.admin.email, { bookId: 'no-such-book' })));
+    });
+
+    test('a book id is plain text, so it cannot point at another document', async () => {
+      await assertFails(setDoc(subjectRef(db('admin'), 'bio2'), subject(people.admin.email, { bookId: 7 })));
+      await assertFails(setDoc(subjectRef(db('admin'), 'bio2'), subject(people.admin.email, { bookId: `${BOOK}/chapters/x` })));
+    });
+
+    test('a member proposes a subject that names a listed book', async () => {
+      await assertSucceeds(setDoc(subjectRef(db('member'), 'bio2'), subject(people.member.email, { title: 'Biology', code: null, approval: 'proposed', bookId: BOOK })));
+      await assertFails(setDoc(subjectRef(db('member'), 'bio3'), subject(people.member.email, { title: 'Biology', code: null, approval: 'proposed', bookId: DECLINED_BOOK })));
+    });
+
+    test('an admin sets, changes and clears the book of a subject', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { bookId: BOOK }));
+      await assertFails(updateDoc(subjectRef(db('admin')), { bookId: 'no-such-book' }));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { bookId: deleteField() }));
+    });
+
+    test('the proposer sets the book of their own proposal, and no other member does', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('member'), PROPOSED), { bookId: BOOK }));
+      await assertFails(updateDoc(subjectRef(db('other'), PROPOSED), { bookId: BOOK }));
+    });
+
+    test('a removed book does not stop an admin archiving the subject, which keeps its book until changed', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { bookId: BOOK }));
+      await assertSucceeds(deleteDoc(bookRef(db('admin'), BOOK)));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { archived: true }));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { title: 'Physics 102' }));
+      await assertFails(updateDoc(subjectRef(db('admin')), { bookId: 'no-such-book' }));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { bookId: deleteField() }));
+    });
+
+    test('a book module can be turned on only in a subject that names a book', async () => {
+      await assertFails(setDoc(moduleRef(db('admin'), 'discussion'), moduleSettings({ name: 'Discussion' })));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'discussion'), moduleSettings({ name: 'Discussion', enabled: false })));
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { bookId: BOOK }));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'discussion'), moduleSettings({ name: 'Discussion' })));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'glossary'), moduleSettings({ name: 'Glossary' })));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'flashcards'), moduleSettings({ name: 'Flashcards' })));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'quizzes'), moduleSettings({ name: 'Quizzes' })));
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'plan'), moduleSettings({ name: 'Study plan' })));
+    });
+
+    test('a member does not turn a book module on', async () => {
+      await assertSucceeds(updateDoc(subjectRef(db('admin')), { bookId: BOOK }));
+      await assertFails(setDoc(moduleRef(db('member'), 'quizzes'), moduleSettings({ name: 'Quizzes' })));
+    });
+  });
+
   describe('the modules of a subject', () => {
     test('only an admin turns a live module on, and a member cannot', async () => {
       await assertFails(setDoc(moduleRef(db('member'), 'tips'), moduleSettings({ enabled: false })));
@@ -249,7 +321,8 @@ describe('study subjects, modules and posts', () => {
     });
 
     test('a module that is not live yet cannot be turned on', async () => {
-      await assertFails(setDoc(moduleRef(db('admin'), 'flashcards'), moduleSettings()));
+      await assertFails(setDoc(moduleRef(db('admin'), 'papers'), moduleSettings()));
+      await assertFails(setDoc(moduleRef(db('admin'), 'assignments'), moduleSettings()));
     });
 
     test('a post policy is one of the three', async () => {

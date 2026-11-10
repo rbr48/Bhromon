@@ -91,8 +91,12 @@ class _FakeStudyRepo extends TourGroupRepository {
     String place = '',
     String notes = '',
   }) async {
-    calls.add('plan $title');
+    calls.add(bookId == null ? 'plan $title' : 'plan $title $bookId');
   }
+
+  @override
+  Stream<List<StudyChapter>> watchStudyChapters(String tourId, String bookId) =>
+      Stream.value(const []);
 }
 
 Future<void> _pump(WidgetTester tester, Widget page) async {
@@ -356,6 +360,58 @@ void main() {
       expect(find.text('Past'), findsOneWidget);
       expect(find.text('Chapters 1 to 3'), findsOneWidget);
       expect(find.text('Introduction'), findsOneWidget);
+    });
+
+    testWidgets('a plan opened for one book shows only that book\'s sessions',
+        (tester) async {
+      final now = DateTime.now();
+      final planned = [
+        ReadingSession(
+          id: 'p1',
+          title: 'Emma chapter 1',
+          startsAt: now.add(const Duration(days: 2)),
+          bookId: 'b1',
+          createdByEmail: 'me@x.com',
+        ),
+        ReadingSession(
+          id: 'p2',
+          title: 'Anna chapter 1',
+          startsAt: now.add(const Duration(days: 2)),
+          bookId: 'b2',
+          createdByEmail: 'me@x.com',
+        ),
+      ];
+      await _pump(
+          tester,
+          StudyReadingScreen(
+            tourId: 't1',
+            repository: _FakeStudyRepo(books: _books, sessions: planned),
+            book: _books.first,
+          ));
+
+      expect(find.text('Emma chapter 1'), findsOneWidget);
+      expect(find.text('Anna chapter 1'), findsNothing);
+    });
+
+    testWidgets('a session added to one book\'s plan starts with that book',
+        (tester) async {
+      final repo = _FakeStudyRepo(books: _books);
+      await _pump(
+          tester,
+          StudyReadingScreen(
+            tourId: 't1',
+            repository: repo,
+            book: _books.first,
+          ));
+
+      await tester.tap(find.text('Add session'));
+      await tester.pumpAndSettle();
+      expect(find.text('Emma'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).first, 'Chapter 4');
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['plan Chapter 4 b1']);
     });
 
     testWidgets('only the creator of a session gets its menu', (tester) async {

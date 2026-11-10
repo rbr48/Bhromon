@@ -52,9 +52,32 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
     }, onError: (Object _) {});
   }
 
+  /// The group's books, for the subject's book choice. Null, with a message, when they cannot be
+  /// read: the editor must not open without them, or saving would clear a subject's book.
+  Future<List<StudyBook>?> _booksForEditor() async {
+    try {
+      return await _repository.watchStudyBooks(widget.tourId).first;
+    } catch (error, stackTrace) {
+      logWarning('The study books did not load', error, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.translate('study_failed')),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+      return null;
+    }
+  }
+
   /// An admin adds a subject straight to the list, or a member proposes one.
   Future<void> _create({required bool proposal}) async {
-    final draft = await showStudySubjectEditor(context, proposal: proposal);
+    final books = await _booksForEditor();
+    if (books == null || !mounted) return;
+    final draft = await showStudySubjectEditor(
+      context,
+      proposal: proposal,
+      books: books,
+    );
     if (draft == null || !mounted) return;
     await _run(
       () => _repository.addStudySubject(
@@ -63,6 +86,7 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
         code: draft.code,
         description: draft.description,
         examDate: draft.examDate,
+        bookId: draft.bookId,
         approval:
             proposal ? StudyBookApproval.proposed : StudyBookApproval.listed,
       ),
@@ -71,7 +95,13 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
   }
 
   Future<void> _edit(StudySubject subject) async {
-    final draft = await showStudySubjectEditor(context, existing: subject);
+    final books = await _booksForEditor();
+    if (books == null || !mounted) return;
+    final draft = await showStudySubjectEditor(
+      context,
+      existing: subject,
+      books: books,
+    );
     if (draft == null || !mounted) return;
     await _run(
       () => _repository.editStudySubject(
@@ -81,6 +111,7 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
         code: draft.code,
         description: draft.description,
         examDate: draft.examDate,
+        bookId: draft.bookId,
       ),
       'study_subject_saved',
     );

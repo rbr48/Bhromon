@@ -5,17 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// The module settings card: its title and buttons stay in view while the list scrolls, every module
-// is an option, the modules not built yet are disabled and marked coming soon, and Cancel and Save
-// behave as their names say.
+// The module settings card: its title and buttons stay in view while the list scrolls, every live module
+// is an option, the modules not built yet are disabled and marked coming soon, a book module has no posting
+// policy, and Cancel and Save behave as their names say.
 
 const _comingLabels = [
-  'Discussion',
   'Past papers',
-  'Study plan',
-  'Glossary',
   'Assignments',
-  'Flashcards and quizzes',
 ];
 
 Future<void> _open(
@@ -84,6 +80,26 @@ void main() {
     expect(find.text('Coming soon'), findsNWidgets(_comingLabels.length));
   });
 
+  testWidgets(
+      'a book module has no posting policy, and says that it opens the subject\'s book',
+      (tester) async {
+    await _open(tester, const {}, (_) {});
+
+    // The five modules that keep their own posts have a policy; the five book modules do not.
+    expect(find.text('Who can post'), findsNWidgets(5));
+    expect(find.textContaining('open this book'), findsNWidgets(5));
+    for (final label in [
+      'Discussion',
+      'Glossary',
+      'Flashcards',
+      'Quizzes',
+      'Study plan'
+    ]) {
+      expect(find.widgetWithText(SwitchListTile, label), findsOneWidget,
+          reason: label);
+    }
+  });
+
   testWidgets('Cancel closes the card without a result', (tester) async {
     var closed = false;
     List<StudyModuleSettings>? result;
@@ -132,6 +148,6 @@ void main() {
     expect(byKey[StudyModuleKey.problems]!.enabled, isTrue);
     expect(byKey[StudyModuleKey.problems]!.name, 'Problem solving');
     // A module not built yet is never part of what gets saved.
-    expect(byKey.containsKey(StudyModuleKey.discussion), isFalse);
+    expect(byKey.containsKey(StudyModuleKey.papers), isFalse);
   });
 }

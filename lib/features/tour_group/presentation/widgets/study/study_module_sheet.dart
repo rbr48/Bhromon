@@ -122,26 +122,36 @@ class _StudyModuleSheetState extends State<StudyModuleSheet> {
                           hintText: _defaultName(key),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.translate('study_module_policy_label'),
-                        style: TextStyle(color: palette.text70),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final policy in StudyPostPolicy.values)
-                            ChoiceChip(
-                              label:
-                                  Text(l10n.translate(studyPolicyKey(policy))),
-                              selected: _policies[key] == policy,
-                              onSelected: (_) =>
-                                  setState(() => _policies[key] = policy),
-                            ),
-                        ],
-                      ),
+                      if (key.isBookModule) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.translate('study_subject_book_hint'),
+                          style: TextStyle(color: palette.text70),
+                        ),
+                      ],
+                      // A book module shows the subject's book, so it has no posting policy of its own.
+                      if (key.hasPostPolicy) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.translate('study_module_policy_label'),
+                          style: TextStyle(color: palette.text70),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final policy in StudyPostPolicy.values)
+                              ChoiceChip(
+                                label: Text(
+                                    l10n.translate(studyPolicyKey(policy))),
+                                selected: _policies[key] == policy,
+                                onSelected: (_) =>
+                                    setState(() => _policies[key] = policy),
+                              ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 16),
                     ],
                     // The modules not built yet: options that cannot be turned on yet.

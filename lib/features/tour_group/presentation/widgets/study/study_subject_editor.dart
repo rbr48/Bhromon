@@ -4,6 +4,7 @@ import 'study_modal.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/forest_palette.dart';
+import '../../../domain/models/study_models.dart';
 import '../../../domain/models/study_subject_models.dart';
 
 import 'study_text_field.dart';
@@ -15,34 +16,52 @@ class StudySubjectDraft {
     required this.code,
     required this.description,
     required this.examDate,
+    this.bookId,
   });
 
   final String title;
   final String code;
   final String description;
   final DateTime? examDate;
+
+  /// The listed book the subject studies, or null for none.
+  final String? bookId;
 }
 
 /// Opens the editor for a subject. [existing] is null for a new subject, and [proposal] is true
-/// when a member proposes one. Returns what was saved, or null when cancelled.
+/// when a member proposes one. [books] fills the book choice; only the listed ones are offered.
+/// Returns what was saved, or null when cancelled.
 Future<StudySubjectDraft?> showStudySubjectEditor(
   BuildContext context, {
   StudySubject? existing,
   bool proposal = false,
+  List<StudyBook> books = const [],
 }) {
   return showStudyModal<StudySubjectDraft>(
     context: context,
-    builder: (_) => StudySubjectEditor(existing: existing, proposal: proposal),
+    builder: (_) => StudySubjectEditor(
+      existing: existing,
+      proposal: proposal,
+      books: books,
+    ),
   );
 }
 
 class StudySubjectEditor extends StatefulWidget {
-  const StudySubjectEditor({super.key, this.existing, this.proposal = false});
+  const StudySubjectEditor({
+    super.key,
+    this.existing,
+    this.proposal = false,
+    this.books = const [],
+  });
 
   final StudySubject? existing;
 
   /// Whether the member is proposing a new subject.
   final bool proposal;
+
+  /// The books of the group that the subject may name.
+  final List<StudyBook> books;
 
   @override
   State<StudySubjectEditor> createState() => _StudySubjectEditorState();
@@ -56,9 +75,27 @@ class _StudySubjectEditorState extends State<StudySubjectEditor> {
   late final TextEditingController _description =
       TextEditingController(text: widget.existing?.description ?? '');
   late DateTime? _examDate = widget.existing?.examDate;
+  late String? _bookId = _knownBook(widget.existing?.bookId);
   bool _tried = false;
 
   bool get _isNew => widget.existing == null;
+
+  /// The books a subject may name: the listed ones only.
+  List<StudyBook> get _listed => [
+        for (final book in widget.books)
+          if (book.isListed) book,
+      ];
+
+  /// The book of an existing subject, when it is still listed. A book removed since then is
+  /// left out, so the choice does not point at nothing and saving clears it.
+  String? _knownBook(String? id) =>
+      id != null && _listed.any((book) => book.id == id) ? id : null;
+
+  void _chooseBook(String? value) {
+    setState(() {
+      _bookId = value;
+    });
+  }
 
   @override
   void dispose() {
@@ -94,6 +131,7 @@ class _StudySubjectEditorState extends State<StudySubjectEditor> {
       code: _code.text.trim(),
       description: _description.text.trim(),
       examDate: _examDate,
+      bookId: _bookId,
     ));
   }
 
@@ -152,6 +190,35 @@ class _StudySubjectEditorState extends State<StudySubjectEditor> {
                 maxLines: 3,
                 decoration: InputDecoration(
                   labelText: l10n.translate('study_subject_description_label'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: InputDecoration(
+                  labelText: l10n.translate('study_session_book_label'),
+                  helperText: l10n.translate('study_subject_book_hint'),
+                  helperMaxLines: 3,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String?>(
+                    value: _bookId,
+                    isExpanded: true,
+                    dropdownColor: palette.sheet,
+                    style: TextStyle(color: palette.text),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(l10n.translate('study_session_book_none')),
+                      ),
+                      for (final book in _listed)
+                        DropdownMenuItem<String?>(
+                          value: book.id,
+                          child:
+                              Text(book.title, overflow: TextOverflow.ellipsis),
+                        ),
+                    ],
+                    onChanged: _chooseBook,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),

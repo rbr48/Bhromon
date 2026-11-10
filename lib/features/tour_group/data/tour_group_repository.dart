@@ -2519,6 +2519,7 @@ class TourGroupRepository {
     String code = '',
     String description = '',
     DateTime? examDate,
+    String? bookId,
   }) async {
     final email = _requireEmail();
     final subject = StudySubject(
@@ -2529,6 +2530,7 @@ class TourGroupRepository {
       examDate: examDate,
       approval: approval,
       createdByEmail: email,
+      bookId: bookId,
     );
     await _sub(tourId, 'study_subjects').add(subject.toFields());
   }
@@ -2541,6 +2543,7 @@ class TourGroupRepository {
     required String code,
     required String description,
     required DateTime? examDate,
+    String? bookId,
   }) async {
     _requireEmail();
     await _sub(tourId, 'study_subjects').doc(original.id).update({
@@ -2548,6 +2551,7 @@ class TourGroupRepository {
       'code': code.trim().isEmpty ? null : code.trim(),
       'description': description.trim().isEmpty ? null : description.trim(),
       'examDate': examDate,
+      'bookId': bookId,
     });
   }
 

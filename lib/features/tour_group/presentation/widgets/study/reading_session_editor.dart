@@ -45,6 +45,7 @@ Future<ReadingSessionDraft?> showReadingSessionEditor(
   required List<StudyBook> books,
   StudyChaptersOf? chaptersOf,
   ReadingSession? existing,
+  String? initialBookId,
 }) {
   return showStudyModal<ReadingSessionDraft>(
     context: context,
@@ -52,6 +53,7 @@ Future<ReadingSessionDraft?> showReadingSessionEditor(
       books: books,
       chaptersOf: chaptersOf,
       existing: existing,
+      initialBookId: initialBookId,
     ),
   );
 }
@@ -62,11 +64,15 @@ class ReadingSessionEditor extends StatefulWidget {
     required this.books,
     this.chaptersOf,
     this.existing,
+    this.initialBookId,
   });
 
   final List<StudyBook> books;
   final StudyChaptersOf? chaptersOf;
   final ReadingSession? existing;
+
+  /// The book a new session starts with, when the plan is opened for one book.
+  final String? initialBookId;
 
   @override
   State<ReadingSessionEditor> createState() => _ReadingSessionEditorState();
@@ -79,7 +85,8 @@ class _ReadingSessionEditorState extends State<ReadingSessionEditor> {
       TextEditingController(text: widget.existing?.place ?? '');
   late final TextEditingController _notes =
       TextEditingController(text: widget.existing?.notes ?? '');
-  late String? _bookId = _knownBook(widget.existing?.bookId);
+  late String? _bookId =
+      _knownBook(widget.existing?.bookId ?? widget.initialBookId);
   late DateTime _startsAt = widget.existing?.startsAt ?? _defaultStart();
   late final List<String> _chapterIds =
       List.of(widget.existing?.chapterIds ?? const []);

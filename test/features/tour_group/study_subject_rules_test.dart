@@ -53,7 +53,7 @@ void main() {
           StudyModuleKey.tips: _module(StudyModuleKey.tips),
           StudyModuleKey.suggestions:
               _module(StudyModuleKey.suggestions, enabled: false),
-          StudyModuleKey.discussion: _module(StudyModuleKey.discussion),
+          StudyModuleKey.papers: _module(StudyModuleKey.papers),
         },
         isAdmin: false,
       );
@@ -287,16 +287,41 @@ void main() {
   });
 
   group('modules and posts as stored', () {
-    test('tips, suggestions, shared findings, problems and challenges are live',
+    test(
+        'the posts, findings, problems, challenges and book modules are live; the rest are coming',
         () {
       final live = StudyModuleKey.values.where((k) => k.isLive).toList();
       expect(live, [
         StudyModuleKey.tips,
         StudyModuleKey.suggestions,
+        StudyModuleKey.discussion,
         StudyModuleKey.findings,
         StudyModuleKey.problems,
+        StudyModuleKey.plan,
+        StudyModuleKey.glossary,
         StudyModuleKey.challenges,
+        StudyModuleKey.flashcards,
+        StudyModuleKey.quizzes,
       ]);
+      expect(
+        StudyModuleKey.values.where((k) => !k.isLive).toList(),
+        [StudyModuleKey.papers, StudyModuleKey.assignments],
+      );
+    });
+
+    test(
+        'a book module is one that shows the subject\'s book, and only it has no posting policy',
+        () {
+      final books = StudyModuleKey.values.where((k) => k.isBookModule).toList();
+      expect(books, [
+        StudyModuleKey.discussion,
+        StudyModuleKey.plan,
+        StudyModuleKey.glossary,
+        StudyModuleKey.flashcards,
+        StudyModuleKey.quizzes,
+      ]);
+      expect(
+          StudyModuleKey.values.where((k) => !k.hasPostPolicy).toList(), books);
     });
 
     test('a module key is read from its name, and an unknown name is not', () {
