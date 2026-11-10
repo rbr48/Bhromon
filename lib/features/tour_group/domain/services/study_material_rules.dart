@@ -129,6 +129,25 @@ bool publishesStudyMaterialDirectly({
 }) =>
     isAdmin || !needsApproval;
 
+/// The group's material policy, as an admin sets it on the tour. A member's material waits for approval
+/// unless the group publishes directly; with [onlyAdminsPost], only admins may add materials at all.
+class StudyMaterialPolicy {
+  const StudyMaterialPolicy({
+    this.needsApproval = true,
+    this.onlyAdminsPost = false,
+  });
+
+  final bool needsApproval;
+  final bool onlyAdminsPost;
+}
+
+/// Whether a viewer may add a material: an admin always may, a member unless only admins may add.
+bool canFileStudyMaterial({
+  required bool isAdmin,
+  required bool onlyAdminsPost,
+}) =>
+    isAdmin || !onlyAdminsPost;
+
 /// The status a new material starts with.
 StudyMaterialStatus initialStudyMaterialStatus({
   required bool isAdmin,

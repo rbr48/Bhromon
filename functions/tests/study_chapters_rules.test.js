@@ -9,14 +9,22 @@ const {
 const fs = require('fs');
 const path = require('path');
 const {
+  collection,
   doc,
+  getCountFromServer,
   getDoc,
+  getDocs,
+  query,
   setDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp,
+  where,
   Timestamp,
 } = require('firebase/firestore');
+
+// The emulator can take longer than Jest's default five seconds to clear and seed each test.
+jest.setTimeout(120000);
 
 const PROJECT_ID = 'bhromon-rules-test-project';
 const STUDY = 'chapterclub';
@@ -221,6 +229,18 @@ describe('study chapters, votes and read marks', () => {
       await assertFails(getDoc(readRef(db('other'), people.member.email)));
       await assertSucceeds(updateDoc(readRef(db('member'), people.member.email), { counted: true }));
       await assertSucceeds(getDoc(readRef(db('other'), people.member.email)));
+    });
+
+    test('the group counts the counted marks of a chapter with one query, and a list of every mark is refused to a member', async () => {
+      await assertSucceeds(setDoc(readRef(db('member'), people.member.email), { readAt: serverTimestamp(), counted: true }));
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(readRef(ctx.firestore(), people.other.email), { readAt: Timestamp.now(), counted: false });
+      });
+      const marks = collection(db('member'), 'tours', STUDY, 'study_books', BOOK, 'chapters', CHAPTER, 'reads');
+      const counted = query(marks, where('counted', '==', true));
+      await assertSucceeds(getCountFromServer(counted));
+      expect((await getCountFromServer(counted)).data().count).toBe(1);
+      await assertFails(getDocs(marks));
     });
 
     test('a member changes only whether their mark counts', async () => {

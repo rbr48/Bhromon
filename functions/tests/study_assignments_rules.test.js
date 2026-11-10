@@ -9,8 +9,12 @@ const {
 const fs = require('fs');
 const path = require('path');
 const {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  query,
+  where,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -28,6 +32,7 @@ const SUBJECT = 'bio101';
 const ADMIN_ITEM = 'lab-admin';
 const MEMBER_ITEM = 'lab-member';
 const WAITING = 'lab-waiting';
+const OTHERS_WAITING = 'lab-others-waiting';
 const people = {
   owner: { uid: 'asowner', email: 'asowner@x.com' },
   admin: { uid: 'asadmin', email: 'asadmin@x.com' },
@@ -56,6 +61,7 @@ const newItem = (by, extra = {}) => ({ ...item(by), createdAt: serverTimestamp()
 const subjectRef = (f) => doc(f, 'tours', STUDY, 'study_subjects', SUBJECT);
 const moduleRef = (f, key = 'assignments') => doc(f, 'tours', STUDY, 'study_subjects', SUBJECT, 'modules', key);
 const itemRef = (f, id) => doc(f, 'tours', STUDY, 'study_subjects', SUBJECT, 'assignments', id);
+const itemsCol = (f) => collection(f, 'tours', STUDY, 'study_subjects', SUBJECT, 'assignments');
 const markRef = (f, email) => doc(f, 'tours', STUDY, 'study_subjects', SUBJECT, 'assignment_marks', email);
 
 describe('assignments and their finished marks', () => {
@@ -101,6 +107,7 @@ describe('assignments and their finished marks', () => {
       await setDoc(itemRef(f, ADMIN_ITEM), item(people.admin.email, { title: 'Lab report 1' }));
       await setDoc(itemRef(f, MEMBER_ITEM), item(people.member.email));
       await setDoc(itemRef(f, WAITING), item(people.member.email, { title: 'Lab report 4', shown: false }));
+      await setDoc(itemRef(f, OTHERS_WAITING), item(people.other.email, { title: 'Lab report 5', shown: false }));
     });
   });
 
@@ -182,9 +189,24 @@ describe('assignments and their finished marks', () => {
       await assertSucceeds(deleteDoc(itemRef(db('admin'), ADMIN_ITEM)));
     });
 
-    test('a member reads every assignment, and an outsider reads none', async () => {
+    test('a member reads a shown assignment and their own, an admin reads every one, and an outsider reads none', async () => {
+      await assertSucceeds(getDoc(itemRef(db('member'), ADMIN_ITEM)));
       await assertSucceeds(getDoc(itemRef(db('member'), WAITING)));
+      await assertFails(getDoc(itemRef(db('member'), OTHERS_WAITING)));
+      await assertSucceeds(getDoc(itemRef(db('admin'), OTHERS_WAITING)));
       await assertFails(getDoc(itemRef(db('outsider'), ADMIN_ITEM)));
+    });
+
+    test('a member lists the shown ones and their own waiting ones, but not everyone\'s', async () => {
+      const shown = query(itemsCol(db('member')), where('shown', '==', true));
+      await assertSucceeds(getDocs(shown));
+      const own = query(itemsCol(db('member')), where('createdByEmail', '==', people.member.email));
+      await assertSucceeds(getDocs(own));
+      await assertFails(getDocs(itemsCol(db('member'))));
+    });
+
+    test('an admin lists every assignment in one query', async () => {
+      await assertSucceeds(getDocs(itemsCol(db('admin'))));
     });
   });
 

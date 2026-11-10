@@ -139,7 +139,23 @@ describe('problems, reference solutions, working and reviews', () => {
     batch.delete(reviewRef(f, problemId, solverEmail, people[who].email, subjectId));
     batch.update(
       workRef(f, problemId, solverEmail, subjectId),
-      verdict === 'right' ? { rightCount: increment(-1) } : { gapCount: increment(-1) },
+      verdict === 'right'
+        ? { rightCount: increment(-1), withdrawnBy: people[who].email }
+        : { gapCount: increment(-1), withdrawnBy: people[who].email },
+    );
+    return batch.commit();
+  };
+
+  // An admin takes another member's review back: the review goes and the working's count falls, in one batch.
+  const withdrawOtherReview = (who, problemId, solverEmail, reviewerEmail, verdict, subjectId = SUBJECT) => {
+    const f = db(who);
+    const batch = writeBatch(f);
+    batch.delete(reviewRef(f, problemId, solverEmail, reviewerEmail, subjectId));
+    batch.update(
+      workRef(f, problemId, solverEmail, subjectId),
+      verdict === 'right'
+        ? { rightCount: increment(-1), withdrawnBy: reviewerEmail }
+        : { gapCount: increment(-1), withdrawnBy: reviewerEmail },
     );
     return batch.commit();
   };
@@ -422,6 +438,18 @@ describe('problems, reference solutions, working and reviews', () => {
 
     test('a withdrawal with the wrong count is refused', async () => {
       await assertFails(withdrawBatch('member', P_MEMBER, people.other.email, 'right'));
+    });
+
+    test('an admin takes another member\'s review back, and the count falls with it', async () => {
+      await assertSucceeds(withdrawOtherReview('admin', P_MEMBER, people.other.email, people.member.email, 'gap'));
+    });
+
+    test('a member cannot take back another member\'s review', async () => {
+      await assertFails(withdrawOtherReview('other', P_MEMBER, people.other.email, people.member.email, 'gap'));
+    });
+
+    test('an admin withdrawal with the wrong count is refused', async () => {
+      await assertFails(withdrawOtherReview('admin', P_MEMBER, people.other.email, people.member.email, 'right'));
     });
 
     test('no member takes away another member\'s review', async () => {

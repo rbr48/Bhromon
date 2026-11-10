@@ -38,6 +38,7 @@ class StudyTodayCard extends StatefulWidget {
     this.findingsModule,
     this.challengeModule,
     this.problemsModule,
+    this.assignmentsModule,
     this.isAdmin = false,
     this.repository,
     this.cardsDue,
@@ -56,6 +57,9 @@ class StudyTodayCard extends StatefulWidget {
 
   /// The problems module, when it is on. The problem-set line is shown only then, and opens it.
   final StudyModuleSettings? problemsModule;
+
+  /// The assignments module, when it is on. The assignment line is shown only then, and opens it.
+  final StudyModuleSettings? assignmentsModule;
 
   /// Whether the viewer is an admin, who sees the problems a member does not (see visibleStudyProblems).
   final bool isAdmin;
@@ -85,6 +89,7 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
   final List<StreamSubscription<dynamic>> _subs = [];
 
   StudyDeadline? _deadline;
+  DueAssignment? _assignment;
   DueProblemSet? _problemSet;
   int _findingsWaiting = 0;
   int _cardsDue = 0;
@@ -169,6 +174,10 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
         subjectId,
         [for (final finding in findings) finding.id],
       );
+      final assignments =
+          await _repository.watchStudyAssignments(tourId, subjectId).first;
+      final finishedAssignments =
+          await _repository.watchMyFinishedAssignments(tourId, subjectId).first;
       final problemSets =
           await _repository.watchStudyProblemSets(tourId, subjectId).first;
       final problems =
@@ -192,6 +201,13 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
       if (!mounted) return;
       setState(() {
         _deadline = nextStudyDeadline(deadlines, _today);
+        _assignment = nextDueAssignment(
+          assignments: assignments,
+          finishedIds: finishedAssignments,
+          viewerEmail: _me,
+          isAdmin: widget.isAdmin,
+          now: _today,
+        );
         _problemSet = nextDueProblemSet(
           sets: problemSets,
           problems: problems,
@@ -302,6 +318,20 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
       }
     }
 
+    final assignment = _assignment;
+    final assignmentsModule = widget.assignmentsModule;
+    _TodayLine? assignmentLine;
+    if (assignment != null && assignmentsModule != null) {
+      assignmentLine = _TodayLine(
+        icon: Icons.assignment_rounded,
+        text: l10n.translate('study_today_assignment_due', args: {
+          'title': assignment.assignment.title,
+          'date': localizedDateFormat('d MMM').format(assignment.due),
+        }),
+        onTap: () => widget.onOpenModule(assignmentsModule),
+      );
+    }
+
     final problemSet = _problemSet;
     final problemsModule = widget.problemsModule;
     _TodayLine? problemSetLine;
@@ -321,6 +351,7 @@ class _StudyTodayCardState extends State<StudyTodayCard> {
     final byLine = <TodayCardLine, _TodayLine?>{
       TodayCardLine.exam: examLine,
       TodayCardLine.deadline: deadlineLine,
+      TodayCardLine.assignment: assignmentLine,
       TodayCardLine.problemSet: problemSetLine,
       TodayCardLine.findings: findingsLine,
       TodayCardLine.cards: cardsLine,

@@ -125,22 +125,18 @@ class StudyGroupTotals {
   final int questionsAsked;
 }
 
-/// Adds up the group's totals. [countedReadFlags] holds, for each chapter, the counted flag of every read mark the
-/// member can see on it. Only the counted ones add to the total: an uncounted read is private to its member.
-/// [takersByQuiz] is the taker count each quiz keeps. [questions] are the threads, each with its first answer.
+/// Adds up the group's totals. [countedReads] holds, for each chapter, how many read marks count for the group. An
+/// uncounted read is private to its member, so it is not in the count. [takersByQuiz] is the taker count each quiz
+/// keeps. [questions] are the threads, each with its first answer.
 StudyGroupTotals groupTotals({
-  required Map<String, Iterable<bool>> countedReadFlags,
+  required Map<String, int> countedReads,
   required Map<String, int> takersByQuiz,
   required Iterable<({DateTime asked, DateTime? firstAnswer})> questions,
   int withinDays = 3,
 }) {
-  final chapters = {
-    for (final entry in countedReadFlags.entries)
-      entry.key: entry.value.where((counted) => counted).length,
-  };
   final list = questions.toList();
   return StudyGroupTotals(
-    chaptersCounted: chapters,
+    chaptersCounted: Map.unmodifiable(countedReads),
     quizTakers: Map.unmodifiable(takersByQuiz),
     questionsAnswered: questionsAnsweredWithin(list, withinDays: withinDays),
     questionsAsked: list.length,

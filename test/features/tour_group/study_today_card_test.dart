@@ -1,5 +1,6 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/domain/models/study_assignment_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_challenge_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_problem_models.dart';
@@ -24,7 +25,12 @@ class _FakeTodayRepo extends TourGroupRepository {
     this.problems = const [],
     this.myWork = const {},
     this.ownDues = const {},
+    this.assignments = const [],
+    this.finishedAssignments = const {},
   });
+
+  final List<StudyAssignment> assignments;
+  final Set<String> finishedAssignments;
 
   final StudyChallenge? challenge;
   final Set<String> joins;
@@ -52,6 +58,20 @@ class _FakeTodayRepo extends TourGroupRepository {
 
   @override
   String get currentEmail => 'me@x.com';
+
+  @override
+  Stream<List<StudyAssignment>> watchStudyAssignments(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(assignments);
+
+  @override
+  Stream<Set<String>> watchMyFinishedAssignments(
+    String tourId,
+    String subjectId,
+  ) =>
+      Stream.value(finishedAssignments);
 
   @override
   Stream<StudyChallenge?> watchStudyChallenge(
@@ -195,7 +215,86 @@ Future<void> _pump(WidgetTester tester, Widget page) async {
   await tester.pumpAndSettle();
 }
 
+const _assignmentsModule = StudyModuleSettings(
+  key: StudyModuleKey.assignments,
+  enabled: true,
+  name: 'Assignments',
+  postPolicy: StudyPostPolicy.members,
+);
+
 void main() {
+  testWidgets(
+      'a subject shows the assignment due soon that the member has not finished, and opens its module',
+      (tester) async {
+    final opened = <StudyModuleSettings>[];
+    await _pump(
+      tester,
+      StudyTodayCard(
+        tourId: 't1',
+        subject: _subject,
+        repository: _FakeTodayRepo(
+          assignments: [
+            StudyAssignment(
+              id: 'a1',
+              title: 'Lab report 2',
+              dueAt: DateTime(2026, 11, 11),
+              createdByEmail: 'ana@x.com',
+            ),
+          ],
+        ),
+        today: _tuesday,
+        assignmentsModule: _assignmentsModule,
+        onOpenModule: opened.add,
+        cardsDue: () async => 0,
+      ),
+    );
+
+    expect(find.text('Assignment due 11 Nov: Lab report 2'), findsOneWidget);
+    await tester.tap(find.text('Assignment due 11 Nov: Lab report 2'));
+    await tester.pumpAndSettle();
+    expect(opened.map((m) => m.key), [StudyModuleKey.assignments]);
+  });
+
+  testWidgets(
+      'a finished assignment, or none when its module is off, is not shown',
+      (tester) async {
+    final assignment = StudyAssignment(
+      id: 'a1',
+      title: 'Lab report 2',
+      dueAt: DateTime(2026, 11, 11),
+      createdByEmail: 'ana@x.com',
+    );
+    await _pump(
+      tester,
+      StudyTodayCard(
+        tourId: 't1',
+        subject: _subject,
+        repository: _FakeTodayRepo(
+          assignments: [assignment],
+          finishedAssignments: const {'a1'},
+        ),
+        today: _tuesday,
+        assignmentsModule: _assignmentsModule,
+        onOpenModule: (_) {},
+        cardsDue: () async => 0,
+      ),
+    );
+    expect(find.text('Assignment due 11 Nov: Lab report 2'), findsNothing);
+
+    await _pump(
+      tester,
+      StudyTodayCard(
+        tourId: 't1',
+        subject: _subject,
+        repository: _FakeTodayRepo(assignments: [assignment]),
+        today: _tuesday,
+        onOpenModule: (_) {},
+        cardsDue: () async => 0,
+      ),
+    );
+    expect(find.text('Assignment due 11 Nov: Lab report 2'), findsNothing);
+  });
+
   testWidgets(
       'a subject shows its exam in exam mode, the next deadline, the findings waiting and the cards due',
       (tester) async {

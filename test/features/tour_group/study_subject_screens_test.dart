@@ -523,6 +523,23 @@ void main() {
       expect(find.text('Add a tip'), findsNothing);
     });
 
+    testWidgets('a past paper offers a file to attach, and a tip does not',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyModulePostsScreen(
+          tourId: 'T',
+          subject: _physics,
+          moduleKey: StudyModuleKey.papers,
+          settings: _on(StudyModuleKey.papers, 'Past papers'),
+          repository: _FakeSubjectRepo(role: TourRole.admin),
+        ),
+      );
+      await tester.tap(find.text('Add a past paper'));
+      await tester.pumpAndSettle();
+      expect(find.text('Attach a file'), findsOneWidget);
+    });
+
     // A separate test, so the screen starts afresh and reads the admin role itself.
     testWidgets('an admin adds a tip to a module that only admins post in',
         (tester) async {

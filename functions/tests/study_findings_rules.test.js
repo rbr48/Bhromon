@@ -106,7 +106,9 @@ describe('shared findings and the checks on them', () => {
     batch.delete(checkRef(f, id, people[who].email, subjectId));
     batch.update(
       findingRef(f, id, subjectId),
-      verdict === 'confirm' ? { confirmCount: increment(-1) } : { challengeCount: increment(-1) },
+      verdict === 'confirm'
+        ? { confirmCount: increment(-1), withdrawnBy: people[who].email }
+        : { challengeCount: increment(-1), withdrawnBy: people[who].email },
     );
     return batch.commit();
   };
@@ -320,6 +322,32 @@ describe('shared findings and the checks on them', () => {
 
     test('a withdrawal with the wrong count is refused', async () => {
       await assertFails(withdrawBatch('other', F_CHECKED, 'challenge'));
+    });
+
+    // An admin withdraws a check another member made: the check goes and its count falls, in one batch.
+    const withdrawOther = (who, id, checkerEmail, verdict, subjectId = SUBJECT) => {
+      const f = db(who);
+      const batch = writeBatch(f);
+      batch.delete(checkRef(f, id, checkerEmail, subjectId));
+      batch.update(
+        findingRef(f, id, subjectId),
+        verdict === 'confirm'
+          ? { confirmCount: increment(-1), withdrawnBy: checkerEmail }
+          : { challengeCount: increment(-1), withdrawnBy: checkerEmail },
+      );
+      return batch.commit();
+    };
+
+    test('an admin withdraws another member\'s check: the check goes and the count falls', async () => {
+      await assertSucceeds(withdrawOther('admin', F_CHECKED, people.other.email, 'confirm'));
+    });
+
+    test('a member cannot withdraw another member\'s check', async () => {
+      await assertFails(withdrawOther('member', F_CHECKED, people.other.email, 'confirm'));
+    });
+
+    test('an admin withdrawal with the wrong count is refused', async () => {
+      await assertFails(withdrawOther('admin', F_CHECKED, people.other.email, 'challenge'));
     });
 
     test('no member takes away another member\'s check', async () => {

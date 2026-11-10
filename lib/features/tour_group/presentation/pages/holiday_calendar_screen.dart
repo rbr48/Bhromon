@@ -9,10 +9,12 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/study_assignment_models.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/holiday_calendar.dart';
 import '../../domain/services/holiday_export.dart';
+import '../../domain/services/study_assignment_rules.dart';
 import '../../domain/services/study_room_rules.dart';
 import '../widgets/holiday_calendar/holiday_common.dart';
 import '../widgets/holiday_calendar/holiday_day_sheet.dart';
@@ -50,6 +52,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
   late int _month;
   DateTime? _selected;
   Stream<List<ReadingSession>>? _sessionStream;
+  Future<List<StudyAssignment>>? _assignmentLoad;
 
   @override
   void initState() {
@@ -123,6 +126,10 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
   Stream<List<ReadingSession>> _sessionsOf(String tourId) =>
       _sessionStream ??= _repository.watchReadingSessions(tourId);
 
+  /// The assignments the member can see across the group's subjects. Read once per open of the screen.
+  Future<List<StudyAssignment>> _assignmentsOf(String tourId) =>
+      _assignmentLoad ??= _repository.loadStudyAssignments(tourId);
+
   /// The study group's sessions whose study room has not closed, soonest first. Each opens its session page.
   Widget _studySessionCard(BuildContext context) {
     final l10n = context.l10n;
@@ -154,6 +161,35 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
                   l10n.translate('study_calendar_empty'),
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
+              FutureBuilder<List<StudyAssignment>>(
+                future: _assignmentsOf(widget.tourId),
+                builder: (context, due) {
+                  final upcoming = upcomingStudyAssignments(
+                    due.data ?? const [],
+                    now: now,
+                  );
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final assignment in upcoming.take(5))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            l10n.translate('study_today_assignment_due', args: {
+                              'date': localizedDateFormat('d MMM y')
+                                  .format(assignment.dueAt!),
+                              'title': assignment.title,
+                            }),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
               for (final session in sessions)
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -463,8 +499,12 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
     if (!isStudy) return month(const {});
     return StreamBuilder<List<ReadingSession>>(
       stream: _sessionsOf(widget.tourId),
-      builder: (context, snap) => month(
-        calendarSessionDays(snap.data ?? const [], now: DateTime.now()),
+      builder: (context, snap) => FutureBuilder<List<StudyAssignment>>(
+        future: _assignmentsOf(widget.tourId),
+        builder: (context, due) => month({
+          ...calendarSessionDays(snap.data ?? const [], now: DateTime.now()),
+          ...assignmentDueDays(due.data ?? const []),
+        }),
       ),
     );
   }

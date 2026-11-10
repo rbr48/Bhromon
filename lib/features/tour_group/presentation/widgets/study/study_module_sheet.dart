@@ -6,9 +6,9 @@ import '../../../../../core/theme/forest_palette.dart';
 import '../../../domain/models/study_subject_models.dart';
 import 'study_labels.dart';
 
-/// Opens the sheet an admin uses to turn the live modules on, rename them, and choose who may
-/// post in each. Every module is listed: the ones not built yet are options that cannot be turned
-/// on yet. Returns one settings entry per live module, or null when cancelled.
+/// Opens the sheet an admin uses to turn the modules on, rename them, and choose who may post in
+/// each. Every module is listed, and every one can be turned on. Returns one settings entry per
+/// module, or null when cancelled.
 Future<List<StudyModuleSettings>?> showStudyModuleSheet(
   BuildContext context, {
   required Map<StudyModuleKey, StudyModuleSettings> current,

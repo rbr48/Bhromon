@@ -12,6 +12,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/models/study_thread_models.dart';
 import '../../domain/services/study_finding_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
+import '../widgets/study/study_finding_checks_sheet.dart';
 import '../widgets/study/study_finding_composer.dart';
 
 import '../widgets/study/study_rich_text.dart';
@@ -171,6 +172,15 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
   }
 
   /// An admin shows a reported finding again, which clears its report time.
+  /// Opens the checks on a finding, where an admin sees them and may withdraw any.
+  Future<void> _openChecks(StudyFinding finding) => showStudyFindingChecksSheet(
+        context,
+        repository: _repository,
+        tourId: widget.tourId,
+        subjectId: widget.subject.id,
+        findingId: finding.id,
+      );
+
   Future<void> _restore(StudyFinding finding) => _run(
         () => _repository.restoreStudyFinding(
           widget.tourId,
@@ -462,6 +472,8 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                         _setFlags(finding, pinned: !finding.pinned);
                       case 'report':
                         _report(finding);
+                      case 'checks':
+                        _openChecks(finding);
                       case 'restore':
                         _restore(finding);
                       default:
@@ -495,6 +507,12 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
                         child: Text(l10n.translate(finding.pinned
                             ? 'study_post_unpin'
                             : 'study_post_pin')),
+                      ),
+                    if (_isAdmin)
+                      PopupMenuItem<String>(
+                        value: 'checks',
+                        child:
+                            Text(l10n.translate('study_finding_checks_action')),
                       ),
                     if (mine || _isAdmin)
                       PopupMenuItem<String>(

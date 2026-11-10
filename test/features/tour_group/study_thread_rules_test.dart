@@ -115,15 +115,42 @@ void main() {
   });
 
   group('limits', () {
-    final now = DateTime(2026, 11, 9, 14);
+    // The day is the Dhaka day (UTC+6), so these instants are written in UTC.
+    final now = DateTime.utc(2026, 11, 9, 8); // 14:00 on 9 November in Dhaka
 
-    test('a member has started a thread today when its date is today', () {
+    test('the Dhaka day key is the date six hours on, as a number', () {
+      expect(threadDayKey(DateTime.utc(2026, 11, 9, 8)), 20261109);
+      expect(threadDayKey(DateTime.utc(2026, 11, 9, 17, 59)),
+          20261109); // 23:59 in Dhaka
+      expect(threadDayKey(DateTime.utc(2026, 11, 9, 18)),
+          20261110); // midnight in Dhaka
+    });
+
+    test('a member has started a thread today when its Dhaka day is today', () {
       final threads = [
-        _thread('today', at: DateTime(2026, 11, 9, 8), by: 'me@x.com'),
-        _thread('yesterday', at: DateTime(2026, 11, 8, 23), by: 'me@x.com'),
-        _thread('others', at: DateTime(2026, 11, 9, 9), by: 'other@x.com'),
+        _thread('today', at: DateTime.utc(2026, 11, 9, 2), by: 'me@x.com'),
+        _thread('yesterday', at: DateTime.utc(2026, 11, 8, 17), by: 'me@x.com'),
+        _thread('others', at: DateTime.utc(2026, 11, 9, 3), by: 'other@x.com'),
       ];
       expect(threadsStartedToday(threads, email: 'me@x.com', now: now), 1);
+    });
+
+    test('the count turns over at Dhaka midnight, not at the local midnight',
+        () {
+      final threads = [
+        _thread('before-midnight',
+            at: DateTime.utc(2026, 11, 9, 17, 59), by: 'me@x.com'),
+        _thread('after-midnight',
+            at: DateTime.utc(2026, 11, 9, 18, 1), by: 'me@x.com'),
+      ];
+      expect(
+          threadsStartedToday(threads,
+              email: 'me@x.com', now: DateTime.utc(2026, 11, 9, 17, 30)),
+          1);
+      expect(
+          threadsStartedToday(threads,
+              email: 'me@x.com', now: DateTime.utc(2026, 11, 9, 18, 30)),
+          1);
     });
 
     test('a member may start a thread until the daily limit is reached', () {

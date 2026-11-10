@@ -33,6 +33,8 @@ class FakeBackend:
         }
         # Only regionExpert and pioneer are platform admins.
         self.tiers = {"uid-admin": "pioneer", "uid-alice": "explorer"}
+        # Study materials by the address of their file: the records a Firestore query would return.
+        self.study_materials = {}
 
     def identity_for_token(self, token):
         if token not in self.tokens:
@@ -50,6 +52,9 @@ class FakeBackend:
             if token_uid == uid:
                 return email
         return ""
+
+    def study_material_records(self, tour_id, url):
+        return [dict(record) for record in self.study_materials.get(url, [])]
 
     def shares_group(self, uid_a, uid_b):
         """Two people share a tour when both are members of the same one."""

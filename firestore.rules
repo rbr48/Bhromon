@@ -741,6 +741,21 @@ service cloud.firestore {
 
     // A study or book club: a family circle with the study preset. Any member proposes a
     // book, which an admin lists or declines; its reading plan is open to every member.
+    // The Dhaka day a member's threads are counted on, from the server's clock (threadDayKey in the app). Dhaka is UTC+6
+    // with no daylight saving, so the day is the date of the time six hours on.
+    function studyDayKey() {
+      let dhaka = request.time + duration.value(6, 'h');
+      return string(dhaka.year() * 10000 + dhaka.month() * 100 + dhaka.day());
+    }
+    // Whether a thread is written with its member's counter for the day: the counter is made, or goes up by one, in the
+    // same batch. The counter's own rule keeps it at or under the day's limit of ten.
+    function studyThreadCounted(tourId) {
+      return (!exists(/databases/$(database)/documents/tours/$(tourId)/study_daily/$(tourUserEmail() + '__' + studyDayKey())) &&
+              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_daily/$(tourUserEmail() + '__' + studyDayKey())).data.threads == 1) ||
+             (exists(/databases/$(database)/documents/tours/$(tourId)/study_daily/$(tourUserEmail() + '__' + studyDayKey())) &&
+              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_daily/$(tourUserEmail() + '__' + studyDayKey())).data.threads ==
+              get(/databases/$(database)/documents/tours/$(tourId)/study_daily/$(tourUserEmail() + '__' + studyDayKey())).data.threads + 1);
+    }
     function isStudyTour(tId) {
       return isFamilyTour(tId) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'study';
@@ -863,6 +878,17 @@ service cloud.firestore {
              (newData.get('archived', false) == false || newData.get('approval', 'listed') == 'listed') &&
              (byAdmin || oldData.get('createdByEmail', '') == tourUserEmail());
     }
+    // A subject stops naming its book in the same batch that removes the book (the book's creator or an admin
+    // does it). The batch must delete the book it names, and the subject changes nothing else. A subject with a
+    // link to a book that is already gone cannot be cleared this way; the app reads that link as none.
+    function studySubjectBookCleared(tourId, newData, oldData) {
+      let bookId = oldData.get('bookId', null);
+      return bookId is string &&
+             newData.get('bookId', null) == null &&
+             newData.diff(oldData).affectedKeys().hasOnly(['bookId']) &&
+             exists(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)) &&
+             !existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId));
+    }
     // Whether a module of a subject is on: its settings exist and say so.
     function studyModuleOn(tourId, subjectId, moduleKey) {
       return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/$(moduleKey)) &&
@@ -918,7 +944,7 @@ service cloud.firestore {
     // A shared finding: the result a member reached, how it was checked, how many members
     // confirmed and challenged it, and whether it is shown and pinned.
     function validStudyFinding(d) {
-      return d.keys().hasOnly(['text', 'method', 'createdByEmail', 'createdAt', 'confirmCount', 'challengeCount', 'shown', 'pinned', 'reportCount', 'reportedAt']) &&
+      return d.keys().hasOnly(['text', 'method', 'createdByEmail', 'createdAt', 'confirmCount', 'challengeCount', 'shown', 'pinned', 'reportCount', 'reportedAt', 'withdrawnBy']) &&
              d.text is string && d.text.size() >= 1 &&
              d.method is string && d.method.size() >= 1 &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
@@ -927,7 +953,8 @@ service cloud.firestore {
              d.challengeCount is int && d.challengeCount >= 0 &&
              d.shown is bool && d.pinned is bool &&
              d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
-             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp) &&
+             (d.get('withdrawnBy', null) == null || (d.withdrawnBy is string && d.withdrawnBy.size() <= 254));
     }
     // A member's check of a finding: a confirmation or a challenge, and an optional note.
     function validStudyCheck(d) {
@@ -989,6 +1016,19 @@ service cloud.firestore {
     }
     // Whether a member's check of a finding is, now or after the batch being written, a check of
     // the given verdict. The check is the member's own, by its document id.
+    // Whether the signed-in member's membership role is admin or owner. The caller checks active membership first, so
+    // this reads only the membership, which keeps the rule under the evaluation limit for an admin's withdrawal.
+    function studyRoleIsAdmin(tId) {
+      return exists(tourMemberPath(tId)) && get(tourMemberPath(tId)).data.role in ['admin', 'owner'];
+    }
+    // Whether a check's withdrawal moved its finding's count by one, the count of the check's verdict, and left the
+    // other count alone. Each finding is read once, so the expression budget holds for an admin's withdrawal too.
+    function studyWithdrawCountsOk(tourId, subjectId, findingId, verdict) {
+      let before = get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data;
+      let after = getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data;
+      return (verdict == 'confirm' && after.confirmCount == before.confirmCount - 1 && after.challengeCount == before.challengeCount) ||
+             (verdict == 'challenge' && after.challengeCount == before.challengeCount - 1 && after.confirmCount == before.confirmCount);
+    }
     function studyCheckNowIs(tourId, subjectId, findingId, verdict) {
       return exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(tourUserEmail())) &&
              get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(tourUserEmail())).data.verdict == verdict;
@@ -999,27 +1039,37 @@ service cloud.firestore {
     }
     // Whether a finding's counts move only with this member's check in the same batch: a
     // confirmation or a challenge is added or taken back, and the other count stays where it is.
+    // Whether the check a withdrawal names (withdrawnBy) held the verdict whose count falls, existed before the batch and
+    // is gone after it. Who may delete that check, and its count, is the check's own delete rule.
+    function studyWithdrawnIs(tourId, subjectId, findingId, newData, verdict) {
+      let who = newData.get('withdrawnBy', '');
+      return who != '' &&
+             exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(who)) &&
+             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(who)).data.verdict == verdict &&
+             !existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)/checks/$(who));
+    }
     function studyCountsMoveOk(tourId, subjectId, findingId, newData, oldData) {
       let dConfirm = newData.confirmCount - oldData.confirmCount;
       let dChallenge = newData.challengeCount - oldData.challengeCount;
       return (dConfirm == 0 && dChallenge == 0) ||
              (dConfirm == 1 && dChallenge == 0 && !studyCheckNowIs(tourId, subjectId, findingId, 'confirm') && studyCheckAfterIs(tourId, subjectId, findingId, 'confirm')) ||
              (dConfirm == 0 && dChallenge == 1 && !studyCheckNowIs(tourId, subjectId, findingId, 'challenge') && studyCheckAfterIs(tourId, subjectId, findingId, 'challenge')) ||
-             (dConfirm == -1 && dChallenge == 0 && studyCheckNowIs(tourId, subjectId, findingId, 'confirm') && !studyCheckAfterIs(tourId, subjectId, findingId, 'confirm')) ||
-             (dConfirm == 0 && dChallenge == -1 && studyCheckNowIs(tourId, subjectId, findingId, 'challenge') && !studyCheckAfterIs(tourId, subjectId, findingId, 'challenge'));
+             (dConfirm == -1 && dChallenge == 0 && studyWithdrawnIs(tourId, subjectId, findingId, newData, 'confirm')) ||
+             (dConfirm == 0 && dChallenge == -1 && studyWithdrawnIs(tourId, subjectId, findingId, newData, 'challenge'));
     }
     // Whether an update to a finding is allowed. Its counts move only with a check
     // (studyCountsMoveOk). An admin shows it or pins it; its author changes its words and method.
     function studyFindingUpdateAllowed(tourId, subjectId, findingId, newData, oldData) {
-      let byAdmin = isTourAdmin(tourId);
       let changed = newData.diff(oldData).affectedKeys();
-      // The cheap key checks come first in each branch, and the shape check runs only in the branch
-      // that matches, so the rule stays under the evaluation limit.
+      // The cheap key checks come first in each branch. A count-only change, which comes with a check or its
+      // withdrawal, changes nothing else, so the finding's other fields stay as they were written and are not
+      // checked again: the counts' own rule (studyCountsMoveOk) carries that branch. The admin lookup is made only in
+      // the branch that needs it.
       return newData.createdByEmail == oldData.createdByEmail &&
-             ((changed.hasOnly(['confirmCount', 'challengeCount']) && validStudyFinding(newData) &&
+             ((changed.hasOnly(['confirmCount', 'challengeCount', 'withdrawnBy']) &&
                studyCountsMoveOk(tourId, subjectId, findingId, newData, oldData)) ||
               // An admin's restore of a reported finding shows it again and clears its report time.
-              (byAdmin && changed.hasOnly(['text', 'method', 'shown', 'pinned', 'reportedAt']) &&
+              (isTourAdmin(tourId) && changed.hasOnly(['text', 'method', 'shown', 'pinned', 'reportedAt']) &&
                (!changed.hasAny(['reportedAt']) || newData.get('reportedAt', null) == null) &&
                validStudyFinding(newData)) ||
               (oldData.createdByEmail == tourUserEmail() && changed.hasOnly(['text', 'method']) &&
@@ -1124,13 +1174,14 @@ service cloud.firestore {
     // The report fields of a working are optional, as a problem's are: a working written before reports existed
     // has neither, and reads as no reports.
     function validStudyWork(d) {
-      return d.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'rightCount', 'gapCount', 'reportCount', 'reportedAt']) &&
+      return d.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'rightCount', 'gapCount', 'reportCount', 'reportedAt', 'withdrawnBy']) &&
              d.text is string && d.text.size() >= 1 &&
              d.createdAt is timestamp && d.updatedAt is timestamp &&
              d.rightCount is int && d.rightCount >= 0 &&
              d.gapCount is int && d.gapCount >= 0 &&
              d.get('reportCount', 0) is int && d.get('reportCount', 0) >= 0 &&
-             (d.get('reportedAt', null) == null || d.reportedAt is timestamp);
+             (d.get('reportedAt', null) == null || d.reportedAt is timestamp) &&
+             (d.get('withdrawnBy', null) == null || (d.withdrawnBy is string && d.withdrawnBy.size() <= 254));
     }
     // A review of a working: a verdict of right or gap, and an optional note.
     function validStudyWorkReview(d) {
@@ -1155,14 +1206,31 @@ service cloud.firestore {
     }
     // Whether a working's review counts move only with the reviewing member's review in the same batch: a right
     // or a gap is added or taken back, and the other count stays where it is.
+    // Whether the review a withdrawal names (withdrawnBy) held the verdict whose count falls, existed before the batch and
+    // is gone after it. Who may delete that review, and its count, is the review's own delete rule.
+    function studyWorkWithdrawnIs(tourId, subjectId, problemId, solverEmail, newData, verdict) {
+      let who = newData.get('withdrawnBy', '');
+      return who != '' &&
+             exists(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(who)) &&
+             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(who)).data.verdict == verdict &&
+             !existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reviews/$(who));
+    }
+    // Whether a review's withdrawal moved its working's count by one, the count of the review's verdict, and left the other
+    // count alone. The working is read once, so the expression limit holds for an admin's withdrawal too.
+    function studyWorkWithdrawCountsOk(tourId, subjectId, problemId, solverEmail, verdict) {
+      let before = get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data;
+      let after = getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data;
+      return (verdict == 'right' && after.rightCount == before.rightCount - 1 && after.gapCount == before.gapCount) ||
+             (verdict == 'gap' && after.gapCount == before.gapCount - 1 && after.rightCount == before.rightCount);
+    }
     function studyWorkCountsOk(tourId, subjectId, problemId, solverEmail, newData, oldData) {
       let dRight = newData.rightCount - oldData.rightCount;
       let dGap = newData.gapCount - oldData.gapCount;
       return (dRight == 0 && dGap == 0) ||
              (dRight == 1 && dGap == 0 && !studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'right') && studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'right')) ||
              (dRight == 0 && dGap == 1 && !studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'gap') && studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'gap')) ||
-             (dRight == -1 && dGap == 0 && studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'right') && !studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'right')) ||
-             (dRight == 0 && dGap == -1 && studyWorkReviewNowIs(tourId, subjectId, problemId, solverEmail, 'gap') && !studyWorkReviewAfterIs(tourId, subjectId, problemId, solverEmail, 'gap'));
+             (dRight == -1 && dGap == 0 && studyWorkWithdrawnIs(tourId, subjectId, problemId, solverEmail, newData, 'right')) ||
+             (dRight == 0 && dGap == -1 && studyWorkWithdrawnIs(tourId, subjectId, problemId, solverEmail, newData, 'gap'));
     }
     // Whether an update to a working is allowed: its counts move only with a review; its author edits the words.
     // An admin restores a reported working, which clears its report time. A member who can see a working, other
@@ -1170,17 +1238,19 @@ service cloud.firestore {
     // member's own report.
     function studyWorkUpdateAllowed(tourId, subjectId, problemId, solverEmail, newData, oldData) {
       let changed = newData.diff(oldData).affectedKeys();
-      return validStudyWork(newData) &&
-             ((changed.hasOnly(['rightCount', 'gapCount']) &&
-               studyWorkCountsOk(tourId, subjectId, problemId, solverEmail, newData, oldData)) ||
-              (changed.hasOnly(['text', 'updatedAt']) && solverEmail == tourUserEmail() && newData.updatedAt == request.time) ||
-              (changed.hasOnly(['reportedAt']) && newData.get('reportedAt', null) == null && isTourAdmin(tourId)) ||
-              (changed.hasOnly(['reportCount', 'reportedAt']) && solverEmail != tourUserEmail() &&
-               (isTourAdmin(tourId) || studyHasOwnWork(tourId, subjectId, problemId)) &&
-               newData.get('reportCount', 0) == oldData.get('reportCount', 0) + 1 &&
-               ((oldData.get('reportedAt', null) == null && newData.reportedAt == request.time) ||
-                (oldData.get('reportedAt', null) != null && newData.reportedAt == oldData.reportedAt)) &&
-               existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reports/$(tourUserEmail()))));
+      // A count-only change (a review or its withdrawal) changes nothing else, so the working's other fields stay as
+      // they were written and are not checked again. The other branches validate the working first.
+      return (changed.hasOnly(['rightCount', 'gapCount', 'withdrawnBy']) &&
+              studyWorkCountsOk(tourId, subjectId, problemId, solverEmail, newData, oldData)) ||
+             (validStudyWork(newData) &&
+              ((changed.hasOnly(['text', 'updatedAt']) && solverEmail == tourUserEmail() && newData.updatedAt == request.time) ||
+               (changed.hasOnly(['reportedAt']) && newData.get('reportedAt', null) == null && isTourAdmin(tourId)) ||
+               (changed.hasOnly(['reportCount', 'reportedAt']) && solverEmail != tourUserEmail() &&
+                (isTourAdmin(tourId) || studyHasOwnWork(tourId, subjectId, problemId)) &&
+                newData.get('reportCount', 0) == oldData.get('reportCount', 0) + 1 &&
+                ((oldData.get('reportedAt', null) == null && newData.reportedAt == request.time) ||
+                 (oldData.get('reportedAt', null) != null && newData.reportedAt == oldData.reportedAt)) &&
+                existsAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)/reports/$(tourUserEmail())))));
     }
     // Whether a member may submit their own working: once, on a shown problem, in a listed subject whose
     // problems module is on. The counts start at zero.
@@ -1243,7 +1313,8 @@ service cloud.firestore {
     // A thread on a book: a title, a body, an optional page reference and chapter, whether an admin has
     // pinned or locked it, and which reply is the accepted answer.
     function validStudyThread(d) {
-      return d.keys().hasOnly(['title', 'body', 'pageRef', 'chapterId', 'createdByEmail', 'createdAt', 'pinned', 'locked', 'acceptedReplyId']) &&
+      return d.keys().hasOnly(['title', 'body', 'pageRef', 'chapterId', 'createdByEmail', 'createdAt', 'pinned', 'locked', 'acceptedReplyId', 'mentions']) &&
+             (d.get('mentions', []) is list && d.get('mentions', []).size() <= 50) &&
              d.title is string && d.title.size() >= 1 &&
              d.body is string && d.body.size() >= 1 &&
              (d.get('pageRef', null) == null || d.pageRef is string) &&
@@ -1255,7 +1326,8 @@ service cloud.firestore {
     }
     // A reply: its text, its author, when it was written, and how many members found it helpful or reported it.
     function validStudyReply(d) {
-      return d.keys().hasOnly(['text', 'createdByEmail', 'createdAt', 'helpfulCount', 'reportCount']) &&
+      return d.keys().hasOnly(['text', 'createdByEmail', 'createdAt', 'helpfulCount', 'reportCount', 'mentions']) &&
+             (d.get('mentions', []) is list && d.get('mentions', []).size() <= 50) &&
              d.text is string && d.text.size() >= 1 &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
              d.createdAt is timestamp &&
@@ -1371,9 +1443,16 @@ service cloud.firestore {
              d.reason in ['copyright', 'exam', 'personal', 'wrong', 'other'] &&
              d.createdAt is timestamp;
     }
-    // Whether the group publishes materials without an admin's approval. Off unless an admin turns it on.
-    function studyMaterialPublishesDirectly(tourId) {
-      return get(/databases/$(database)/documents/tours/$(tourId)).data.get('studyPolicy', {}).get('materialsNeedApproval', true) == false;
+    // Whether a new material may be filed as its status says. The admin check and the group's policy are each
+    // read once, because the admin check is expensive and the rules have a fixed budget of expressions. A material
+    // waits for an admin unless the group publishes directly (materialsNeedApproval off); an admin's publishes at
+    // once. Only admins may file when onlyAdminsPost is on. Both policy flags are off unless an admin turns them on.
+    function studyMaterialMayFile(tourId, d) {
+      let admin = isTourAdmin(tourId);
+      let policy = get(/databases/$(database)/documents/tours/$(tourId)).data.get('studyPolicy', {});
+      return (admin || policy.get('onlyAdminsPost', false) != true) &&
+             (d.status == 'pending' ||
+              (d.status == 'published' && (admin || policy.get('materialsNeedApproval', true) == false)));
     }
     // The publish stamp of a material: when an admin published it, and who did. Optional, so a publish from an
     // earlier app still works; the media server tells the group once, from the stamp.
@@ -1562,11 +1641,13 @@ service cloud.firestore {
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['momentsEnabled']) || isManagedTour(tourId)) &&
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['samity']) ||
                      (isSamityTour(tourId) && validSamityConfig(request.resource.data.samity))) &&
-                    // The study policy: whether a member's material waits for an admin. Only a study group has one.
+                    // The study policy: whether a member's material waits for an admin, and whether only admins
+                    // may add materials. Each is a boolean. Only a study group has one.
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['studyPolicy']) ||
                      (isStudyTour(tourId) && request.resource.data.studyPolicy is map &&
-                      request.resource.data.studyPolicy.keys().hasOnly(['materialsNeedApproval']) &&
-                      request.resource.data.studyPolicy.materialsNeedApproval is bool)) &&
+                      request.resource.data.studyPolicy.keys().hasOnly(['materialsNeedApproval', 'onlyAdminsPost']) &&
+                      (!('materialsNeedApproval' in request.resource.data.studyPolicy) || request.resource.data.studyPolicy.materialsNeedApproval is bool) &&
+                      (!('onlyAdminsPost' in request.resource.data.studyPolicy) || request.resource.data.studyPolicy.onlyAdminsPost is bool))) &&
                     (!('emergencyContacts' in request.resource.data) ||
                      (request.resource.data.emergencyContacts is list &&
                       request.resource.data.emergencyContacts.size() <= 10)) &&
@@ -1703,6 +1784,19 @@ service cloud.firestore {
       // A study or book club's book list. A member proposes a book, and it waits for an admin,
       // who lists it or declines it. Any member moves a listed book along its statuses under
       // their own name. Its creator or an admin changes the details or removes it.
+      // A member's threads on each Dhaka day: one counter per member per day, whose count moves with each thread the member
+      // starts (the thread and the count are written in one batch) and stops at the day's limit of ten.
+      match /study_daily/{dayId} {
+        allow read: if isActiveMember(tourId) && dayId == tourUserEmail() + '__' + studyDayKey();
+        allow create: if isStudyTour(tourId) && isActiveMember(tourId) && dayId == tourUserEmail() + '__' + studyDayKey() &&
+                         request.resource.data.keys().hasOnly(['threads']) && request.resource.data.threads == 1;
+        allow update: if isStudyTour(tourId) && isActiveMember(tourId) && dayId == tourUserEmail() + '__' + studyDayKey() &&
+                         request.resource.data.keys().hasOnly(['threads']) &&
+                         request.resource.data.threads == resource.data.threads + 1 &&
+                         request.resource.data.threads <= 10;
+        allow delete: if false;
+      }
+
       match /study_books/{bookId} {
         allow read: if isActiveMember(tourId);
         allow create: if isStudyTour(tourId) && isActiveMember(tourId) &&
@@ -1739,7 +1833,7 @@ service cloud.firestore {
           // A member's read mark on the chapter, in their own name, on a listed book. An uncounted
           // mark is private to its member; a counted one is visible to the group.
           match /reads/{voter} {
-            allow read: if isActiveMember(tourId) && (voter == tourUserEmail() || resource.data.get('counted', false) == true);
+            allow read: if isActiveMember(tourId) && (voter == tourUserEmail() || resource.data.counted == true);
             allow create: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
                              request.resource.data.keys().hasOnly(['readAt', 'counted']) &&
                              request.resource.data.readAt == request.time &&
@@ -1805,7 +1899,8 @@ service cloud.firestore {
                            request.resource.data.locked == false &&
                            request.resource.data.get('acceptedReplyId', null) == null &&
                            validStudyThread(request.resource.data) &&
-                           studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data);
+                           studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(bookId)).data) &&
+                           studyThreadCounted(tourId);
           allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                            studyThreadUpdateAllowed(tourId, bookId, threadId, request.resource.data, resource.data);
           allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
@@ -1930,9 +2025,7 @@ service cloud.firestore {
                          (request.resource.data.get('publishedAt', null) == null || request.resource.data.publishedAt == request.time) &&
                          (request.resource.data.get('publishedByEmail', null) == null || request.resource.data.publishedByEmail == tourUserEmail()) &&
                          validStudyMaterial(tourId, request.resource.data) &&
-                         (request.resource.data.status == 'pending' ||
-                          (request.resource.data.status == 'published' &&
-                           (isTourAdmin(tourId) || studyMaterialPublishesDirectly(tourId)))) &&
+                         studyMaterialMayFile(tourId, request.resource.data) &&
                          studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(request.resource.data.bookId)).data);
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          studyMaterialUpdateAllowed(tourId, request.resource.data, resource.data);
@@ -1980,9 +2073,10 @@ service cloud.firestore {
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
                          validStudySubject(request.resource.data) &&
-                         studySubjectUpdateAllowed(tourId, request.resource.data, resource.data) &&
-                         (resource.data.get('bookId', null) == request.resource.data.get('bookId', null) ||
-                          studySubjectBookOk(tourId, request.resource.data));
+                         ((studySubjectUpdateAllowed(tourId, request.resource.data, resource.data) &&
+                           (resource.data.get('bookId', null) == request.resource.data.get('bookId', null) ||
+                            studySubjectBookOk(tourId, request.resource.data))) ||
+                          studySubjectBookCleared(tourId, request.resource.data, resource.data));
 
         // The modules of a subject. Only an admin turns a live module on or changes it.
         match /modules/{moduleKey} {
@@ -1996,8 +2090,11 @@ service cloud.firestore {
 
         // Assignments: a member adds one as the module's post policy lets them, and its author or an admin changes or
         // removes it. Only an admin shows one that waited.
+        // A member reads the shown ones and their own waiting ones; an admin reads all. The app asks for each
+        // part with its own query, since the rules can accept a list only when every item in it may be read.
         match /assignments/{assignmentId} {
-          allow read: if isActiveMember(tourId);
+          allow read: if isActiveMember(tourId) &&
+                         (resource.data.shown == true || resource.data.createdByEmail == tourUserEmail() || isTourAdmin(tourId));
           allow create: if studyAssignmentCreateAllowed(tourId, subjectId, request.resource.data);
           allow update: if isStudyTour(tourId) && studyAssignmentUpdateAllowed(tourId, subjectId, request.resource.data, resource.data);
           allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
@@ -2122,14 +2219,10 @@ service cloud.firestore {
                               (request.resource.data.verdict == 'challenge' &&
                                getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount + 1 &&
                                getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount));
-            // A member takes their own check back, and the count falls in the same batch.
-            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
-                             ((resource.data.verdict == 'confirm' &&
-                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount - 1 &&
-                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount) ||
-                              (resource.data.verdict == 'challenge' &&
-                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.challengeCount - 1 &&
-                               getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/findings/$(findingId)).data.confirmCount));
+            // A member takes their own check back, and the count falls in the same batch. An admin may withdraw any
+            // check (for example one left in error), under the same count rule.
+            allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && (voter == tourUserEmail() || studyRoleIsAdmin(tourId)) &&
+                             studyWithdrawCountsOk(tourId, subjectId, findingId, resource.data.verdict);
           }
         }
 
@@ -2303,13 +2396,8 @@ service cloud.firestore {
                                  getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount + 1 &&
                                  getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount));
               // A reviewer takes their own review back, and the working's count falls in the same batch.
-              allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
-                               ((resource.data.verdict == 'right' &&
-                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount - 1 &&
-                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount) ||
-                                (resource.data.verdict == 'gap' &&
-                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.gapCount - 1 &&
-                                 getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/problems/$(problemId)/solutions/$(solverEmail)).data.rightCount));
+              allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && (voter == tourUserEmail() || studyRoleIsAdmin(tourId)) &&
+                               studyWorkWithdrawCountsOk(tourId, subjectId, problemId, solverEmail, resource.data.verdict);
             }
           }
         }

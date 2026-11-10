@@ -3,6 +3,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_material_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
+import 'package:bhromon/features/tour_group/domain/services/study_material_rules.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_materials_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/study/study_material_composer.dart';
 import 'package:flutter/material.dart';
@@ -16,11 +17,12 @@ class _FakeMaterialsRepo extends TourGroupRepository {
   _FakeMaterialsRepo({
     this.materials = const [],
     this.role,
+    this.policy = const StudyMaterialPolicy(),
   });
 
   final List<StudyMaterial> materials;
   final TourRole? role;
-  final bool needsApproval = true;
+  final StudyMaterialPolicy policy;
   final List<String> calls = [];
 
   @override
@@ -39,8 +41,8 @@ class _FakeMaterialsRepo extends TourGroupRepository {
       Stream.value(const []);
 
   @override
-  Stream<bool> watchMaterialsNeedApproval(String tourId) =>
-      Stream.value(needsApproval);
+  Stream<StudyMaterialPolicy> watchMaterialPolicy(String tourId) =>
+      Stream.value(policy);
 
   @override
   Future<void> reportStudyMaterial(
@@ -62,6 +64,14 @@ class _FakeMaterialsRepo extends TourGroupRepository {
     required bool needsApproval,
   }) async {
     calls.add('approval $needsApproval');
+  }
+
+  @override
+  Future<void> setMaterialsOnlyAdmins(
+    String tourId, {
+    required bool onlyAdmins,
+  }) async {
+    calls.add('only admins $onlyAdmins');
   }
 
   @override
@@ -225,12 +235,67 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.tune_rounded));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(SwitchListTile));
+      await tester.tap(find.byType(SwitchListTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(repo.calls, ['approval false']);
+    });
+
+    testWidgets('an admin turns on the rule that only admins add materials',
+        (tester) async {
+      final repo = _FakeMaterialsRepo(role: TourRole.admin);
+      await _pump(
+        tester,
+        StudyMaterialsScreen(tourId: 'T', book: _book, repository: repo),
+      );
+
+      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(SwitchListTile).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls, ['only admins true']);
+    });
+
+    testWidgets('when only admins add materials, a member has no add button',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyMaterialsScreen(
+          tourId: 'T',
+          book: _book,
+          repository: _FakeMaterialsRepo(
+            policy: const StudyMaterialPolicy(onlyAdminsPost: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Add material'), findsNothing);
+      expect(find.text('Only admins add materials to this group.'),
+          findsOneWidget);
+    });
+
+    testWidgets('an admin still has the add button when only admins add',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyMaterialsScreen(
+          tourId: 'T',
+          book: _book,
+          repository: _FakeMaterialsRepo(
+            role: TourRole.admin,
+            policy: const StudyMaterialPolicy(onlyAdminsPost: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Add material'), findsOneWidget);
+      expect(
+          find.text('Only admins add materials to this group.'), findsNothing);
     });
 
     testWidgets('a member files a note, which is saved for approval',

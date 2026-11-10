@@ -44,6 +44,9 @@ class FakeRef:
     def get(self, transaction=None):
         return FakeSnap(self._db.docs.get(self.path))
 
+    def collection(self, name):
+        return FakeCollection(self._db, f"{self.path}/{name}")
+
 
 class FakeQuery:
     """Equality filters over one collection, which is all the membership reads use."""
@@ -324,3 +327,142 @@ def test_an_edit_that_is_not_a_publish_is_not_pushed_and_neither_is_a_hidden_mat
     )
 
     assert engine.pushes == []
+
+
+# A material reported more than once (Phase 3, the notice to admins).
+
+
+def test_a_material_with_a_second_report_tells_the_owners_and_admins_once():
+    engine, watcher = _setup()
+    reported = _change(MATERIAL, _material("hidden", reportCount=2), kind="MODIFIED")
+
+    watcher.on_study_reported_material_snapshot(None, [reported], None)
+    watcher.on_study_reported_material_snapshot(None, [reported], None)
+
+    assert _recipients(engine) == ["tok-uid-ana@x.com", "tok-uid-cy@x.com"]
+    push = engine.pushes[0]
+    assert push["title"] == "A study material was reported again"
+    assert push["body"] == "Chapter 3 notes has been reported by more than one member. Decide it now."
+    assert push["data"] == {"action": "study_material", "tourId": TOUR, "bookId": BOOK, "materialId": "m1"}
+
+
+def test_a_material_with_one_report_is_not_pushed():
+    engine, watcher = _setup()
+    reported = _change(MATERIAL, _material("hidden", reportCount=1), kind="ADDED")
+
+    watcher.on_study_reported_material_snapshot(None, [reported], None)
+
+    assert engine.pushes == []
+
+
+def test_a_repeat_report_is_pushed_when_the_material_starts_to_match_the_query():
+    engine, watcher = _setup()
+    # The query matches a material from the moment its second report is counted, as an added document.
+    reported = _change(MATERIAL, _material("hidden", reportCount=2), kind="ADDED")
+
+    watcher.on_study_reported_material_snapshot(None, [reported], None)
+
+    assert len(engine.pushes) == 2
+
+
+# Assignments and past papers added to a subject (Phase 7 and 8's sibling modules).
+
+SUBJECT = "s1"
+SUBJECT_PATH = f"tours/{TOUR}/study_subjects/{SUBJECT}"
+ASSIGNMENT_PATH = f"{SUBJECT_PATH}/assignments/a1"
+PAPER_PATH = f"{SUBJECT_PATH}/papers/p1"
+
+
+def _subject(**extra):
+    return {SUBJECT_PATH: {"title": "Physics 101", **extra}}
+
+
+def _post(path, by, shown, title="Lab report 2"):
+    return _change(path, {"title": title, "createdByEmail": by, "shown": shown, "createdAt": None})
+
+
+def test_an_assignment_shown_at_once_is_pushed_to_the_members_but_not_its_author_once():
+    engine, watcher = _setup(_subject())
+    added = _post(ASSIGNMENT_PATH, "ben@x.com", shown=True)
+
+    watcher.on_study_assignment_snapshot(None, [added], None)
+    watcher.on_study_assignment_snapshot(None, [added], None)
+
+    assert _recipients(engine) == ["tok-uid-ana@x.com", "tok-uid-cy@x.com", "tok-uid-dee@x.com"]
+    push = engine.pushes[0]
+    assert push["title"] == "New assignment"
+    assert push["body"] == "Lab report 2 was added to Physics 101."
+    assert push["data"] == {"action": "study_subject", "tourId": TOUR, "subjectId": SUBJECT}
+
+
+def test_an_assignment_waiting_for_approval_is_pushed_to_the_admins_only():
+    engine, watcher = _setup(_subject())
+    waiting = _post(ASSIGNMENT_PATH, "ben@x.com", shown=False)
+
+    watcher.on_study_assignment_snapshot(None, [waiting], None)
+
+    assert _recipients(engine) == ["tok-uid-ana@x.com", "tok-uid-cy@x.com"]
+    assert engine.pushes[0]["title"] == "Assignment to review"
+
+
+def test_a_past_paper_shown_at_once_is_pushed_to_the_members():
+    engine, watcher = _setup(_subject())
+    added = _post(PAPER_PATH, "ben@x.com", shown=True, title="Mid-term 2025")
+
+    watcher.on_study_paper_snapshot(None, [added], None)
+
+    assert _recipients(engine) == ["tok-uid-ana@x.com", "tok-uid-cy@x.com", "tok-uid-dee@x.com"]
+    assert engine.pushes[0]["title"] == "New past paper"
+    assert engine.pushes[0]["body"] == "Mid-term 2025 was added to Physics 101."
+
+
+def test_a_post_in_another_place_is_ignored():
+    engine, watcher = _setup(_subject())
+    elsewhere = _post(f"tours/{TOUR}/study_subjects/{SUBJECT}/tips/t1", "ben@x.com", shown=True)
+
+    watcher.on_study_assignment_snapshot(None, [elsewhere], None)
+    watcher.on_study_paper_snapshot(None, [elsewhere], None)
+
+    assert engine.pushes == []
+
+
+
+# Mentions in a discussion: the members a thread or reply names with @ are told once each (Phase 2, mentions).
+
+
+def _thread_with(asker="ana@x.com", mentions=None, title="Why is the sum zero?"):
+    return {THREAD_PATH: {"title": title, "createdByEmail": asker, "mentions": mentions or []}}
+
+
+def test_a_reply_that_names_a_member_tells_that_member_once_and_not_the_asker_twice():
+    engine, watcher = _setup(_thread_with(asker="ana@x.com"))
+    reply = _change(REPLY_PATH, {"createdByEmail": "dee@x.com", "createdAt": watcher.started_at,
+                                 "mentions": ["ben@x.com", "ana@x.com", "dee@x.com"]})
+
+    watcher.on_study_reply_snapshot(None, [reply], None)
+    watcher.on_study_reply_snapshot(None, [reply], None)
+
+    mentions = [push for push in engine.pushes if push["title"] == "You were mentioned"]
+    assert [push["token"] for push in mentions] == ["tok-uid-ben@x.com"]
+    assert mentions[0]["body"] == "In Why is the sum zero?."
+    assert mentions[0]["data"] == {"action": "study_reply", "tourId": TOUR, "bookId": BOOK, "threadId": THREAD}
+
+
+def test_a_thread_that_names_a_member_tells_them_but_not_its_author_or_a_member_who_has_left():
+    engine, watcher = _setup(_thread_with(asker="ana@x.com", mentions=["dee@x.com", "ben@x.com", "zoe@x.com", "ana@x.com"]))
+    started = _change(THREAD_PATH, {"title": "Why is the sum zero?", "createdByEmail": "ana@x.com",
+                                    "createdAt": watcher.started_at, "mentions": ["dee@x.com", "ben@x.com", "zoe@x.com", "ana@x.com"]})
+
+    watcher.on_study_thread_snapshot(None, [started], None)
+
+    assert _recipients(engine) == ["tok-uid-ben@x.com", "tok-uid-dee@x.com"]
+
+
+def test_an_outsider_named_in_a_discussion_is_not_told():
+    engine, watcher = _setup(_thread_with(asker="ana@x.com"))
+    reply = _change(REPLY_PATH, {"createdByEmail": "ben@x.com", "createdAt": watcher.started_at,
+                                 "mentions": ["eve@x.com"]})
+
+    watcher.on_study_reply_snapshot(None, [reply], None)
+
+    assert [push for push in engine.pushes if push["title"] == "You were mentioned"] == []

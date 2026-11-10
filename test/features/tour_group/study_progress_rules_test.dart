@@ -203,11 +203,8 @@ void main() {
         () {
       final asked = DateTime(2026, 11, 1, 9);
       final totals = groupTotals(
-        countedReadFlags: {
-          // Account A counted chapter one, account B did not, and account C counted it.
-          'c1': [true, false, true],
-          'c2': [false],
-        },
+        // Two counted reads of chapter one (accounts A and C; B did not count), and none of chapter two.
+        countedReads: {'c1': 2, 'c2': 0},
         takersByQuiz: {'q1': 3},
         questions: [
           (asked: asked, firstAnswer: asked.add(const Duration(days: 1))),

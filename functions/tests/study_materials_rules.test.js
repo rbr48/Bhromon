@@ -398,9 +398,35 @@ describe('study materials: filing, approval, rights, reports, opens and removal'
       await assertFails(updateDoc(tourRef(db('member')), { studyPolicy: { materialsNeedApproval: false } }));
     });
 
-    test('the policy holds one boolean only', async () => {
+    test('the policy holds two booleans only', async () => {
       await assertFails(updateDoc(tourRef(db('admin')), { studyPolicy: { materialsNeedApproval: 'no' } }));
-      await assertFails(updateDoc(tourRef(db('admin')), { studyPolicy: { materialsNeedApproval: false, onlyAdminsPost: true } }));
+      await assertFails(updateDoc(tourRef(db('admin')), { studyPolicy: { onlyAdminsPost: 'yes' } }));
+      await assertFails(updateDoc(tourRef(db('admin')), { studyPolicy: { materialsNeedApproval: false, other: true } }));
+      await assertSucceeds(updateDoc(tourRef(db('admin')), { studyPolicy: { materialsNeedApproval: false, onlyAdminsPost: true } }));
+    });
+
+    test('only admins may turn on the rule that only admins add materials', async () => {
+      await assertFails(updateDoc(tourRef(db('member')), { studyPolicy: { onlyAdminsPost: true } }));
+      await assertFails(updateDoc(tourRef(db('other')), { studyPolicy: { onlyAdminsPost: true } }));
+      await assertSucceeds(updateDoc(tourRef(db('owner')), { studyPolicy: { onlyAdminsPost: true } }));
+    });
+
+    test('when only admins add materials, a member cannot file one; an admin still can', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(tourRef(ctx.firestore()), { studyPolicy: { onlyAdminsPost: true } }, { merge: true });
+      });
+      await assertFails(setDoc(materialRef(db('other'), 'only1'), { ...linkFields(people.other.email), createdAt: serverTimestamp() }));
+      await assertFails(setDoc(materialRef(db('member'), 'only2'), { ...noteFields(people.member.email), createdAt: serverTimestamp() }));
+      await assertSucceeds(setDoc(materialRef(db('admin'), 'only3'), { ...linkFields(people.admin.email, { status: 'published' }), createdAt: serverTimestamp() }));
+    });
+
+    test('a member files again once the group lets members add materials', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(tourRef(ctx.firestore()), { studyPolicy: { onlyAdminsPost: true, materialsNeedApproval: true } }, { merge: true });
+      });
+      await assertFails(setDoc(materialRef(db('other'), 'only4'), { ...linkFields(people.other.email), createdAt: serverTimestamp() }));
+      await assertSucceeds(updateDoc(tourRef(db('admin')), { 'studyPolicy.onlyAdminsPost': false }));
+      await assertSucceeds(setDoc(materialRef(db('other'), 'only5'), { ...linkFields(people.other.email), createdAt: serverTimestamp() }));
     });
 
     test('a group with no study preset has no policy', async () => {
