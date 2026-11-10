@@ -69,7 +69,7 @@ class _StudyTextFieldState extends State<StudyTextField> {
         ),
         Align(
           alignment: AlignmentDirectional.centerStart,
-          child: _MarkupButton(
+          child: StudyMarkupButton(
             active: _showFormatting,
             onPressed: () => setState(() => _showFormatting = !_showFormatting),
           ),
@@ -79,12 +79,17 @@ class _StudyTextFieldState extends State<StudyTextField> {
   }
 }
 
-/// The "Aa" button that shows or hides the markup menu, drawn as the chat composers draw it.
-class _MarkupButton extends StatelessWidget {
-  const _MarkupButton({required this.active, required this.onPressed});
+/// The "Aa" button that shows or hides the markup menu, drawn as the chat composers draw it. A null
+/// [onPressed] leaves it off, as while a message is being sent.
+class StudyMarkupButton extends StatelessWidget {
+  const StudyMarkupButton({
+    super.key,
+    required this.active,
+    required this.onPressed,
+  });
 
   final bool active;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
