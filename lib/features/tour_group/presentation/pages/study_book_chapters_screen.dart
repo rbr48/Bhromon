@@ -23,6 +23,7 @@ import '../widgets/study/study_thread_composer.dart';
 import 'markdown_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
 import 'study_discussion_screen.dart';
+import 'study_exam_simulator_screen.dart';
 import 'study_flashcards_screen.dart';
 import 'study_glossary_screen.dart';
 import 'study_materials_screen.dart';
@@ -34,7 +35,14 @@ import 'study_summary_screen.dart';
 import '../widgets/study/study_rich_text.dart';
 
 /// The learning tools a book offers, from the sheet on its chapters.
-enum _LearningTool { quizzes, glossary, flashcards, progress, studyPack }
+enum _LearningTool {
+  quizzes,
+  glossary,
+  flashcards,
+  examSimulator,
+  progress,
+  studyPack
+}
 
 /// One book's chapters in reading order. Each has its due date and guide questions. A member
 /// marks a chapter read in their own name, and can keep a place in the book on this device.
@@ -337,6 +345,13 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                   Navigator.of(sheetContext).pop(_LearningTool.flashcards),
             ),
             ListTile(
+              leading: Icon(Icons.timer_outlined, color: palette.accentText),
+              title: Text(l10n.translate('study_exam_simulator_title'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.examSimulator),
+            ),
+            ListTile(
               leading: Icon(Icons.insights_rounded, color: palette.accentText),
               title: Text(l10n.translate('study_progress_title'),
                   style: TextStyle(color: palette.text)),
@@ -380,6 +395,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           book: widget.book,
           tourId: widget.tourId,
           repository: _repository,
+        ),
+      _LearningTool.examSimulator => StudyExamSimulatorScreen(
+          tourId: widget.tourId,
+          bookId: widget.book.id,
+          paperTitle: widget.book.title,
         ),
       _LearningTool.progress => StudyProgressScreen(
           tourId: widget.tourId,
