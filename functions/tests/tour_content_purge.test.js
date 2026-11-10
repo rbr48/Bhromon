@@ -347,6 +347,7 @@ async function seed() {
     rightCount: 1,
     gapCount: 0,
     reportCount: 1,
+    withdrawnBy: LEAVER,
   });
   await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reports/${LEAVER}`, report);
   await set(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}/reviews/${LEAVER}`, {
@@ -905,6 +906,10 @@ describe('tour content purge', () => {
       rightCount: 0,
       gapCount: 0,
       reportCount: 0,
+    });
+    // An admin who withdrew a review from the working is named by the stand-in, and the words stay.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/solutions/${OTHER}`)).toMatchObject({
+      withdrawnBy: STAND_IN,
     });
     // Their reports come out, and each count falls by one. A reported item stays hidden for an admin to decide,
     // and another member's report stays.

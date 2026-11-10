@@ -70,6 +70,9 @@ CALL_PUSH_WINDOW_SECONDS = 120
 JOURNEY_PUSH_WINDOW_SECONDS = 60
 # Study replies and materials written or published from this long before the start onwards are pushed.
 STUDY_PUSH_WINDOW_SECONDS = 15 * 60
+# A material that this many members have reported is pushed to the owners and admins once, so they know the
+# report is not one person's complaint. The first report already hides it and puts it in the review queue.
+STUDY_REPEAT_REPORTS = 2
 # One record per study push that was sent, so a restart does not send it again. Clients cannot read it.
 PUSH_CLAIMS = "push_claims"
 
@@ -416,10 +419,12 @@ class NotificationEngine:
         title: str,
         emails: List[str],
         pending: bool,
+        kind: Optional[str] = None,
     ) -> int:
-        """Tells members that a material was shared, or the admins that one waits for their approval."""
+        """Tells members that a material was shared, or the admins that one waits for their approval, or
+        that it has been reported again (kind "reported")."""
         targets = self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
-        kind = "review" if pending else "shared"
+        kind = kind or ("review" if pending else "shared")
         name = title.strip()
         data = {"action": "study_material", "tourId": tour_id, "bookId": book_id, "materialId": material_id}
         count = self.send_localized(
@@ -431,6 +436,53 @@ class NotificationEngine:
             data,
         )
         self.stats["study_material_sent"] = self.stats.get("study_material_sent", 0) + count
+        return count
+
+    def send_study_mention(self, tour_id: str, book_id: str, thread_id: str, title: str, emails: List[str]) -> int:
+        """Tells the members a discussion names with @ that they were mentioned in it."""
+        targets = self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
+        name = title.strip()
+        data = {"action": "study_reply", "tourId": tour_id, "bookId": book_id, "threadId": thread_id}
+        count = self.send_localized(
+            targets,
+            lambda lang: (
+                push_text(lang, "study.mention.head"),
+                push_text(lang, "study.mention.body", title=name or push_text(lang, "study.reply.untitled")),
+            ),
+            data,
+        )
+        self.stats["study_mention_sent"] = self.stats.get("study_mention_sent", 0) + count
+        return count
+
+    def send_study_subject(
+        self,
+        tour_id: str,
+        subject_id: str,
+        kind: str,
+        title: str,
+        subject_title: str,
+        emails: List[str],
+    ) -> int:
+        """Tells members that an assignment or a past paper was added to a subject, or the admins that one waits
+        for their approval. `kind` is one of assignment.new, assignment.review, paper.new or paper.review."""
+        targets = self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
+        name = title.strip()
+        subject_name = subject_title.strip()
+        data = {"action": "study_subject", "tourId": tour_id, "subjectId": subject_id}
+        count = self.send_localized(
+            targets,
+            lambda lang: (
+                push_text(lang, f"study.{kind}.head"),
+                push_text(
+                    lang,
+                    f"study.{kind}.body",
+                    title=name or push_text(lang, "study.assignment.untitled"),
+                    subject=subject_name or push_text(lang, "study.subject.untitled"),
+                ),
+            ),
+            data,
+        )
+        self.stats["study_subject_sent"] = self.stats.get("study_subject_sent", 0) + count
         return count
 
     def send_journey_event(
@@ -1367,6 +1419,13 @@ class FirestoreNotificationWatcher:
         except Exception as error:
             logger.warning("Study push failed for %s: %s", doc.reference.path, error)
 
+    def on_study_thread_snapshot(self, col_snapshot, changes, read_time):
+        """A discussion was started. The members its body names with @ are told once each, except its author."""
+        since = self.started_at - timedelta(seconds=STUDY_PUSH_WINDOW_SECONDS)
+        for change in changes:
+            if change.type.name == "ADDED":
+                self._safe_study_push(change.document, self._push_thread_mentions, since)
+
     def on_study_reply_snapshot(self, col_snapshot, changes, read_time):
         """A member replied to a discussion question (Phase 2). The member who asked is pushed once. The path
         is checked, since other features keep `replies` collections too."""
@@ -1374,6 +1433,7 @@ class FirestoreNotificationWatcher:
         for change in changes:
             if change.type.name == "ADDED":
                 self._safe_study_push(change.document, self._push_study_reply, since)
+                self._safe_study_push(change.document, self._push_reply_mentions, since)
 
     def _push_study_reply(self, doc: Any, since: datetime) -> None:
         # tours/{tour}/study_books/{book}/threads/{thread}/replies/{reply}
@@ -1410,6 +1470,13 @@ class FirestoreNotificationWatcher:
             if change.type.name == "ADDED":
                 self._safe_study_push(change.document, self._push_pending_material, since)
 
+    def on_study_reported_material_snapshot(self, col_snapshot, changes, read_time):
+        """A material that has more than one report. The owners and admins are pushed once. A material
+        already reported when the watcher starts is pushed too, unless it was pushed before."""
+        for change in changes:
+            if change.type.name in ("ADDED", "MODIFIED"):
+                self._safe_study_push(change.document, self._push_repeated_report, self.started_at)
+
     def on_study_published_material_snapshot(self, col_snapshot, changes, read_time):
         """A material was published, or filed as published at once. The other members are pushed once. A
         publish with no stamp (from an earlier app) is not pushed: it has no time to judge by."""
@@ -1443,6 +1510,121 @@ class FirestoreNotificationWatcher:
             title=str(data.get("title", "")),
             emails=admins,
             pending=True,
+        )
+
+    def on_study_assignment_snapshot(self, col_snapshot, changes, read_time):
+        """An assignment was added to a subject. The members are pushed once when it is shown, and the admins when it
+        waits for approval. Nothing written before the watcher started is pushed."""
+        since = self.started_at - timedelta(seconds=STUDY_PUSH_WINDOW_SECONDS)
+        for change in changes:
+            if change.type.name == "ADDED":
+                self._safe_study_push(change.document, lambda doc, s: self._push_new_subject_post(doc, s, "assignment"), since)
+
+    def on_study_paper_snapshot(self, col_snapshot, changes, read_time):
+        """A past paper was added to a subject. The members are pushed once when it is shown, and the admins when it
+        waits for approval."""
+        since = self.started_at - timedelta(seconds=STUDY_PUSH_WINDOW_SECONDS)
+        for change in changes:
+            if change.type.name == "ADDED":
+                self._safe_study_push(change.document, lambda doc, s: self._push_new_subject_post(doc, s, "paper"), since)
+
+    def _push_new_subject_post(self, doc: Any, since: datetime, post: str) -> None:
+        # tours/{tour}/study_subjects/{subject}/{assignments|papers}/{post}
+        parts = doc.reference.path.split("/")
+        collection = "assignments" if post == "assignment" else "papers"
+        if len(parts) != 6 or parts[0] != "tours" or parts[2] != "study_subjects" or parts[4] != collection:
+            return
+        tour_id, subject_id, post_id = parts[1], parts[3], parts[5]
+        data = doc.to_dict() or {}
+        if not self._is_recent(data.get("createdAt"), since):
+            return
+        author = str(data.get("createdByEmail", "")).strip().lower()
+        subject = self.engine._get_db().collection("tours").document(tour_id).collection("study_subjects").document(subject_id).get()
+        subject_title = str((subject.to_dict() or {}).get("title", ""))
+        title = str(data.get("title", ""))
+        if data.get("shown") is True:
+            emails = self.engine.get_active_tour_members(tour_id, except_email=author)
+            kind, key = f"{post}.new", f"{post}_new_{tour_id}_{post_id}"
+        else:
+            emails = self.engine.get_active_tour_admins(tour_id, except_email=author)
+            kind, key = f"{post}.review", f"{post}_review_{tour_id}_{post_id}"
+        if not emails or not self._claim_push(key):
+            return
+        self.engine.send_study_subject(tour_id, subject_id, kind, title, subject_title, emails)
+
+    def _push_thread_mentions(self, doc: Any, since: datetime) -> None:
+        # tours/{tour}/study_books/{book}/threads/{thread}
+        parts = doc.reference.path.split("/")
+        if len(parts) != 6 or parts[0] != "tours" or parts[2] != "study_books" or parts[4] != "threads":
+            return
+        tour_id, book_id, thread_id = parts[1], parts[3], parts[5]
+        data = doc.to_dict() or {}
+        if not self._is_recent(data.get("createdAt"), since):
+            return
+        author = str(data.get("createdByEmail", "")).strip().lower()
+        self._tell_mentioned(
+            tour_id, book_id, thread_id, f"thread_{thread_id}", data.get("mentions"),
+            skip={author}, title=str(data.get("title", "")),
+        )
+
+    def _push_reply_mentions(self, doc: Any, since: datetime) -> None:
+        # tours/{tour}/study_books/{book}/threads/{thread}/replies/{reply}
+        parts = doc.reference.path.split("/")
+        if len(parts) != 8 or parts[0] != "tours" or parts[2] != "study_books" or parts[4] != "threads" or parts[6] != "replies":
+            return
+        tour_id, book_id, thread_id, reply_id = parts[1], parts[3], parts[5], parts[7]
+        data = doc.to_dict() or {}
+        if not self._is_recent(data.get("createdAt"), since):
+            return
+        thread = self.engine._get_db().document(f"tours/{tour_id}/study_books/{book_id}/threads/{thread_id}").get()
+        if not thread.exists:
+            return
+        thread_data = thread.to_dict() or {}
+        author = str(data.get("createdByEmail", "")).strip().lower()
+        asker = str(thread_data.get("createdByEmail", "")).strip().lower()
+        # The member who asked is already told of every reply, so a mention of them adds nothing.
+        self._tell_mentioned(
+            tour_id, book_id, thread_id, f"reply_{reply_id}", data.get("mentions"),
+            skip={author, asker}, title=str(thread_data.get("title", "")),
+        )
+
+    def _tell_mentioned(self, tour_id: str, book_id: str, thread_id: str, claim_stem: str, mentions: Any,
+                        skip: Set[str], title: str) -> None:
+        """Pushes the members a discussion names, once each: the active members only, and not those in `skip`."""
+        if not isinstance(mentions, list):
+            return
+        recipients: List[str] = []
+        for raw in mentions:
+            if not isinstance(raw, str):
+                continue
+            email = raw.strip().lower()
+            if not email or email in skip or email in recipients:
+                continue
+            if not self._is_active_member(tour_id, email):
+                continue
+            if not self._claim_push(f"mention_{claim_stem}_{tour_id}_{email}"):
+                continue
+            recipients.append(email)
+        if recipients:
+            self.engine.send_study_mention(tour_id, book_id, thread_id, title, recipients)
+
+    def _push_repeated_report(self, doc: Any, since: datetime) -> None:
+        ids = self._material_ids(doc)
+        data = doc.to_dict() or {}
+        if ids is None or int(data.get("reportCount") or 0) < STUDY_REPEAT_REPORTS:
+            return
+        tour_id, material_id = ids
+        admins = self.engine.get_active_tour_admins(tour_id)
+        if not admins or not self._claim_push(f"material_reported_again_{tour_id}_{material_id}"):
+            return
+        self.engine.send_study_material(
+            tour_id=tour_id,
+            book_id=str(data.get("bookId", "")),
+            material_id=material_id,
+            title=str(data.get("title", "")),
+            emails=admins,
+            pending=False,
+            kind="reported",
         )
 
     def _push_published_material(self, doc: Any, since: datetime) -> None:
@@ -1642,6 +1824,12 @@ class FirestoreNotificationWatcher:
                 .on_snapshot(self.on_study_reply_snapshot)
             )
             new_listeners.append(reply_watch)
+            thread_watch = (
+                db.collection_group("threads")
+                .where("createdAt", ">=", study_since)
+                .on_snapshot(self.on_study_thread_snapshot)
+            )
+            new_listeners.append(thread_watch)
             pending_material_watch = (
                 db.collection_group("study_materials")
                 .where("createdAt", ">=", study_since)
@@ -1654,6 +1842,24 @@ class FirestoreNotificationWatcher:
                 .on_snapshot(self.on_study_published_material_snapshot)
             )
             new_listeners.append(published_material_watch)
+            reported_material_watch = (
+                db.collection_group("study_materials")
+                .where("reportCount", ">=", STUDY_REPEAT_REPORTS)
+                .on_snapshot(self.on_study_reported_material_snapshot)
+            )
+            new_listeners.append(reported_material_watch)
+            assignment_watch = (
+                db.collection_group("assignments")
+                .where("createdAt", ">=", study_since)
+                .on_snapshot(self.on_study_assignment_snapshot)
+            )
+            new_listeners.append(assignment_watch)
+            paper_watch = (
+                db.collection_group("papers")
+                .where("createdAt", ">=", study_since)
+                .on_snapshot(self.on_study_paper_snapshot)
+            )
+            new_listeners.append(paper_watch)
 
             self.active_listeners = new_listeners
             logger.info("Successfully attached %d real-time Firestore listeners.", len(new_listeners))

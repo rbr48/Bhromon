@@ -103,3 +103,30 @@ AssignmentDue assignmentDueState(
   if (days <= kAssignmentDueSoonDays) return AssignmentDue.dueSoon;
   return AssignmentDue.upcoming;
 }
+
+/// The days an assignment is due on, as dates at midnight, for the group calendar. An undated assignment has none.
+Set<DateTime> assignmentDueDays(Iterable<StudyAssignment> assignments) => {
+      for (final assignment in assignments)
+        if (assignment.dueAt != null)
+          DateTime(assignment.dueAt!.year, assignment.dueAt!.month,
+              assignment.dueAt!.day),
+    };
+
+/// The assignments due today or later, the nearest day first and then by title, for the calendar's list.
+List<StudyAssignment> upcomingStudyAssignments(
+  Iterable<StudyAssignment> assignments, {
+  required DateTime now,
+}) {
+  final upcoming = [
+    for (final assignment in assignments)
+      if (assignment.dueAt != null &&
+          daysUntilAssignmentDue(dueAt: assignment.dueAt!, now: now) >= 0)
+        assignment,
+  ];
+  upcoming.sort((a, b) {
+    final byDay = DateTime(a.dueAt!.year, a.dueAt!.month, a.dueAt!.day)
+        .compareTo(DateTime(b.dueAt!.year, b.dueAt!.month, b.dueAt!.day));
+    return byDay != 0 ? byDay : a.title.compareTo(b.title);
+  });
+  return upcoming;
+}

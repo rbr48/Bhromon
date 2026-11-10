@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/media/media_access.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
@@ -46,13 +47,13 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
   TourRole? _myRole;
   List<StudyMaterial> _materials = const [];
   List<StudyChapter> _chapters = const [];
-  bool _needsApproval = true;
+  StudyMaterialPolicy _policy = const StudyMaterialPolicy();
   bool _loaded = false;
   String? _chapterId;
 
   StreamSubscription<List<StudyMaterial>>? _materialsSub;
   StreamSubscription<List<StudyChapter>>? _chaptersSub;
-  StreamSubscription<bool>? _policySub;
+  StreamSubscription<StudyMaterialPolicy>? _policySub;
 
   String get _me => _repository.currentEmail;
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -82,8 +83,8 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       if (mounted) setState(() => _chapters = chapters);
     });
     _policySub =
-        _repository.watchMaterialsNeedApproval(widget.tourId).listen((needs) {
-      if (mounted) setState(() => _needsApproval = needs);
+        _repository.watchMaterialPolicy(widget.tourId).listen((policy) {
+      if (mounted) setState(() => _policy = policy);
     });
   }
 
@@ -136,17 +137,30 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
               ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _addMaterial,
-          icon: const Icon(Icons.add_rounded),
-          label: Text(l10n.translate('study_material_add')),
-        ),
+        floatingActionButton: canFileStudyMaterial(
+          isAdmin: _isAdmin,
+          onlyAdminsPost: _policy.onlyAdminsPost,
+        )
+            ? FloatingActionButton.extended(
+                onPressed: _addMaterial,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.translate('study_material_add')),
+              )
+            : null,
         body: !_loaded
             ? const Center(child: CircularProgressIndicator())
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                 children: [
                   _chapterFilter(context),
+                  if (!_isAdmin && _policy.onlyAdminsPost)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        l10n.translate('study_material_only_admins_note'),
+                        style: TextStyle(color: context.forest.text70),
+                      ),
+                    ),
                   if (review.isNotEmpty)
                     _section(
                       context,
@@ -476,18 +490,33 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
 
   Future<void> _editPolicy() async {
     final l10n = context.l10n;
-    var needs = _needsApproval;
-    final result = await showDialog<bool>(
+    var needs = _policy.needsApproval;
+    var onlyAdmins = _policy.onlyAdminsPost;
+    final result = await showDialog<({bool needs, bool onlyAdmins})>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(l10n.translate('study_material_policy_title')),
-          content: SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: needs,
-            title: Text(l10n.translate('study_material_approval_switch')),
-            subtitle: Text(l10n.translate('study_material_approval_hint')),
-            onChanged: (value) => setDialogState(() => needs = value),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: needs,
+                title: Text(l10n.translate('study_material_approval_switch')),
+                subtitle: Text(l10n.translate('study_material_approval_hint')),
+                onChanged: (value) => setDialogState(() => needs = value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: onlyAdmins,
+                title:
+                    Text(l10n.translate('study_material_only_admins_switch')),
+                subtitle:
+                    Text(l10n.translate('study_material_only_admins_hint')),
+                onChanged: (value) => setDialogState(() => onlyAdmins = value),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -495,7 +524,8 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
               child: Text(l10n.translate('study_cancel')),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(needs),
+              onPressed: () => Navigator.of(dialogContext)
+                  .pop((needs: needs, onlyAdmins: onlyAdmins)),
               child: Text(l10n.translate('study_save')),
             ),
           ],
@@ -503,11 +533,16 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       ),
     );
     if (result == null || !mounted) return;
-    await _run(
-      () => _repository.setMaterialsNeedApproval(widget.tourId,
-          needsApproval: result),
-      'study_material_saved',
-    );
+    await _run(() async {
+      if (result.needs != _policy.needsApproval) {
+        await _repository.setMaterialsNeedApproval(widget.tourId,
+            needsApproval: result.needs);
+      }
+      if (result.onlyAdmins != _policy.onlyAdminsPost) {
+        await _repository.setMaterialsOnlyAdmins(widget.tourId,
+            onlyAdmins: result.onlyAdmins);
+      }
+    }, 'study_material_saved');
   }
 
   /// A member files a material: the file, when there is one, is uploaded first, then the record is saved,
@@ -538,7 +573,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
         kind: draft.kind,
         title: draft.title,
         isAdmin: _isAdmin,
-        needsApproval: _needsApproval,
+        needsApproval: _policy.needsApproval,
         chapterId: draft.chapterId,
         url: url,
         fileName: draft.fileName,
@@ -548,7 +583,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       await upload?.commit();
       final waits = initialStudyMaterialStatus(
             isAdmin: _isAdmin,
-            needsApproval: _needsApproval,
+            needsApproval: _policy.needsApproval,
           ) ==
           StudyMaterialStatus.pending;
       messenger.showSnackBar(SnackBar(

@@ -1,7 +1,9 @@
+import '../models/study_assignment_models.dart';
 import '../models/study_finding_models.dart';
 import '../models/study_problem_models.dart';
 import '../models/study_subject_models.dart';
 import '../models/study_today_models.dart';
+import 'study_assignment_rules.dart';
 import 'study_finding_rules.dart' show canCheckFinding;
 import 'study_problem_rules.dart'
     show
@@ -21,16 +23,25 @@ bool examModeOn(int? daysLeft) =>
     daysLeft != null && daysLeft >= 0 && daysLeft <= kExamModeDays;
 
 /// The lines of the Today card, in the order they can appear.
-enum TodayCardLine { exam, deadline, problemSet, findings, cards, challenge }
+enum TodayCardLine {
+  exam,
+  deadline,
+  assignment,
+  problemSet,
+  findings,
+  cards,
+  challenge
+}
 
-/// The order of the Today card's lines. Outside exam mode the next deadline leads, then the problem set due soon, the
-/// findings, the cards due and the challenge. In exam mode the exam comes first and then the cards due, the deadline
-/// and the problem set, so revision comes before the other work.
+/// The order of the Today card's lines. Outside exam mode the next deadline leads, then the assignment due soon, the
+/// problem set due soon, the findings, the cards due and the challenge. In exam mode the exam comes first and then the
+/// cards due, the deadline, the assignment and the problem set, so revision comes before the other work.
 List<TodayCardLine> todayCardLineOrder({required bool examMode}) => examMode
     ? const [
         TodayCardLine.exam,
         TodayCardLine.cards,
         TodayCardLine.deadline,
+        TodayCardLine.assignment,
         TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.challenge,
@@ -38,11 +49,59 @@ List<TodayCardLine> todayCardLineOrder({required bool examMode}) => examMode
     : const [
         TodayCardLine.exam,
         TodayCardLine.deadline,
+        TodayCardLine.assignment,
         TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.cards,
         TodayCardLine.challenge,
       ];
+
+/// The assignment the Today card shows for a viewer: the nearest one that the viewer can see, has not finished, and
+/// that is due today or within the days before it (see [assignmentDueState]). Overdue ones are not shown. Two due on
+/// the same day come in the order of their titles. Null when there is none.
+class DueAssignment {
+  const DueAssignment({required this.assignment, required this.due});
+
+  final StudyAssignment assignment;
+  final DateTime due;
+}
+
+DueAssignment? nextDueAssignment({
+  required List<StudyAssignment> assignments,
+  required Set<String> finishedIds,
+  required String viewerEmail,
+  required bool isAdmin,
+  required DateTime now,
+}) {
+  DueAssignment? next;
+  for (final assignment in assignments) {
+    final dueAt = assignment.dueAt;
+    if (dueAt == null ||
+        finishedIds.contains(assignment.id) ||
+        !canSeeAssignment(
+          assignment: assignment,
+          viewerEmail: viewerEmail,
+          isAdmin: isAdmin,
+        )) {
+      continue;
+    }
+    final state = assignmentDueState(dueAt: dueAt, now: now);
+    if (state != AssignmentDue.dueSoon && state != AssignmentDue.dueToday) {
+      continue;
+    }
+    final candidate = DueAssignment(assignment: assignment, due: _dayOf(dueAt));
+    if (next == null || _assignmentSooner(candidate, next)) {
+      next = candidate;
+    }
+  }
+  return next;
+}
+
+bool _assignmentSooner(DueAssignment a, DueAssignment b) {
+  if (a.due.isBefore(b.due)) return true;
+  if (b.due.isBefore(a.due)) return false;
+  return a.assignment.title.compareTo(b.assignment.title) < 0;
+}
 
 /// The problem set the Today card shows for a viewer: the set due soon for them (see [problemSetDueState]) that has a
 /// problem the viewer can see and has not worked yet. [due] is the day it is due for the viewer: their own date when an

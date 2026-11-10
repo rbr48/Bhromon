@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:bhromon/core/utils/session_shared_stream.dart';
 import 'package:bhromon/core/utils/shared_stream_registry.dart';
+import 'package:bhromon/features/chat/data/call_history_stream.dart';
 
 import '../../../../core/utils/app_logger.dart';
 import '../domain/models/date_codec.dart';
@@ -31,8 +32,11 @@ import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
 import '../domain/models/study_assignment_models.dart';
 import '../domain/models/study_subject_models.dart';
+import '../domain/services/study_subject_rules.dart' show activeStudySubjects;
+import '../domain/services/chat_mentions.dart';
 import '../domain/models/study_finding_models.dart';
 import '../domain/models/study_problem_models.dart';
+import '../domain/services/study_thread_rules.dart';
 import '../domain/models/study_challenge_models.dart';
 import '../domain/models/study_today_models.dart';
 import '../domain/services/study_challenge_rules.dart';
@@ -2447,9 +2451,19 @@ class TourGroupRepository {
     });
   }
 
+  /// Removes a book. In the same batch every subject that names it stops naming it, so no subject is left
+  /// pointing at a book that is gone. The rules allow that clear only together with the removal.
   Future<void> deleteStudyBook(String tourId, String bookId) async {
     _requireEmail();
-    await _sub(tourId, 'study_books').doc(bookId).delete();
+    final subjects = await _sub(tourId, 'study_subjects')
+        .where('bookId', isEqualTo: bookId)
+        .get();
+    final batch = _firestore.batch()
+      ..delete(_sub(tourId, 'study_books').doc(bookId));
+    for (final subject in subjects.docs) {
+      batch.update(subject.reference, {'bookId': null});
+    }
+    await batch.commit();
   }
 
   /// Lists a proposed or declined book. Only an admin does this. The note of a declined
@@ -2512,24 +2526,72 @@ class TourGroupRepository {
         ]);
   }
 
-  /// The assignments of a subject, newest first. The rules let a member read every one, so the screen
-  /// shows the shown ones and a member's own waiting one, as the rules for visibility say.
+  /// The assignments of a subject, newest first. A member reads the shown ones and their own waiting ones;
+  /// an admin reads all of them. The rules accept a list only when each item in it may be read, so a member's
+  /// stream is two queries, one for the shown ones and one for their own, merged here.
   Stream<List<StudyAssignment>> watchStudyAssignments(
     String tourId,
     String subjectId,
   ) {
-    return _sub(tourId, 'study_subjects')
-        .doc(subjectId)
-        .collection('assignments')
-        .orderBy('createdAt', descending: true)
-        .limit(200)
-        .snapshots()
-        .map((s) => [
-              for (final d in s.docs)
-                if (StudyAssignment.fromMap(d.id, _datesAsDateTimes(d.data()))
-                    case final assignment?)
-                  assignment,
-            ]);
+    final assignments =
+        _sub(tourId, 'study_subjects').doc(subjectId).collection('assignments');
+    return Stream.fromFuture(myRole(tourId)).asyncExpand((role) {
+      if (role?.isAdminOrOwner ?? false) {
+        return assignments
+            .limit(500)
+            .snapshots()
+            .map((s) => _assignmentsNewestFirst(s));
+      }
+      final email = currentEmail;
+      return mergeLatestLists<StudyAssignment>(
+        [
+          assignments
+              .where('shown', isEqualTo: true)
+              .limit(500)
+              .snapshots()
+              .map((s) => _assignmentsNewestFirst(s)),
+          assignments
+              .where('createdByEmail', isEqualTo: email)
+              .limit(500)
+              .snapshots()
+              .map((s) => _assignmentsNewestFirst(s)),
+        ],
+        idOf: (assignment) => assignment.id,
+      );
+    });
+  }
+
+  List<StudyAssignment> _assignmentsNewestFirst(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final list = [
+      for (final d in snapshot.docs)
+        if (StudyAssignment.fromMap(d.id, _datesAsDateTimes(d.data()))
+            case final assignment?)
+          assignment,
+    ];
+    list.sort((a, b) {
+      final ta = a.createdAt;
+      final tb = b.createdAt;
+      if (ta == null && tb == null) return 0;
+      if (ta == null) return -1;
+      if (tb == null) return 1;
+      return tb.compareTo(ta);
+    });
+    return list;
+  }
+
+  /// The assignments the signed-in member can see in the group's listed, unarchived subjects, for the group
+  /// calendar. Each subject's list is read once, as the subject's own screen reads it.
+  Future<List<StudyAssignment>> loadStudyAssignments(String tourId) async {
+    final subjects = await watchStudySubjects(tourId).first;
+    final assignments = <StudyAssignment>[];
+    for (final subject in activeStudySubjects(subjects)) {
+      assignments.addAll(
+        await watchStudyAssignments(tourId, subject.id).first,
+      );
+    }
+    return assignments;
   }
 
   /// Adds an assignment. Whether members see it at once is the module's post policy, decided by the caller.
@@ -3091,7 +3153,50 @@ class TourGroupRepository {
         verdict == FindingVerdict.confirm ? 'confirmCount' : 'challengeCount';
     final batch = _firestore.batch();
     batch.delete(finding.collection('checks').doc(email));
-    batch.update(finding, {countField: FieldValue.increment(-1)});
+    // The finding names the check it withdraws, so its count rule can check that check is gone (withdrawnBy).
+    batch.update(
+        finding, {countField: FieldValue.increment(-1), 'withdrawnBy': email});
+    await batch.commit();
+  }
+
+  /// Every check on a finding, by the members who made them. Members read the checks, so an admin
+  /// sees who checked and what they said.
+  Future<List<StudyFindingCheck>> loadFindingChecks(
+    String tourId,
+    String subjectId,
+    String findingId,
+  ) async {
+    _requireEmail();
+    final snap = await _findingRef(tourId, subjectId, findingId)
+        .collection('checks')
+        .get();
+    return [
+      for (final doc in snap.docs)
+        if (StudyFindingCheck.fromMap(doc.id, _datesAsDateTimes(doc.data()))
+            case final check?)
+          check,
+    ];
+  }
+
+  /// An admin withdraws another member's check. The check goes and the finding's count falls by one in the
+  /// same batch, as the member's own withdrawal does.
+  Future<void> withdrawOtherFindingCheck(
+    String tourId,
+    String subjectId,
+    String findingId,
+    StudyFindingCheck check,
+  ) async {
+    _requireEmail();
+    final finding = _findingRef(tourId, subjectId, findingId);
+    final countField = check.verdict == FindingVerdict.confirm
+        ? 'confirmCount'
+        : 'challengeCount';
+    final batch = _firestore.batch();
+    batch.delete(finding.collection('checks').doc(check.email));
+    batch.update(finding, {
+      countField: FieldValue.increment(-1),
+      'withdrawnBy': check.email,
+    });
     await batch.commit();
   }
 
@@ -3802,7 +3907,51 @@ class TourGroupRepository {
     final countField = verdict == WorkVerdict.right ? 'rightCount' : 'gapCount';
     final batch = _firestore.batch();
     batch.delete(work.collection('reviews').doc(email));
-    batch.update(work, {countField: FieldValue.increment(-1)});
+    // The working names the review it withdraws, so its count rule can check that review is gone (withdrawnBy).
+    batch.update(
+        work, {countField: FieldValue.increment(-1), 'withdrawnBy': email});
+    await batch.commit();
+  }
+
+  /// Every review of a working, by the members who wrote them. Members may read the reviews of a working
+  /// once they have their own, and an admin always may, so an admin sees who reviewed and what they said.
+  Future<List<StudyWorkReview>> loadWorkReviews(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+  ) async {
+    _requireEmail();
+    final snap = await _workRef(tourId, subjectId, problemId, solverEmail)
+        .collection('reviews')
+        .get();
+    return [
+      for (final doc in snap.docs)
+        if (StudyWorkReview.fromMap(doc.id, _datesAsDateTimes(doc.data()))
+            case final review?)
+          review,
+    ];
+  }
+
+  /// An admin takes another member's review of a working back. The review goes and the working's count
+  /// falls by one in the same batch, as the reviewer's own withdrawal does.
+  Future<void> withdrawOtherWorkReview(
+    String tourId,
+    String subjectId,
+    String problemId,
+    String solverEmail,
+    StudyWorkReview review,
+  ) async {
+    _requireEmail();
+    final work = _workRef(tourId, subjectId, problemId, solverEmail);
+    final countField =
+        review.verdict == WorkVerdict.right ? 'rightCount' : 'gapCount';
+    final batch = _firestore.batch();
+    batch.delete(work.collection('reviews').doc(review.reviewerEmail));
+    batch.update(work, {
+      countField: FieldValue.increment(-1),
+      'withdrawnBy': review.reviewerEmail,
+    });
     await batch.commit();
   }
 
@@ -4382,6 +4531,16 @@ class TourGroupRepository {
   }
 
   /// Starts a thread on a book. The signed-in member is its author.
+  /// The members a discussion text names with @, by email, at most the cap. Only members are named, so only members
+  /// are told (the media server checks each one).
+  Future<List<String>> _mentionsIn(String tourId, String text) async {
+    if (!text.contains('@')) return const [];
+    final members = await watchMembers(tourId).first;
+    return resolveMentions(text, members)
+        .take(kStudyMentionsMax)
+        .toList(growable: false);
+  }
+
   Future<void> addStudyThread(
     String tourId,
     String bookId, {
@@ -4391,18 +4550,32 @@ class TourGroupRepository {
     String pageRef = '',
   }) async {
     final email = _requireEmail();
+    final threadRef = _threadsCol(tourId, bookId).doc();
+    final mentions = await _mentionsIn(tourId, body);
     final thread = StudyThread(
-      id: '',
+      id: threadRef.id,
       title: title.trim(),
       body: body.trim(),
       pageRef: pageRef.trim(),
       chapterId: chapterId,
       createdByEmail: email,
+      mentions: mentions,
     );
-    await _threadsCol(tourId, bookId).add({
+    // The thread and its member's count for the Dhaka day go in one batch, so the rules can hold the day's limit of
+    // ten threads (studyThreadCounted in firestore.rules).
+    final counter = _sub(tourId, 'study_daily')
+        .doc('${email}__${threadDayKey(DateTime.now())}');
+    final batch = _firestore.batch();
+    batch.set(threadRef, {
       ...thread.toFields(),
       'createdAt': FieldValue.serverTimestamp(),
     });
+    batch.set(
+      counter,
+      {'threads': FieldValue.increment(1)},
+      SetOptions(merge: true),
+    );
+    await batch.commit();
   }
 
   /// The replies of a thread, oldest first.
@@ -4434,8 +4607,13 @@ class TourGroupRepository {
     required String text,
   }) async {
     final email = _requireEmail();
-    final reply =
-        StudyReply(id: replyId, text: text.trim(), createdByEmail: email);
+    final mentions = await _mentionsIn(tourId, text);
+    final reply = StudyReply(
+      id: replyId,
+      text: text.trim(),
+      createdByEmail: email,
+      mentions: mentions,
+    );
     await _replyDoc(tourId, bookId, threadId, replyId).set({
       ...reply.toFields(),
       'createdAt': FieldValue.serverTimestamp(),
@@ -4574,12 +4752,17 @@ class TourGroupRepository {
   ) =>
       _materialsCol(tourId).doc(materialId);
 
-  /// Whether a member's material waits for an admin. On unless the group publishes directly.
-  Stream<bool> watchMaterialsNeedApproval(String tourId) {
+  /// The group's material policy, read from the tour. Each flag is off or on by its default.
+  Stream<StudyMaterialPolicy> watchMaterialPolicy(String tourId) {
     return _firestore.collection('tours').doc(tourId).snapshots().map((s) {
       final policy = s.data()?['studyPolicy'];
-      final value = policy is Map ? policy['materialsNeedApproval'] : null;
-      return value is bool ? value : true;
+      final map = policy is Map ? policy : const <Object?, Object?>{};
+      final needs = map['materialsNeedApproval'];
+      final onlyAdmins = map['onlyAdminsPost'];
+      return StudyMaterialPolicy(
+        needsApproval: needs is bool ? needs : true,
+        onlyAdminsPost: onlyAdmins is bool ? onlyAdmins : false,
+      );
     });
   }
 
@@ -4591,6 +4774,17 @@ class TourGroupRepository {
     _requireEmail();
     await _firestore.collection('tours').doc(tourId).update({
       'studyPolicy.materialsNeedApproval': needsApproval,
+    });
+  }
+
+  /// Turns on or off the rule that only admins add materials. Only an owner or admin does this.
+  Future<void> setMaterialsOnlyAdmins(
+    String tourId, {
+    required bool onlyAdmins,
+  }) async {
+    _requireEmail();
+    await _firestore.collection('tours').doc(tourId).update({
+      'studyPolicy.onlyAdminsPost': onlyAdmins,
     });
   }
 
@@ -6411,41 +6605,70 @@ class TourGroupRepository {
     });
   }
 
-  /// The counted flag of every read mark the member can see on each chapter. An uncounted mark is visible only to
-  /// its own member, so the group's total is made of counted marks alone.
-  Future<Map<String, List<bool>>> loadReadFlags(
+  /// How many counted read marks each chapter has, counted by the server. An uncounted mark is private to its
+  /// member, so it is not counted for the group. The count reads no mark itself, so it does not grow with the group.
+  Future<Map<String, int>> countCountedReads(
     String tourId,
     String bookId,
     Iterable<String> chapterIds,
   ) async {
-    final result = <String, List<bool>>{};
+    final result = <String, int>{};
     for (final chapterId in chapterIds) {
-      final snap = await _studyBookDoc(tourId, bookId)
+      final aggregate = await _studyBookDoc(tourId, bookId)
           .collection('chapters')
           .doc(chapterId)
           .collection('reads')
+          .where('counted', isEqualTo: true)
+          .count()
           .get();
-      result[chapterId] = [
-        for (final d in snap.docs) d.data()['counted'] == true,
+      result[chapterId] = aggregate.count ?? 0;
+    }
+    return result;
+  }
+
+  /// The signed-in member's own replies to each thread, in time order: their answers and when they gave them.
+  Future<Map<String, List<StudyReply>>> loadMyReplies(
+    String tourId,
+    String bookId,
+    Iterable<String> threadIds,
+  ) async {
+    final email = currentEmail;
+    final result = <String, List<StudyReply>>{};
+    for (final threadId in threadIds) {
+      final snap = await _threadDoc(tourId, bookId, threadId)
+          .collection('replies')
+          .where('createdByEmail', isEqualTo: email)
+          .limit(1000)
+          .get();
+      result[threadId] = [
+        for (final d in snap.docs)
+          if (StudyReply.fromMap(d.id, _datesAsDateTimes(d.data()))
+              case final reply?)
+            reply,
       ];
     }
     return result;
   }
 
-  /// Every reply of each thread in [threadIds], read once, in time order.
-  Future<Map<String, List<StudyReply>>> loadReplies(
+  /// The first replies to each thread in the [window] after it was asked, in time order, at most [perThread] of them.
+  /// That is enough to tell whether a question was answered in time, and it stays small however long a discussion is.
+  Future<Map<String, List<StudyReply>>> loadEarlyReplies(
     String tourId,
     String bookId,
-    Iterable<String> threadIds,
-  ) async {
+    Iterable<({String id, DateTime asked})> threads, {
+    Duration window = const Duration(days: 3),
+    int perThread = 20,
+  }) async {
     final result = <String, List<StudyReply>>{};
-    for (final threadId in threadIds) {
-      final snap = await _threadDoc(tourId, bookId, threadId)
+    for (final thread in threads) {
+      final snap = await _threadDoc(tourId, bookId, thread.id)
           .collection('replies')
+          .where('createdAt', isGreaterThanOrEqualTo: thread.asked)
+          .where('createdAt', isLessThanOrEqualTo: thread.asked.add(window))
           .orderBy('createdAt')
-          .limit(1000)
+          .limit(perThread)
           .get();
-      result[threadId] = [
+      result[thread.id] = [
         for (final d in snap.docs)
           if (StudyReply.fromMap(d.id, _datesAsDateTimes(d.data()))
               case final reply?)

@@ -79,12 +79,23 @@ class _StudyProgressScreenState extends State<StudyProgressScreen> {
       final myReads = await _repository.watchMyReadMarks(tourId, bookId).first;
       final quizzes = await _repository.watchStudyQuizzes(tourId, bookId).first;
       final threads = await _repository.watchStudyThreads(tourId, bookId).first;
-      final replies = await _repository.loadReplies(
+      // The member's own answers, and only the first replies in the three days after each question: both are
+      // bounded per question, so the page does not read a large group's whole discussion.
+      final myReplies = await _repository.loadMyReplies(
         tourId,
         bookId,
         [for (final thread in threads) thread.id],
       );
-      final readFlags = await _repository.loadReadFlags(
+      final earlyReplies = await _repository.loadEarlyReplies(
+        tourId,
+        bookId,
+        [
+          for (final thread in threads)
+            if (thread.createdAt != null)
+              (id: thread.id, asked: thread.createdAt!),
+        ],
+      );
+      final countedReads = await _repository.countCountedReads(
         tourId,
         bookId,
         [for (final chapter in chapters) chapter.id],
@@ -111,15 +122,18 @@ class _StudyProgressScreenState extends State<StudyProgressScreen> {
       final questions = <({DateTime asked, DateTime? firstAnswer})>[];
       for (final thread in threads) {
         DateTime? firstAnswer;
-        for (final reply in replies[thread.id] ?? const <StudyReply>[]) {
+        for (final reply in myReplies[thread.id] ?? const <StudyReply>[]) {
           final at = reply.createdAt;
           if (at == null) continue;
-          if (reply.createdByEmail == email) {
-            answersGiven++;
-            answerTimes.add(at);
+          answersGiven++;
+          answerTimes.add(at);
+        }
+        for (final reply in earlyReplies[thread.id] ?? const <StudyReply>[]) {
+          final at = reply.createdAt;
+          if (at == null || reply.createdByEmail == thread.createdByEmail) {
+            continue;
           }
-          if (reply.createdByEmail != thread.createdByEmail &&
-              (firstAnswer == null || at.isBefore(firstAnswer))) {
+          if (firstAnswer == null || at.isBefore(firstAnswer)) {
             firstAnswer = at;
           }
         }
@@ -141,7 +155,7 @@ class _StudyProgressScreenState extends State<StudyProgressScreen> {
       );
 
       final totals = groupTotals(
-        countedReadFlags: readFlags,
+        countedReads: countedReads,
         takersByQuiz: {for (final quiz in quizzes) quiz.id: quiz.takerCount},
         questions: questions,
       );

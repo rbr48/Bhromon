@@ -1,9 +1,11 @@
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/media/media_access.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -68,21 +70,52 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       context,
       withLink: _withLink,
       paper: _paper,
+      tourId: widget.tourId,
     );
     if (draft == null || !mounted) return;
     final shown = postShownAtOnce(settings: widget.settings, isAdmin: _isAdmin);
     await _run(
-      () => _repository.addStudyPost(
-        widget.tourId,
-        widget.subject.id,
-        widget.moduleKey,
-        text: draft.text,
-        title: draft.title,
-        url: draft.url,
-        shown: shown,
+      () => _saveWithFile(
+        draft,
+        () => _repository.addStudyPost(
+          widget.tourId,
+          widget.subject.id,
+          widget.moduleKey,
+          text: draft.text,
+          title: draft.title,
+          url: draft.url,
+          shown: shown,
+        ),
       ),
       shown ? 'study_post_saved' : 'study_post_waiting',
     );
+  }
+
+  /// Saves a post with the file it was given, if any: the file is kept when the post is saved, and discarded when
+  /// the save fails, so a file that no post names is not left on the server.
+  Future<void> _saveWithFile(
+    StudyPostDraft draft,
+    Future<void> Function() save,
+  ) async {
+    try {
+      await save();
+    } catch (_) {
+      await draft.upload?.discard();
+      rethrow;
+    }
+    await draft.upload?.commit();
+  }
+
+  /// Opens a link of a post. A file in the group's study folder is opened with its signed link.
+  Future<void> _openLink(String url) async {
+    final target = url.contains('/media/') ? signedMediaUrl(url) : url;
+    final uri = Uri.tryParse(target);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (error, stackTrace) {
+      logWarning('A study link could not be opened', error, stackTrace);
+    }
   }
 
   Future<void> _edit(StudyPost post) async {
@@ -91,17 +124,21 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       withLink: _withLink,
       existing: post,
       paper: _paper,
+      tourId: widget.tourId,
     );
     if (draft == null || !mounted) return;
     await _run(
-      () => _repository.editStudyPost(
-        widget.tourId,
-        widget.subject.id,
-        widget.moduleKey,
-        post,
-        text: draft.text,
-        title: draft.title,
-        url: draft.url,
+      () => _saveWithFile(
+        draft,
+        () => _repository.editStudyPost(
+          widget.tourId,
+          widget.subject.id,
+          widget.moduleKey,
+          post,
+          text: draft.text,
+          title: draft.title,
+          url: draft.url,
+        ),
       ),
       'study_post_saved',
     );
@@ -289,8 +326,11 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
             StudyRichText(post.text, style: TextStyle(color: palette.text)),
             if (post.url.isNotEmpty) ...[
               const SizedBox(height: 6),
-              SelectableText(post.url,
-                  style: TextStyle(color: palette.accentText)),
+              TextButton.icon(
+                onPressed: () => _openLink(post.url),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: Text(l10n.translate('study_material_open')),
+              ),
             ],
             if (!post.shown) ...[
               const SizedBox(height: 6),

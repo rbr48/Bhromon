@@ -53,19 +53,25 @@ bool isBehindFence(
   return number != null && number > place;
 }
 
-/// How many threads a member started on the calendar day of [now].
+/// The day a member's threads are counted on, as a number: the calendar day in Dhaka (UTC+6, with no daylight saving),
+/// so 20261111. The server counts on the same day from its own clock (studyDayKey in firestore.rules).
+int threadDayKey(DateTime now) {
+  final dhaka = now.toUtc().add(const Duration(hours: 6));
+  return dhaka.year * 10000 + dhaka.month * 100 + dhaka.day;
+}
+
+/// How many threads a member started on the Dhaka day of [now].
 int threadsStartedToday(
   Iterable<StudyThread> threads, {
   required String email,
   required DateTime now,
 }) {
+  final today = threadDayKey(now);
   var count = 0;
   for (final thread in threads) {
     final at = thread.createdAt;
     if (thread.createdByEmail != email || at == null) continue;
-    if (at.year == now.year && at.month == now.month && at.day == now.day) {
-      count++;
-    }
+    if (threadDayKey(at) == today) count++;
   }
   return count;
 }

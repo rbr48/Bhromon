@@ -535,6 +535,7 @@ class FcmService {
         }
         break;
       case 'problem_set':
+      case 'study_subject':
         if (tourId != null) {
           GoRouter.of(context).go('/group/$tourId/study-subjects');
         }

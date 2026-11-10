@@ -143,7 +143,9 @@ const STUDY_SESSION: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A tip or a suggestion in a subject: who posted it. */
 const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
-const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail', 'withdrawnBy'] };
+// A working another member wrote keeps its words. Only the admin who withdrew a review on it is named there.
+const STUDY_WORK: AnonymizePlan = { emails: ['withdrawnBy'] };
 const STUDY_ASSIGNMENT: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM_SET: AnonymizePlan = { emails: ['createdByEmail'] };
@@ -592,6 +594,8 @@ export async function purgeMemberContent(
         batch.update(work.ref, { [countField]: FieldValue.increment(-1) });
         await batch.commit();
       }
+      // A review an admin withdrew from someone's working names the admin on the working. That name goes too.
+      await applyToQuery(db, solutions, anonymize(STUDY_WORK, email, standIn));
     }
 
     // A week's challenge keeps its kind and target under the stand-in for the admin who set it. The person's join

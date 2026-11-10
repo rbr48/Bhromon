@@ -16,6 +16,7 @@ class StudyThread {
     this.pinned = false,
     this.locked = false,
     this.acceptedReplyId,
+    this.mentions = const [],
   });
 
   final String id;
@@ -43,6 +44,9 @@ class StudyThread {
   /// The reply the asker accepted, or null when none is accepted.
   final String? acceptedReplyId;
 
+  /// The members the body names with @, by email. Each is told once.
+  final List<String> mentions;
+
   bool get isAnswered => acceptedReplyId != null;
 
   /// The fields written when a thread is started. Empty optional values are stored as null.
@@ -55,6 +59,7 @@ class StudyThread {
         'pinned': pinned,
         'locked': locked,
         'acceptedReplyId': acceptedReplyId,
+        'mentions': mentions,
       };
 
   /// Reads one stored thread. Returns null when it has no title or body, so a damaged thread
@@ -75,6 +80,7 @@ class StudyThread {
       pinned: map['pinned'] == true,
       locked: map['locked'] == true,
       acceptedReplyId: _nonEmpty(map['acceptedReplyId'] as String?),
+      mentions: _mentionList(map['mentions']),
     );
   }
 }
@@ -89,10 +95,14 @@ class StudyReply {
     this.createdAt,
     this.helpfulCount = 0,
     this.reportCount = 0,
+    this.mentions = const [],
   });
 
   final String id;
   final String text;
+
+  /// The members the reply names with @, by email. Each is told once.
+  final List<String> mentions;
 
   /// The member who wrote the reply. Only they, or an admin, delete it.
   final String createdByEmail;
@@ -114,6 +124,7 @@ class StudyReply {
         'createdByEmail': createdByEmail,
         'helpfulCount': 0,
         'reportCount': 0,
+        'mentions': mentions,
       };
 
   /// Reads one stored reply. Returns null when it has no text.
@@ -128,6 +139,7 @@ class StudyReply {
       createdAt: created is DateTime ? created : null,
       helpfulCount: (map['helpfulCount'] as num?)?.toInt() ?? 0,
       reportCount: (map['reportCount'] as num?)?.toInt() ?? 0,
+      mentions: _mentionList(map['mentions']),
     );
   }
 }
@@ -145,3 +157,15 @@ enum StudyReportReason {
 
 String? _nonEmpty(String? value) =>
     value == null || value.isEmpty ? null : value;
+
+/// The most members one thread or reply can name. The rules hold the same cap.
+const int kStudyMentionsMax = 50;
+
+/// The emails a stored list of mentions holds. Anything that is not a non-empty text is left out.
+List<String> _mentionList(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final item in raw)
+      if (item is String && item.isNotEmpty) item,
+  ];
+}

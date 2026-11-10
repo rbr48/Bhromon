@@ -17,6 +17,7 @@ import logging
 import re
 import secrets
 import shutil
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -42,6 +43,7 @@ from ack_reminders import AckReminderScheduler, PingRefused, run_ack_reminders, 
 from family_dates import FamilyDateReminderScheduler
 from session_reminders import SessionReminderScheduler, run_session_reminders
 from problem_set_reminders import ProblemSetReminderScheduler, run_problem_set_reminders
+from assignment_reminders import AssignmentReminderScheduler, run_assignment_due_reminders
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from call_cleanup import run_call_cleanup
@@ -118,6 +120,11 @@ problem_set_reminder_scheduler = ProblemSetReminderScheduler(
         backend._client(), notification_engine, datetime.now(timezone.utc)
     )
 )
+assignment_reminder_scheduler = AssignmentReminderScheduler(
+    lambda: run_assignment_due_reminders(
+        backend._client(), notification_engine, datetime.now(timezone.utc)
+    )
+)
 def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
     """The 04:00 run: expired stories and their files, then old call records."""
     db = backend._client()
@@ -186,6 +193,7 @@ async def lifespan(app: FastAPI):
         ack_reminder_scheduler.start()
         session_reminder_scheduler.start()
         problem_set_reminder_scheduler.start()
+        assignment_reminder_scheduler.start()
     # The live relay drops members who have been silent for two minutes.
     live_sweep = asyncio.create_task(live.sweep_forever())
     yield
@@ -194,6 +202,7 @@ async def lifespan(app: FastAPI):
     ack_reminder_scheduler.stop()
     session_reminder_scheduler.stop()
     problem_set_reminder_scheduler.stop()
+    assignment_reminder_scheduler.stop()
     story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
     notification_watcher.stop()
@@ -355,6 +364,15 @@ class FirebaseBackend:
             return "owner"
         return None
 
+    def study_material_records(self, tour_id: str, url: str) -> List[Dict[str, Any]]:
+        """The study materials of a tour whose file is at this address: one, or none when it is not filed."""
+        db = self._client()
+        rows = (
+            db.collection("tours").document(tour_id).collection("study_materials")
+            .where("url", "==", url).limit(5).stream()
+        )
+        return [dict(row.to_dict() or {}) for row in rows]
+
 
 backend = FirebaseBackend()
 
@@ -482,13 +500,55 @@ def can_read_space(space: str, caller: Caller) -> bool:
     return True
 
 
+# How long a study file's material state is remembered. A report hides a file at once, so this is short.
+STUDY_FILE_CACHE_SECONDS = 5
+_study_file_cache: Dict[Tuple[str, str], Tuple[float, List[Dict[str, Any]]]] = {}
+MAX_DECISIONS_CACHED = 5000
+_study_file_lock = threading.Lock()
+
+
+def study_file_visible(tour_id: str, filename: str, email: str) -> bool:
+    """Whether a study file may be served to this person.
+
+    A file is served once its material is published. Until then, and after a report hides it, only
+    the one who filed it and the tour's owners and admins may read it. A file that no material points
+    to is served as any other file of the tour is. The material's state is read from Firestore, and
+    a state that cannot be read is refused.
+    """
+    email = email.strip().lower()
+    url = f"{BASE_URL.rstrip('/')}/{tour_id}/study/{filename}"
+    now = time.monotonic()
+    key = (tour_id, filename)
+    with _study_file_lock:
+        hit = _study_file_cache.get(key)
+    if hit is not None and now - hit[0] < STUDY_FILE_CACHE_SECONDS:
+        records = hit[1]
+    else:
+        records = backend.study_material_records(tour_id, url)
+        with _study_file_lock:
+            if len(_study_file_cache) >= MAX_DECISIONS_CACHED:
+                _study_file_cache.clear()
+            _study_file_cache[key] = (now, records)
+    role: Optional[str] = None
+    for record in records:
+        if record.get("status") == "published":
+            continue
+        if str(record.get("createdByEmail", "")).strip().lower() == email:
+            continue
+        if role is None:
+            role = backend.role_for(tour_id, email) or ""
+        if role not in ("owner", "admin"):
+            return False
+    return True
+
+
 def media_read_decision(raw_uri: str) -> Tuple[bool, str]:
     """Whether nginx may serve a media file, and why. The reason never includes the link."""
     path = raw_uri.partition("?")[0]
     match = MEDIA_PATH.fullmatch(path)
     if match is None or FILENAME_PATTERN.fullmatch(match.group(3)) is None:
         return False, "not a media file"
-    space, folder, _filename = match.groups()
+    space, folder, filename = match.groups()
     if folder not in ALLOWED_FOLDERS:
         return False, "unknown folder"
     if not media_access.secret_is_usable(MEDIA_ACCESS_SECRET):
@@ -505,6 +565,8 @@ def media_read_decision(raw_uri: str) -> Tuple[bool, str]:
             return False, "no verified account"
         caller = Caller(email=email, uid=uid)
         allowed = media_decisions.allowed(uid, space, lambda: can_read_space(space, caller))
+        if allowed and folder == "study" and not study_file_visible(space, filename, email):
+            return False, "study material is not published"
     except Exception as error:  # Fail closed: a check that fails refuses the file.
         logger.error("Media access check failed: %s: %s", type(error).__name__, error)
         return False, "check failed"

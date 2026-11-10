@@ -212,4 +212,35 @@ void main() {
       expect(read.shown, isFalse);
     });
   });
+
+  group('the group calendar', () {
+    final now = DateTime(2026, 11, 10, 15);
+    StudyAssignment due(String id, String title, DateTime? dueAt) =>
+        StudyAssignment(id: id, title: title, dueAt: dueAt);
+
+    test(
+        'an assignment marks the day it is due, at midnight, and an undated one marks none',
+        () {
+      final days = assignmentDueDays([
+        due('a', 'A', DateTime(2026, 11, 12, 9, 30)),
+        due('b', 'B', DateTime(2026, 11, 12, 20)),
+        due('c', 'C', null),
+      ]);
+      expect(days, {DateTime(2026, 11, 12)});
+    });
+
+    test(
+        'the calendar lists the assignments due today or later, nearest first, then by title',
+        () {
+      final upcoming = upcomingStudyAssignments([
+        due('late', 'Zeta', DateTime(2026, 11, 14)),
+        due('same1', 'Beta', DateTime(2026, 11, 12)),
+        due('same2', 'Alpha', DateTime(2026, 11, 12)),
+        due('today', 'Today', DateTime(2026, 11, 10)),
+        due('past', 'Past', DateTime(2026, 11, 9)),
+        due('none', 'None', null),
+      ], now: now);
+      expect(upcoming.map((a) => a.id), ['today', 'same2', 'same1', 'late']);
+    });
+  });
 }

@@ -1,3 +1,4 @@
+import 'package:bhromon/features/tour_group/domain/models/study_assignment_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_finding_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_problem_models.dart';
@@ -196,6 +197,7 @@ void main() {
       expect(todayCardLineOrder(examMode: false), [
         TodayCardLine.exam,
         TodayCardLine.deadline,
+        TodayCardLine.assignment,
         TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.cards,
@@ -210,6 +212,7 @@ void main() {
         TodayCardLine.exam,
         TodayCardLine.cards,
         TodayCardLine.deadline,
+        TodayCardLine.assignment,
         TodayCardLine.problemSet,
         TodayCardLine.findings,
         TodayCardLine.challenge,
@@ -363,6 +366,73 @@ void main() {
         ownDueBySetId: {'s1': DateTime(2026, 11, 13)},
       );
       expect(line?.set.id, 's2');
+    });
+  });
+
+  group('the assignment due soon on the Today card', () {
+    final now = DateTime(2026, 11, 10, 9);
+    StudyAssignment item(String id, String title,
+            {DateTime? dueAt, bool shown = true, String by = 'ana@x.com'}) =>
+        StudyAssignment(
+            id: id,
+            title: title,
+            dueAt: dueAt,
+            shown: shown,
+            createdByEmail: by);
+
+    DueAssignment? next(List<StudyAssignment> items,
+            {Set<String> finished = const {},
+            String viewer = 'me@x.com',
+            bool admin = false}) =>
+        nextDueAssignment(
+          assignments: items,
+          finishedIds: finished,
+          viewerEmail: viewer,
+          isAdmin: admin,
+          now: now,
+        );
+
+    test(
+        'the nearest unfinished one due today or within three days is the line',
+        () {
+      final due = next([
+        item('far', 'Far', dueAt: DateTime(2026, 11, 13)),
+        item('near', 'Near', dueAt: DateTime(2026, 11, 11)),
+        item('today', 'Today', dueAt: DateTime(2026, 11, 10)),
+      ]);
+      expect(due?.assignment.id, 'today');
+    });
+
+    test(
+        'a finished one, an overdue one, an undated one and a later one are not the line',
+        () {
+      expect(
+          next([item('a', 'A', dueAt: DateTime(2026, 11, 11))],
+              finished: {'a'}),
+          isNull);
+      expect(next([item('b', 'B', dueAt: DateTime(2026, 11, 9))]), isNull);
+      expect(next([item('c', 'C')]), isNull);
+      expect(next([item('d', 'D', dueAt: DateTime(2026, 11, 20))]), isNull);
+    });
+
+    test(
+        'a waiting one by someone else is not shown, but the viewer\'s own is, and an admin sees all',
+        () {
+      final waiting = item('w', 'W',
+          dueAt: DateTime(2026, 11, 11), shown: false, by: 'ben@x.com');
+      expect(next([waiting]), isNull);
+      expect(next([waiting], admin: true)?.assignment.id, 'w');
+      final own = item('o', 'O',
+          dueAt: DateTime(2026, 11, 11), shown: false, by: 'me@x.com');
+      expect(next([own])?.assignment.id, 'o');
+    });
+
+    test('two due on the same day come in the order of their titles', () {
+      final due = next([
+        item('z', 'Zebra', dueAt: DateTime(2026, 11, 11)),
+        item('a', 'Apple', dueAt: DateTime(2026, 11, 11)),
+      ]);
+      expect(due?.assignment.id, 'a');
     });
   });
 }

@@ -13,6 +13,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_problem_rules.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_problem_composer.dart';
+import '../widgets/study/study_work_reviews_sheet.dart';
 import '../widgets/study/study_problem_set_sheets.dart';
 
 import '../widgets/study/study_rich_text.dart';
@@ -247,6 +248,17 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       ));
     }
   }
+
+  /// Opens the reviews of a working, where an admin sees them and may take any back.
+  Future<void> _openReviews(StudyProblemSolution work) =>
+      showStudyWorkReviewsSheet(
+        context,
+        repository: _repository,
+        tourId: widget.tourId,
+        subjectId: widget.subject.id,
+        problemId: _problem.id,
+        solverEmail: work.solverEmail,
+      );
 
   Future<void> _withdrawReview(
       StudyProblemSolution work, WorkVerdict verdict) async {
@@ -1066,6 +1078,11 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
             TextButton(
               onPressed: () => _withdrawReview(work, myReview.verdict),
               child: Text(l10n.translate('study_work_withdraw')),
+            ),
+          if (_isAdmin)
+            TextButton(
+              onPressed: () => _openReviews(work),
+              child: Text(l10n.translate('study_work_reviews_action')),
             ),
           if (!mine && _canReportWork(work))
             TextButton.icon(

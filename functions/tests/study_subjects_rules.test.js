@@ -341,6 +341,15 @@ describe('study subjects, modules and posts', () => {
       );
     });
 
+    test('a past paper attached as a file takes the study folder\'s https address, and no other media address', async () => {
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'papers'), moduleSettings({ name: 'Past papers' })));
+      const file = `https://bhromon.fun/media/${STUDY}/study/${'b'.repeat(32)}.pdf`;
+      await assertSucceeds(setDoc(postRef(db('member'), 'papers', 'paper4'), newPost(people.member.email, { title: 'Scan', url: file })));
+      await assertFails(
+        setDoc(postRef(db('member'), 'papers', 'paper5'), newPost(people.member.email, { title: 'Scan', url: `http://bhromon.fun/media/${STUDY}/study/${'b'.repeat(32)}.pdf` }))
+      );
+    });
+
     test('a past paper is refused while past papers are off', async () => {
       await assertFails(setDoc(postRef(db('member'), 'papers', 'paper3'), newPost(people.member.email, { title: 'Final 2025' })));
     });
@@ -508,6 +517,76 @@ describe('study subjects, modules and posts', () => {
       await assertFails(deleteDoc(postRef(db('other'), 'tips', TIP)));
       await assertSucceeds(setDoc(postRef(db('member'), 'tips', 'mine'), newPost(people.member.email)));
       await assertSucceeds(deleteDoc(postRef(db('admin'), 'tips', 'mine')));
+    });
+  });
+  describe('removing a book clears the subjects that name it', () => {
+    const MEMBER_BOOK = 'mem-book';
+    const OTHER_BOOK = 'mem-book-2';
+    const QUANT = 'quant';
+    const bookDoc = (by, extra = {}) => ({
+      title: 'Quantum notes',
+      status: 'toRead',
+      createdByEmail: by,
+      approval: 'listed',
+      ...extra,
+    });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(bookRef(f, MEMBER_BOOK), bookDoc(people.member.email));
+        await setDoc(bookRef(f, OTHER_BOOK), bookDoc(people.member.email));
+        await setDoc(subjectRef(f, QUANT), subject(people.admin.email, { bookId: MEMBER_BOOK }));
+      });
+    });
+
+    test('a member removes their own book and the link to it in one batch', async () => {
+      const f = db('member');
+      const batch = writeBatch(f);
+      batch.delete(bookRef(f, MEMBER_BOOK));
+      batch.update(subjectRef(f, QUANT), { bookId: null });
+      await assertSucceeds(batch.commit());
+    });
+
+    test('an admin removes a book and the link to it in one batch', async () => {
+      const f = db('admin');
+      const batch = writeBatch(f);
+      batch.delete(bookRef(f, MEMBER_BOOK));
+      batch.update(subjectRef(f, QUANT), { bookId: null });
+      await assertSucceeds(batch.commit());
+    });
+
+    test('the link cannot be cleared by itself while the book stays', async () => {
+      await assertFails(updateDoc(subjectRef(db('other'), QUANT), { bookId: null }));
+    });
+
+    test('the batch clears only a link to the book it removes', async () => {
+      const f = db('member');
+      const batch = writeBatch(f);
+      batch.delete(bookRef(f, OTHER_BOOK));
+      batch.update(subjectRef(f, QUANT), { bookId: null });
+      await assertFails(batch.commit());
+    });
+
+    test('a member who did not make the book cannot remove it with the link', async () => {
+      const f = db('other');
+      const batch = writeBatch(f);
+      batch.delete(bookRef(f, MEMBER_BOOK));
+      batch.update(subjectRef(f, QUANT), { bookId: null });
+      await assertFails(batch.commit());
+    });
+
+    test('the same batch changes nothing else about the subject', async () => {
+      const f = db('member');
+      const batch = writeBatch(f);
+      batch.delete(bookRef(f, MEMBER_BOOK));
+      batch.update(subjectRef(f, QUANT), { bookId: null, title: 'Quantum 2' });
+      await assertFails(batch.commit());
+    });
+
+    test('a link to a book that is already gone is cleared by an admin, as before', async () => {
+      await assertSucceeds(deleteDoc(bookRef(db('member'), MEMBER_BOOK)));
+      await assertSucceeds(updateDoc(subjectRef(db('admin'), QUANT), { bookId: null }));
     });
   });
 });

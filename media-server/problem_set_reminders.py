@@ -261,6 +261,8 @@ def run_problem_set_reminders(
 class ProblemSetReminderScheduler:
     """Runs the problem-set reminders every POLL_SECONDS in a background thread of the media server."""
 
+    thread_name = "problem-set-reminders"
+
     def __init__(
         self,
         run: Callable[[], Dict[str, int]],
@@ -276,7 +278,7 @@ class ProblemSetReminderScheduler:
             return
         self._stop.clear()
         self._thread = threading.Thread(
-            target=self._loop, name="problem-set-reminders", daemon=True
+            target=self._loop, name=self.thread_name, daemon=True
         )
         self._thread.start()
 
@@ -290,4 +292,4 @@ class ProblemSetReminderScheduler:
             try:
                 self._run()
             except Exception:  # The loop keeps going; the next run tries again.
-                logger.exception("Problem-set reminder run failed")
+                logger.exception("%s run failed", self.thread_name)

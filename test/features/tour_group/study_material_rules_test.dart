@@ -352,4 +352,25 @@ void main() {
           StudyMaterialReportReason.other);
     });
   });
+  group('who may add a material', () {
+    test('the policy is off by default: members wait for approval, may add',
+        () {
+      const policy = StudyMaterialPolicy();
+      expect(policy.needsApproval, isTrue);
+      expect(policy.onlyAdminsPost, isFalse);
+    });
+
+    test('an admin may always add, with or without the rule', () {
+      expect(canFileStudyMaterial(isAdmin: true, onlyAdminsPost: true), isTrue);
+      expect(
+          canFileStudyMaterial(isAdmin: true, onlyAdminsPost: false), isTrue);
+    });
+
+    test('a member may add unless only admins may add', () {
+      expect(
+          canFileStudyMaterial(isAdmin: false, onlyAdminsPost: false), isTrue);
+      expect(
+          canFileStudyMaterial(isAdmin: false, onlyAdminsPost: true), isFalse);
+    });
+  });
 }

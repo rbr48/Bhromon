@@ -278,6 +278,8 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
                           _liveModule(settings, StudyModuleKey.challenges),
                       problemsModule:
                           _liveModule(settings, StudyModuleKey.problems),
+                      assignmentsModule:
+                          _liveModule(settings, StudyModuleKey.assignments),
                       isAdmin: _isAdmin,
                       onOpenModule: _open,
                     ),

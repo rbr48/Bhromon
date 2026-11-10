@@ -20,6 +20,8 @@ const {
   Timestamp,
 } = require('firebase/firestore');
 
+jest.setTimeout(120000);
+
 const PROJECT_ID = 'bhromon-rules-test-project';
 const STUDY = 'threadclub';
 const BOOK = 'b1';
@@ -155,16 +157,62 @@ describe('study discussions: threads, replies, helpful marks and reports', () =>
   });
 
   describe('starting a thread', () => {
+    // The Dhaka day a thread is counted on (UTC+6, no daylight saving), as the app and the rules compute it.
+    const dhakaDayKey = (d = new Date()) => {
+      const x = new Date(d.getTime() + 6 * 3600 * 1000);
+      return x.getUTCFullYear() * 10000 + (x.getUTCMonth() + 1) * 100 + x.getUTCDate();
+    };
+    // A member starts a thread the way the app does: the thread and the member's count for the day, in one batch.
+    const startThread = (who, id, extra = {}, bookId = BOOK) => {
+      const f = db(who);
+      const batch = writeBatch(f);
+      batch.set(threadRef(f, id, bookId), { ...threadFields(people[who].email), createdAt: serverTimestamp(), ...extra });
+      batch.set(
+        doc(f, 'tours', STUDY, 'study_daily', `${people[who].email}__${dhakaDayKey()}`),
+        { threads: increment(1) },
+        { merge: true },
+      );
+      return batch.commit();
+    };
+
     test('a member starts a thread on a listed book under their own email', async () => {
-      await assertSucceeds(setDoc(threadRef(db('other'), 'new1'), { ...threadFields(people.other.email), createdAt: serverTimestamp() }));
+      await assertSucceeds(startThread('other', 'new1'));
     });
 
     test('a member cannot start a thread under someone else\'s email', async () => {
-      await assertFails(setDoc(threadRef(db('other'), 'new2'), { ...threadFields(people.member.email), createdAt: serverTimestamp() }));
+      await assertFails(startThread('other', 'new2', { createdByEmail: people.member.email }));
     });
 
     test('a thread is started on a listed book only', async () => {
-      await assertFails(setDoc(threadRef(db('other'), 'new3', PROPOSAL), { ...threadFields(people.other.email), createdAt: serverTimestamp() }));
+      await assertFails(startThread('other', 'new3', {}, PROPOSAL));
+    });
+
+    test('a thread written without its day count is refused', async () => {
+      await assertFails(setDoc(threadRef(db('other'), 'new4'), { ...threadFields(people.other.email), createdAt: serverTimestamp() }));
+    });
+
+    test('a member starts ten threads on a Dhaka day, and an eleventh is refused', async () => {
+      for (let i = 1; i <= 10; i++) {
+        await assertSucceeds(startThread('other', `day${i}`));
+      }
+      await assertFails(startThread('other', 'day11'));
+    });
+
+    test('a day count goes up by one at a time', async () => {
+      const f = db('other');
+      const batch = writeBatch(f);
+      batch.set(threadRef(f, 'jump', BOOK), { ...threadFields(people.other.email), createdAt: serverTimestamp() });
+      batch.set(doc(f, 'tours', STUDY, 'study_daily', `${people.other.email}__${dhakaDayKey()}`), { threads: increment(2) }, { merge: true });
+      await assertFails(batch.commit());
+    });
+
+    test('a member cannot write another member\'s day count, and a day count cannot be deleted', async () => {
+      const key = `${people.member.email}__${dhakaDayKey()}`;
+      await assertFails(setDoc(doc(db('other'), 'tours', STUDY, 'study_daily', key), { threads: 1 }));
+      await assertSucceeds(startThread('other', 'mine'));
+      await assertFails(deleteDoc(doc(db('other'), 'tours', STUDY, 'study_daily', `${people.other.email}__${dhakaDayKey()}`)));
+      await assertSucceeds(getDoc(doc(db('other'), 'tours', STUDY, 'study_daily', `${people.other.email}__${dhakaDayKey()}`)));
+      await assertFails(getDoc(doc(db('other'), 'tours', STUDY, 'study_daily', `${people.member.email}__${dhakaDayKey()}`)));
     });
 
     test('a thread starts unpinned, unlocked and unanswered', async () => {
@@ -174,10 +222,10 @@ describe('study discussions: threads, replies, helpful marks and reports', () =>
     });
 
     test('a title and a body can be any length', async () => {
-      await assertFails(setDoc(threadRef(db('other'), 'new7'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), title: '' }));
-      await assertSucceeds(setDoc(threadRef(db('other'), 'new8'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), title: 'x'.repeat(121) }));
-      await assertSucceeds(setDoc(threadRef(db('other'), 'new9'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), body: 'x'.repeat(2001) }));
-      await assertSucceeds(setDoc(threadRef(db('other'), 'new10'), { ...threadFields(people.other.email), createdAt: serverTimestamp(), body: 'x'.repeat(2000) }));
+      await assertFails(startThread('other', 'new7', { title: '' }));
+      await assertSucceeds(startThread('other', 'new8', { title: 'x'.repeat(121) }));
+      await assertSucceeds(startThread('other', 'new9', { body: 'x'.repeat(2001) }));
+      await assertSucceeds(startThread('other', 'new10', { body: 'x'.repeat(2000) }));
     });
 
     test('a thread carries the server time', async () => {
@@ -244,6 +292,17 @@ describe('study discussions: threads, replies, helpful marks and reports', () =>
       await assertFails(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: '' }));
       await assertSucceeds(setDoc(replyRef(db('other'), 'new-reply-long'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1001) }));
       await assertSucceeds(setDoc(replyRef(db('other'), 'new-reply'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), text: 'x'.repeat(1000) }));
+    });
+
+    test('a reply names up to fifty members, as a list of emails', async () => {
+      const names = (n) => Array.from({ length: n }, (_, i) => `member${i}@x.com`);
+      await assertSucceeds(setDoc(replyRef(db('other'), 'mention-ok'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), mentions: names(50) }));
+      await assertFails(setDoc(replyRef(db('other'), 'mention-many'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), mentions: names(51) }));
+      await assertFails(setDoc(replyRef(db('other'), 'mention-text'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), mentions: 'member@x.com' }));
+    });
+
+    test('a reply holds no field the rules do not name', async () => {
+      await assertFails(setDoc(replyRef(db('other'), 'mention-extra'), { ...replyFields(people.other.email), createdAt: serverTimestamp(), pinnedBy: 'x' }));
     });
 
     test('a member cannot reply under someone else\'s email', async () => {
