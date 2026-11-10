@@ -842,64 +842,73 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
         backgroundColor: palette.surfaceFor(const Color(0xFF141E18)),
         leading: GroupBackButton(tourId: widget.tourId ?? ''),
         titleSpacing: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: palette.accentText.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(
-                  color: palette.accentText.withValues(alpha: 0.5),
-                  width: 0.8,
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final showBadge = constraints.maxWidth > 140;
+            return Row(
+              children: [
+                if (showBadge) ...[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: palette.accentText.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: palette.accentText.withValues(alpha: 0.5),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      'MD',
+                      style: TextStyle(
+                        color: palette.accentText,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    _currentTitle.isNotEmpty
+                        ? _currentTitle
+                        : l10n.translate('viewer_markdown_title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: palette.text,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                'MD',
-                style: TextStyle(
-                  color: palette.accentText,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _currentTitle.isNotEmpty
-                    ? _currentTitle
-                    : l10n.translate('viewer_markdown_title'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: palette.text,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
         actions: [
           if (_hasAlternate) ...[
-            IconButton(
-              tooltip: _isSplit(context)
-                  ? l10n.translate('viewer_single_view')
-                  : l10n.translate('viewer_split_view'),
-              icon: Icon(
-                _isSplit(context)
-                    ? Icons.view_agenda_outlined
-                    : Icons.vertical_split_rounded,
-                color: palette.accentText,
-                size: 21,
+            if (MediaQuery.sizeOf(context).width >= 720 || _isSplit(context))
+              IconButton(
+                tooltip: _isSplit(context)
+                    ? l10n.translate('viewer_single_view')
+                    : l10n.translate('viewer_split_view'),
+                icon: Icon(
+                  _isSplit(context)
+                      ? Icons.view_agenda_outlined
+                      : Icons.vertical_split_rounded,
+                  color: palette.accentText,
+                  size: 21,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _userSplitOverride = !_isSplit(context);
+                  });
+                },
               ),
-              onPressed: () {
-                setState(() {
-                  _userSplitOverride = !_isSplit(context);
-                });
-              },
-            ),
             if (!_isSplit(context))
               Center(
                 child: Padding(
