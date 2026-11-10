@@ -12,6 +12,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
+import '../../domain/models/study_syllabus_models.dart';
 import '../widgets/group_back_button.dart';
 
 /// Represents a distinct section or question in a Markdown document.
@@ -21,6 +22,7 @@ class _MarkdownSection {
   final String rawText;
   final GlobalKey key;
   final bool isQuestion;
+  final SyllabusModule? module;
 
   _MarkdownSection({
     required this.title,
@@ -28,6 +30,7 @@ class _MarkdownSection {
     required this.rawText,
     required this.key,
     this.isQuestion = false,
+    this.module,
   });
 }
 
@@ -322,6 +325,10 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           .replaceAll(r'\]', ']')
           .replaceAll('**', '');
 
+      final mod = isQ
+          ? StudySyllabusCatalog.identifyModule(widget.title, sectionText)
+          : null;
+
       sections.add(
         _MarkdownSection(
           title: headingText,
@@ -329,6 +336,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           rawText: sectionText,
           key: GlobalKey(),
           isQuestion: isQ,
+          module: mod,
         ),
       );
     }
@@ -416,6 +424,8 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
             .toList();
     if (navSections.isEmpty) return;
     final palette = context.forest;
+    final modules = StudySyllabusCatalog.modulesFor(widget.title);
+    String? selectedModuleCode;
 
     showModalBottomSheet<void>(
       context: context,
@@ -425,106 +435,258 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       ),
       builder: (bottomSheetContext) {
         final l10n = context.l10n;
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.text54.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.format_list_bulleted_rounded,
-                        color: palette.accentText, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.translate('viewer_question_navigator'),
-                        style: TextStyle(
-                          color: palette.text,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      l10n.translate('viewer_questions_count',
-                          args: {'count': '${navSections.length}'}),
-                      style: TextStyle(
-                        color: palette.text54,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Divider(height: 1, color: palette.divider12),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: navSections.length,
-                  separatorBuilder: (_, __) =>
-                      Divider(height: 1, indent: 56, color: palette.divider10),
-                  itemBuilder: (context, index) {
-                    final section = navSections[index];
-                    final isQ = section.isQuestion;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filteredSections = selectedModuleCode == null
+                ? navSections
+                : navSections
+                    .where((s) => s.module?.code == selectedModuleCode)
+                    .toList();
 
-                    return ListTile(
-                      dense: true,
-                      leading: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: isQ
-                              ? palette.accentText.withValues(alpha: 0.15)
-                              : palette.divider10,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isQ
-                                ? palette.accentText.withValues(alpha: 0.45)
-                                : palette.divider12,
-                            width: 0.8,
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: palette.text54.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.format_list_bulleted_rounded,
+                            color: palette.accentText, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.translate('viewer_question_navigator'),
+                            style: TextStyle(
+                              color: palette.text,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          isQ
-                              ? Icons.quiz_outlined
-                              : Icons.bookmark_outline_rounded,
-                          color: isQ ? palette.accentText : palette.text70,
-                          size: 18,
+                        Text(
+                          l10n.translate('viewer_questions_count',
+                              args: {'count': '${filteredSections.length}'}),
+                          style: TextStyle(
+                            color: palette.text54,
+                            fontSize: 12,
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  // Syllabus Module Filter Chips (shown only when subject has syllabus modules)
+                  if (modules.isNotEmpty) ...[
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ChoiceChip(
+                              label: Text(
+                                l10n.translate('viewer_filter_all_modules'),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: selectedModuleCode == null
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: selectedModuleCode == null
+                                      ? palette.accentText
+                                      : palette.text70,
+                                ),
+                              ),
+                              selected: selectedModuleCode == null,
+                              selectedColor:
+                                  palette.accentText.withValues(alpha: 0.2),
+                              backgroundColor: palette.divider10,
+                              side: BorderSide(
+                                color: selectedModuleCode == null
+                                    ? palette.accentText.withValues(alpha: 0.6)
+                                    : palette.divider12,
+                                width: 0.8,
+                              ),
+                              onSelected: (_) {
+                                setSheetState(() {
+                                  selectedModuleCode = null;
+                                });
+                              },
+                            ),
+                          ),
+                          for (final mod in modules)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ChoiceChip(
+                                label: Text(
+                                  'Module ${mod.code}',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: selectedModuleCode == mod.code
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: selectedModuleCode == mod.code
+                                        ? palette.accentText
+                                        : palette.text70,
+                                  ),
+                                ),
+                                selected: selectedModuleCode == mod.code,
+                                selectedColor:
+                                    palette.accentText.withValues(alpha: 0.2),
+                                backgroundColor: palette.divider10,
+                                side: BorderSide(
+                                  color: selectedModuleCode == mod.code
+                                      ? palette.accentText
+                                          .withValues(alpha: 0.6)
+                                      : palette.divider12,
+                                  width: 0.8,
+                                ),
+                                onSelected: (selected) {
+                                  setSheetState(() {
+                                    selectedModuleCode =
+                                        selected ? mod.code : null;
+                                  });
+                                },
+                              ),
+                            ),
+                        ],
                       ),
-                      title: Text(
-                        section.cleanTitle,
-                        style: TextStyle(
-                          color: isQ ? palette.text : palette.text70,
-                          fontSize: 13.5,
-                          fontWeight: isQ ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onTap: () {
-                        Navigator.of(bottomSheetContext).pop();
-                        _scrollToSection(section, isSplit: isSplit);
-                      },
-                    );
-                  },
-                ),
+                    ),
+                    Divider(height: 8, color: palette.divider12),
+                  ],
+                  Flexible(
+                    child: filteredSections.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              'No questions mapped to this module.',
+                              style: TextStyle(
+                                  color: palette.text54, fontSize: 13),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: filteredSections.length,
+                            separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                indent: 56,
+                                color: palette.divider10),
+                            itemBuilder: (context, index) {
+                              final section = filteredSections[index];
+                              final isQ = section.isQuestion;
+                              final mod = section.module;
+
+                              return ListTile(
+                                dense: true,
+                                leading: Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: isQ
+                                        ? palette.accentText
+                                            .withValues(alpha: 0.15)
+                                        : palette.divider10,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isQ
+                                          ? palette.accentText
+                                              .withValues(alpha: 0.45)
+                                          : palette.divider12,
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    isQ
+                                        ? Icons.quiz_outlined
+                                        : Icons.bookmark_outline_rounded,
+                                    color: isQ
+                                        ? palette.accentText
+                                        : palette.text70,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Row(
+                                  children: [
+                                    if (mod != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: palette.accentText
+                                              .withValues(alpha: 0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: palette.accentText
+                                                .withValues(alpha: 0.4),
+                                            width: 0.6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Mod ${mod.code}',
+                                          style: TextStyle(
+                                            color: palette.accentText,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        section.cleanTitle,
+                                        style: TextStyle(
+                                          color: isQ
+                                              ? palette.text
+                                              : palette.text70,
+                                          fontSize: 13.5,
+                                          fontWeight: isQ
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: mod != null
+                                    ? Text(
+                                        mod.title,
+                                        style: TextStyle(
+                                          color: palette.text54,
+                                          fontSize: 11,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    : null,
+                                onTap: () {
+                                  Navigator.of(bottomSheetContext).pop();
+                                  _scrollToSection(section, isSplit: isSplit);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

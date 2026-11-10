@@ -13,9 +13,12 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/study_activity_log.dart';
 import '../../data/study_flashcard_store.dart';
+import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_flashcard_models.dart';
 import '../../domain/models/study_models.dart';
+import '../../domain/services/study_flashcard_extractor.dart';
 import '../../domain/services/study_flashcard_rules.dart';
+import '../../domain/services/study_solution_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
 import 'study_flashcard_review_screen.dart';
 
@@ -30,6 +33,7 @@ class StudyFlashcardsScreen extends StatefulWidget {
     this.store,
     this.today,
     this.activity,
+    this.repository,
   });
 
   /// Where reviews are counted for the streak and the progress card. Null in the app; tests pass one.
@@ -45,22 +49,28 @@ class StudyFlashcardsScreen extends StatefulWidget {
   /// The day the due dates are judged against. Null in the app, where it is today; tests pass one.
   final DateTime? today;
 
+  /// The repository for reading study materials. Null in the app; tests pass one.
+  final TourGroupRepository? repository;
+
   @override
   State<StudyFlashcardsScreen> createState() => _StudyFlashcardsScreenState();
 }
 
 /// The actions of the deck menu.
-enum _DeckAction { exportDeck, exportAnki, importDeck }
+enum _DeckAction { exportDeck, exportAnki, importDeck, generateFromSolutions }
 
 class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
   static const Uuid _ids = Uuid();
 
   late final StudyFlashcardStore _store = widget.store ?? StudyFlashcardStore();
+  late final TourGroupRepository _repository =
+      widget.repository ?? TourGroupRepository();
 
   /// The cards of this book, the soonest due first.
   List<StudyFlashcard> _cards = const [];
   bool _loaded = false;
   bool _failed = false;
+  bool _extracting = false;
 
   DateTime get _now => widget.today ?? DateTime.now();
 
@@ -164,6 +174,78 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
         await _exportAnki();
       case _DeckAction.importDeck:
         await _importDeck();
+      case _DeckAction.generateFromSolutions:
+        await _generateFromSolutions();
+    }
+  }
+
+  Future<void> _generateFromSolutions() async {
+    if (_extracting || widget.tourId.isEmpty) return;
+    setState(() => _extracting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+
+    try {
+      final materials = await _repository
+          .watchStudyMaterials(widget.tourId, widget.book.id)
+          .first;
+
+      final solutions = materials
+          .where((m) => m.isPublished && isReadableSolution(m))
+          .toList();
+
+      if (solutions.isEmpty) {
+        if (mounted) {
+          messenger.showSnackBar(SnackBar(
+            content: Text(l10n.translate('study_flashcards_none_found')),
+          ));
+        }
+        return;
+      }
+
+      final generated = <StudyFlashcard>[];
+      for (final sol in solutions) {
+        final content = sol.body ?? '';
+        if (content.trim().isEmpty) continue;
+        final cards = StudyFlashcardExtractor.extractFromMarkdown(
+          deckId: widget.book.id,
+          subjectTitle: widget.book.title,
+          markdownContent: content,
+          today: _now,
+        );
+        generated.addAll(cards);
+      }
+
+      if (generated.isEmpty) {
+        if (mounted) {
+          messenger.showSnackBar(SnackBar(
+            content: Text(l10n.translate('study_flashcards_none_found')),
+          ));
+        }
+        return;
+      }
+
+      await _store.putAll(generated);
+      await _load();
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(l10n.translate(
+            'study_flashcards_generated_count',
+            args: {'count': l10n.number(generated.length)},
+          )),
+        ));
+      }
+    } catch (error, stackTrace) {
+      logWarning(
+          'Failed to generate flashcards from solutions', error, stackTrace);
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(l10n.translate('study_failed')),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _extracting = false);
     }
   }
 
@@ -273,6 +355,12 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
               icon: Icon(Icons.more_vert_rounded, color: palette.text),
               onSelected: _onAction,
               itemBuilder: (_) => [
+                if (widget.tourId.isNotEmpty)
+                  PopupMenuItem<_DeckAction>(
+                    value: _DeckAction.generateFromSolutions,
+                    child: Text(l10n
+                        .translate('study_flashcards_generate_from_solutions')),
+                  ),
                 PopupMenuItem<_DeckAction>(
                   value: _DeckAction.exportDeck,
                   child: Text(l10n.translate('study_flashcard_export_json')),
@@ -335,17 +423,44 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
                   style: TextStyle(color: palette.text54, fontSize: 12),
                 ),
                 const SizedBox(height: 10),
-                if (due.isNotEmpty)
-                  FilledButton.icon(
-                    onPressed: () => _review(due),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(l10n.translate('study_flashcards_review')),
-                  )
-                else if (_cards.isNotEmpty)
-                  Text(
-                    l10n.translate('study_flashcards_nothing_due'),
-                    style: TextStyle(color: palette.text70),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (due.isNotEmpty)
+                      FilledButton.icon(
+                        onPressed: () => _review(due),
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: Text(l10n.translate('study_flashcards_review')),
+                      ),
+                    if (widget.tourId.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: _extracting ? null : _generateFromSolutions,
+                        icon: _extracting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.auto_awesome_rounded, size: 16),
+                        label: Text(
+                          l10n.translate(
+                              'study_flashcards_generate_from_solutions'),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    if (due.isEmpty && _cards.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          l10n.translate('study_flashcards_nothing_due'),
+                          style: TextStyle(color: palette.text70),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -372,9 +487,40 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text(
-          card.front,
-          style: TextStyle(color: palette.text, fontWeight: FontWeight.w600),
+        title: Row(
+          children: [
+            if (card.moduleCode != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: palette.accentText.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: palette.accentText.withValues(alpha: 0.4),
+                    width: 0.6,
+                  ),
+                ),
+                child: Text(
+                  'Mod ${card.moduleCode}',
+                  style: TextStyle(
+                    color: palette.accentText,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                card.front,
+                style:
+                    TextStyle(color: palette.text, fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         subtitle: Text(
           [
@@ -387,6 +533,8 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
             }),
           ].join('\n'),
           style: TextStyle(color: palette.text54),
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: IconButton(
           tooltip: l10n.translate('study_remove'),

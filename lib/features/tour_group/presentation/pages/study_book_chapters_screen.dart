@@ -13,6 +13,7 @@ import '../../data/study_reading_position.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_material_models.dart';
 import '../../domain/models/study_models.dart';
+import '../../domain/models/study_syllabus_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
@@ -79,6 +80,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   /// The chapter number the member is on, kept on this device.
   int? _here;
+  String? _selectedModuleCode;
+  late final List<SyllabusModule> _syllabusModules =
+      StudySyllabusCatalog.modulesFor(widget.book.title);
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
@@ -375,6 +379,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       _LearningTool.flashcards => StudyFlashcardsScreen(
           book: widget.book,
           tourId: widget.tourId,
+          repository: _repository,
         ),
       _LearningTool.progress => StudyProgressScreen(
           tourId: widget.tourId,
@@ -528,8 +533,182 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
         _summary(next),
+        _syllabusBlueprintCard(),
         for (final chapter in _chapters) _chapterCard(chapter, today),
       ],
+    );
+  }
+
+  Widget _syllabusBlueprintCard() {
+    if (_syllabusModules.isEmpty) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final palette = context.forest;
+    final isBn = l10n.locale.languageCode == 'bn';
+    final activeModule = _selectedModuleCode == null
+        ? null
+        : _syllabusModules.firstWhere(
+            (m) => m.code == _selectedModuleCode,
+            orElse: () => _syllabusModules.first,
+          );
+
+    return Card(
+      color: palette.card,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: _selectedModuleCode != null
+              ? palette.accentText.withValues(alpha: 0.5)
+              : palette.divider12,
+          width: 0.8,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.account_tree_rounded,
+                    color: palette.accentText, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.translate('study_syllabus_blueprint'),
+                    style: TextStyle(
+                      color: palette.text,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (_selectedModuleCode != null)
+                  TextButton(
+                    onPressed: () => setState(() => _selectedModuleCode = null),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 24),
+                    ),
+                    child: Text(
+                      l10n.translate('viewer_filter_all_modules'),
+                      style: TextStyle(
+                        color: palette.accentText,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(
+                        l10n.translate('viewer_filter_all_modules'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: _selectedModuleCode == null
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _selectedModuleCode == null
+                              ? palette.accentText
+                              : palette.text70,
+                        ),
+                      ),
+                      selected: _selectedModuleCode == null,
+                      selectedColor: palette.accentText.withValues(alpha: 0.2),
+                      backgroundColor: palette.divider10,
+                      side: BorderSide(
+                        color: _selectedModuleCode == null
+                            ? palette.accentText.withValues(alpha: 0.6)
+                            : palette.divider12,
+                        width: 0.8,
+                      ),
+                      onSelected: (_) =>
+                          setState(() => _selectedModuleCode = null),
+                    ),
+                  ),
+                  for (final mod in _syllabusModules)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(
+                          'Module ${mod.code}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: _selectedModuleCode == mod.code
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: _selectedModuleCode == mod.code
+                                ? palette.accentText
+                                : palette.text70,
+                          ),
+                        ),
+                        selected: _selectedModuleCode == mod.code,
+                        selectedColor:
+                            palette.accentText.withValues(alpha: 0.2),
+                        backgroundColor: palette.divider10,
+                        side: BorderSide(
+                          color: _selectedModuleCode == mod.code
+                              ? palette.accentText.withValues(alpha: 0.6)
+                              : palette.divider12,
+                          width: 0.8,
+                        ),
+                        onSelected: (selected) => setState(() {
+                          _selectedModuleCode = selected ? mod.code : null;
+                        }),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (activeModule != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: palette.accentText.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: palette.accentText.withValues(alpha: 0.25),
+                    width: 0.8,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Module ${activeModule.code}: ${isBn && activeModule.titleBn.isNotEmpty ? activeModule.titleBn : activeModule.title}',
+                      style: TextStyle(
+                        color: palette.accentText,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (activeModule.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        activeModule.description,
+                        style: TextStyle(
+                          color: palette.text70,
+                          fontSize: 11.5,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

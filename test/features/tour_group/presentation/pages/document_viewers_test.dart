@@ -267,6 +267,87 @@ Answer to question 2.
     });
 
     testWidgets(
+        'renders syllabus module filter chips in Question Navigator and filters questions by module',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: 'Laws & Practice of General Banking',
+            rawContent: '''
+### Question 1 [Marks: 10]
+Explain the Bank Company Act 1991 provisions.
+
+### Question 2 [Marks: 10]
+What are the KYC procedures for opening an account?
+
+### Question 3 [Marks: 10]
+Explain special crossing of a cheque under NI Act.
+''',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open Question Navigator
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
+      await tester.pumpAndSettle();
+
+      // Module chips should be present
+      expect(find.text('All Modules'), findsOneWidget);
+      expect(find.text('Module A'), findsOneWidget);
+      expect(find.text('Module B'), findsOneWidget);
+      expect(find.text('Module C'), findsOneWidget);
+
+      // Question 1 has Mod A badge, Question 2 has Mod B badge, Question 3 has Mod C badge
+      expect(find.text('Mod A'), findsOneWidget);
+      expect(find.text('Mod B'), findsOneWidget);
+      expect(find.text('Mod C'), findsOneWidget);
+
+      // Filter by Module A
+      await tester.tap(find.text('Module A'));
+      await tester.pumpAndSettle();
+
+      final bottomSheet = find.byType(BottomSheet);
+
+      // Question 1 should be visible in bottom sheet, while Question 2 and Question 3 should be filtered out
+      expect(
+        find.descendant(
+            of: bottomSheet, matching: find.textContaining('Question 1')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+            of: bottomSheet, matching: find.textContaining('Question 2')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+            of: bottomSheet, matching: find.textContaining('Question 3')),
+        findsNothing,
+      );
+
+      // Select All Modules again
+      await tester.tap(find.text('All Modules'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+            of: bottomSheet, matching: find.textContaining('Question 1')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+            of: bottomSheet, matching: find.textContaining('Question 2')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+            of: bottomSheet, matching: find.textContaining('Question 3')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
         'jumps to a distant question in split view and scrolls both panes simultaneously',
         (tester) async {
       tester.view.physicalSize = const Size(1000, 800);
@@ -316,7 +397,7 @@ Answer to question 2.
         question40Finder,
         300,
         scrollable: find.descendant(
-          of: bottomSheetFinder,
+          of: find.byType(ListView),
           matching: find.byType(Scrollable),
         ),
       );

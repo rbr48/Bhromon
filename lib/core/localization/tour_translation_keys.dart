@@ -265,6 +265,10 @@ class TourTranslationKeys {
       'viewer_split_view': 'Split View',
       'viewer_single_view': 'Single View',
       'viewer_sync_scroll': 'Synchronized Scroll',
+      'viewer_filter_all_modules': 'All Modules',
+      'viewer_module_prefix': 'Module {0}',
+      'study_syllabus_blueprint': 'Official Syllabus & Blueprint',
+      'study_filter_by_module': 'Filter by Syllabus Module',
       'study_solution_english': 'English Solution',
       'study_solution_bangla': 'বাংলা সমাধান',
       'hub_section_family': 'Family circles',
@@ -3218,6 +3222,14 @@ class TourTranslationKeys {
       'study_flashcard_import_bad': 'That file is not a Bhromon deck.',
       'study_flashcard_export_empty': 'There are no cards to export yet.',
       'study_flashcard_removed': 'Card removed.',
+      'study_flashcard_again': 'Again',
+      'study_flashcard_good': 'Good',
+      'study_flashcard_easy': 'Easy',
+      'study_flashcards_generate_from_solutions': 'Generate from Past Papers',
+      'study_flashcards_generated_count':
+          'Generated {count} flashcards from solutions!',
+      'study_flashcards_none_found':
+          'No readable solutions found for this book.',
       'study_flashcard_menu': 'More options',
       'study_flashcard_device_note':
           'Cards stay on this phone. They leave it only when you export them.',
@@ -3858,6 +3870,10 @@ class TourTranslationKeys {
       'viewer_split_view': 'দ্বৈত ভিউ (পাশাপাশি)',
       'viewer_single_view': 'একক ভিউ',
       'viewer_sync_scroll': 'একসাথে স্ক্রোল',
+      'viewer_filter_all_modules': 'সকল মডিউল',
+      'viewer_module_prefix': 'মডিউল {0}',
+      'study_syllabus_blueprint': 'অফিসিয়াল সিলেবাস ও ব্লুপ্রিন্ট',
+      'study_filter_by_module': 'সিলেবাস মডিউল ফিল্টার',
       'study_solution_english': 'English Solution',
       'study_solution_bangla': 'বাংলা সমাধান',
       'hub_section_family': 'পরিবারের গ্রুপ',
@@ -6806,6 +6822,14 @@ class TourTranslationKeys {
       'study_flashcard_import_bad': 'ফাইলটি Bhromon-এর কোনো ডেক নয়।',
       'study_flashcard_export_empty': 'রপ্তানি করার মতো কোনো কার্ড নেই।',
       'study_flashcard_removed': 'কার্ডটি সরানো হয়েছে।',
+      'study_flashcard_again': 'আবার',
+      'study_flashcard_good': 'পেরেছি',
+      'study_flashcard_easy': 'সহজ',
+      'study_flashcards_generate_from_solutions': 'বিগত প্রশ্ন থেকে তৈরি করুন',
+      'study_flashcards_generated_count':
+          'বিগত সমাধান থেকে {count}টি ফ্ল্যাশকার্ড তৈরি হয়েছে!',
+      'study_flashcards_none_found':
+          'এই বইটির কোনো পড়াযোগ্য সমাধান পাওয়া যায়নি।',
       'study_flashcard_menu': 'আরও বিকল্প',
       'study_flashcard_device_note':
           'কার্ড এই ফোনেই থাকে। আপনি রপ্তানি করলেই শুধু বাইরে যায়।',

@@ -11,6 +11,13 @@ const List<int> kLeitnerIntervalDays = [1, 2, 4, 8, 16];
 const String kDeckFormat = 'bhromon-deck';
 const int kDeckVersion = 1;
 
+/// The self-assessment rating selected by candidate upon reviewing a card.
+enum FlashcardRating {
+  again, // Missed / Hard -> Reset to Box 1
+  good, // Recalled successfully -> Advance +1 Box
+  easy, // Mastered easily -> Accelerated advance +2 Boxes
+}
+
 /// The box a card moves to after a review. A recalled card moves up one box, up to the top. A missed card goes
 /// back to box 1.
 int nextLeitnerBox(int box, {required bool recalled}) {
@@ -19,6 +26,24 @@ int nextLeitnerBox(int box, {required bool recalled}) {
   return next > StudyFlashcardLimits.boxMax
       ? StudyFlashcardLimits.boxMax
       : next;
+}
+
+/// The box a card moves to after a review according to [FlashcardRating].
+int nextLeitnerBoxForRating(int box, FlashcardRating rating) {
+  switch (rating) {
+    case FlashcardRating.again:
+      return StudyFlashcardLimits.boxMin;
+    case FlashcardRating.good:
+      final next = box + 1;
+      return next > StudyFlashcardLimits.boxMax
+          ? StudyFlashcardLimits.boxMax
+          : next;
+    case FlashcardRating.easy:
+      final next = box + 2;
+      return next > StudyFlashcardLimits.boxMax
+          ? StudyFlashcardLimits.boxMax
+          : next;
+  }
 }
 
 /// The days a box waits before its card is due again. A box outside the range uses the nearest one.
@@ -51,10 +76,13 @@ String dueKeyAfterReview(DateTime today, int box) {
 /// The card after a review: its box moves, and it is due again after the box's interval.
 StudyFlashcard reviewCard(
   StudyFlashcard card, {
-  required bool recalled,
+  bool recalled = true,
+  FlashcardRating? rating,
   required DateTime today,
 }) {
-  final box = nextLeitnerBox(card.box, recalled: recalled);
+  final box = rating != null
+      ? nextLeitnerBoxForRating(card.box, rating)
+      : nextLeitnerBox(card.box, recalled: recalled);
   return card.copyWith(box: box, dueOn: dueKeyAfterReview(today, box));
 }
 

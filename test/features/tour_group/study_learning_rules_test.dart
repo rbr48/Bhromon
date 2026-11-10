@@ -362,6 +362,59 @@ void main() {
       final missed = reviewCard(_card(box: 4), recalled: false, today: today);
       expect(missed.box, 1);
       expect(missed.dueOn, '2026-11-10');
+
+      // 3-tier rating assessment tests
+      final again = reviewCard(
+        _card(box: 3),
+        rating: FlashcardRating.again,
+        today: today,
+      );
+      expect(again.box, 1);
+      expect(again.dueOn, '2026-11-10');
+
+      final good = reviewCard(
+        _card(box: 3),
+        rating: FlashcardRating.good,
+        today: today,
+      );
+      expect(good.box, 4);
+      expect(good.dueOn, '2026-11-17');
+
+      final easy = reviewCard(
+        _card(box: 2),
+        rating: FlashcardRating.easy,
+        today: today,
+      );
+      expect(easy.box, 4);
+      expect(easy.dueOn, '2026-11-17');
+
+      // Easy cap at boxMax (5)
+      final easyMax = reviewCard(
+        _card(box: 4),
+        rating: FlashcardRating.easy,
+        today: today,
+      );
+      expect(easyMax.box, 5);
+      expect(easyMax.dueOn, '2026-11-25');
+    });
+
+    test('StudyFlashcard preserves moduleCode across JSON serialization', () {
+      const card = StudyFlashcard(
+        id: 'c_mod',
+        deckId: 'b_mod',
+        front: 'Bank Company Act 1991',
+        back: 'Banking regulatory framework',
+        box: 2,
+        dueOn: '2026-11-10',
+        moduleCode: 'A',
+      );
+
+      final json = card.toJson();
+      expect(json['moduleCode'], 'A');
+
+      final restored = StudyFlashcard.fromJson(json);
+      expect(restored?.moduleCode, 'A');
+      expect(restored?.id, 'c_mod');
     });
 
     test(

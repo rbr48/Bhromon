@@ -195,6 +195,51 @@ void main() {
       expect(find.text('Why does the first line matter?'), findsOneWidget);
     });
 
+    testWidgets(
+        'renders official syllabus blueprint card with interactive module selection',
+        (tester) async {
+      const lpgbBook = StudyBook(
+        id: 'b_lpgb',
+        title: 'Laws & Practice of General Banking (LPGB)',
+        createdByEmail: 'admin@x.com',
+      );
+      final repo = _FakeChapterRepo(chapters: _chapters);
+      await _pump(
+        tester,
+        StudyBookChaptersScreen(
+          tourId: 'T',
+          book: lpgbBook,
+          repository: repo,
+          position: _FakePosition(),
+        ),
+      );
+
+      // Verify blueprint card header and module chips exist
+      expect(find.text('Official Syllabus & Blueprint'), findsOneWidget);
+      expect(find.text('All Modules'), findsOneWidget);
+      expect(find.text('Module A'), findsOneWidget);
+      expect(find.text('Module B'), findsOneWidget);
+      expect(find.text('Module C'), findsOneWidget);
+
+      // Tap Module A to inspect module description
+      await tester.tap(find.text('Module A'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Module A: Legal & Regulatory Framework'),
+        findsOneWidget,
+      );
+
+      // Tap 'All Modules' button to reset selection
+      await tester.tap(find.widgetWithText(TextButton, 'All Modules'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Module A: Legal & Regulatory Framework'),
+        findsNothing,
+      );
+    });
+
     testWidgets('a member marks a chapter read in their own name',
         (tester) async {
       final repo = _FakeChapterRepo(chapters: _chapters);
