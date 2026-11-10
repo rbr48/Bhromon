@@ -1,18 +1,26 @@
 // Which study materials open as a chapter's one-tap solution, and what the reader needs to open one.
-// A note carries its text. A Markdown file is fetched by the reader from its address. Other files
-// (PDFs, images, audio, video and links) are reached from the materials list, not from a solution button.
+// A note carries its text. A Markdown file is fetched by the reader from its address, and a PDF opens in the
+// PDF viewer from its address. Other files (images, audio, video and links) are reached from the materials list.
 
 import '../models/study_material_models.dart';
 
-/// Whether a published material can open from a chapter's solution button.
+/// Whether a published material can open from a chapter's solution button: a note with text, or a Markdown or
+/// PDF file with an address.
 bool isReadableSolution(StudyMaterial material) {
   if (material.kind == StudyMaterialKind.note) {
     return (material.body ?? '').trim().isNotEmpty;
   }
-  return material.kind == StudyMaterialKind.file &&
-      (material.url ?? '').isNotEmpty &&
-      (material.fileName ?? '').toLowerCase().endsWith('.md');
+  if (material.kind != StudyMaterialKind.file || (material.url ?? '').isEmpty) {
+    return false;
+  }
+  final name = (material.fileName ?? '').toLowerCase();
+  return name.endsWith('.md') || name.endsWith('.pdf');
 }
+
+/// Whether a solution is a PDF, which opens in the PDF viewer rather than the Markdown reader.
+bool isPdfSolution(StudyMaterial material) =>
+    material.kind == StudyMaterialKind.file &&
+    (material.fileName ?? '').toLowerCase().endsWith('.pdf');
 
 /// Whether a solution is the Bangla version: its title has a Bengali word, or its file name says Bangla.
 bool isBanglaSolution(StudyMaterial material) =>

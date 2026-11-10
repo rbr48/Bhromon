@@ -23,6 +23,38 @@ List<StudyThread> sortStudyThreads(Iterable<StudyThread> threads) {
   return sorted;
 }
 
+/// The threads in the order a conversation reads: pinned ones first, as [sortStudyThreads] has
+/// them, then the rest oldest first, so the newest is last and a chat opens at it.
+List<StudyThread> chatOrderStudyThreads(Iterable<StudyThread> threads) {
+  final sorted = sortStudyThreads(threads);
+  return [
+    for (final thread in sorted)
+      if (thread.pinned) thread,
+    for (final thread in sorted.reversed)
+      if (!thread.pinned) thread,
+  ];
+}
+
+/// The longest first line a thread takes as its title. A longer line is cut at a word and ends
+/// with an ellipsis; the whole text is still the question.
+const int kThreadTitleMax = 80;
+
+/// The title and question of a thread started from the chat box. The first line of the text is
+/// the title, and the whole text, trimmed, is the question. A blank text gives a blank title and
+/// question, which the caller refuses.
+({String title, String body}) threadTitleAndBody(String text) {
+  final body = text.trim();
+  final firstLine = body.split('\n').first.trim();
+  return (title: _cutAtWord(firstLine, kThreadTitleMax), body: body);
+}
+
+String _cutAtWord(String line, int max) {
+  if (line.length <= max) return line;
+  final space = line.lastIndexOf(' ', max);
+  final end = space > 0 ? space : max;
+  return '${line.substring(0, end).trimRight()}…';
+}
+
 /// The threads whose title or body contains the query, ignoring case. An empty query keeps
 /// every thread. The search runs only over the threads already loaded.
 List<StudyThread> searchStudyThreads(

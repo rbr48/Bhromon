@@ -13,7 +13,7 @@ import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_thread_rules.dart';
 
-import '../widgets/study/study_text_field.dart';
+import '../widgets/study/study_chat_composer.dart';
 
 /// One thread on a book: its question, the replies in time order, and the actions each viewer
 /// may take. The asker or an admin accepts an answer. A member marks a reply helpful once and
@@ -624,31 +624,11 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
         ),
       );
     }
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-            12, 6, 12, MediaQuery.viewInsetsOf(context).bottom + 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: StudyTextField(
-                controller: _reply,
-                minLines: 1,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: l10n.translate('study_thread_reply_hint'),
-                  counterText: '',
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: l10n.translate('study_thread_reply_send'),
-              onPressed: _sending ? null : _send,
-              icon: Icon(Icons.send_rounded, color: palette.accentText),
-            ),
-          ],
-        ),
-      ),
+    return StudyChatComposer(
+      controller: _reply,
+      hint: l10n.translate('study_thread_reply_hint'),
+      sending: _sending,
+      onSend: _send,
     );
   }
 

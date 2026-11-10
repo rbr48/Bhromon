@@ -102,6 +102,17 @@ class _FakeDiscussionRepo extends TourGroupRepository {
   }) async {
     calls.add('start $title');
   }
+
+  @override
+  Future<void> addStudyReply(
+    String tourId,
+    String bookId,
+    String threadId, {
+    required String replyId,
+    required String text,
+  }) async {
+    calls.add('reply $text');
+  }
 }
 
 /// The reading position and fence kept in memory, so a test sees what the screen saved.
@@ -200,7 +211,7 @@ void main() {
       expect(find.text('Why the train?'), findsOneWidget);
       expect(find.text('The ending'), findsNothing);
       expect(find.text('Later chapter'), findsOneWidget);
-      expect(find.text('Start a thread'), findsOneWidget);
+      expect(find.text('Ask a question or start a topic'), findsOneWidget);
     });
 
     testWidgets('turning the fence off shows the later thread by its title',
@@ -231,6 +242,62 @@ void main() {
 
       expect(position.fence, isFalse);
       expect(find.text('The ending'), findsOneWidget);
+    });
+
+    testWidgets(
+        'a member posts from the chat box, and the first line becomes the title',
+        (tester) async {
+      final repo = _FakeDiscussionRepo(
+        threads: [_openThread],
+        chapters: [_chapterOne],
+      );
+      await _pump(
+        tester,
+        StudyDiscussionScreen(
+          tourId: 'T',
+          book: _book,
+          repository: repo,
+          position: _FakePosition(number: 1),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField),
+          'Why does Anna leave?\nThe letter is the reason.');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls, ['start Why does Anna leave?']);
+      // The box is cleared once the thread is saved.
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          isEmpty);
+    });
+
+    testWidgets('the chapter and page form opens with the text from the box',
+        (tester) async {
+      final repo = _FakeDiscussionRepo(
+        threads: [_openThread],
+        chapters: [_chapterOne],
+      );
+      await _pump(
+        tester,
+        StudyDiscussionScreen(
+          tourId: 'T',
+          book: _book,
+          repository: repo,
+          position: _FakePosition(number: 1),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Why the train?');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.menu_book_outlined));
+      await tester.pumpAndSettle();
+      // The form is filled from the box, so posting it saves the same thread.
+      await tester.tap(find.text('Post thread'));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls, ['start Why the train?']);
     });
   });
 
@@ -318,6 +385,36 @@ void main() {
       await tester.tap(find.text('Lock thread'));
       await tester.pumpAndSettle();
       expect(repo.calls, ['locked true']);
+    });
+  });
+
+  group('the chat box in a thread', () {
+    testWidgets('a reply is sent from the box, and the box is cleared',
+        (tester) async {
+      final repo = _FakeDiscussionRepo(
+        threads: [_openThread],
+        chapters: [_chapterOne],
+        role: TourRole.member,
+      );
+      await _pump(
+        tester,
+        StudyThreadScreen(
+          tourId: 'T',
+          bookId: 'b1',
+          bookTitle: 'Anna Karenina',
+          threadId: 't1',
+          repository: repo,
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Because of the letter.');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      expect(repo.calls, ['reply Because of the letter.']);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          isEmpty);
     });
   });
 
