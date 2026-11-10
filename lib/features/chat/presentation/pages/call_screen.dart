@@ -248,7 +248,10 @@ class _CallScreenState extends State<CallScreen> {
   /// override the route back to the earpiece when tracks activate.
   Future<void> _routeToSpeaker(bool speaker) async {
     try {
-      await CallAudioSession.setSpeakerphone(speaker);
+      await CallAudioSession.setSpeakerphone(
+        speaker,
+        callId: _systemCall ? widget.callId : null,
+      );
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
     }

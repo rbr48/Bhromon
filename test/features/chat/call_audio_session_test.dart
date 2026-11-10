@@ -32,6 +32,18 @@ void main() {
     expect(seen?.arguments, {'enabled': true});
   });
 
+  test('names the call when the phone\'s call system holds it', () async {
+    MethodCall? seen;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      seen = call;
+      return true;
+    });
+
+    expect(await CallAudioSession.setSpeakerphone(true, callId: 'c1'), isTrue);
+    expect(seen?.arguments, {'enabled': true, 'callId': 'c1'});
+  });
+
   test('reports false when the phone did not change the route', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async => false);
