@@ -159,7 +159,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       String myEmail = '';
       try {
         myEmail = _repository.requireEmail();
-      } catch (_) {}
+      } catch (error) {
+        // Safe to fall back when running in unit tests or preview mode.
+        myEmail = '';
+      }
       final standings = StudyDailyStreakRules.fallbackStandings(
         myEmail: myEmail,
         myName: myEmail.isNotEmpty ? myEmail.split('@').first : 'You',
