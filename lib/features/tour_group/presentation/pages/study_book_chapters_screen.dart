@@ -538,6 +538,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   }
 
   Widget _syllabusBlueprintCard() {
+    if (_syllabusModules.isEmpty) return const SizedBox.shrink();
     final l10n = context.l10n;
     final palette = context.forest;
     final isBn = l10n.locale.languageCode == 'bn';

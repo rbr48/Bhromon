@@ -85,10 +85,26 @@ void main() {
       expect(modD?.code, 'D');
     });
 
-    test('falls back gracefully to LPGB for unknown subjects', () {
+    test('returns empty list for unrecognized non-banking subjects', () {
       final modules = StudySyllabusCatalog.modulesFor('UNKNOWN_SUBJECT_XYZ');
-      expect(modules.length, 5);
-      expect(modules.first.id, 'lpgb_mod_a');
+      expect(modules, isEmpty);
+
+      final identified = StudySyllabusCatalog.identifyModule(
+        'UNKNOWN_SUBJECT_XYZ',
+        'Some arbitrary question content',
+      );
+      expect(identified, isNull);
+    });
+
+    test(
+        'avoids false-positive partial substring matches using boundary isolation',
+        () {
+      // "action" must not falsely match keyword "act", and "current" must not match "crr"
+      final mod = StudySyllabusCatalog.identifyModule(
+        'LPGB',
+        'The candidate took immediate action to practice general routines without banking regulation.',
+      );
+      expect(mod, isNull);
     });
   });
 }

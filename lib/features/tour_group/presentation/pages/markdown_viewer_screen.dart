@@ -485,83 +485,86 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                       ],
                     ),
                   ),
-                  // Syllabus Module Filter Chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(
-                              l10n.translate('viewer_filter_all_modules'),
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: selectedModuleCode == null
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: selectedModuleCode == null
-                                    ? palette.accentText
-                                    : palette.text70,
-                              ),
-                            ),
-                            selected: selectedModuleCode == null,
-                            selectedColor:
-                                palette.accentText.withValues(alpha: 0.2),
-                            backgroundColor: palette.divider10,
-                            side: BorderSide(
-                              color: selectedModuleCode == null
-                                  ? palette.accentText.withValues(alpha: 0.6)
-                                  : palette.divider12,
-                              width: 0.8,
-                            ),
-                            onSelected: (_) {
-                              setSheetState(() {
-                                selectedModuleCode = null;
-                              });
-                            },
-                          ),
-                        ),
-                        for (final mod in modules)
+                  // Syllabus Module Filter Chips (shown only when subject has syllabus modules)
+                  if (modules.isNotEmpty) ...[
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      child: Row(
+                        children: [
                           Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: ChoiceChip(
                               label: Text(
-                                'Module ${mod.code}',
+                                l10n.translate('viewer_filter_all_modules'),
                                 style: TextStyle(
                                   fontSize: 11.5,
-                                  fontWeight: selectedModuleCode == mod.code
+                                  fontWeight: selectedModuleCode == null
                                       ? FontWeight.bold
                                       : FontWeight.normal,
-                                  color: selectedModuleCode == mod.code
+                                  color: selectedModuleCode == null
                                       ? palette.accentText
                                       : palette.text70,
                                 ),
                               ),
-                              selected: selectedModuleCode == mod.code,
+                              selected: selectedModuleCode == null,
                               selectedColor:
                                   palette.accentText.withValues(alpha: 0.2),
                               backgroundColor: palette.divider10,
                               side: BorderSide(
-                                color: selectedModuleCode == mod.code
+                                color: selectedModuleCode == null
                                     ? palette.accentText.withValues(alpha: 0.6)
                                     : palette.divider12,
                                 width: 0.8,
                               ),
-                              onSelected: (selected) {
+                              onSelected: (_) {
                                 setSheetState(() {
-                                  selectedModuleCode =
-                                      selected ? mod.code : null;
+                                  selectedModuleCode = null;
                                 });
                               },
                             ),
                           ),
-                      ],
+                          for (final mod in modules)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ChoiceChip(
+                                label: Text(
+                                  'Module ${mod.code}',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: selectedModuleCode == mod.code
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: selectedModuleCode == mod.code
+                                        ? palette.accentText
+                                        : palette.text70,
+                                  ),
+                                ),
+                                selected: selectedModuleCode == mod.code,
+                                selectedColor:
+                                    palette.accentText.withValues(alpha: 0.2),
+                                backgroundColor: palette.divider10,
+                                side: BorderSide(
+                                  color: selectedModuleCode == mod.code
+                                      ? palette.accentText
+                                          .withValues(alpha: 0.6)
+                                      : palette.divider12,
+                                  width: 0.8,
+                                ),
+                                onSelected: (selected) {
+                                  setSheetState(() {
+                                    selectedModuleCode =
+                                        selected ? mod.code : null;
+                                  });
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Divider(height: 8, color: palette.divider12),
+                    Divider(height: 8, color: palette.divider12),
+                  ],
                   Flexible(
                     child: filteredSections.isEmpty
                         ? Padding(

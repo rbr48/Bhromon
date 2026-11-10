@@ -19,12 +19,18 @@ class SyllabusModule {
     required this.keywords,
   });
 
-  /// Checks if given text matches any keywords belonging to this module.
+  /// Checks if given text matches any keywords belonging to this module
+  /// with boundary awareness to prevent false-positive partial substring matches.
   bool matches(String text) {
     if (text.isEmpty) return false;
-    final lower = text.toLowerCase();
     for (final kw in keywords) {
-      if (lower.contains(kw.toLowerCase())) {
+      if (kw.isEmpty) continue;
+      final escaped = RegExp.escape(kw);
+      final pattern = RegExp(
+        "(^|[\\s,;:.?!()\\[\\]\\-/\"'])$escaped([\\s,;:.?!()\\[\\]\\-/\"']|\$)",
+        caseSensitive: false,
+      );
+      if (pattern.hasMatch(text)) {
         return true;
       }
     }
@@ -764,22 +770,32 @@ class StudySyllabusCatalog {
         return entry.value;
       }
     }
-    return _modules['LPGB'] ?? const [];
+    // Return empty list if subject is not recognized as an IBB banking catalog entry.
+    return const [];
   }
 
   /// Identifies the best matching syllabus module for a given question heading
-  /// and content text using score-weighted keyword matching.
+  /// and content text using score-weighted, length-prioritized keyword matching.
+  ///
+  /// Tie-breaking is deterministic: in the event of equal cumulative match scores,
+  /// the earliest module defined in the catalog order (`score > bestScore`) is preserved.
   static SyllabusModule? identifyModule(
       String subjectText, String questionText) {
     final list = modulesFor(subjectText);
+    if (list.isEmpty || questionText.isEmpty) return null;
     SyllabusModule? bestModule;
     int bestScore = 0;
-    final lower = questionText.toLowerCase();
 
     for (final mod in list) {
       int score = 0;
       for (final kw in mod.keywords) {
-        if (lower.contains(kw.toLowerCase())) {
+        if (kw.isEmpty) continue;
+        final escaped = RegExp.escape(kw);
+        final pattern = RegExp(
+          "(^|[\\s,;:.?!()\\[\\]\\-/\"'])$escaped([\\s,;:.?!()\\[\\]\\-/\"']|\$)",
+          caseSensitive: false,
+        );
+        if (pattern.hasMatch(questionText)) {
           score += kw.length;
         }
       }
