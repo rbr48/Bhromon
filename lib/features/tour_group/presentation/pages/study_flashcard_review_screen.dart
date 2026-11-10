@@ -293,7 +293,7 @@ class _StudyFlashcardReviewScreenState
                             rating: FlashcardRating.good,
                             recalled: true,
                           ),
-                  child: Text(l10n.translate('study_flashcard_good')),
+                  child: Text(l10n.translate('study_flashcard_got_it')),
                 ),
               ),
               const SizedBox(width: 8),
