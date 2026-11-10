@@ -190,7 +190,8 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
             if (sortedBanks.length > 1) ...[
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Row(
                   children: [
                     ChoiceChip(
@@ -233,7 +234,8 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                           ),
                         ),
                         selected: _filterBank == bank,
-                        selectedColor: palette.accentText.withValues(alpha: 0.2),
+                        selectedColor:
+                            palette.accentText.withValues(alpha: 0.2),
                         backgroundColor: palette.divider10,
                         side: BorderSide(
                           color: _filterBank == bank

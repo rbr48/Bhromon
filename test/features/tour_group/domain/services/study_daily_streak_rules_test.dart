@@ -181,7 +181,9 @@ void main() {
       expect(ranked[2].rank, 3);
     });
 
-    test('fromTourMembers connects to real circle members exclusively without fabricated profiles', () {
+    test(
+        'fromTourMembers connects to real circle members exclusively without fabricated profiles',
+        () {
       final members = [
         TourMember(
           tourId: 't1',

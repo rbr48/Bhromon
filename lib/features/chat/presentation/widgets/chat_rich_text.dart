@@ -323,7 +323,11 @@ class _ChatRichTextState extends State<ChatRichText> {
               fontWeight: FontWeight.w600,
               fontSize: 15,
               fontFamily: 'NotoSansBengali',
-              fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
+              fontFamilyFallback: const [
+                'HindSiliguri',
+                'Roboto',
+                'sans-serif'
+              ],
             ),
           ),
         );

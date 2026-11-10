@@ -477,7 +477,8 @@ Explain special crossing of a cheque under NI Act.
 
       // Initially showing Bangla, so the button should offer to switch to English
       expect(find.text('🇬🇧 English'), findsOneWidget);
-      expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'), findsOneWidget);
+      expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'),
+          findsOneWidget);
 
       // Tap to switch to English
       await tester.tap(find.text('🇬🇧 English'));
@@ -493,7 +494,8 @@ Explain special crossing of a cheque under NI Act.
 
       // Back to offering English
       expect(find.text('🇬🇧 English'), findsOneWidget);
-      expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'), findsOneWidget);
+      expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'),
+          findsOneWidget);
     });
   });
 

@@ -177,7 +177,9 @@ class StudyDailyStreakRules {
 
       final circleBank = (groupName != null && groupName.isNotEmpty)
           ? groupName
-          : (member.tourName.isNotEmpty ? member.tourName : 'JAIBB Study Circle');
+          : (member.tourName.isNotEmpty
+              ? member.tourName
+              : 'JAIBB Study Circle');
 
       results.add(
         BranchStudyStanding(
