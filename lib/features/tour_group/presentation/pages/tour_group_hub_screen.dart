@@ -36,6 +36,7 @@ import '../widgets/group_type.dart';
 import '../widgets/group_photo_sheet.dart';
 import '../widgets/hub/preset_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
+import '../widgets/google_play_action_button.dart';
 import '../tour_pdf_export.dart';
 import 'package:bhromon/features/official_feed/data/official_feed_repository.dart';
 import 'package:bhromon/features/official_feed/presentation/official_feed_entry_card.dart';
@@ -1582,6 +1583,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ],
             ),
             actions: [
+              if (kIsWeb) const GooglePlayActionButton(),
               ListenableBuilder(
                 listenable: LocaleController.instance,
                 builder: (context, _) {

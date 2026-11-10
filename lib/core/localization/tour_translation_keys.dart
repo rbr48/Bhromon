@@ -247,6 +247,7 @@ class TourTranslationKeys {
       'hub_join_invalid_code':
           'Invalid invite code. Please check the link or ask the admin for a new invite.',
       'hub_add_menu': 'Create or join',
+      'hub_google_play_tooltip': 'Get app on Google Play',
       'hub_section_family': 'Family circles',
       'hub_section_groups': 'Groups',
       'hub_section_trips': 'Trips',
@@ -3827,6 +3828,7 @@ class TourTranslationKeys {
       'hub_join_invalid_code':
           'আমন্ত্রণ কোডটি সঠিক নয়। অনুগ্রহ করে লিংকটি পরীক্ষা করুন অথবা অ্যাডমিনের থেকে নতুন কোড নিন।',
       'hub_add_menu': 'গ্রুপ তৈরি বা যোগ',
+      'hub_google_play_tooltip': 'Google Play থেকে অ্যাপ নামান',
       'hub_section_family': 'পরিবারের গ্রুপ',
       'hub_section_groups': 'গ্রুপ',
       'hub_section_trips': 'ট্যুর',
