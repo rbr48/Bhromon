@@ -63,7 +63,10 @@ class _StudyFlashcardReviewScreenState
 
   bool get _finished => _index >= widget.cards.length;
 
-  Future<void> _answer({required bool recalled}) async {
+  Future<void> _answer({
+    FlashcardRating? rating,
+    bool recalled = true,
+  }) async {
     if (_busy) return;
     setState(() {
       _busy = true;
@@ -72,6 +75,7 @@ class _StudyFlashcardReviewScreenState
     final updated = reviewCard(
       _card,
       recalled: recalled,
+      rating: rating,
       today: widget.today ?? DateTime.now(),
     );
     try {
@@ -172,50 +176,140 @@ class _StudyFlashcardReviewScreenState
         const SizedBox(height: 12),
         Card(
           color: palette.card,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Text(
-                  card.front,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: palette.text,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600),
-                ),
-                if (_shown) ...[
-                  const Divider(height: 32),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => setState(() => _shown = !_shown),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: palette.divider10,
+                          borderRadius: BorderRadius.circular(6),
+                          border:
+                              Border.all(color: palette.divider12, width: 0.8),
+                        ),
+                        child: Text(
+                          'Box ${card.box}',
+                          style: TextStyle(
+                            color: palette.text54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (card.moduleCode != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: palette.accentText.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: palette.accentText.withValues(alpha: 0.4),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            'Mod ${card.moduleCode}',
+                            style: TextStyle(
+                              color: palette.accentText,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    card.back,
+                    card.front,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text, fontSize: 17),
+                    style: TextStyle(
+                        color: palette.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  if (_shown) ...[
+                    const Divider(height: 28),
+                    Text(
+                      card.back,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: palette.text, fontSize: 16),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    _shown
+                        ? 'Tap card to flip back'
+                        : 'Tap card or button to reveal answer',
+                    style: TextStyle(
+                        color: palette.text54,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic),
                   ),
                 ],
-              ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 16),
         if (!_shown)
-          FilledButton(
+          FilledButton.icon(
             onPressed: () => setState(() => _shown = true),
-            child: Text(l10n.translate('study_flashcard_show_answer')),
+            icon: const Icon(Icons.flip_to_back_rounded),
+            label: Text(l10n.translate('study_flashcard_show_answer')),
           )
         else
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _busy ? null : () => _answer(recalled: false),
-                  child: Text(l10n.translate('study_flashcard_missed')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent, width: 1.2),
+                  ),
+                  onPressed: _busy
+                      ? null
+                      : () => _answer(
+                            rating: FlashcardRating.again,
+                            recalled: false,
+                          ),
+                  child: Text(l10n.translate('study_flashcard_again')),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: FilledButton(
-                  onPressed: _busy ? null : () => _answer(recalled: true),
-                  child: Text(l10n.translate('study_flashcard_got_it')),
+                  onPressed: _busy
+                      ? null
+                      : () => _answer(
+                            rating: FlashcardRating.good,
+                            recalled: true,
+                          ),
+                  child: Text(l10n.translate('study_flashcard_good')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: palette.accentText,
+                    side: BorderSide(color: palette.accentText, width: 1.2),
+                  ),
+                  onPressed: _busy
+                      ? null
+                      : () => _answer(
+                            rating: FlashcardRating.easy,
+                            recalled: true,
+                          ),
+                  child: Text(l10n.translate('study_flashcard_easy')),
                 ),
               ),
             ],

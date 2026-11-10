@@ -186,6 +186,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         StudyModuleKey.flashcards => StudyFlashcardsScreen(
             book: book,
             tourId: widget.tourId,
+            repository: _repository,
           ),
         StudyModuleKey.quizzes => StudyQuizzesScreen(
             tourId: widget.tourId,
