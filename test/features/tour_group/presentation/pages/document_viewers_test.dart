@@ -236,7 +236,8 @@ Answer to question 2.
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('97th BPE (Nov 2023) · 97th BPE Solution'), findsOneWidget);
+      expect(
+          find.text('97th BPE (Nov 2023) · 97th BPE Solution'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
       await tester.pumpAndSettle();
@@ -248,8 +249,8 @@ Answer to question 2.
       expect(
         find.descendant(
           of: find.byType(ListTile),
-          matching:
-              find.textContaining('উত্তরাধিকার পরিকল্পনা (Succession Planning)'),
+          matching: find
+              .textContaining('উত্তরাধিকার পরিকল্পনা (Succession Planning)'),
         ),
         findsOneWidget,
       );
