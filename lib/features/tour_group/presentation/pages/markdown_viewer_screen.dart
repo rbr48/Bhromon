@@ -360,6 +360,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final qNum = _extractQuestionNumber(section.title);
       if (qNum != null && isSplit) {
+        _isSyncingScroll = true;
         // Find in primary sections
         final pSec = _primarySections.firstWhere(
           (s) => _extractQuestionNumber(s.title) == qNum,
@@ -389,6 +390,10 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
             alignment: 0.05,
           );
         }
+
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted) _isSyncingScroll = false;
+        });
       } else {
         final targetCtx = section.key.currentContext;
         if (targetCtx != null) {
@@ -783,95 +788,111 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
 
   Widget _buildSplitBody() {
     final palette = context.forest;
-    final primaryIsBangla = (_primaryContent ?? '').contains('বাংলা') ||
-        (_primaryContent ?? '').contains('সমাধান') ||
-        RegExp(r'[\u0980-\u09FF]').hasMatch(_primaryContent ?? '');
+    final primaryBnCount =
+        RegExp(r'[\u0980-\u09FF]').allMatches(_primaryContent ?? '').length;
+    final primaryEnCount =
+        RegExp(r'[a-zA-Z]').allMatches(_primaryContent ?? '').length;
+    final primaryIsBangla = primaryBnCount > primaryEnCount;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Left Column: Primary solution
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildPaneHeader(
-                primaryIsBangla ? '🇧🇩 বাংলা সমাধান' : '🇬🇧 English Solution',
-                widget.title,
-              ),
-              Divider(height: 1, color: palette.divider12),
-              Expanded(
-                child: SelectionArea(
-                  child: ListView.builder(
-                    controller: _primaryScrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    itemCount: _primarySections.length,
-                    itemBuilder: (context, index) {
-                      final section = _primarySections[index];
-                      return Container(
-                        key: section.key,
-                        child: ChatRichText(
-                          text: section.rawText,
-                          baseStyle: TextStyle(
-                            color: palette.text,
-                            fontSize: 14.5,
-                            height: 1.55,
-                          ),
-                        ),
-                      );
-                    },
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1600),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left Column: Primary solution
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildPaneHeader(
+                    primaryIsBangla
+                        ? '🇧🇩 বাংলা সমাধান'
+                        : '🇬🇧 English Solution',
+                    widget.title,
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        VerticalDivider(width: 1, thickness: 1, color: palette.divider12),
-        // Right Column: Alternate solution
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildPaneHeader(
-                primaryIsBangla ? '🇬🇧 English Solution' : '🇧🇩 বাংলা সমাধান',
-                widget.alternateTitle ??
-                    (primaryIsBangla ? 'English' : 'বাংলা সমাধান'),
-              ),
-              Divider(height: 1, color: palette.divider12),
-              Expanded(
-                child: SelectionArea(
-                  child: ListView.builder(
-                    controller: _alternateScrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    itemCount: _alternateSections.length,
-                    itemBuilder: (context, index) {
-                      final section = _alternateSections[index];
-                      return Container(
-                        key: section.key,
-                        child: ChatRichText(
-                          text: section.rawText,
-                          baseStyle: TextStyle(
-                            color: palette.text,
-                            fontSize: 14.5,
-                            height: 1.55,
-                          ),
+                  Divider(height: 1, color: palette.divider12),
+                  Expanded(
+                    child: SelectionArea(
+                      child: SingleChildScrollView(
+                        controller: _primaryScrollController,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final section in _primarySections)
+                              Container(
+                                key: section.key,
+                                child: ChatRichText(
+                                  text: section.rawText,
+                                  baseStyle: TextStyle(
+                                    color: palette.text,
+                                    fontSize: 14.5,
+                                    height: 1.55,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            VerticalDivider(width: 1, thickness: 1, color: palette.divider12),
+            // Right Column: Alternate solution
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildPaneHeader(
+                    primaryIsBangla
+                        ? '🇬🇧 English Solution'
+                        : '🇧🇩 বাংলা সমাধান',
+                    widget.alternateTitle ??
+                        (primaryIsBangla ? 'English' : 'বাংলা সমাধান'),
+                  ),
+                  Divider(height: 1, color: palette.divider12),
+                  Expanded(
+                    child: SelectionArea(
+                      child: SingleChildScrollView(
+                        controller: _alternateScrollController,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final section in _alternateSections)
+                              Container(
+                                key: section.key,
+                                child: ChatRichText(
+                                  text: section.rawText,
+                                  baseStyle: TextStyle(
+                                    color: palette.text,
+                                    fontSize: 14.5,
+                                    height: 1.55,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildPaneHeader(String badge, String title) {
     final palette = context.forest;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: palette.surfaceFor(const Color(0xFF141E18)),
@@ -907,6 +928,14 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
               ),
+            ),
+          ),
+          Tooltip(
+            message: l10n.translate('viewer_sync_scroll'),
+            child: Icon(
+              Icons.sync_alt_rounded,
+              size: 16,
+              color: palette.accentText.withValues(alpha: 0.7),
             ),
           ),
         ],
