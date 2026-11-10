@@ -721,40 +721,48 @@ class StudySyllabusCatalog {
     ],
   };
 
+  /// Whether [upperKey] (already upper case) has [code] as a whole word, not inside a longer run of
+  /// letters or digits. So "OM" is not found in "INCOME", and "BA" is not found in "BANGLA".
+  static bool _hasWord(String upperKey, String code) =>
+      RegExp('(^|[^A-Z0-9])${RegExp.escape(code)}(\$|[^A-Z0-9])')
+          .hasMatch(upperKey);
+
   /// Returns official syllabus modules for a subject code or book title
   /// (e.g. 'LPGB', 'Laws & Practice of General Banking', 'Principles of Economics').
+  /// A short code matches only as a whole word. A title with no catalog match gets an empty list.
   static List<SyllabusModule> modulesFor(String subjectCodeOrTitle) {
     final key = subjectCodeOrTitle.toUpperCase();
-    if (key.contains('LPGB') ||
+    if (_hasWord(key, 'LPGB') ||
         key.contains('GENERAL BANKING') ||
         key.contains('LAWS & PRACTICE') ||
         key.contains('ব্যাংকিং')) {
       return _modules['LPGB'] ?? const [];
     }
-    if (key.contains('POE') ||
+    if (_hasWord(key, 'POE') ||
         key.contains('ECONOMICS') ||
         key.contains('অর্থনীতি')) {
       return _modules['POE'] ?? const [];
     }
-    if (key.contains('MAFS') ||
+    if (_hasWord(key, 'MAFS') ||
         key.contains('MANAGEMENT ACCOUNTING') ||
-        key.contains('ACCOUNTING') ||
+        // "Basic Accounting" is the BA course, which the BA check below picks up.
+        (key.contains('ACCOUNTING') && !key.contains('BASIC ACCOUNTING')) ||
         key.contains('হিসাববিজ্ঞান')) {
       return _modules['MAFS'] ?? const [];
     }
-    if (key.contains('BCFI') ||
+    if (_hasWord(key, 'BCFI') ||
         key.contains('BUSINESS COMMUNICATION') ||
         key.contains('COMMUNICATION') ||
         key.contains('যোগাযোগ')) {
       return _modules['BCFI'] ?? const [];
     }
-    if (key.contains('OM') ||
+    if (_hasWord(key, 'OM') ||
         key.contains('ORGANIZATION') ||
         key.contains('ORGANISATION') ||
         key.contains('সংগঠন')) {
       return _modules['OM'] ?? const [];
     }
-    if (key.contains('GFI') ||
+    if (_hasWord(key, 'GFI') ||
         key.contains('GOVERNANCE') ||
         key.contains('FINANCIAL INSTITUTIONS') ||
         key.contains('শাসন')) {
@@ -771,7 +779,7 @@ class StudySyllabusCatalog {
       return _modules['BA'] ?? const [];
     }
     for (final entry in _modules.entries) {
-      if (key.contains(entry.key)) {
+      if (_hasWord(key, entry.key)) {
         return entry.value;
       }
     }
