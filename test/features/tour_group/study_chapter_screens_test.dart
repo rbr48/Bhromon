@@ -288,19 +288,35 @@ void main() {
     });
 
     testWidgets(
-        'renders direct 1-tap English and Bangla solution buttons on chapter card',
+        'a chapter offers one-tap solutions for a Markdown file and a note, never for a PDF',
         (tester) async {
-      const englishSol = StudyMaterial(
-        id: 'm1',
-        title: '98th BPE - Master Solutions (English)',
-        kind: StudyMaterialKind.note,
+      // The PDF comes first, so a rule that let it through would show it as the English button.
+      const paperPdf = StudyMaterial(
+        id: 'm0',
+        title: 'Chapter 1 solutions (PDF)',
+        kind: StudyMaterialKind.file,
         bookId: 'b1',
         chapterId: 'c1',
         status: StudyMaterialStatus.published,
+        url:
+            'https://bhromon.fun/media/T/study/0123456789abcdef0123456789abcdef.pdf',
+        fileName: 'Chapter1_Solutions.pdf',
+        sizeBytes: 90000,
+      );
+      // An uploaded Markdown file: its text is fetched by the reader, so it has no body here.
+      const englishSol = StudyMaterial(
+        id: 'm1',
+        title: '98th BPE - Master Solutions (English)',
+        kind: StudyMaterialKind.file,
+        bookId: 'b1',
+        chapterId: 'c1',
+        status: StudyMaterialStatus.published,
+        url:
+            'https://bhromon.fun/media/T/study/fedcba9876543210fedcba9876543210.md',
         fileName: 'JAIBB_Accounting_98th_BPE_Solutions.md',
-        body: 'English solution body',
         sizeBytes: 25600,
       );
+      // A note has its text and no file size.
       const banglaSol = StudyMaterial(
         id: 'm2',
         title: '৯৮তম বিপিই - মাস্টার সমাধান (বাংলা)',
@@ -308,14 +324,12 @@ void main() {
         bookId: 'b1',
         chapterId: 'c1',
         status: StudyMaterialStatus.published,
-        fileName: 'JAIBB_Accounting_98th_BPE_Solutions_Bangla.md',
         body: 'বাংলা সমাধান টেক্সট',
-        sizeBytes: 31200,
       );
 
       final repo = _FakeChapterRepo(
         chapters: _chapters,
-        materials: [englishSol, banglaSol],
+        materials: [paperPdf, englishSol, banglaSol],
       );
 
       await _pump(
@@ -329,7 +343,8 @@ void main() {
       );
 
       expect(find.text('English Solution (25 KB)'), findsOneWidget);
-      expect(find.text('বাংলা সমাধান (30 KB)'), findsOneWidget);
+      expect(find.text('English Solution (88 KB)'), findsNothing);
+      expect(find.text('বাংলা সমাধান'), findsOneWidget);
       expect(find.text('🇬🇧'), findsOneWidget);
       expect(find.text('🇧🇩'), findsOneWidget);
     });

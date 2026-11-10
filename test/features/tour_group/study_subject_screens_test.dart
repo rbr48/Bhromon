@@ -7,6 +7,7 @@ import 'package:bhromon/features/tour_group/domain/models/study_problem_models.d
 import 'package:bhromon/features/tour_group/domain/models/study_subject_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/study_today_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
+import 'package:bhromon/features/tour_group/presentation/pages/study_book_chapters_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_module_posts_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_subject_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_subjects_screen.dart';
@@ -392,6 +393,28 @@ void main() {
           find.descendant(
               of: tile, matching: find.byIcon(Icons.chevron_right_rounded)),
           findsOneWidget);
+    });
+
+    testWidgets(
+        'past papers open the posts, not the chapters, when the subject has a listed book',
+        (tester) async {
+      final repo = _FakeSubjectRepo(
+        modules: {
+          StudyModuleKey.papers: _on(StudyModuleKey.papers, 'Past papers'),
+        },
+        books: const [_physicsBook],
+      );
+      await _pump(
+        tester,
+        StudySubjectScreen(
+            tourId: 'T', subject: _physicsWithBook, repository: repo),
+      );
+
+      await tester.tap(find.widgetWithText(ListTile, 'Past papers'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StudyModulePostsScreen), findsOneWidget);
+      expect(find.byType(StudyBookChaptersScreen), findsNothing);
     });
 
     testWidgets('a member does not see a book module of a subject with no book',

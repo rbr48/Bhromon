@@ -14,7 +14,6 @@ import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_module_sheet.dart';
 import '../widgets/study/study_today_card.dart';
 import 'study_assignments_screen.dart';
-import 'study_book_chapters_screen.dart';
 import 'study_challenge_screen.dart';
 import 'study_discussion_screen.dart';
 import 'study_findings_screen.dart';
@@ -125,14 +124,6 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
   /// Opens a module's page. A book module opens the subject's [book], and does nothing without
   /// one. The other modules open their own screens.
   void _open(StudyModuleSettings settings, [StudyBook? book]) {
-    if (settings.key == StudyModuleKey.papers && book != null) {
-      _push(StudyBookChaptersScreen(
-        tourId: widget.tourId,
-        book: book,
-        repository: _repository,
-      ));
-      return;
-    }
     if (settings.key.isBookModule) {
       if (book == null) return;
       _push(_bookPage(settings.key, book));
