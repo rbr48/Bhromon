@@ -65,13 +65,36 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
         return const Color(0xFFE53935);
       case 'DOC':
       case 'DOCX':
+      case 'ODT':
+      case 'RTF':
         return const Color(0xFF1E88E5);
       case 'XLS':
       case 'XLSX':
+      case 'ODS':
+      case 'CSV':
+      case 'TSV':
         return const Color(0xFF43A047);
+      case 'PPT':
+      case 'PPTX':
+      case 'ODP':
+        return const Color(0xFFE65100);
+      case 'MD':
+      case 'TXT':
+      case 'LOG':
+        return const Color(0xFF00897B);
+      case 'JSON':
+      case 'YAML':
+      case 'YML':
+      case 'XML':
+      case 'SQL':
+        return const Color(0xFF5E35B1);
+      case 'EPUB':
+        return const Color(0xFF8E24AA);
       case 'ZIP':
       case 'RAR':
       case '7Z':
+      case 'TAR':
+      case 'GZ':
         return const Color(0xFFFB8C00);
       default:
         return const Color(0xFF00A884);

@@ -82,11 +82,17 @@ ALLOWED_EXTENSIONS = frozenset({
     # Audio extensions
     ".m4a", ".mp3", ".aac", ".wav", ".ogg", ".opus",
     # Document extensions
-    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".zip",
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".log", ".csv", ".tsv",
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".md", ".json", ".yaml", ".yml", ".xml", ".sql",
+    ".odt", ".ods", ".odp", ".rtf", ".epub",
 })
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".m4v", ".webm", ".3gp", ".mkv"})
 AUDIO_EXTENSIONS = frozenset({".m4a", ".mp3", ".aac", ".wav", ".ogg", ".opus"})
-DOC_EXTENSIONS = frozenset({".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".zip"})
+DOC_EXTENSIONS = frozenset({
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".log", ".csv", ".tsv",
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".md", ".json", ".yaml", ".yml", ".xml", ".sql",
+    ".odt", ".ods", ".odp", ".rtf", ".epub",
+})
 
 # These match the app's limits (lib/features/tour_group/domain/services/media_rules.dart).
 MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -97,7 +103,7 @@ MAX_DOC_BYTES = 50 * 1024 * 1024  # 50 MB
 TOUR_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 OBJECT_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
 FILENAME_PATTERN = re.compile(
-    r"([0-9a-f]{32})\.(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv|m4a|mp3|aac|wav|ogg|opus|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)"
+    r"([0-9a-f]{32})\.(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv|m4a|mp3|aac|wav|ogg|opus|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|log|csv|tsv|zip|rar|7z|tar|gz|md|json|yaml|yml|xml|sql|odt|ods|odp|rtf|epub)"
 )
 
 notification_engine = NotificationEngine(chat_db=chat_db)

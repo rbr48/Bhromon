@@ -57,18 +57,7 @@ List<String> studyMaterialExtensions(StudyMaterialKind kind) => switch (kind) {
           '3gp',
           'mkv'
         ],
-      StudyMaterialKind.file => const [
-          'pdf',
-          'doc',
-          'docx',
-          'xls',
-          'xlsx',
-          'ppt',
-          'pptx',
-          'txt',
-          'csv',
-          'zip'
-        ],
+      StudyMaterialKind.file => kSupportedDocExtensions,
       StudyMaterialKind.link || StudyMaterialKind.note => const <String>[],
     };
 

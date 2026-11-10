@@ -44,6 +44,10 @@ void main() {
       expect(studyKindForFileName('lecture.mp4'), StudyMaterialKind.video);
       expect(studyKindForFileName('explain.m4a'), StudyMaterialKind.audio);
       expect(studyKindForFileName('summary.pdf'), StudyMaterialKind.file);
+      expect(studyKindForFileName('notes.md'), StudyMaterialKind.file);
+      expect(studyKindForFileName('config.json'), StudyMaterialKind.file);
+      expect(studyKindForFileName('book.epub'), StudyMaterialKind.file);
+      expect(studyKindForFileName('archive.7z'), StudyMaterialKind.file);
       expect(studyKindForFileName('program.exe'), isNull);
     });
 
@@ -99,6 +103,9 @@ void main() {
 
     test('the picker offers the extensions of an upload kind only', () {
       expect(studyMaterialExtensions(StudyMaterialKind.file), contains('pdf'));
+      expect(studyMaterialExtensions(StudyMaterialKind.file), contains('md'));
+      expect(studyMaterialExtensions(StudyMaterialKind.file), contains('epub'));
+      expect(studyMaterialExtensions(StudyMaterialKind.file), contains('7z'));
       expect(studyMaterialExtensions(StudyMaterialKind.video), contains('mkv'));
       expect(studyMaterialExtensions(StudyMaterialKind.link), isEmpty);
       expect(studyMaterialExtensions(StudyMaterialKind.note), isEmpty);
