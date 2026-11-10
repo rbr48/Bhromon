@@ -17,6 +17,7 @@ import '../../domain/models/study_models.dart';
 import '../../domain/models/study_streak_models.dart';
 import '../../domain/models/study_syllabus_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/study_booklet_pdf_generator.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_daily_streak_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
@@ -52,7 +53,9 @@ enum _LearningTool {
   examSimulator,
   branchHall,
   progress,
-  studyPack
+  studyPack,
+  printableBooklet,
+  branchPoster,
 }
 
 /// One book's chapters in reading order. Each has its due date and guide questions. A member
@@ -537,6 +540,24 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               onTap: () =>
                   Navigator.of(sheetContext).pop(_LearningTool.studyPack),
             ),
+            ListTile(
+              leading: Icon(Icons.print_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_printable_booklet_title'),
+                  style: TextStyle(color: palette.text)),
+              subtitle: Text(l10n.translate('study_printable_booklet_sub'),
+                  style: TextStyle(color: palette.text70, fontSize: 11.5)),
+              onTap: () => Navigator.of(sheetContext)
+                  .pop(_LearningTool.printableBooklet),
+            ),
+            ListTile(
+              leading: Icon(Icons.campaign_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_branch_poster_title'),
+                  style: TextStyle(color: palette.text)),
+              subtitle: Text(l10n.translate('study_branch_poster_sub'),
+                  style: TextStyle(color: palette.text70, fontSize: 11.5)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.branchPoster),
+            ),
           ],
         ),
       ),
@@ -553,6 +574,14 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         tourId: widget.tourId,
         book: widget.book,
       );
+      return;
+    }
+    if (tool == _LearningTool.printableBooklet) {
+      await _generateAndOpenBooklet(isBengali: true);
+      return;
+    }
+    if (tool == _LearningTool.branchPoster) {
+      await _generateAndOpenBranchPoster();
       return;
     }
     final Widget page = switch (tool) {
@@ -581,11 +610,188 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           book: widget.book,
           repository: _repository,
         ),
-      // The study pack and branch hall open modal sheets, not a page, so they return above.
+      // The study pack, branch hall, booklet, and poster open modal sheets, not a page.
       _LearningTool.branchHall => const SizedBox.shrink(),
       _LearningTool.studyPack => const SizedBox.shrink(),
+      _LearningTool.printableBooklet => const SizedBox.shrink(),
+      _LearningTool.branchPoster => const SizedBox.shrink(),
     };
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  Future<void> _generateAndOpenBooklet({bool isBengali = true}) async {
+    final l10n = context.l10n;
+    if (_chapters.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.translate('study_chapters_empty_member'))),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: context.forest.card,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                l10n.translate('study_generating_booklet'),
+                style: TextStyle(color: context.forest.text),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final solutionTexts = <String, String>{};
+      if (_cachedPackage != null) {
+        solutionTexts.addAll(_cachedPackage!.contents);
+      }
+
+      for (final m in _materials) {
+        if (!solutionTexts.containsKey(m.id)) {
+          if (m.body != null && m.body!.isNotEmpty) {
+            solutionTexts[m.id] = m.body!;
+          } else if (m.url != null && m.url!.isNotEmpty) {
+            try {
+              final targetUrl = signedMediaUrl(m.url!);
+              final response = await Dio().get<String>(
+                targetUrl,
+                options: Options(responseType: ResponseType.plain),
+              );
+              if (response.data != null) {
+                solutionTexts[m.id] = response.data!;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      String tourName = 'Banking Exam Study Circle';
+      String? inviteCode;
+      try {
+        final group = await _repository.watchGroup(widget.tourId).first;
+        if (group != null) {
+          tourName = group.name;
+          inviteCode = group.inviteCode;
+        }
+      } catch (_) {}
+
+      final content = StudyBookletPdfGenerator.extractContent(
+        subjectTitle: widget.book.title,
+        subjectCode: 'JAIBB',
+        tourName: tourName,
+        inviteCode: inviteCode,
+        chapters: _chapters,
+        materials: _materials,
+        solutionTexts: solutionTexts,
+        isBengali: isBengali,
+      );
+
+      const generator = StudyBookletPdfGenerator();
+      final pdfBytes =
+          await generator.generateBookletPdf(content, isBengali: isBengali);
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        await PdfViewerScreen.open(
+          context,
+          title:
+              '${widget.book.title} - ${isBengali ? 'প্রশ্নোত্তর বুকলেট' : 'Exam Booklet'}',
+          bytes: pdfBytes,
+          tourId: widget.tourId,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate booklet: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateAndOpenBranchPoster() async {
+    final l10n = context.l10n;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: context.forest.card,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                l10n.translate('study_generating_poster'),
+                style: TextStyle(color: context.forest.text),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      String tourName = 'Banking Professional Exam Preparation';
+      String? tourDescription;
+      String? inviteCode;
+      try {
+        final group = await _repository.watchGroup(widget.tourId).first;
+        if (group != null) {
+          tourName = group.name;
+          tourDescription = group.description;
+          inviteCode = group.inviteCode;
+        }
+      } catch (_) {}
+
+      final content = StudyBookletContent(
+        subjectTitle: widget.book.title,
+        subjectCode: 'JAIBB',
+        tourName: tourName,
+        tourDescription: tourDescription,
+        inviteCode: inviteCode,
+        chapters: const [],
+      );
+
+      const generator = StudyBookletPdfGenerator();
+      final pdfBytes = await generator.generateBranchNoticePoster(content);
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        await PdfViewerScreen.open(
+          context,
+          title: 'Branch Notice Board Poster',
+          bytes: pdfBytes,
+          tourId: widget.tourId,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate poster: $e')),
+        );
+      }
+    }
   }
 
   /// The shared summary of a chapter: the revision the group reads, and the older ones.

@@ -242,13 +242,13 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ### Track N: 3-Hour Timed Exam Simulator (Distraction-Free) (Feature 4)
-- [ ] **Task N1: Exam Simulator Screen (`study_exam_simulator_screen.dart`)**:
+- [x] **Task N1: Exam Simulator Screen (`study_exam_simulator_screen.dart`)**:
   - Fullscreen exam mode: pick any past paper, choose timer (3 hours standard, 1h/2h practice).
-  - Floating HUD countdown timer with color shift and vibration alert at 30 min and 10 min.
-- [ ] **Task N2: Digital Scratchpad & Section Navigator**:
+  - Floating HUD countdown timer with color shift and vibration alert at 30 min and 10 min ([PR #473](https://github.com/rbr48/Bhromon/pull/473) - Merged).
+- [x] **Task N2: Digital Scratchpad & Section Navigator**:
   - Collapsible question tray to jump between questions.
   - Rich draft notepad where candidates outline points, formulas, and legal sections.
-- [ ] **Task N3: Post-Exam Comparison Mode**:
+- [x] **Task N3: Post-Exam Comparison Mode (`study_exam_review_screen.dart`)**:
   - When time expires or submitted, split-screen review comparing the candidate's scratchpad notes against the official examiner-grade model answers.
 
 ---
@@ -303,9 +303,13 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ### Track S: Branch Printable PDF Booklets & Notice Board Poster Generator (Feature 9)
-- [ ] **Task S1: Duplex Printable A4 PDF Generator (`study_booklet_pdf_generator.dart`)**:
-  - Compile entire subject exam series into clean, printable A4 PDF.
-  - Table of contents, running headers with subject code, page numbering, and clean Bengali/English typography using `bangla_pdf`.
-- [ ] **Task S2: Branch Notice Board Poster Generator (`study_branch_poster_generator.dart`)**:
-  - Generate branded A4 printable recruitment/study poster for bank branches.
-  - Features group title, IBB emblem styling, description, and high-resolution invite QR code.
+- [x] **Task S1: Duplex Printable A4 PDF Generator (`study_booklet_pdf_generator.dart`)**:
+  - Implemented `StudyBookletPdfGenerator` compiling entire subject past exam series into duplex-printable A4 booklets.
+  - Table of contents, institutional cover page (IBB header, title, module overview), running headers, page numbers, and examiner-grade model answers with syllabus module tags using `bangla_pdf`.
+- [x] **Task S2: Branch Notice Board Poster Generator & QR Code Vector Engine**:
+  - Implemented single-page A4 notice board poster generator with high-impact IBB styling, feature highlights, and native vector QR code via `pw.BarcodeWidget(barcode: pw.Barcode.qrCode())` for seamless branch recruitment.
+- [x] **Task S3: UI Integration, Localization & Automated Verification**:
+  - Added "Printable Exam Booklet (A4 PDF)" and "Branch Notice Board Poster (A4 PDF)" actions to `StudyBookChaptersScreen` learning modal with automatic PDF generation and `PdfViewerScreen` launch.
+  - 6 new translation keys in English and Bengali with 100% dictionary parity.
+  - Unit tests in `study_booklet_pdf_generator_test.dart` (3/3 passing).
+  - Monotonic version bump to `1.8.182+236`.

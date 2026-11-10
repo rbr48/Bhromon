@@ -3312,6 +3312,14 @@ class TourTranslationKeys {
       'study_audio_no_tracks': 'No audio tracks found',
       'study_audio_playing': 'Playing',
       'study_audio_paused': 'Paused',
+      'study_printable_booklet_title': 'Printable Exam Booklet (A4 PDF)',
+      'study_printable_booklet_sub':
+          'Duplex-printable question bank & model solutions booklet',
+      'study_branch_poster_title': 'Branch Notice Board Poster (A4 PDF)',
+      'study_branch_poster_sub':
+          'High-impact recruitment poster with invite QR code',
+      'study_generating_booklet': 'Generating printable exam booklet...',
+      'study_generating_poster': 'Generating branch notice poster...',
       'study_material_title': 'Materials',
       'study_material_add': 'Add material',
       'study_material_empty':
@@ -6991,6 +6999,14 @@ class TourTranslationKeys {
       'study_audio_no_tracks': 'কোনো অডিও ট্র্যাক পাওয়া যায়নি',
       'study_audio_playing': 'চলছে',
       'study_audio_paused': 'স্থগিত',
+      'study_printable_booklet_title': 'প্রিন্টযোগ্য পরীক্ষা বুকলেট (A4 PDF)',
+      'study_printable_booklet_sub':
+          'উভয় পৃষ্ঠায় প্রিন্টযোগ্য বিগত প্রশ্ন ও মডেল সমাধান বুকলেট',
+      'study_branch_poster_title': 'ব্রাঞ্চ নোটিশ বোর্ড পোস্টার (A4 PDF)',
+      'study_branch_poster_sub':
+          'ইনভাইট কিউআর কোডসহ শাখায় লাগানোর জন্য নজরকাড়া পোস্টার',
+      'study_generating_booklet': 'প্রিন্টযোগ্য পরীক্ষা বুকলেট তৈরি হচ্ছে...',
+      'study_generating_poster': 'ব্রাঞ্চ নোটিশ বোর্ড পোস্টার তৈরি হচ্ছে...',
       'study_material_title': 'উপকরণ',
       'study_material_add': 'উপকরণ যোগ করুন',
       'study_material_empty':
