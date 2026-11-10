@@ -59,6 +59,10 @@ class _FakeChapterRepo extends TourGroupRepository {
       Stream.value(votes);
 
   @override
+  Stream<List<TourMember>> watchMembers(String tourId) =>
+      Stream.value(const []);
+
+  @override
   Future<void> markStudyChapterRead(
     String tourId,
     String bookId,

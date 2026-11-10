@@ -244,5 +244,37 @@ And the next paragraph follows.
       // Because line breaks were restored, there should be multiple distinct blocks/paragraphs
       expect(blocks.length, greaterThanOrEqualTo(5));
     });
+
+    test('cleanBengaliMath formats Bengali LaTeX formulas into legible Unicode text', () {
+      expect(cleanBengaliMath(r'\frac{চলতি সম্পদ}{চলতি দায়}'), '(চলতি সম্পদ ÷ চলতি দায়)');
+      expect(cleanBengaliMath(r'GPM = \frac{মোট লাভ}{বিক্রয়} \times ১০০'), 'GPM = (মোট লাভ ÷ বিক্রয়) × ১০০');
+    });
+
+    test('parseChatBlocks normalizes corrupted LaTeX right-arrow carriage return artifacts', () {
+      const corrupted = 'নগদে পণ্য ক্রয় \\\$\n   ightarrow\\\$ এটি সরাসরি নগদ প্রদান জাবেদায় লেখা হয়।';
+      final blocks = parseChatBlocks(corrupted);
+      expect(blocks, hasLength(1));
+      final para = blocks[0] as ChatParagraphBlock;
+      final text = para.lines.map((l) => l.spans.map((s) => s.text).join()).join(' ');
+      expect(text, contains('নগদে পণ্য ক্রয় → এটি সরাসরি নগদ প্রদান'));
+      expect(text, isNot(contains('ightarrow')));
+    });
+
+    test('parseChatBlocks parses tables inside blockquotes into interactive ChatTableBlock', () {
+      const quoteWithTable = '''
+> #### 3. Estimated Capital
+> | SL | Head | Amount |
+> | :---: | :--- | :---: |
+> | 1 | Advance Rent | 80,64,000 |
+''';
+      final blocks = parseChatBlocks(quoteWithTable);
+      expect(blocks, hasLength(1));
+      expect(blocks[0], isA<ChatQuoteBlock>());
+      final quote = blocks[0] as ChatQuoteBlock;
+      expect(quote.blocks.any((b) => b is ChatTableBlock), isTrue);
+      final table = quote.blocks.firstWhere((b) => b is ChatTableBlock) as ChatTableBlock;
+      expect(table.headers, hasLength(3));
+      expect(table.rows, hasLength(1));
+    });
   });
 }

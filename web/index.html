@@ -83,6 +83,12 @@
   <script src="https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.js"></script>
   <link href="https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.css" rel="stylesheet" />
 
+  <!-- PDF.js for pdfx PDF viewer support on Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+  <script type="text/javascript">
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js";
+  </script>
+
   <!-- Browser video transcoder for reel uploads, loaded before the app starts -->
   <script type="module" src="js/bhromon_video_transcoder.js"></script>
 

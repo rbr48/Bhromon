@@ -451,6 +451,50 @@ Explain special crossing of a cheque under NI Act.
       expect(scrollables[0].controller!.offset, greaterThan(200.0));
       expect(scrollables[1].controller!.offset, greaterThan(200.0));
     });
+
+    testWidgets(
+        'toggles language button between Bangla and English in single view',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: '৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)',
+            rawContent: '### প্রশ্ন ১\nবাংলা উত্তর বিবরণ।',
+            alternateRawContent: '### Question 1\nEnglish answer details.',
+            alternateTitle: '7th Banking Exam (English Solution)',
+            alternateLanguageLabel: 'English',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Initially showing Bangla, so the button should offer to switch to English
+      expect(find.text('🇬🇧 English'), findsOneWidget);
+      expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'), findsOneWidget);
+
+      // Tap to switch to English
+      await tester.tap(find.text('🇬🇧 English'));
+      await tester.pumpAndSettle();
+
+      // Now showing English, button should offer to switch to Bangla
+      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+      expect(find.text('7th Banking Exam (English Solution)'), findsOneWidget);
+
+      // Tap to switch back to Bangla
+      await tester.tap(find.text('🇧🇩 বাংলা'));
+      await tester.pumpAndSettle();
+
+      // Back to offering English
+      expect(find.text('🇬🇧 English'), findsOneWidget);
+      expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'), findsOneWidget);
+    });
   });
 
   group('PdfViewerScreen', () {

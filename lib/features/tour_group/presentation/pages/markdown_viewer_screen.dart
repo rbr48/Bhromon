@@ -754,14 +754,37 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     );
   }
 
+  bool get _isPrimaryBangla {
+    if (widget.alternateLanguageLabel != null) {
+      final label = widget.alternateLanguageLabel!.trim().toLowerCase();
+      if (label.contains('eng')) return true;
+      if (label.contains('বাং') || label.contains('bang')) return false;
+    }
+    final titleLower = widget.title.toLowerCase();
+    final isPrimaryTitleBangla = titleLower.contains('বাংলা') ||
+        titleLower.contains('সমাধান') ||
+        titleLower.contains('bangla');
+    final altTitleLower = (widget.alternateTitle ?? '').toLowerCase();
+    final isAltTitleBangla = altTitleLower.contains('বাংলা') ||
+        altTitleLower.contains('সমাধান') ||
+        altTitleLower.contains('bangla');
+
+    if (isPrimaryTitleBangla && !isAltTitleBangla) return true;
+    if (!isPrimaryTitleBangla && isAltTitleBangla) return false;
+
+    final text = _primaryContent ?? widget.rawContent ?? '';
+    if (text.isNotEmpty) {
+      final bnCount = RegExp(r'[\u0980-\u09FF]').allMatches(text).length;
+      final enCount = RegExp(r'[a-zA-Z]').allMatches(text).length;
+      return bnCount > enCount;
+    }
+    return false;
+  }
+
   String _targetLanguageLabel() {
-    final targetText = _showingAlternate
-        ? (widget.rawContent ?? _primaryContent ?? '')
-        : (widget.alternateRawContent ?? '');
-    final isBangla = targetText.contains('বাংলা') ||
-        targetText.contains('সমাধান') ||
-        RegExp(r'[\u0980-\u09FF]').hasMatch(targetText);
-    return isBangla ? '🇧🇩 বাংলা' : '🇬🇧 English';
+    final targetIsBangla =
+        _showingAlternate ? _isPrimaryBangla : !_isPrimaryBangla;
+    return targetIsBangla ? '🇧🇩 বাংলা' : '🇬🇧 English';
   }
 
   void _toggleAudioPlayer() {
@@ -913,39 +936,45 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _showingAlternate = !_showingAlternate;
-                        if (_isAudioBarVisible && _ttsController != null) {
-                          final tracks =
-                              StudyTtsController.buildTracksFromSections([
-                            for (final s in _sections)
-                              {'title': s.cleanTitle, 'rawText': s.rawText},
-                          ]);
-                          _ttsController!.setTracks(tracks);
-                          _ttsController!.play();
-                        }
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: palette.accentText.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: palette.accentText.withValues(alpha: 0.5),
-                          width: 0.8,
+                  child: Tooltip(
+                    message: l10n.translate('viewer_switch_language'),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _showingAlternate = !_showingAlternate;
+                          if (_primaryScrollController.hasClients) {
+                            _primaryScrollController.jumpTo(0);
+                          }
+                          if (_isAudioBarVisible && _ttsController != null) {
+                            final tracks =
+                                StudyTtsController.buildTracksFromSections([
+                              for (final s in _sections)
+                                {'title': s.cleanTitle, 'rawText': s.rawText},
+                            ]);
+                            _ttsController!.setTracks(tracks);
+                            _ttsController!.play();
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: palette.accentText.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: palette.accentText.withValues(alpha: 0.5),
+                            width: 0.8,
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        _targetLanguageLabel(),
-                        style: TextStyle(
-                          color: palette.accentText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        child: Text(
+                          _targetLanguageLabel(),
+                          style: TextStyle(
+                            color: palette.accentText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -1076,11 +1105,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
 
   Widget _buildSplitBody() {
     final palette = context.forest;
-    final primaryBnCount =
-        RegExp(r'[\u0980-\u09FF]').allMatches(_primaryContent ?? '').length;
-    final primaryEnCount =
-        RegExp(r'[a-zA-Z]').allMatches(_primaryContent ?? '').length;
-    final primaryIsBangla = primaryBnCount > primaryEnCount;
+    final primaryIsBangla = _isPrimaryBangla;
 
     return Center(
       child: ConstrainedBox(

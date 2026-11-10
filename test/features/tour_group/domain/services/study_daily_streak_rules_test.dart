@@ -1,4 +1,5 @@
 import 'package:bhromon/features/tour_group/domain/models/study_streak_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/services/study_daily_streak_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -178,6 +179,59 @@ void main() {
       expect(ranked[1].rank, 2);
       expect(ranked[2].email, 'b@bank.org');
       expect(ranked[2].rank, 3);
+    });
+
+    test('fromTourMembers connects to real circle members exclusively without fabricated profiles', () {
+      final members = [
+        TourMember(
+          tourId: 't1',
+          tourName: 'JAIBB Circle',
+          email: 'lead@bank.com',
+          displayName: 'Branch Lead',
+          role: TourRole.owner,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 1, 1),
+        ),
+        TourMember(
+          tourId: 't1',
+          tourName: 'JAIBB Circle',
+          email: 'me@bank.com',
+          displayName: 'Candidate Me',
+          role: TourRole.member,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 2, 1),
+        ),
+        TourMember(
+          tourId: 't1',
+          tourName: 'JAIBB Circle',
+          email: 'peer@bank.com',
+          displayName: 'Colleague Officer',
+          role: TourRole.member,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 3, 1),
+        ),
+      ];
+
+      final standings = StudyDailyStreakRules.fromTourMembers(
+        members: members,
+        myEmail: 'me@bank.com',
+        myName: 'Candidate Me',
+        myStreak: 5,
+        myChapters: 3,
+        myExams: 2,
+        groupName: 'IBB JAIBB Circle',
+      );
+
+      expect(standings.length, 3);
+      expect(standings.any((s) => s.displayName == 'Tahmina Akhter'), isFalse);
+      expect(standings.any((s) => s.displayName == 'Mahmudul Hasan'), isFalse);
+
+      final me = standings.firstWhere((s) => s.isCurrentUser);
+      expect(me.displayName, 'Candidate Me');
+      expect(me.streakDays, 5);
+      expect(me.chaptersRead, 3);
+      expect(me.mockExamsAttempted, 2);
+      expect(me.rank, 1); // 5 days is highest streak among these 3
     });
 
     test('fallbackStandings provides peer group and includes user', () {
