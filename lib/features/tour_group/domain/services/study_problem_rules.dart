@@ -127,6 +127,32 @@ List<StudyProblem> reportedProblemsForReview(Iterable<StudyProblem> problems) {
   return reported;
 }
 
+/// A reported working, with the problem it is on.
+class ReportedWork {
+  const ReportedWork({required this.problem, required this.work});
+
+  final StudyProblem problem;
+  final StudyProblemSolution work;
+}
+
+/// The reported workings an admin must decide, across a subject's problems: the oldest report first. A working that
+/// was never reported is left out.
+List<ReportedWork> reportedWorkForReview(Iterable<ReportedWork> items) {
+  final reported = [
+    for (final item in items)
+      if (item.work.isReported) item,
+  ];
+  reported.sort((a, b) {
+    final ta = a.work.reportedAt;
+    final tb = b.work.reportedAt;
+    if (ta == null && tb == null) return 0;
+    if (ta == null) return 1;
+    if (tb == null) return -1;
+    return ta.compareTo(tb);
+  });
+  return reported;
+}
+
 /// How near a problem set's due date is at a given time. A set with no due date has none. A set is due soon in
 /// the days before its due day, and overdue from the start of the day after it.
 enum ProblemSetDue { none, upcoming, dueSoon, overdue }

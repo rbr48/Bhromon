@@ -13,6 +13,7 @@ import '../../domain/services/study_subject_rules.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_problem_composer.dart';
 import '../widgets/study/study_problem_set_sheets.dart';
+import '../widgets/study/study_reported_work_sheet.dart';
 import 'study_problem_screen.dart';
 
 /// The problems of one subject. Members open a problem to submit their own working; an admin posts
@@ -173,6 +174,17 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
                 icon: Icon(Icons.library_books_outlined, color: palette.text),
                 tooltip: l10n.translate('study_set_manage'),
                 onPressed: () => showStudyProblemSetsManager(
+                  context,
+                  repository: _repository,
+                  tourId: widget.tourId,
+                  subjectId: widget.subject.id,
+                ),
+              ),
+            if (_isAdmin)
+              IconButton(
+                icon: Icon(Icons.flag_outlined, color: palette.text),
+                tooltip: l10n.translate('study_work_queue_action'),
+                onPressed: () => showStudyReportedWorkSheet(
                   context,
                   repository: _repository,
                   tourId: widget.tourId,

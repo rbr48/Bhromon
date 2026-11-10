@@ -531,4 +531,32 @@ void main() {
           isNull);
     });
   });
+
+  group('the reported working an admin decides', () {
+    final day = DateTime(2026, 11, 10, 9);
+
+    ReportedWork item(String id, {DateTime? reportedAt}) => ReportedWork(
+          problem: StudyProblem(id: 'p-$id', text: 'Problem $id'),
+          work: StudyProblemSolution(
+            solverEmail: '$id@x.com',
+            text: 'Working $id',
+            reportedAt: reportedAt,
+          ),
+        );
+
+    test('only a working that was reported is listed, the oldest report first',
+        () {
+      final queue = reportedWorkForReview([
+        item('late', reportedAt: day.add(const Duration(days: 2))),
+        item('never'),
+        item('early', reportedAt: day),
+      ]);
+      expect(
+          queue.map((i) => i.work.solverEmail), ['early@x.com', 'late@x.com']);
+    });
+
+    test('nothing is listed when no working was reported', () {
+      expect(reportedWorkForReview([item('a'), item('b')]), isEmpty);
+    });
+  });
 }

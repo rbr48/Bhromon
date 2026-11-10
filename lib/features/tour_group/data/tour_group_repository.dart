@@ -3751,6 +3751,34 @@ class TourGroupRepository {
     await _workRef(tourId, subjectId, problemId, solverEmail).delete();
   }
 
+  /// The reported workings on each of a subject's problems, by problem id; a problem with none is left out. Only an
+  /// admin reads them: the rules let an admin list every working, and this asks only for the reported ones.
+  Future<Map<String, List<StudyProblemSolution>>> loadReportedWork(
+    String tourId,
+    String subjectId,
+    List<String> problemIds,
+  ) async {
+    _requireEmail();
+    final snaps = await Future.wait([
+      for (final id in problemIds)
+        _problemRef(tourId, subjectId, id)
+            .collection('solutions')
+            .where('reportedAt', isNull: false)
+            .get(),
+    ]);
+    final reported = <String, List<StudyProblemSolution>>{};
+    for (var i = 0; i < problemIds.length; i++) {
+      final works = [
+        for (final d in snaps[i].docs)
+          if (StudyProblemSolution.fromMap(d.id, _datesAsDateTimes(d.data()))
+              case final work?)
+            work,
+      ];
+      if (works.isNotEmpty) reported[problemIds[i]] = works;
+    }
+    return reported;
+  }
+
   Stream<List<ReadingSession>> watchReadingSessions(String tourId) {
     return _sub(tourId, 'reading_sessions').limit(300).snapshots().map((s) => [
           for (final d in s.docs)
