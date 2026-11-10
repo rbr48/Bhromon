@@ -9,15 +9,20 @@ import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../data/study_activity_log.dart';
 import '../../data/study_reading_position.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_material_models.dart';
 import '../../domain/models/study_models.dart';
+import '../../domain/models/study_streak_models.dart';
 import '../../domain/models/study_syllabus_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
+import '../../domain/services/study_daily_streak_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
+import '../widgets/study/branch_study_hall_sheet.dart';
 import '../widgets/study/study_chapter_editor.dart';
+import '../widgets/study/study_daily_streak_card.dart';
 import '../widgets/study/study_pace_sheet.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'markdown_viewer_screen.dart';
@@ -40,6 +45,7 @@ enum _LearningTool {
   glossary,
   flashcards,
   examSimulator,
+  branchHall,
   progress,
   studyPack
 }
@@ -87,6 +93,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   bool _failed = false;
 
   /// The chapter number the member is on, kept on this device.
+  StudyDailyStreak _dailyStreak = StudyDailyStreak.empty;
+  List<BranchStudyStanding> _standings = const [];
   int? _here;
   String? _selectedModuleCode;
   late final List<SyllabusModule> _syllabusModules =
@@ -117,7 +125,12 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     _markSub =
         _repository.watchMyReadMarks(widget.tourId, widget.book.id).listen(
       (marks) {
-        if (mounted) setState(() => _marks = marks);
+        if (mounted) {
+          setState(() {
+            _marks = marks;
+          });
+          _refreshStreak();
+        }
       },
       onError: (Object _) {},
     );
@@ -133,6 +146,34 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         .then((number) {
       if (mounted) setState(() => _here = number);
     });
+    _refreshStreak();
+  }
+
+  void _refreshStreak() {
+    StudyActivityLog().activeDays().then((days) {
+      if (!mounted) return;
+      final streak = StudyDailyStreakRules.computeDailyStreak(
+        days,
+        today: DateTime.now(),
+      );
+      String myEmail = '';
+      try {
+        myEmail = _repository.requireEmail();
+      } catch (error) {
+        // Safe to fall back when running in unit tests or preview mode.
+        myEmail = '';
+      }
+      final standings = StudyDailyStreakRules.fallbackStandings(
+        myEmail: myEmail,
+        myName: myEmail.isNotEmpty ? myEmail.split('@').first : 'You',
+        myStreak: streak.currentStreak > 0 ? streak.currentStreak : 1,
+        myChapters: _marks.length,
+      );
+      setState(() {
+        _dailyStreak = streak;
+        _standings = standings;
+      });
+    }).catchError((Object _) {});
   }
 
   @override
@@ -256,6 +297,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   Future<void> _toggleRead(StudyChapter chapter) async {
     final wasRead = _marks.containsKey(chapter.id);
+    if (!wasRead) {
+      unawaited(countStudyActionToday());
+    }
     await _run(
       () => wasRead
           ? _repository.unmarkStudyChapterRead(
@@ -352,6 +396,13 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                   Navigator.of(sheetContext).pop(_LearningTool.examSimulator),
             ),
             ListTile(
+              leading: Icon(Icons.apartment_rounded, color: palette.accentText),
+              title: Text(l10n.translate('study_branch_hall'),
+                  style: TextStyle(color: palette.text)),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_LearningTool.branchHall),
+            ),
+            ListTile(
               leading: Icon(Icons.insights_rounded, color: palette.accentText),
               title: Text(l10n.translate('study_progress_title'),
                   style: TextStyle(color: palette.text)),
@@ -371,6 +422,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       ),
     );
     if (tool == null || !mounted) return;
+    if (tool == _LearningTool.branchHall) {
+      await BranchStudyHallSheet.show(context, standings: _standings);
+      return;
+    }
     if (tool == _LearningTool.studyPack) {
       await shareStudyPack(
         context: context,
@@ -406,7 +461,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           book: widget.book,
           repository: _repository,
         ),
-      // The study pack opens a share sheet, not a page, so it returned above.
+      // The study pack and branch hall open modal sheets, not a page, so they return above.
+      _LearningTool.branchHall => const SizedBox.shrink(),
       _LearningTool.studyPack => const SizedBox.shrink(),
     };
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -553,6 +609,14 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
         _summary(next),
+        StudyDailyStreakCard(
+          streak: _dailyStreak,
+          standings: _standings,
+          onOpenBranchHall: () => BranchStudyHallSheet.show(
+            context,
+            standings: _standings,
+          ),
+        ),
         _syllabusBlueprintCard(),
         for (final chapter in _chapters) _chapterCard(chapter, today),
       ],
