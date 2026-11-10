@@ -24,13 +24,15 @@ class StudyThreadDraft {
   final String? chapterId;
 }
 
-/// Opens the composer for a new thread. [chapters] fills the chapter choice. [initialTitle] and
-/// [initialChapterId] are set when the thread starts from a guide question. Returns what the
-/// member entered, or null when they cancel.
+/// Opens the composer for a new thread. [chapters] fills the chapter choice. [initialTitle],
+/// [initialBody] and [initialChapterId] are set when the thread starts from a guide question or
+/// from the text in the discussion's chat box. Returns what the member entered, or null when they
+/// cancel.
 Future<StudyThreadDraft?> showStudyThreadComposer(
   BuildContext context, {
   required List<StudyChapter> chapters,
   String initialTitle = '',
+  String initialBody = '',
   String? initialChapterId,
 }) {
   return showStudyModal<StudyThreadDraft>(
@@ -38,6 +40,7 @@ Future<StudyThreadDraft?> showStudyThreadComposer(
     builder: (_) => StudyThreadComposer(
       chapters: chapters,
       initialTitle: initialTitle,
+      initialBody: initialBody,
       initialChapterId: initialChapterId,
     ),
   );
@@ -48,11 +51,13 @@ class StudyThreadComposer extends StatefulWidget {
     super.key,
     required this.chapters,
     this.initialTitle = '',
+    this.initialBody = '',
     this.initialChapterId,
   });
 
   final List<StudyChapter> chapters;
   final String initialTitle;
+  final String initialBody;
   final String? initialChapterId;
 
   @override
@@ -62,7 +67,8 @@ class StudyThreadComposer extends StatefulWidget {
 class _StudyThreadComposerState extends State<StudyThreadComposer> {
   late final TextEditingController _title =
       TextEditingController(text: widget.initialTitle);
-  final TextEditingController _body = TextEditingController();
+  late final TextEditingController _body =
+      TextEditingController(text: widget.initialBody);
   final TextEditingController _page = TextEditingController();
   late String? _chapterId = _knownChapter(widget.initialChapterId);
   bool _tried = false;
