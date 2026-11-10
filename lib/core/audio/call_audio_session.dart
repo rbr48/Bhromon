@@ -74,12 +74,15 @@ class CallAudioSession {
   /// the phone's own audio manager. The WebRTC plugin drops a speaker request without an
   /// error when its device list has no loudspeaker yet, so the phone answers whether the
   /// route took. False when it did not, and off Android.
-  static Future<bool> setSpeakerphone(bool enabled) async {
+  ///
+  /// [callId] names a call the phone's call system holds. That system owns the route of
+  /// such a call and starts it on the earpiece, so the request is made to it as well.
+  static Future<bool> setSpeakerphone(bool enabled, {String? callId}) async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
     try {
       final done = await _channel.invokeMethod<bool>(
         'setSpeakerphone',
-        {'enabled': enabled},
+        {'enabled': enabled, if (callId != null) 'callId': callId},
       );
       return done ?? false;
     } on MissingPluginException catch (e) {

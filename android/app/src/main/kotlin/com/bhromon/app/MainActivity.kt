@@ -13,11 +13,13 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.OpenableColumns
 import android.provider.Settings
+import android.telecom.CallAudioState
 import android.util.Log
 import android.util.Rational
 import android.webkit.MimeTypeMap
 import android.view.WindowManager
 import com.cloudwebrtc.webrtc.audio.AudioSwitchManager
+import com.hiennv.flutter_callkit_incoming.CallkitConnection
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -192,7 +194,13 @@ class MainActivity: FlutterFragmentActivity() {
                 }
                 "setSpeakerphone" -> {
                     // Answers whether the route took, so the app can fall back to the plugin.
-                    result.success(setSpeakerphone(call.argument<Boolean>("enabled") ?: false))
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    // A call the phone's call system holds is routed by that system, so
+                    // the request goes to it first. The audio manager is still set, for
+                    // phones that route the call from it.
+                    val telecom = setTelecomRoute(call.argument<String>("callId"), enabled)
+                    val direct = setSpeakerphone(enabled)
+                    result.success(telecom || direct)
                 }
                 "routeSnapshot" -> {
                     // What the phone and the WebRTC plugin say the call is routed to, read
@@ -235,6 +243,27 @@ class MainActivity: FlutterFragmentActivity() {
             val flags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             if (enabled) window.addFlags(flags) else window.clearFlags(flags)
+        }
+    }
+
+    /**
+     * Asks the phone's call system (Telecom) to route the call [callId] to the loudspeaker,
+     * or back to the earpiece or a wired headset. Telecom owns the route of a call it holds
+     * and starts a voice call on the earpiece, so a request made only through the audio
+     * manager does not move it. False when Telecom does not hold the call.
+     */
+    @Suppress("DEPRECATION")
+    private fun setTelecomRoute(callId: String?, speaker: Boolean): Boolean {
+        if (callId.isNullOrEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        return try {
+            val connection = CallkitConnection.find(callId) ?: return false
+            connection.setAudioRoute(
+                if (speaker) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_WIRED_OR_EARPIECE
+            )
+            true
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Telecom audio route failed", e)
+            false
         }
     }
 
