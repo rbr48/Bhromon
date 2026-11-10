@@ -242,7 +242,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: Text(l10n.translate('dialog_cancel')),
+              child: Text(l10n.translate('study_cancel')),
             ),
             FilledButton(
               onPressed: () {
