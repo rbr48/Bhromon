@@ -16,11 +16,15 @@ class ChatFormattingToolbar extends StatelessWidget {
   final FocusNode? focusNode;
   final VoidCallback? onClose;
 
+  /// Whether the table builder button shows. The study group turns it off.
+  final bool showTable;
+
   const ChatFormattingToolbar({
     super.key,
     required this.controller,
     this.focusNode,
     this.onClose,
+    this.showTable = true,
   });
 
   /// Applies inline wrapping to current selection or inserts empty paired markers.
@@ -323,68 +327,69 @@ class ChatFormattingToolbar extends StatelessWidget {
                     color: itemColor,
                   ),
                   // Table Builder Button
-                  _btn(
-                    tooltip: l10n.translate('format_toolbar_table'),
-                    child: Container(
-                      width: 16,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: itemColor, width: 1.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        right: BorderSide(
-                                            color: itemColor, width: 1),
-                                        bottom: BorderSide(
-                                            color: itemColor, width: 1),
+                  if (showTable)
+                    _btn(
+                      tooltip: l10n.translate('format_toolbar_table'),
+                      child: Container(
+                        width: 16,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: itemColor, width: 1.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          right: BorderSide(
+                                              color: itemColor, width: 1),
+                                          bottom: BorderSide(
+                                              color: itemColor, width: 1),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                            color: itemColor, width: 1),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(
+                                              color: itemColor, width: 1),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        right: BorderSide(
-                                            color: itemColor, width: 1),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          right: BorderSide(
+                                              color: itemColor, width: 1),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                const Expanded(child: SizedBox.expand()),
-                              ],
+                                  const Expanded(child: SizedBox.expand()),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      onTap: () => _openTableBuilder(context),
+                      color: itemColor,
                     ),
-                    onTap: () => _openTableBuilder(context),
-                    color: itemColor,
-                  ),
                 ],
               ),
             ),

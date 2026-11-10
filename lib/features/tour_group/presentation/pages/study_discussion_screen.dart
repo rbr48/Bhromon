@@ -13,13 +13,15 @@ import '../../domain/models/study_thread_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_thread_rules.dart';
+import '../widgets/study/study_chat_composer.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'study_thread_screen.dart';
 
-/// The discussions of a study book: the threads members have started, pinned ones first. A member
-/// starts a thread, and anyone opens one. A thread about a later chapter than the member's place
-/// shows only a "later chapter" label until it is opened, when the fence is on. An admin pins and
-/// locks threads.
+/// The discussions of a study book, opened as a conversation: the threads members have started, in
+/// chat order (pinned ones first, the newest at the foot), with the chat box under them. A member
+/// posts from the box, and anyone opens a thread. A thread about a later chapter than the member's
+/// place shows only a "later chapter" label until it is opened, when the fence is on. An admin pins
+/// and locks threads.
 class StudyDiscussionScreen extends StatefulWidget {
   const StudyDiscussionScreen({
     super.key,
@@ -62,6 +64,8 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
   bool _fenceOn = true;
   bool _searching = false;
   String _query = '';
+  final TextEditingController _draft = TextEditingController();
+  bool _posting = false;
 
   String get _me => _repository.currentEmail;
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -113,6 +117,7 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
   void dispose() {
     _threadSub?.cancel();
     _chapterSub?.cancel();
+    _draft.dispose();
     super.dispose();
   }
 
@@ -141,30 +146,85 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
     }
   }
 
-  /// A member starts a thread. The daily limit is checked first.
-  Future<void> _startThread() async {
-    final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
-    if (!canStartThreadToday(_threads, email: _me, now: DateTime.now())) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.translate('study_thread_daily_limit',
-            args: {'count': l10n.number(kThreadsPerDayMax)})),
-      ));
-      return;
+  /// Whether a member may start another thread today. Says so when they may not.
+  bool _withinDailyLimit() {
+    if (canStartThreadToday(_threads, email: _me, now: DateTime.now())) {
+      return true;
     }
-    final draft = await showStudyThreadComposer(context, chapters: _chapters);
-    if (draft == null || !mounted) return;
-    await _run(
-      () => _repository.addStudyThread(
+    final l10n = context.l10n;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(l10n.translate('study_thread_daily_limit',
+          args: {'count': l10n.number(kThreadsPerDayMax)})),
+    ));
+    return false;
+  }
+
+  /// Saves a new thread. Returns whether it was saved; a failure is logged and shown.
+  Future<bool> _post({
+    required String title,
+    required String body,
+    required String pageRef,
+    required String? chapterId,
+  }) async {
+    setState(() => _posting = true);
+    try {
+      await _repository.addStudyThread(
         widget.tourId,
         widget.book.id,
-        title: draft.title,
-        body: draft.body,
-        pageRef: draft.pageRef,
-        chapterId: draft.chapterId,
-      ),
-      'study_thread_posted',
+        title: title,
+        body: body,
+        pageRef: pageRef,
+        chapterId: chapterId,
+      );
+      return true;
+    } catch (error, stackTrace) {
+      logWarning('A study thread failed to post', error, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.translate('study_failed')),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _posting = false);
+    }
+  }
+
+  /// A member posts what is in the chat box as a new thread. Its first line is the title.
+  Future<void> _sendDraft() async {
+    final text = _draft.text.trim();
+    if (text.isEmpty || _posting || !_withinDailyLimit()) return;
+    final parts = threadTitleAndBody(text);
+    final saved = await _post(
+      title: parts.title,
+      body: parts.body,
+      pageRef: '',
+      chapterId: null,
     );
+    if (saved && mounted) _draft.clear();
+  }
+
+  /// The chapter and page choices. The form opens with what is in the chat box, and the thread is
+  /// saved only when the member posts it there.
+  Future<void> _openDetails() async {
+    if (_posting || !_withinDailyLimit()) return;
+    final typed = _draft.text.trim();
+    final parts = typed.isEmpty ? null : threadTitleAndBody(typed);
+    final draft = await showStudyThreadComposer(
+      context,
+      chapters: _chapters,
+      initialTitle: parts?.title ?? '',
+      initialBody: parts?.body ?? '',
+    );
+    if (draft == null || !mounted) return;
+    final saved = await _post(
+      title: draft.title,
+      body: draft.body,
+      pageRef: draft.pageRef,
+      chapterId: draft.chapterId,
+    );
+    if (saved && mounted) _draft.clear();
   }
 
   Future<void> _setPinned(StudyThread thread, bool pinned) async {
@@ -292,11 +352,6 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
               ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _startThread,
-          icon: const Icon(Icons.add_comment_rounded),
-          label: Text(l10n.translate('study_thread_start')),
-        ),
         body: Column(
           children: [
             if (_searching)
@@ -313,6 +368,14 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
                 ),
               ),
             Expanded(child: _list(shown)),
+            StudyChatComposer(
+              controller: _draft,
+              hint: l10n.translate('study_discussion_hint'),
+              sending: _posting,
+              onSend: _sendDraft,
+              onDetails: _openDetails,
+              detailsTooltip: l10n.translate('study_thread_details'),
+            ),
           ],
         ),
       ),
@@ -349,9 +412,14 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
             style: TextStyle(color: palette.text70)),
       );
     }
+    // The newest thread is at the foot, and the list starts there, as a chat does.
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      children: [for (final thread in shown) _tile(thread)],
+      reverse: true,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      children: [
+        for (final thread in chatOrderStudyThreads(shown).reversed)
+          _tile(thread),
+      ],
     );
   }
 

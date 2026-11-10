@@ -333,22 +333,22 @@ void main() {
     });
 
     testWidgets(
-        'a chapter offers one-tap solutions for a Markdown file and a note, never for a PDF',
+        'a chapter offers one-tap solutions for a PDF and a note, never for audio',
         (tester) async {
-      // The PDF comes first, so a rule that let it through would show it as the English button.
-      const paperPdf = StudyMaterial(
+      // The audio file comes first, so a rule that let it through would show it as the English button.
+      const audioSol = StudyMaterial(
         id: 'm0',
-        title: 'Chapter 1 solutions (PDF)',
-        kind: StudyMaterialKind.file,
+        title: 'Chapter 1 lecture (audio)',
+        kind: StudyMaterialKind.audio,
         bookId: 'b1',
         chapterId: 'c1',
         status: StudyMaterialStatus.published,
         url:
-            'https://bhromon.fun/media/T/study/0123456789abcdef0123456789abcdef.pdf',
-        fileName: 'Chapter1_Solutions.pdf',
-        sizeBytes: 90000,
+            'https://bhromon.fun/media/T/study/0123456789abcdef0123456789abcdef.mp3',
+        fileName: 'Chapter1_Lecture.mp3',
+        sizeBytes: 2048,
       );
-      // An uploaded Markdown file: its text is fetched by the reader, so it has no body here.
+      // An uploaded PDF: the viewer fetches it from its address, so it has no body here.
       const englishSol = StudyMaterial(
         id: 'm1',
         title: '98th BPE - Master Solutions (English)',
@@ -357,9 +357,9 @@ void main() {
         chapterId: 'c1',
         status: StudyMaterialStatus.published,
         url:
-            'https://bhromon.fun/media/T/study/fedcba9876543210fedcba9876543210.md',
-        fileName: 'JAIBB_Accounting_98th_BPE_Solutions.md',
-        sizeBytes: 25600,
+            'https://bhromon.fun/media/T/study/fedcba9876543210fedcba9876543210.pdf',
+        fileName: 'JAIBB_Accounting_98th_BPE_Solutions.pdf',
+        sizeBytes: 90000,
       );
       // A note has its text and no file size.
       const banglaSol = StudyMaterial(
@@ -374,7 +374,7 @@ void main() {
 
       final repo = _FakeChapterRepo(
         chapters: _chapters,
-        materials: [paperPdf, englishSol, banglaSol],
+        materials: [audioSol, englishSol, banglaSol],
       );
 
       await _pump(
@@ -387,8 +387,8 @@ void main() {
         ),
       );
 
-      expect(find.text('English Solution (25 KB)'), findsOneWidget);
-      expect(find.text('English Solution (88 KB)'), findsNothing);
+      expect(find.text('English Solution (88 KB)'), findsOneWidget);
+      expect(find.text('English Solution (2 KB)'), findsNothing);
       expect(find.text('বাংলা সমাধান'), findsOneWidget);
       expect(find.text('🇬🇧'), findsOneWidget);
       expect(find.text('🇧🇩'), findsOneWidget);

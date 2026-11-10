@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/theme/colors.dart';
 import '../../../../../core/theme/forest_palette.dart';
-import '../../../domain/services/study_table_markdown.dart';
-import 'study_table_editor.dart';
+import '../../../../chat/presentation/widgets/chat_formatting_toolbar.dart';
 
-/// A multi-line field for study text. It takes the same settings as a [TextField], and under it a Table
-/// action: with the cursor in a table, the action edits that table; anywhere else it adds a new table at the
-/// cursor. The text is markdown, so a table in it renders wherever study text is shown.
-class StudyTextField extends StatelessWidget {
+/// A multi-line field for study text. It takes the same settings as a [TextField]. Under it is the markup
+/// button, "Aa", which shows the chat's formatting menu above the text, without the table button. The text is
+/// markdown, so a table written in it renders wherever study text is shown.
+class StudyTextField extends StatefulWidget {
   const StudyTextField({
     super.key,
     required this.controller,
@@ -29,54 +29,97 @@ class StudyTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
 
   @override
+  State<StudyTextField> createState() => _StudyTextFieldState();
+}
+
+class _StudyTextFieldState extends State<StudyTextField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _showFormatting = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final palette = context.forest;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_showFormatting)
+          ChatFormattingToolbar(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            showTable: false,
+            onClose: () => setState(() => _showFormatting = false),
+          ),
         TextField(
-          controller: controller,
-          autofocus: autofocus,
-          minLines: minLines,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
+          controller: widget.controller,
+          focusNode: _focusNode,
+          autofocus: widget.autofocus,
+          minLines: widget.minLines,
+          maxLines: widget.maxLines,
+          keyboardType: widget.keyboardType,
+          onChanged: widget.onChanged,
           style: TextStyle(color: palette.text),
-          decoration: decoration,
+          decoration: widget.decoration,
         ),
         Align(
           alignment: AlignmentDirectional.centerStart,
-          child: TextButton.icon(
-            onPressed: () => _openTable(context),
-            icon: const Icon(Icons.table_chart_outlined, size: 18),
-            label: Text(l10n.translate('study_table_insert')),
+          child: StudyMarkupButton(
+            active: _showFormatting,
+            onPressed: () => setState(() => _showFormatting = !_showFormatting),
           ),
         ),
       ],
     );
   }
+}
 
-  /// Edits the table the cursor is in, or adds a new one at the cursor.
-  Future<void> _openTable(BuildContext context) async {
-    final text = controller.text;
-    final selection = controller.selection;
-    final offset = selection.isValid ? selection.start : text.length;
-    final existing = studyTableAt(text, offset);
-    final grid = await showStudyTableEditor(
-      context,
-      initial: existing?.rows,
+/// The "Aa" button that shows or hides the markup menu, drawn as the chat composers draw it. A null
+/// [onPressed] leaves it off, as while a message is being sent.
+class StudyMarkupButton extends StatelessWidget {
+  const StudyMarkupButton({
+    super.key,
+    required this.active,
+    required this.onPressed,
+  });
+
+  final bool active;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final color = active ? AppColors.mintGreen : context.forest.text70;
+    return Semantics(
+      label: l10n.translate('format_toolbar_toggle'),
+      button: true,
+      child: IconButton(
+        tooltip: l10n.translate('format_toolbar_toggle'),
+        onPressed: onPressed,
+        icon: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            border: Border.all(color: color, width: 1.5),
+            borderRadius: BorderRadius.circular(4),
+            color: active
+                ? AppColors.mintGreen.withValues(alpha: 0.15)
+                : Colors.transparent,
+          ),
+          child: Text(
+            'Aa',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
     );
-    if (grid == null) return;
-    final markdown = studyTableMarkdown(grid);
-    final edit = existing == null
-        ? replaceStudyRange(text, offset, offset, markdown)
-        : replaceStudyRange(text, existing.start, existing.end, markdown);
-    controller.value = TextEditingValue(
-      text: edit.text,
-      selection: TextSelection.collapsed(offset: edit.cursor),
-    );
-    onChanged?.call(edit.text);
   }
 }
