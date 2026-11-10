@@ -220,6 +220,42 @@ Answer to question 2.
     });
 
     testWidgets(
+        'extracts question topic and renders in navigator sheet subtitle',
+        (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: '97th BPE Solution',
+            chapterTitle: '97th BPE (Nov 2023)',
+            subjectTitle: 'Laws & Practice of General Banking',
+            rawContent:
+                '### প্রশ্ন ৮ [মান: ২০]\n৮(ক) উত্তরাধিকার পরিকল্পনা (Succession Planning) বলতে কী বুঝায়?\nউত্তর বিবরণ।',
+          ),
+          theme: ThemeData.light(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('97th BPE (Nov 2023) · 97th BPE Solution'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(ListTile, 'প্রশ্ন ৮ [মান: ২০]'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching:
+              find.textContaining('উত্তরাধিকার পরিকল্পনা (Succession Planning)'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
         'adapts AppBar title and Question Navigator contrast in Light mode',
         (tester) async {
       await tester.pumpWidget(

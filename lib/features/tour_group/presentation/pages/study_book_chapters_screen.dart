@@ -755,11 +755,18 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   /// Opens a solution in its reader: a PDF in the PDF viewer, and a note or a Markdown file in the Markdown reader.
   /// A note opens from its text, and a Markdown file from its address, which the reader fetches. The other
   /// language pairs only when its text is a note.
-  void _openSolution(StudyMaterial material, StudyMaterial? other) {
+  void _openSolution(
+    StudyMaterial material,
+    StudyMaterial? other, {
+    StudyChapter? chapter,
+  }) {
+    final titleWithChapter = chapter != null && chapter.title.isNotEmpty
+        ? '${chapter.title} · ${material.title}'
+        : material.title;
     if (isPdfSolution(material)) {
       PdfViewerScreen.open(
         context,
-        title: material.title,
+        title: titleWithChapter,
         fileUrl: material.url,
         tourId: widget.tourId,
       );
@@ -775,6 +782,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       alternateRawContent: source.paired?.body,
       alternateTitle: source.paired?.title,
       alternateLanguageLabel: isBanglaSolution(material) ? 'English' : 'বাংলা',
+      subjectTitle: widget.book.title,
+      chapterTitle: chapter?.title,
     );
   }
 
@@ -836,7 +845,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                 children: [
                   if (englishNote != null)
                     ElevatedButton.icon(
-                      onPressed: () => _openSolution(englishNote!, banglaNote),
+                      onPressed: () => _openSolution(englishNote!, banglaNote,
+                          chapter: chapter),
                       icon: const Text('🇬🇧', style: TextStyle(fontSize: 16)),
                       label: Text(
                         englishNote.sizeBytes != null &&
@@ -868,7 +878,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                     ),
                   if (banglaNote != null)
                     ElevatedButton.icon(
-                      onPressed: () => _openSolution(banglaNote!, englishNote),
+                      onPressed: () => _openSolution(banglaNote!, englishNote,
+                          chapter: chapter),
                       icon: const Text('🇧🇩', style: TextStyle(fontSize: 16)),
                       label: Text(
                         banglaNote.sizeBytes != null &&
