@@ -112,6 +112,28 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - Run `flutter test test/core/localization/tour_translation_test.dart` and `dart analyze`.
 - [x] **Task G4: Version Bump & Playbook Memory Update**:
   - Increment version to `1.8.169+223` in `pubspec.yaml` and update `AGENTS.md`.
-- [ ] **Task G5: Peer Review & Deployment Cycle**:
-  - Push branch, open PR, mutual peer review with Claude, verify 100% green CI, merge to `main`.
+- [x] **Task G5: Peer Review & Deployment Cycle**:
+  - Push branch, open PR, mutual peer review with Claude, verify 100% green CI, merge to `main` ([PR #461](https://github.com/rbr48/Bhromon/pull/461)).
   - Full deployment: Firestore rules, Storage rules, VPS media server, Web Hosting, APK to VPS, and Play Store AAB.
+
+---
+
+### Track H: In-App Document Viewers (Markdown & PDF)
+- [x] **Task H1: Markdown In-App Viewer Screen (`markdown_viewer_screen.dart`)**:
+  - Fullscreen reading screen supporting remote URLs (`signedMediaUrl`), local file paths, and raw text.
+  - Integration with Bhromon's forest-themed `ChatRichText` (tables, code blocks, checklists, math, copy, share).
+  - Responsive layout reading container (`maxWidth: 800`).
+- [x] **Task H2: PDF In-App Viewer Screen (`pdf_viewer_screen.dart`)**:
+  - Add `pdfx: ^2.11.0` to `pubspec.yaml`.
+  - Fullscreen pinch-to-zoom multi-page PDF viewing with page indicator and jump slider.
+  - Network streaming/caching, local file support, and "Open externally" fallback.
+- [x] **Task H3: App Touchpoint Integration (`chat_document_bubble.dart`, `study_materials_screen.dart`)**:
+  - Intercept `.md` and `.pdf` taps in 1-on-1 chats and group channels to launch in-app viewers.
+  - Intercept `.md` and `.pdf` study materials to open in-app study reading mode.
+- [x] **Task H4: Translations & Unit/Widget Tests**:
+  - Add localized strings for viewer actions (`viewer_download`, `viewer_share`, `viewer_copy`, `viewer_open_external`, `viewer_page_count`).
+  - Write widget and unit tests for both viewer screens (`document_viewers_test.dart` 6/6 passed).
+  - Verify `tour_translation_test.dart` (9/9 passed) and full `dart analyze` (0 issues).
+- [ ] **Task H5: Version Bump, Peer Review & Merge**:
+  - Increment version to `1.8.170+224` in `pubspec.yaml` and update `AGENTS.md`.
+  - Push branch `feat/in-app-document-viewers`, open PR, peer review with Claude, merge on green CI.
