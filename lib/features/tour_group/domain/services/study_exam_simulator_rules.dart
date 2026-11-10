@@ -91,7 +91,8 @@ class StudyExamSimulatorExtractor {
           : markdownContent.length;
 
       final body = markdownContent.substring(startIndex, endIndex).trim();
-      final marks = _parseMarks(headingText, defaultMarks: defaultMarksPerQuestion);
+      final marks =
+          _parseMarks(headingText, defaultMarks: defaultMarksPerQuestion);
       final mod = StudySyllabusCatalog.identifyModule(
         subjectTitle,
         '$headingText $body',
@@ -144,9 +145,15 @@ class StudyExamSimulatorExtractor {
   }
 
   /// Fallback when no markdown solution is attached: standard 8-question IBB paper format.
-  static List<ExamQuestion> _generateDefaultQuestions(String subjectTitle) {
+  static List<ExamQuestion> fallbackQuestions(String subjectTitle,
+      {int count = 8}) {
+    return _generateDefaultQuestions(subjectTitle, count: count);
+  }
+
+  static List<ExamQuestion> _generateDefaultQuestions(String subjectTitle,
+      {int count = 8}) {
     final modules = StudySyllabusCatalog.modulesFor(subjectTitle);
-    return List.generate(8, (index) {
+    return List.generate(count, (index) {
       final number = index + 1;
       final mod = modules.isNotEmpty ? modules[index % modules.length] : null;
       return ExamQuestion(
@@ -154,7 +161,8 @@ class StudyExamSimulatorExtractor {
         number: number,
         prompt: 'Question $number [Marks: 20]',
         marks: 20,
-        modelAnswer: 'Official examiner model answer not yet attached for this past paper.',
+        modelAnswer:
+            'Official examiner model answer not yet attached for this past paper.',
         moduleCode: mod?.code,
       );
     });

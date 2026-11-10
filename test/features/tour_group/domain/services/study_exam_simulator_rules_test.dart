@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:bhromon/core/security/hive_encryption_service.dart';
@@ -18,7 +17,8 @@ void main() {
         '03:00:00',
       );
       expect(
-        StudyExamTimerRules.formatDuration(const Duration(minutes: 45, seconds: 12)),
+        StudyExamTimerRules.formatDuration(
+            const Duration(minutes: 45, seconds: 12)),
         '00:45:12',
       );
       expect(
@@ -111,7 +111,8 @@ Discuss the differences between a Cheque and a Bill of Exchange under Negotiable
       // Question 3
       expect(questions[2].number, 3);
       expect(questions[2].marks, 15);
-      expect(questions[2].moduleCode, 'A'); // Negotiable Instruments Act -> Module A
+      expect(questions[2].moduleCode,
+          'A'); // Negotiable Instruments Act -> Module A
     });
 
     test('generates standard 8-question fallback on blank markdown', () {
@@ -158,7 +159,8 @@ Discuss the differences between a Cheque and a Bill of Exchange under Negotiable
       elapsedSeconds: 9900,
       isCompleted: true,
       draftAnswers: {
-        'q_1': 'Detailed answer outline discussing banking succession planning...',
+        'q_1':
+            'Detailed answer outline discussing banking succession planning...',
         'q_2': 'Section 45 powers of central bank...',
       },
       scores: {

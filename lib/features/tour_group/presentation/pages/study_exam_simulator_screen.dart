@@ -90,8 +90,8 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
     } else if (widget.rawContent != null &&
         widget.rawContent!.trim().isNotEmpty) {
       _questions = StudyExamSimulatorExtractor.extractQuestions(
-        widget.rawContent!,
-        widget.paperTitle,
+        subjectTitle: widget.paperTitle,
+        markdownContent: widget.rawContent!,
       );
     } else {
       _questions = StudyExamSimulatorExtractor.fallbackQuestions(
@@ -179,7 +179,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
       id: _attemptId,
       tourId: widget.tourId,
       bookId: widget.bookId,
-      chapterId: widget.chapterId,
+      chapterId: widget.chapterId ?? '',
       paperTitle: widget.paperTitle,
       durationMinutes: widget.initialDurationMinutes,
       startedAt: DateTime.now().subtract(Duration(seconds: elapsed)),
@@ -188,7 +188,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
       isCompleted: isCompleted,
       draftAnswers: Map.unmodifiable(_drafts),
       scores: const {},
-      notes: const {},
+      notes: '',
     );
   }
 
@@ -209,7 +209,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
 
     // Navigate to Review Screen
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => StudyExamReviewScreen(
           attempt: attempt,
           questions: _questions,
@@ -441,8 +441,8 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                           decoration: BoxDecoration(
                             color: palette.card,
                             borderRadius: BorderRadius.circular(12),
-                            border:
-                                Border.all(color: palette.divider12, width: 0.8),
+                            border: Border.all(
+                                color: palette.divider12, width: 0.8),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,8 +530,8 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                             height: 1.5,
                           ),
                           decoration: InputDecoration(
-                            hintText: l10n
-                                .translate('study_exam_scratchpad_hint'),
+                            hintText:
+                                l10n.translate('study_exam_scratchpad_hint'),
                             hintStyle: TextStyle(color: palette.text54),
                             filled: true,
                             fillColor: palette.card,
@@ -618,9 +618,8 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                     Text(
                       l10n.translate('study_exam_question_tray'),
                       style: TextStyle(
-                        color: palette.isDark
-                            ? Colors.white
-                            : AppColors.darkText,
+                        color:
+                            palette.isDark ? Colors.white : AppColors.darkText,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -653,9 +652,8 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                           palette.accentText.withValues(alpha: 0.1),
                       leading: CircleAvatar(
                         radius: 14,
-                        backgroundColor: isAnswered
-                            ? AppColors.midGreen
-                            : palette.divider12,
+                        backgroundColor:
+                            isAnswered ? AppColors.midGreen : palette.divider12,
                         child: Text(
                           '${idx + 1}',
                           style: const TextStyle(
@@ -680,9 +678,8 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                             ? l10n.translate('study_exam_status_answered')
                             : l10n.translate('study_exam_status_unattempted'),
                         style: TextStyle(
-                          color: isAnswered
-                              ? AppColors.mintGreen
-                              : palette.text54,
+                          color:
+                              isAnswered ? AppColors.mintGreen : palette.text54,
                           fontSize: 11.5,
                         ),
                       ),

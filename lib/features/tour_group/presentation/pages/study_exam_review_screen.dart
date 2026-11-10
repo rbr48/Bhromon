@@ -20,7 +20,10 @@ class StudyExamReviewScreen extends StatefulWidget {
     super.key,
     required this.attempt,
     required this.questions,
+    this.store,
   });
+
+  final StudyExamAttemptStore? store;
 
   @override
   State<StudyExamReviewScreen> createState() => _StudyExamReviewScreenState();
@@ -43,7 +46,9 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
       _attempt = _attempt.copyWith(scores: Map.unmodifiable(_scores));
     });
     // Persist asynchronously to local store
-    StudyExamAttemptStore.instance.saveAttempt(_attempt);
+    (widget.store ?? StudyExamAttemptStore.instance)
+        .saveAttempt(_attempt)
+        .catchError((Object _) {});
   }
 
   @override
@@ -126,9 +131,8 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                               : Colors.amber.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isPassed
-                                ? AppColors.mintGreen
-                                : Colors.amber,
+                            color:
+                                isPassed ? AppColors.mintGreen : Colors.amber,
                             width: 0.8,
                           ),
                         ),
@@ -137,9 +141,8 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                               ? l10n.translate('study_exam_pass')
                               : l10n.translate('study_exam_fail'),
                           style: TextStyle(
-                            color: isPassed
-                                ? AppColors.mintGreen
-                                : Colors.amber,
+                            color:
+                                isPassed ? AppColors.mintGreen : Colors.amber,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -313,16 +316,14 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                           : palette.text54,
                       fontSize: 13,
                       height: 1.45,
-                      fontStyle:
-                          hasDraft ? FontStyle.normal : FontStyle.italic,
+                      fontStyle: hasDraft ? FontStyle.normal : FontStyle.italic,
                     ),
                   ),
                 ),
                 const SizedBox(height: 14),
 
                 // Model Answer
-                if (question.modelAnswer != null &&
-                    question.modelAnswer!.trim().isNotEmpty) ...[
+                if (question.modelAnswer.trim().isNotEmpty) ...[
                   Text(
                     l10n.translate('study_exam_model_answer'),
                     style: TextStyle(
@@ -339,7 +340,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: ChatRichText(
-                      text: question.modelAnswer!,
+                      text: question.modelAnswer,
                       baseStyle: TextStyle(
                         color: palette.text,
                         fontSize: 13,

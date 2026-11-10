@@ -1,8 +1,6 @@
 // Models for the 3-Hour Timed Exam Simulator for IBB JAIBB banking promotion exams.
 // Pure offline data structures with JSON serialization support.
 
-import 'study_syllabus_models.dart';
-
 /// The status of a question in the candidate's exam tray.
 enum ExamQuestionStatus {
   unattempted,
@@ -110,9 +108,16 @@ class ExamAttempt {
 
   int get totalPossibleMarks => 100; // Standard IBB 5 questions * 20 marks
 
+  int get totalScore => totalAwardedMarks;
+
+  int get totalMarks => totalPossibleMarks;
+
   double get scorePercentage => totalPossibleMarks > 0
-      ? (totalAwardedMarks / totalPossibleMarks * 100).clamp(0.0, 100.0)
+      ? double.parse(
+          (totalAwardedMarks / totalPossibleMarks * 100).toStringAsFixed(1))
       : 0.0;
+
+  double get percentage => scorePercentage;
 
   bool get isPassed => scorePercentage >= 50.0; // IBB JAIBB pass mark is 50%
 
@@ -155,8 +160,7 @@ class ExamAttempt {
         'paperTitle': paperTitle,
         'durationMinutes': durationMinutes,
         'startedAt': startedAt.toIso8601String(),
-        if (submittedAt != null)
-          'submittedAt': submittedAt!.toIso8601String(),
+        if (submittedAt != null) 'submittedAt': submittedAt!.toIso8601String(),
         'elapsedSeconds': elapsedSeconds,
         'isCompleted': isCompleted,
         'draftAnswers': draftAnswers,
