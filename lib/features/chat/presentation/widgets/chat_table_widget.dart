@@ -228,6 +228,16 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
 
   InlineSpan _span(ChatSpan span, TextStyle style) {
     if (span.math) {
+      if (RegExp(r'[\u0980-\u09FF]').hasMatch(span.text)) {
+        return TextSpan(
+          text: cleanBengaliMath(span.text),
+          style: style.copyWith(
+            fontWeight: FontWeight.w600,
+            fontFamily: 'NotoSansBengali',
+            fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
+          ),
+        );
+      }
       return WidgetSpan(
         alignment: PlaceholderAlignment.middle,
         child: Padding(
@@ -293,6 +303,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
 
     return Container(
       alignment: alignment,
+      constraints: const BoxConstraints(minWidth: 55),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       child: Text.rich(
         TextSpan(

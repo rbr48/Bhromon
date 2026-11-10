@@ -290,7 +290,8 @@ class StudyDailyStreakCard extends StatelessWidget {
                     onOpenBranchHall!();
                   } else {
                     final list = standings ??
-                        StudyDailyStreakRules.fallbackStandings(
+                        StudyDailyStreakRules.fromTourMembers(
+                          members: const [],
                           myEmail: 'candidate@bank.org',
                           myName: 'You',
                           myStreak: streak.currentStreak,

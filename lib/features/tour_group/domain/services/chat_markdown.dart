@@ -108,9 +108,10 @@ class ChatHeadingBlock extends ChatBlock {
 
 /// A blockquote with one or more lines prefixed by "> ".
 class ChatQuoteBlock extends ChatBlock {
+  final List<ChatBlock> blocks;
   final List<ChatLine> lines;
 
-  const ChatQuoteBlock(this.lines);
+  const ChatQuoteBlock({this.blocks = const [], this.lines = const []});
 }
 
 /// A fenced code block with optional syntax language.
@@ -152,6 +153,32 @@ class ChatMathBlock extends ChatBlock {
   final String latex;
 
   const ChatMathBlock(this.latex);
+}
+
+/// Cleans raw LaTeX math commands for Bengali script text, avoiding broken font
+/// shaping in flutter_math_fork and converting fractions and symbols into legible Unicode text.
+String cleanBengaliMath(String input) {
+  var s = input.trim();
+  // Handle fractions: \frac{A}{B} -> (A ÷ B)
+  s = s.replaceAllMapped(
+    RegExp(r'\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}'),
+    (m) => '(${m.group(1)} ÷ ${m.group(2)})',
+  );
+  s = s.replaceAll(r'\times', '×');
+  s = s.replaceAll(r'\div', '÷');
+  s = s.replaceAll(r'\cdot', '·');
+  s = s.replaceAll(r'\pm', '±');
+  s = s.replaceAll(r'\approx', '≈');
+  s = s.replaceAll(r'\neq', '≠');
+  s = s.replaceAll(r'\le', '≤');
+  s = s.replaceAll(r'\ge', '≥');
+  s = s.replaceAll(r'\rightarrow', '→');
+  s = s.replaceAll(r'\implies', '⇒');
+  s = s.replaceAll(RegExp(r'\\text\s*\{([^{}]+)\}'), r'$1');
+  s = s.replaceAll(RegExp(r'\\mathbf\s*\{([^{}]+)\}'), r'$1');
+  s = s.replaceAll(RegExp(r'\\math[a-zA-Z]+\s*\{([^{}]+)\}'), r'$1');
+  s = s.replaceAll('{', '').replaceAll('}', '');
+  return s;
 }
 
 /// Splits [text] into lines, each with its styled runs.
@@ -232,6 +259,14 @@ String _autoWrapRawLatex(String s) {
   if (s.contains(r'$')) return s;
   final trimmed = s.trim();
   if (trimmed.isEmpty) return s;
+
+  // Complex Indic / Bengali script must not be auto-wrapped into LaTeX math!
+  // flutter_math_fork lacks HarfBuzz font shaping, which renders broken ligatures
+  // and Unicode dotted circles (U+25CC).
+  if (RegExp(r'[\u0980-\u09FF]').hasMatch(trimmed)) {
+    return s;
+  }
+
   const indicators = [
     r'\frac',
     r'\text{',
@@ -266,8 +301,16 @@ String _autoWrapRawLatex(String s) {
 List<ChatBlock> parseChatBlocks(String text) {
   final counter = _Counter();
 
+  // Fix corrupted LaTeX right-arrow carriage return artifact: \$ \n ightarrow\$ or \$\r?ightarrow\$
+  var normalized = text.replaceAll(
+    RegExp(r'\\?\$[\s\r\n]*\\?r?ightarrow\\?\$?', caseSensitive: false),
+    '→',
+  );
+  normalized = normalized.replaceAll(r'\rightarrow', '→');
+  normalized = normalized.replaceAll(r'\implies', '⇒');
+
   // Normalize line endings and unescape markdown brackets
-  var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  normalized = normalized.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   normalized = normalized.replaceAll(r'\[', '[').replaceAll(r'\]', ']');
 
   // Wrap display math $$...$$ with line breaks so it forms its own block
@@ -450,11 +493,13 @@ List<ChatBlock> parseChatBlocks(String text) {
 
     // 5. Blockquotes (consecutive > lines)
     if (trimmed.startsWith('> ') || trimmed == '>') {
+      final quoteRawLines = <String>[];
       final quoteLines = <ChatLine>[];
       while (i < rawLines.length) {
         final qLine = rawLines[i].trim();
         if (qLine.startsWith('> ') || qLine == '>') {
           final body = qLine.startsWith('> ') ? qLine.substring(2) : '';
+          quoteRawLines.add(body);
           quoteLines.add(ChatLine(
             quote: true,
             spans: _inline(body, const _Style(), counter),
@@ -464,7 +509,9 @@ List<ChatBlock> parseChatBlocks(String text) {
           break;
         }
       }
-      blocks.add(ChatQuoteBlock(quoteLines));
+      final innerContent = quoteRawLines.join('\n');
+      final innerBlocks = parseChatBlocks(innerContent);
+      blocks.add(ChatQuoteBlock(blocks: innerBlocks, lines: quoteLines));
       continue;
     }
 

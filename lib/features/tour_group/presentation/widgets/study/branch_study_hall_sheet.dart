@@ -186,70 +186,73 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
               ),
             ),
 
-            // Bank Filter Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: Text(
-                      l10n.translate('study_filter_all_banks'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _filterBank == null
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: _filterBank == null
-                            ? palette.accentText
-                            : palette.text70,
-                      ),
-                    ),
-                    selected: _filterBank == null,
-                    selectedColor: palette.accentText.withValues(alpha: 0.2),
-                    backgroundColor: palette.divider10,
-                    side: BorderSide(
-                      color: _filterBank == null
-                          ? palette.accentText.withValues(alpha: 0.6)
-                          : palette.divider12,
-                      width: 0.8,
-                    ),
-                    onSelected: (_) => setState(() => _filterBank = null),
-                  ),
-                  for (final bank in sortedBanks) ...[
-                    const SizedBox(width: 6),
+            // Bank Filter Chips (shown when members represent multiple banks/branches)
+            if (sortedBanks.length > 1) ...[
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Row(
+                  children: [
                     ChoiceChip(
                       label: Text(
-                        bank,
+                        l10n.translate('study_filter_all_banks'),
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: _filterBank == bank
+                          fontWeight: _filterBank == null
                               ? FontWeight.bold
                               : FontWeight.normal,
-                          color: _filterBank == bank
+                          color: _filterBank == null
                               ? palette.accentText
                               : palette.text70,
                         ),
                       ),
-                      selected: _filterBank == bank,
+                      selected: _filterBank == null,
                       selectedColor: palette.accentText.withValues(alpha: 0.2),
                       backgroundColor: palette.divider10,
                       side: BorderSide(
-                        color: _filterBank == bank
+                        color: _filterBank == null
                             ? palette.accentText.withValues(alpha: 0.6)
                             : palette.divider12,
                         width: 0.8,
                       ),
-                      onSelected: (selected) {
-                        setState(() => _filterBank = selected ? bank : null);
-                      },
+                      onSelected: (_) => setState(() => _filterBank = null),
                     ),
+                    for (final bank in sortedBanks) ...[
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: Text(
+                          bank,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: _filterBank == bank
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: _filterBank == bank
+                                ? palette.accentText
+                                : palette.text70,
+                          ),
+                        ),
+                        selected: _filterBank == bank,
+                        selectedColor:
+                            palette.accentText.withValues(alpha: 0.2),
+                        backgroundColor: palette.divider10,
+                        side: BorderSide(
+                          color: _filterBank == bank
+                              ? palette.accentText.withValues(alpha: 0.6)
+                              : palette.divider12,
+                          width: 0.8,
+                        ),
+                        onSelected: (selected) {
+                          setState(() => _filterBank = selected ? bank : null);
+                        },
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-
-            const Divider(height: 12),
+              const Divider(height: 12),
+            ],
 
             // Standings Leaderboard List
             Expanded(

@@ -133,6 +133,16 @@ class _ChatRichTextState extends State<ChatRichText> {
     }
 
     if (span.math) {
+      if (RegExp(r'[\u0980-\u09FF]').hasMatch(span.text)) {
+        return TextSpan(
+          text: cleanBengaliMath(span.text),
+          style: base.copyWith(
+            fontWeight: FontWeight.w600,
+            fontFamily: 'NotoSansBengali',
+            fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
+          ),
+        );
+      }
       return WidgetSpan(
         alignment: PlaceholderAlignment.middle,
         child: Padding(
@@ -272,6 +282,84 @@ class _ChatRichTextState extends State<ChatRichText> {
     );
   }
 
+  Widget _buildBlock(ChatBlock block, TextStyle base) {
+    if (block is ChatParagraphBlock) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final line in block.lines) _buildLine(line, base),
+        ],
+      );
+    } else if (block is ChatHeadingBlock) {
+      return _buildHeading(block, base);
+    } else if (block is ChatListBlock) {
+      return _buildList(block, base);
+    } else if (block is ChatQuoteBlock) {
+      return _buildQuote(block, base);
+    } else if (block is ChatTableBlock) {
+      return ChatTableWidget(
+        table: block,
+        baseStyle: base,
+        revealed: _internalRevealed,
+        onSpoiler: _handleSpoiler,
+        isMine: widget.isMine,
+        title: widget.tableTitle,
+        onPinNotice: widget.onPinNotice,
+        onImportLedger: widget.onImportLedger,
+      );
+    } else if (block is ChatCodeBlock) {
+      return ChatCodeBlockWidget(
+        code: block.code,
+        language: block.language,
+      );
+    } else if (block is ChatMathBlock) {
+      if (RegExp(r'[\u0980-\u09FF]').hasMatch(block.latex)) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Text(
+            cleanBengaliMath(block.latex),
+            style: base.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              fontFamily: 'NotoSansBengali',
+              fontFamilyFallback: const [
+                'HindSiliguri',
+                'Roboto',
+                'sans-serif'
+              ],
+            ),
+          ),
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Math.tex(
+            block.latex,
+            mathStyle: MathStyle.display,
+            textStyle: base,
+            onErrorFallback: (_) => Text(
+              r'$$' + block.latex + r'$$',
+              style: base.copyWith(fontFamily: 'monospace'),
+            ),
+          ),
+        ),
+      );
+    } else if (block is ChatDividerBlock) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Divider(
+          height: 1,
+          thickness: 1,
+          color: context.forest.divider12,
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
   Widget _buildQuote(ChatQuoteBlock block, TextStyle base) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
@@ -283,12 +371,15 @@ class _ChatRichTextState extends State<ChatRichText> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final line in block.lines)
-            Text.rich(
-              TextSpan(
-                children: [for (final span in line.spans) _span(span, base)],
+          if (block.blocks.isNotEmpty)
+            for (final inner in block.blocks) _buildBlock(inner, base)
+          else
+            for (final line in block.lines)
+              Text.rich(
+                TextSpan(
+                  children: [for (final span in line.spans) _span(span, base)],
+                ),
               ),
-            ),
         ],
       ),
     );
@@ -315,57 +406,7 @@ class _ChatRichTextState extends State<ChatRichText> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final block in blocks) ...[
-          if (block is ChatParagraphBlock)
-            for (final line in block.lines) _buildLine(line, base)
-          else if (block is ChatHeadingBlock)
-            _buildHeading(block, base)
-          else if (block is ChatListBlock)
-            _buildList(block, base)
-          else if (block is ChatQuoteBlock)
-            _buildQuote(block, base)
-          else if (block is ChatTableBlock)
-            ChatTableWidget(
-              table: block,
-              baseStyle: base,
-              revealed: _internalRevealed,
-              onSpoiler: _handleSpoiler,
-              isMine: widget.isMine,
-              title: widget.tableTitle,
-              onPinNotice: widget.onPinNotice,
-              onImportLedger: widget.onImportLedger,
-            )
-          else if (block is ChatCodeBlock)
-            ChatCodeBlockWidget(
-              code: block.code,
-              language: block.language,
-            )
-          else if (block is ChatMathBlock)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Math.tex(
-                  block.latex,
-                  mathStyle: MathStyle.display,
-                  textStyle: base,
-                  onErrorFallback: (_) => Text(
-                    r'$$' + block.latex + r'$$',
-                    style: base.copyWith(fontFamily: 'monospace'),
-                  ),
-                ),
-              ),
-            )
-          else if (block is ChatDividerBlock)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Divider(
-                height: 1,
-                thickness: 1,
-                color: context.forest.divider12,
-              ),
-            ),
-        ],
+        for (final block in blocks) _buildBlock(block, base),
       ],
     );
 

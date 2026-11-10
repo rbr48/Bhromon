@@ -92,11 +92,13 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   StreamSubscription<List<StudyChapter>>? _chapterSub;
   StreamSubscription<Map<String, StudyReadMark>>? _markSub;
   StreamSubscription<List<StudyMaterial>>? _materialsSub;
+  StreamSubscription<List<TourMember>>? _membersSub;
 
   TourRole? _myRole;
   List<StudyChapter> _chapters = const [];
   Map<String, StudyReadMark> _marks = const {};
   List<StudyMaterial> _materials = const [];
+  List<TourMember> _members = const [];
   bool _loaded = false;
   bool _failed = false;
 
@@ -151,8 +153,25 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       (materials) {
         if (mounted) setState(() => _materials = materials);
       },
-      onError: (Object _) {},
+      onError: (Object _) {
+        // Safe fallback if study materials stream errors.
+      },
     );
+    try {
+      _membersSub = _repository.watchMembers(widget.tourId).listen(
+        (members) {
+          if (mounted) {
+            setState(() => _members = members);
+            _refreshStreak();
+          }
+        },
+        onError: (Object _) {
+          // Safe fallback if tour members stream errors.
+        },
+      );
+    } catch (_) {
+      // Safe fallback when running in widget tests or preview mode without Firebase.
+    }
     _position
         .load(tourId: widget.tourId, bookId: widget.book.id)
         .then((number) {
@@ -286,17 +305,21 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         // Safe to fall back when running in unit tests or preview mode.
         myEmail = '';
       }
-      final standings = StudyDailyStreakRules.fallbackStandings(
+      final standings = StudyDailyStreakRules.fromTourMembers(
+        members: _members,
         myEmail: myEmail,
         myName: myEmail.isNotEmpty ? myEmail.split('@').first : 'You',
         myStreak: streak.currentStreak > 0 ? streak.currentStreak : 1,
         myChapters: _marks.length,
+        groupName: widget.book.title,
       );
       setState(() {
         _dailyStreak = streak;
         _standings = standings;
       });
-    }).catchError((Object _) {});
+    }).catchError((Object _) {
+      // Safe fallback if active days log fails to load.
+    });
   }
 
   @override
@@ -304,6 +327,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     _chapterSub?.cancel();
     _markSub?.cancel();
     _materialsSub?.cancel();
+    _membersSub?.cancel();
     super.dispose();
   }
 
@@ -628,26 +652,63 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       return;
     }
 
+    var isCancelled = false;
     showDialog<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: context.forest.card,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                l10n.translate('study_generating_booklet'),
-                style: TextStyle(color: context.forest.text),
-              ),
-            ],
+      barrierDismissible: true,
+      builder: (dialogCtx) => PopScope(
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) {
+            isCancelled = true;
+          }
+        },
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: context.forest.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.forest.divider12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(color: AppColors.mintGreen),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.translate('study_generating_booklet'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'প্রশ্নোত্তর বুকলেট প্রস্তুত হচ্ছে...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.forest.text70,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () {
+                    isCancelled = true;
+                    Navigator.of(dialogCtx).pop();
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text('বাতিল / Cancel'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.forest.text54,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -659,14 +720,23 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         solutionTexts.addAll(_cachedPackage!.contents);
       }
 
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+          sendTimeout: const Duration(seconds: 4),
+        ),
+      );
+
       for (final m in _materials) {
+        if (isCancelled) return;
         if (!solutionTexts.containsKey(m.id)) {
           if (m.body != null && m.body!.isNotEmpty) {
             solutionTexts[m.id] = m.body!;
           } else if (m.url != null && m.url!.isNotEmpty) {
             try {
               final targetUrl = signedMediaUrl(m.url!);
-              final response = await Dio().get<String>(
+              final response = await dio.get<String>(
                 targetUrl,
                 options: Options(responseType: ResponseType.plain),
               );
@@ -680,17 +750,24 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         }
       }
 
+      if (isCancelled) return;
+
       String tourName = 'Banking Exam Study Circle';
       String? inviteCode;
       try {
-        final group = await _repository.watchGroup(widget.tourId).first;
+        final group = await _repository
+            .watchGroup(widget.tourId)
+            .first
+            .timeout(const Duration(seconds: 2));
         if (group != null) {
           tourName = group.name;
           inviteCode = group.inviteCode;
         }
       } catch (_) {
-        // Safe fallback when tour group details cannot be read.
+        // Safe fallback when tour group details cannot be read or time out.
       }
+
+      if (isCancelled) return;
 
       final content = StudyBookletPdfGenerator.extractContent(
         subjectTitle: widget.book.title,
@@ -704,10 +781,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       );
 
       const generator = StudyBookletPdfGenerator();
-      final pdfBytes =
-          await generator.generateBookletPdf(content, isBengali: isBengali);
+      final pdfBytes = await generator
+          .generateBookletPdf(content, isBengali: isBengali)
+          .timeout(const Duration(seconds: 15));
 
-      if (mounted) {
+      if (!isCancelled && mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         await PdfViewerScreen.open(
           context,
@@ -718,7 +796,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!isCancelled && mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to generate booklet: $e')),
@@ -729,26 +807,63 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   Future<void> _generateAndOpenBranchPoster() async {
     final l10n = context.l10n;
+    var isCancelled = false;
     showDialog<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: context.forest.card,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                l10n.translate('study_generating_poster'),
-                style: TextStyle(color: context.forest.text),
-              ),
-            ],
+      barrierDismissible: true,
+      builder: (dialogCtx) => PopScope(
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) {
+            isCancelled = true;
+          }
+        },
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: context.forest.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.forest.divider12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(color: AppColors.mintGreen),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.translate('study_generating_poster'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'পোস্টার তৈরি হচ্ছে...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.forest.text70,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () {
+                    isCancelled = true;
+                    Navigator.of(dialogCtx).pop();
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text('বাতিল / Cancel'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.forest.text54,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -759,15 +874,20 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       String? tourDescription;
       String? inviteCode;
       try {
-        final group = await _repository.watchGroup(widget.tourId).first;
+        final group = await _repository
+            .watchGroup(widget.tourId)
+            .first
+            .timeout(const Duration(seconds: 2));
         if (group != null) {
           tourName = group.name;
           tourDescription = group.description;
           inviteCode = group.inviteCode;
         }
       } catch (_) {
-        // Safe fallback when tour group details cannot be read.
+        // Safe fallback when tour group details cannot be read or time out.
       }
+
+      if (isCancelled) return;
 
       final content = StudyBookletContent(
         subjectTitle: widget.book.title,
@@ -779,9 +899,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       );
 
       const generator = StudyBookletPdfGenerator();
-      final pdfBytes = await generator.generateBranchNoticePoster(content);
+      final pdfBytes = await generator
+          .generateBranchNoticePoster(content)
+          .timeout(const Duration(seconds: 15));
 
-      if (mounted) {
+      if (!isCancelled && mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         await PdfViewerScreen.open(
           context,
@@ -791,7 +913,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!isCancelled && mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to generate poster: $e')),

@@ -313,3 +313,32 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - 6 new translation keys in English and Bengali with 100% dictionary parity.
   - Unit tests in `study_booklet_pdf_generator_test.dart` (3/3 passing).
   - Monotonic version bump to `1.8.182+236`.
+
+---
+
+### Track T: Real Study Group Members Hall, Markdown Typography Hardening & Language Toggle
+- [x] **Task T1: Connect Study Hall to Real Circle Members Only (`study_daily_streak_rules.dart`, `study_book_chapters_screen.dart`, `branch_study_hall_sheet.dart`)**:
+  - Replaced synthetic mock banker profiles with real `TourMember`s from `watchMembers(tourId)`.
+  - Accurately compute standings for live circle members with their real names, roles, and streak stats.
+  - Removed all fabricated banker profiles (`Tahmina Akhter`, `Mahmudul Hasan`, etc.).
+- [x] **Task T2: Complex Bengali Script Protection in Formulas & Tables (`chat_markdown.dart`, `chat_rich_text.dart`, `chat_table_widget.dart`)**:
+  - In `_autoWrapRawLatex`, skip wrapping into `$ ... $` if text contains Bengali Unicode characters (`\u0980-\u09FF`) to prevent `flutter_math_fork` font shaping failures.
+  - In `ChatRichText` and `ChatTableWidget`, render Bengali-containing math spans with native text typography (`NotoSansBengali` / `HindSiliguri`) eliminating all Unicode dotted circles (`◌`, U+25CC) and broken ligatures.
+  - Added `cleanBengaliMath` helper converting LaTeX fractions with Bengali script to clean Unicode math expressions.
+- [x] **Task T3: Corrupted Right Arrow & Markdown Pipe Table Normalization (`chat_markdown.dart`)**:
+  - Normalized corrupted `\$ \n ightarrow\$`, `\rightarrow`, and `\implies` into clean Unicode arrow `→`.
+  - Ensured markdown tables preceded immediately by headings or enclosed within callouts/blockquotes are properly recognized and parsed into `ChatTableBlock`.
+  - Added horizontal minimum width constraint (`minWidth: 55`) in `ChatTableWidget` cells to prevent column squishing.
+- [x] **Task T4: Bangla/English Language Switch Button Fix (`markdown_viewer_screen.dart`)**:
+  - Resolved bug where the switch button perpetually displayed `[🇧🇩 বাংলা]` regardless of active language.
+  - Corrected target language detection using `widget.alternateLanguageLabel`, titles, and character frequencies (`_isPrimaryBangla`).
+  - Added responsive tooltip (`viewer_switch_language`) and scroll reset on switch.
+  - Added unit test in `document_viewers_test.dart` verifying dynamic button toggling.
+- [x] **Task T5: PDF Booklet Generation Non-Blocking Fix & Web Integration (`study_book_chapters_screen.dart`, `web/index.html`)**:
+  - Made the booklet generation modal dismissible (`barrierDismissible: true`) with an explicit "বাতিল / Cancel" button and cancellation flag.
+  - Added network timeouts (4s each) to `Dio().get` calls and a 2s timeout to `_repository.watchGroup`.
+  - Added `pdf.js` CDN scripts to `web/index.html` ensuring `pdfx` initializes correctly on Flutter Web.
+- [x] **Task T6: Automated Tests, Dual-Agent Review Gate & Version Bump**:
+  - Verified 0 issues across `dart analyze`.
+  - Verified all tests passing in `document_viewers_test.dart` (16/16), `study_chapter_screens_test.dart`, `chat_markdown_test.dart`, `chat_rich_text_test.dart`, `study_daily_streak_rules_test.dart`, and `study_daily_streak_test.dart`.
+  - Monotonic version increment to `1.8.183+237`.

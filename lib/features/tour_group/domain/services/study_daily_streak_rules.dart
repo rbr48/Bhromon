@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import '../models/study_streak_models.dart';
+import '../models/tour_group.dart';
 
 /// Business rules and deterministic algorithms for Daily Study Streaks and Branch Study Hall accountability.
 class StudyDailyStreakRules {
@@ -138,6 +139,82 @@ class StudyDailyStreakRules {
     return [
       for (int i = 0; i < sorted.length; i++) sorted[i].copyWith(rank: i + 1),
     ];
+  }
+
+  /// Builds study standings exclusively from real members of the study circle.
+  /// Never injects fabricated or synthetic banker profiles.
+  static List<BranchStudyStanding> fromTourMembers({
+    required List<TourMember> members,
+    required String myEmail,
+    required String myName,
+    int myStreak = 1,
+    int myChapters = 0,
+    int myExams = 0,
+    String? groupName,
+  }) {
+    final normalizedMyEmail = myEmail.toLowerCase().trim();
+    final results = <BranchStudyStanding>[];
+    var foundMe = false;
+
+    for (final member in members) {
+      final email = member.email.toLowerCase().trim();
+      final isMe = normalizedMyEmail.isNotEmpty && email == normalizedMyEmail;
+      if (isMe) foundMe = true;
+
+      final roleLabel = switch (member.role) {
+        TourRole.owner => 'Group Lead (Owner)',
+        TourRole.admin => 'Study Lead (Admin)',
+        TourRole.member => 'Member',
+      };
+
+      final name = isMe
+          ? (myName.isNotEmpty
+              ? myName
+              : (member.displayName.isNotEmpty ? member.displayName : 'You'))
+          : (member.displayName.isNotEmpty
+              ? member.displayName
+              : (email.contains('@') ? email.split('@').first : 'Member'));
+
+      final circleBank = (groupName != null && groupName.isNotEmpty)
+          ? groupName
+          : (member.tourName.isNotEmpty
+              ? member.tourName
+              : 'JAIBB Study Circle');
+
+      results.add(
+        BranchStudyStanding(
+          email: email,
+          displayName: name,
+          bankName: circleBank,
+          branchName: roleLabel,
+          streakDays: isMe ? myStreak : 0,
+          chaptersRead: isMe ? myChapters : 0,
+          mockExamsAttempted: isMe ? myExams : 0,
+          isCurrentUser: isMe,
+          lastActive: isMe ? DateTime.now() : member.joinedAt,
+        ),
+      );
+    }
+
+    if (!foundMe && normalizedMyEmail.isNotEmpty) {
+      results.add(
+        BranchStudyStanding(
+          email: normalizedMyEmail,
+          displayName: myName.isNotEmpty ? myName : 'You',
+          bankName: (groupName != null && groupName.isNotEmpty)
+              ? groupName
+              : 'JAIBB Study Circle',
+          branchName: 'Member',
+          streakDays: myStreak,
+          chaptersRead: myChapters,
+          mockExamsAttempted: myExams,
+          isCurrentUser: true,
+          lastActive: DateTime.now(),
+        ),
+      );
+    }
+
+    return rankStandings(results);
   }
 
   /// Provides realistic peer benchmarks for banking candidates across major Bangladeshi banks.
