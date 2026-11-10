@@ -20,6 +20,7 @@ class StudyFlashcard {
     required this.dueOn,
     this.box = StudyFlashcardLimits.boxMin,
     this.termId,
+    this.moduleCode,
   });
 
   final String id;
@@ -42,7 +43,11 @@ class StudyFlashcard {
   /// The glossary term the card came from, or null when the member wrote it.
   final String? termId;
 
-  StudyFlashcard copyWith({int? box, String? dueOn}) => StudyFlashcard(
+  /// The official IBB syllabus module code (e.g. 'A', 'B'), or null.
+  final String? moduleCode;
+
+  StudyFlashcard copyWith({int? box, String? dueOn, String? moduleCode}) =>
+      StudyFlashcard(
         id: id,
         deckId: deckId,
         front: front,
@@ -50,6 +55,7 @@ class StudyFlashcard {
         box: box ?? this.box,
         dueOn: dueOn ?? this.dueOn,
         termId: termId,
+        moduleCode: moduleCode ?? this.moduleCode,
       );
 
   /// The card as it is written to the device box or to a deck file.
@@ -61,6 +67,7 @@ class StudyFlashcard {
         'box': box,
         'dueOn': dueOn,
         if (termId != null) 'termId': termId,
+        if (moduleCode != null) 'moduleCode': moduleCode,
       };
 
   /// Reads one card. Returns null when a text is blank, the box is out of range, or the due day
@@ -73,6 +80,7 @@ class StudyFlashcard {
     final box = (json['box'] as num?)?.toInt();
     final dueOn = json['dueOn'];
     final termId = json['termId'];
+    final moduleCode = json['moduleCode'];
     if (id is! String || id.isEmpty || deckId is! String) return null;
     if (front.isEmpty || back.isEmpty) return null;
     if (box == null ||
@@ -89,6 +97,8 @@ class StudyFlashcard {
       box: box,
       dueOn: dueOn,
       termId: termId is String && termId.isNotEmpty ? termId : null,
+      moduleCode:
+          moduleCode is String && moduleCode.isNotEmpty ? moduleCode : null,
     );
   }
 

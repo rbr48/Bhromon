@@ -378,6 +378,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       _LearningTool.flashcards => StudyFlashcardsScreen(
           book: widget.book,
           tourId: widget.tourId,
+          repository: _repository,
         ),
       _LearningTool.progress => StudyProgressScreen(
           tourId: widget.tourId,

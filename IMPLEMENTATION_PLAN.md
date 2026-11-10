@@ -221,15 +221,23 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ### Track M: Spaced-Repetition Flashcards Engine (Leitner Algorithm) (Feature 3)
-- [ ] **Task M1: Spaced Repetition Domain Models & Engine (`study_flashcard_engine.dart`)**:
-  - Implement 5-box Leitner algorithmic scheduler with deterministic review intervals (Box 1: 1 day, Box 2: 3 days, Box 3: 7 days, Box 4: 14 days, Box 5: 30 days).
-  - Extract key question-answer flashcard pairs from master solutions.
-- [ ] **Task M2: Interactive Flashcard Study Screen (`study_flashcards_screen.dart`)**:
-  - Flip-card animation (Front: Question & Marks, Back: Structured answer bullet points).
-  - Self-rating buttons: `Again (Hard)`, `Good (Medium)`, `Easy`.
-  - Progress tracker showing cards due today, learning, and mastered.
-- [ ] **Task M3: Widget & Engine Unit Tests**:
-  - Add tests in `study_flashcard_engine_test.dart`.
+- [x] **Task M1: Spaced Repetition Domain Models & Engine (`study_flashcard_rules.dart`, `study_flashcard_models.dart`)**:
+  - Implemented 5-box Leitner algorithmic scheduler with deterministic review intervals (Box 1: 1 day, Box 2: 2 days, Box 3: 4 days, Box 4: 8 days, Box 5: 16 days).
+  - Added 3-tier candidate rating enum `FlashcardRating` (`again`, `good`, `easy`) with corresponding box progression logic in `nextLeitnerBoxForRating`.
+  - Added optional `moduleCode` property to `StudyFlashcard` with JSON serialization round-trip support.
+- [x] **Task M2: Deterministic Card Extractor from Exam Solutions (`study_flashcard_extractor.dart`)**:
+  - Deterministic regex-based extraction of sub-questions `1(a)` / `১(ক)` and corresponding answers from past paper Markdown solutions.
+  - Automatic official syllabus module mapping via `StudySyllabusCatalog.identifyModule`.
+  - Deterministic SHA-256 card IDs to prevent duplicate card creation across multiple extractions.
+- [x] **Task M3: Interactive Flashcard Study Screen & Review (`study_flashcards_screen.dart`, `study_flashcard_review_screen.dart`)**:
+  - Tap-to-flip card interaction with module badges (`Mod A`, `Mod B`) and box indicator (`Box 1..5`).
+  - 3 self-rating assessment buttons: `Again` (resets to Box 1), `Good` (advances +1 Box), `Easy` (advances +2 Boxes).
+  - One-tap "Generate from Past Papers" action in `StudyFlashcardsScreen` reading published exam solutions.
+- [x] **Task M4: Unit & Widget Test Verification**:
+  - Added unit test suite in `study_flashcard_extractor_test.dart` (3/3 passing).
+  - Enriched `study_learning_rules_test.dart` with 3-tier rating and `moduleCode` JSON round-trip tests (all 31 tests passing).
+  - Preserved translation key parity in `tour_translation_test.dart` (all 9 tests passing).
+  - 0 analyzer issues, version bumped to `1.8.175+229`.
 
 ---
 
