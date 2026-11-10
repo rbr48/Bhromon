@@ -15,6 +15,7 @@ import '../../domain/models/study_material_models.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
+import '../../domain/services/study_solution_rules.dart';
 import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_pace_sheet.dart';
 import '../widgets/study/study_thread_composer.dart';
@@ -571,18 +572,19 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  void _openSolution(StudyMaterial material, StudyMaterial? alternate) {
-    final isBangla = material.title.contains('বাংলা') ||
-        material.title.contains('সমাধান') ||
-        (material.fileName?.toLowerCase().contains('bangla') ?? false);
+  /// Opens a solution in the reader. A note opens from its text, and a Markdown file from its address,
+  /// which the reader fetches. The other language pairs only when its text is a note.
+  void _openSolution(StudyMaterial material, StudyMaterial? other) {
+    final source = solutionSource(material, other);
     MarkdownViewerScreen.open(
       context,
       title: material.title,
-      rawContent: material.body ?? '',
+      rawContent: source.rawContent,
+      fileUrl: source.fileUrl,
       tourId: widget.tourId,
-      alternateRawContent: alternate?.body,
-      alternateTitle: alternate?.title,
-      alternateLanguageLabel: isBangla ? 'English' : 'বাংলা',
+      alternateRawContent: source.paired?.body,
+      alternateTitle: source.paired?.title,
+      alternateLanguageLabel: isBanglaSolution(material) ? 'English' : 'বাংলা',
     );
   }
 
@@ -594,18 +596,17 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     final overdue = isChapterOverdue(chapter, read: read, today: today);
     final here = _here == chapter.number;
 
+    // Only a solution the reader can open gets a one-tap button: a note with text, or a Markdown file.
     final chapterMaterials = _materials
-        .where((m) => m.chapterId == chapter.id && m.isPublished)
+        .where((m) =>
+            m.chapterId == chapter.id && m.isPublished && isReadableSolution(m))
         .toList();
 
     StudyMaterial? englishNote;
     StudyMaterial? banglaNote;
 
     for (final m in chapterMaterials) {
-      final isBangla = m.title.contains('বাংলা') ||
-          m.title.contains('সমাধান') ||
-          (m.fileName?.toLowerCase().contains('bangla') ?? false);
-      if (isBangla) {
+      if (isBanglaSolution(m)) {
         banglaNote ??= m;
       } else {
         englishNote ??= m;
