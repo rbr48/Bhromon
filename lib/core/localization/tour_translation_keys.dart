@@ -3286,6 +3286,21 @@ class TourTranslationKeys {
       'study_tier_legendary': 'Legendary Candidate',
       'study_streak_motivation':
           'Consistent daily revision is the #1 predictor of passing JAIBB/AIBB.',
+      'study_offline_vault_title': 'Offline Study Vault',
+      'study_offline_vault_cached_desc':
+          'Saved on device · {count} materials ({size}) · 100% Native',
+      'study_offline_vault_uncached_desc':
+          'Download full book & examiner-grade solutions for commute and zero-network banking study.',
+      'study_offline_save_button': 'Save Offline',
+      'study_offline_saved_badge': 'Offline Ready',
+      'study_offline_updating': 'Downloading solutions...',
+      'study_offline_success':
+          'Saved {count} solutions to offline vault ({size})',
+      'study_offline_update': 'Update Offline Cache',
+      'study_offline_remove': 'Remove from Device',
+      'study_offline_removed': 'Offline vault data removed from device',
+      'study_offline_empty_solutions':
+          'No solutions found to save for this book.',
       'study_material_title': 'Materials',
       'study_material_add': 'Add material',
       'study_material_empty':
@@ -6939,6 +6954,21 @@ class TourTranslationKeys {
       'study_tier_legendary': 'কিংবদন্তি পরীক্ষার্থী',
       'study_streak_motivation':
           'প্রতিদিনের নিয়মিত পুনরাবৃত্তিই ব্যাংকিং ডিপ্লোমা পরীক্ষায় প্রথমবারে পাসের মূল চাবিকাঠি।',
+      'study_offline_vault_title': 'অফলাইন স্টাডি ভল্ট',
+      'study_offline_vault_cached_desc':
+          'ডিভাইসে সংরক্ষিত · {count}টি সমাধান ({size}) · সম্পূর্ণ অফলাইন',
+      'study_offline_vault_uncached_desc':
+          'কমিউট ও দুর্বল নেটওয়ার্কেও নিরবচ্ছিন্ন প্রস্তুতির জন্য পুরো বই ও সমাধান অফলাইনে নামিয়ে রাখুন।',
+      'study_offline_save_button': 'অফলাইনে সংরক্ষণ',
+      'study_offline_saved_badge': 'অফলাইন প্রস্তুত',
+      'study_offline_updating': 'সমাধান ডাউনলোড হচ্ছে...',
+      'study_offline_success':
+          'অফলাইন ভল্টে {count}টি সমাধান সংরক্ষিত হয়েছে ({size})',
+      'study_offline_update': 'অফলাইন ক্যাশ আপডেট করুন',
+      'study_offline_remove': 'ডিভাইস থেকে মুছুন',
+      'study_offline_removed': 'ডিভাইস থেকে অফলাইন ভল্ট সরানো হয়েছে',
+      'study_offline_empty_solutions':
+          'এই বইয়ের জন্য কোনো সমাধান পাওয়া যায়নি।',
       'study_material_title': 'উপকরণ',
       'study_material_add': 'উপকরণ যোগ করুন',
       'study_material_empty':
