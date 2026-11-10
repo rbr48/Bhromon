@@ -144,8 +144,15 @@ Answer to question 2.
     });
 
     testWidgets(
-        'renders bilingual toggle and switches between English and Bangla solutions on tap',
+        'renders bilingual toggle and switches between English and Bangla solutions on tap on mobile',
         (tester) async {
+      tester.view.physicalSize = const Size(500, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(
         buildTestApp(
           const MarkdownViewerScreen(
@@ -166,6 +173,50 @@ Answer to question 2.
 
       expect(find.text('🇬🇧 English'), findsOneWidget);
       expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
+    });
+
+    testWidgets(
+        'renders dual-language synchronized split reader on wide screens and toggles mode',
+        (tester) async {
+      tester.view.physicalSize = const Size(1000, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: '98th BPE - Accounting (English)',
+            rawContent: '### Question 1\nEnglish answer here.',
+            alternateRawContent: '### প্রশ্ন ১\nবাংলা সমাধান এখানে।',
+            alternateTitle: '৯৮তম বিপিই - অ্যাকাউন্টিং (বাংলা)',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // In split view, both pane headers and content are visible concurrently
+      expect(find.text('🇬🇧 English Solution'), findsOneWidget);
+      expect(find.text('🇧🇩 বাংলা সমাধান'), findsOneWidget);
+      expect(find.textContaining('English answer here.'), findsOneWidget);
+      expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
+      expect(find.byIcon(Icons.view_agenda_outlined), findsOneWidget);
+
+      // Toggle to single-column mode
+      await tester.tap(find.byIcon(Icons.view_agenda_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.vertical_split_rounded), findsOneWidget);
+      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+
+      // Toggle back to split view
+      await tester.tap(find.byIcon(Icons.vertical_split_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('🇬🇧 English Solution'), findsOneWidget);
+      expect(find.text('🇧🇩 বাংলা সমাধান'), findsOneWidget);
     });
 
     testWidgets(
