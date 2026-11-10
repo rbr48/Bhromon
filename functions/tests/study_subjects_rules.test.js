@@ -320,9 +320,29 @@ describe('study subjects, modules and posts', () => {
       await assertSucceeds(setDoc(moduleRef(db('admin'), 'tips'), moduleSettings({ enabled: false })));
     });
 
-    test('a module that is not live yet cannot be turned on', async () => {
-      await assertFails(setDoc(moduleRef(db('admin'), 'papers'), moduleSettings()));
-      await assertFails(setDoc(moduleRef(db('admin'), 'assignments'), moduleSettings()));
+    test('a module the app does not know cannot be turned on', async () => {
+      await assertFails(setDoc(moduleRef(db('admin'), 'bogus'), moduleSettings()));
+      await assertFails(setDoc(moduleRef(db('admin'), 'papers-old'), moduleSettings()));
+    });
+
+    test('every module the app shows can be turned on', async () => {
+      for (const key of ['papers', 'assignments', 'discussion', 'plan', 'glossary', 'flashcards', 'quizzes']) {
+        await assertSucceeds(setDoc(moduleRef(db('admin'), key), moduleSettings({ name: key, enabled: false })));
+      }
+    });
+
+    test('an admin turns on past papers, and a member posts a paper with a link', async () => {
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'papers'), moduleSettings({ name: 'Past papers' })));
+      await assertSucceeds(
+        setDoc(postRef(db('member'), 'papers', 'paper1'), newPost(people.member.email, { title: 'Final 2025', url: 'https://x.org/final.pdf' }))
+      );
+      await assertFails(
+        setDoc(postRef(db('member'), 'papers', 'paper2'), newPost(people.member.email, { title: 'Old', url: 'http://x.org/old.pdf' }))
+      );
+    });
+
+    test('a past paper is refused while past papers are off', async () => {
+      await assertFails(setDoc(postRef(db('member'), 'papers', 'paper3'), newPost(people.member.email, { title: 'Final 2025' })));
     });
 
     test('a post policy is one of the three', async () => {

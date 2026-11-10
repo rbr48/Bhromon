@@ -1,14 +1,14 @@
 import '../models/study_subject_models.dart';
 
-/// Which modules a viewer sees, in catalogue order. An admin sees every module, so an admin
-/// can turn on one that is not live yet. A member sees only the live modules that are on.
+/// Which modules a viewer sees, in catalogue order. An admin sees every module, so an admin can
+/// turn one on. A member sees only the modules that are on.
 List<StudyModuleKey> visibleStudyModules({
   required Map<StudyModuleKey, StudyModuleSettings> settings,
   required bool isAdmin,
 }) =>
     [
       for (final key in StudyModuleKey.values)
-        if (isAdmin || (key.isLive && (settings[key]?.enabled ?? false))) key,
+        if (isAdmin || (settings[key]?.enabled ?? false)) key,
     ];
 
 /// Whether a member may post in a module. Anyone may post in a module that is on, unless it

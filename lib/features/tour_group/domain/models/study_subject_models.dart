@@ -23,15 +23,6 @@ enum StudyModuleKey {
   flashcards,
   quizzes;
 
-  /// Whether the module is built in this version, so an admin can turn it on.
-  bool get isLive =>
-      this == StudyModuleKey.tips ||
-      this == StudyModuleKey.suggestions ||
-      this == StudyModuleKey.findings ||
-      this == StudyModuleKey.problems ||
-      this == StudyModuleKey.challenges ||
-      isBookModule;
-
   /// Whether the module shows the book its subject studies: its discussion, glossary, flashcards,
   /// quizzes, or the reading sessions planned for it. The subject must name a book for these.
   bool get isBookModule =>

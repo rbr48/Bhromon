@@ -5,13 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// The module settings card: its title and buttons stay in view while the list scrolls, every live module
-// is an option, the modules not built yet are disabled and marked coming soon, a book module has no posting
-// policy, and Cancel and Save behave as their names say.
+// The module settings card: its title and buttons stay in view while the list scrolls, every module is an option
+// that can be turned on (none is marked coming soon), a book module has no posting policy, and Cancel and Save
+// behave as their names say.
 
-const _comingLabels = [
+// Every module the group can turn on, by its name in the sheet.
+const _moduleLabels = [
+  'Exam tips',
+  'Suggestions',
+  'Discussion',
+  'Shared findings',
+  'Problem solving',
   'Past papers',
+  'Study plan',
+  'Glossary',
   'Assignments',
+  'Weekly challenge',
+  'Flashcards',
+  'Quizzes',
 ];
 
 Future<void> _open(
@@ -66,18 +77,18 @@ void main() {
   });
 
   testWidgets(
-      'every module not built yet is an option: disabled, and marked coming soon',
+      'every module is an option that can be turned on, and none is marked coming soon',
       (tester) async {
     await _open(tester, const {}, (_) {});
 
-    for (final label in _comingLabels) {
+    for (final label in _moduleLabels) {
       final tile = tester.widget<SwitchListTile>(
         find.widgetWithText(SwitchListTile, label),
       );
-      expect(tile.onChanged, isNull, reason: label);
+      expect(tile.onChanged, isNotNull, reason: label);
       expect(tile.value, isFalse, reason: label);
     }
-    expect(find.text('Coming soon'), findsNWidgets(_comingLabels.length));
+    expect(find.text('Coming soon'), findsNothing);
   });
 
   testWidgets(
@@ -85,8 +96,8 @@ void main() {
       (tester) async {
     await _open(tester, const {}, (_) {});
 
-    // The five modules that keep their own posts have a policy; the five book modules do not.
-    expect(find.text('Who can post'), findsNWidgets(5));
+    // The seven modules that keep their own posts have a policy; the five book modules do not.
+    expect(find.text('Who can post'), findsNWidgets(7));
     expect(find.textContaining('open this book'), findsNWidgets(5));
     for (final label in [
       'Discussion',
@@ -116,7 +127,7 @@ void main() {
     expect(find.text('Modules'), findsNothing);
   });
 
-  testWidgets('Save returns every live module with its switch and its name',
+  testWidgets('Save returns every module with its switch and its name',
       (tester) async {
     List<StudyModuleSettings>? result;
     await _open(
@@ -147,7 +158,8 @@ void main() {
     expect(byKey[StudyModuleKey.tips]!.name, 'Exam tips');
     expect(byKey[StudyModuleKey.problems]!.enabled, isTrue);
     expect(byKey[StudyModuleKey.problems]!.name, 'Problem solving');
-    // A module not built yet is never part of what gets saved.
-    expect(byKey.containsKey(StudyModuleKey.papers), isFalse);
+    // Every module is saved with its switch as the admin left it.
+    expect(result, hasLength(StudyModuleKey.values.length));
+    expect(byKey[StudyModuleKey.papers]!.enabled, isFalse);
   });
 }

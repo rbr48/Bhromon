@@ -13,6 +13,7 @@ import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_module_sheet.dart';
 import '../widgets/study/study_today_card.dart';
+import 'study_assignments_screen.dart';
 import 'study_challenge_screen.dart';
 import 'study_discussion_screen.dart';
 import 'study_findings_screen.dart';
@@ -136,6 +137,12 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
           repository: _repository,
         ),
       StudyModuleKey.problems => StudyProblemsScreen(
+          tourId: widget.tourId,
+          subject: widget.subject,
+          settings: settings,
+          repository: _repository,
+        ),
+      StudyModuleKey.assignments => StudyAssignmentsScreen(
           tourId: widget.tourId,
           subject: widget.subject,
           settings: settings,
@@ -339,12 +346,13 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         StudyModuleKey.findings => Icons.fact_check_rounded,
         StudyModuleKey.problems => Icons.assignment_rounded,
         StudyModuleKey.challenges => Icons.flag_rounded,
+        StudyModuleKey.papers => Icons.description_rounded,
+        StudyModuleKey.assignments => Icons.assignment_turned_in_rounded,
         StudyModuleKey.discussion => Icons.forum_rounded,
         StudyModuleKey.glossary => Icons.menu_book_rounded,
         StudyModuleKey.flashcards => Icons.style_rounded,
         StudyModuleKey.quizzes => Icons.quiz_rounded,
         StudyModuleKey.plan => Icons.event_note_rounded,
-        _ => Icons.extension_rounded,
       };
 
   /// A module's settings when an admin has turned it on, or null when it is off or not set up.
@@ -357,7 +365,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
   }
 
   /// One module. A live module that is on opens its posts, and a book module opens the subject's
-  /// book. An admin also sees the modules that are off, and which are still coming.
+  /// book. An admin also sees the modules that are off.
   Widget _moduleTile(
     StudyModuleKey key,
     StudyModuleSettings? settings, {
@@ -367,10 +375,8 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final on = settings?.enabled ?? false;
-    final openable = settings != null &&
-        key.isLive &&
-        on &&
-        (!key.isBookModule || book != null);
+    final openable =
+        settings != null && on && (!key.isBookModule || book != null);
     final name = settings?.name ?? l10n.translate(studyModuleLabelKey(key));
     String? note;
     if (key.isBookModule && on) {
@@ -381,8 +387,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         note = l10n.translate('study_subject_book_needed');
       }
     } else if (!on && _isAdmin) {
-      note = l10n.translate(
-          key.isLive ? 'study_module_off' : 'study_module_coming_soon');
+      note = l10n.translate('study_module_off');
     }
     return Card(
       color: palette.card,

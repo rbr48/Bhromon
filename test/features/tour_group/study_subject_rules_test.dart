@@ -47,7 +47,7 @@ void main() {
       expect(visible, StudyModuleKey.values);
     });
 
-    test('a member sees only the live modules that are on', () {
+    test('a member sees only the modules that are on, in catalogue order', () {
       final visible = visibleStudyModules(
         settings: {
           StudyModuleKey.tips: _module(StudyModuleKey.tips),
@@ -57,7 +57,7 @@ void main() {
         },
         isAdmin: false,
       );
-      expect(visible, [StudyModuleKey.tips]);
+      expect(visible, [StudyModuleKey.tips, StudyModuleKey.papers]);
     });
 
     test('a member sees nothing when no module is on', () {
@@ -288,25 +288,16 @@ void main() {
 
   group('modules and posts as stored', () {
     test(
-        'the posts, findings, problems, challenges and book modules are live; the rest are coming',
+        'every module the app shows is one the group can turn on, past papers and assignments among them',
         () {
-      final live = StudyModuleKey.values.where((k) => k.isLive).toList();
-      expect(live, [
-        StudyModuleKey.tips,
-        StudyModuleKey.suggestions,
-        StudyModuleKey.discussion,
-        StudyModuleKey.findings,
-        StudyModuleKey.problems,
-        StudyModuleKey.plan,
-        StudyModuleKey.glossary,
-        StudyModuleKey.challenges,
-        StudyModuleKey.flashcards,
-        StudyModuleKey.quizzes,
-      ]);
+      expect(StudyModuleKey.values, hasLength(12));
       expect(
-        StudyModuleKey.values.where((k) => !k.isLive).toList(),
-        [StudyModuleKey.papers, StudyModuleKey.assignments],
+        StudyModuleKey.values,
+        containsAll([StudyModuleKey.papers, StudyModuleKey.assignments]),
       );
+      expect(
+          StudyModuleKey.fromName('assignments'), StudyModuleKey.assignments);
+      expect(StudyModuleKey.fromName('papers-old'), isNull);
     });
 
     test(

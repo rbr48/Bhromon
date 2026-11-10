@@ -51,7 +51,7 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list, reading plan, subjects, tips, suggestions, findings, problems, problem sets and weekly
+ *   list, and the study book list, reading plan, subjects, tips, suggestions, past papers, assignments, findings, problems, problem sets and weekly
  *   challenges) keeps its amounts and dates. A challenge loses the person's join only.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
@@ -144,6 +144,7 @@ const STUDY_SUBJECT: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A tip or a suggestion in a subject: who posted it. */
 const STUDY_POST: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_FINDING: AnonymizePlan = { emails: ['createdByEmail'] };
+const STUDY_ASSIGNMENT: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM: AnonymizePlan = { emails: ['createdByEmail'] };
 const STUDY_PROBLEM_SET: AnonymizePlan = { emails: ['createdByEmail'] };
 /** A member's own due date for a problem set: who set it, for the admin who set it. */
@@ -513,7 +514,7 @@ export async function purgeMemberContent(
   // helpful marks come out, and each post's count drops by the mark removed.
   const subjects = await tour.collection('study_subjects').get();
   for (const subject of subjects.docs) {
-    for (const kind of ['tips', 'suggestions']) {
+    for (const kind of ['tips', 'suggestions', 'papers']) {
       const posts = subject.ref.collection(kind);
       await applyToQuery(db, posts, anonymize(STUDY_POST, email, standIn));
       const docs = await posts.get();
@@ -527,6 +528,13 @@ export async function purgeMemberContent(
         await batch.commit();
       }
     }
+
+    // Assignments keep their words and due days under the stand-in. The person's finished marks are one document of
+    // their own, which comes out.
+    const assignments = subject.ref.collection('assignments');
+    await applyToQuery(db, assignments, anonymize(STUDY_ASSIGNMENT, email, standIn));
+    const finishedMarks = subject.ref.collection('assignment_marks').doc(email);
+    if ((await finishedMarks.get()).exists) await finishedMarks.delete();
 
     // Shared findings keep their words under the stand-in. The person's checks and reports come out, and
     // each finding's count drops by the one removed, so the counts stay true.

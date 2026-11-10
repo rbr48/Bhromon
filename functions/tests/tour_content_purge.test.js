@@ -215,6 +215,51 @@ async function seed() {
   await set(`tours/${TOUR}/study_subjects/subj_leaver/tips/tip_other/helpful/third@x.com`, {
     createdAt: new Date('2026-11-02T10:00:00Z'),
   });
+  // Past papers in the same subject: a paper the leaver added, and another member's that the leaver found helpful.
+  // The leaver's words stay under the stand-in, and their helpful mark comes out with the count falling by one.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_leaver`, {
+    text: 'Final exam 2025, both papers.',
+    title: 'Final 2025',
+    url: 'https://x.org/final-2025.pdf',
+    createdByEmail: LEAVER,
+    helpfulCount: 0,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other`, {
+    text: 'Mid-term 2024.',
+    title: 'Mid-term 2024',
+    url: null,
+    createdByEmail: OTHER,
+    helpfulCount: 1,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other/helpful/${LEAVER}`, {
+    createdAt: new Date('2026-11-02T09:30:00Z'),
+  });
+  // Assignments in the same subject: one the leaver added, and another member's that the leaver finished, and
+  // a third member finished too. Each member's finished ids are one document of their own.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/assignments/as_leaver`, {
+    title: 'Lab report 3',
+    details: 'Two pages on the bench results.',
+    url: null,
+    dueAt: new Date('2026-12-20T00:00:00Z'),
+    shown: true,
+    createdByEmail: LEAVER,
+    createdAt: new Date('2026-11-02T10:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/assignments/as_other`, {
+    title: 'Reading for week 5',
+    details: null,
+    url: null,
+    dueAt: null,
+    shown: true,
+    createdByEmail: OTHER,
+    createdAt: new Date('2026-11-03T10:00:00Z'),
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/assignment_marks/${LEAVER}`, { done: ['as_other'] });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/assignment_marks/third@x.com`, { done: ['as_other'] });
   // Shared findings in the same subject: one the leaver posted, and another member's that the leaver
   // confirmed and a third member challenged. The leaver's check comes out and the counts follow it.
   await set(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_leaver`, {
@@ -868,6 +913,30 @@ describe('tour content purge', () => {
     expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/findings/fd_reported`)).toMatchObject({
       reportCount: 1,
       shown: false,
+    });
+    // Past papers keep their words under the stand-in. The leaver's helpful mark on another member's paper comes out,
+    // and that paper's count falls by one.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_leaver`)).toMatchObject({
+      title: 'Final 2025',
+      createdByEmail: STAND_IN,
+    });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other/helpful/${LEAVER}`)).toBe(false);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other`)).toMatchObject({
+      createdByEmail: OTHER,
+      helpfulCount: 0,
+    });
+    // Assignments keep their words and due days under the stand-in. The leaver's finished ids come out with their
+    // document; another member's stays as it was.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/assignments/as_leaver`)).toMatchObject({
+      title: 'Lab report 3',
+      createdByEmail: STAND_IN,
+    });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/assignment_marks/${LEAVER}`)).toBe(false);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/assignment_marks/third@x.com`)).toMatchObject({
+      done: ['as_other'],
+    });
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/assignments/as_other`)).toMatchObject({
+      createdByEmail: OTHER,
     });
     expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other/reports/${LEAVER}`)).toBe(false);
     expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/problems/pb_other`)).toMatchObject({ reportCount: 0 });

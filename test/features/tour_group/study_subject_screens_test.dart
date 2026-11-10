@@ -344,7 +344,7 @@ void main() {
     });
 
     testWidgets(
-        'an admin sees every module, the modules not yet built as coming soon, and can customise',
+        'an admin sees every module, each one a choice, and can customise',
         (tester) async {
       final repo = _FakeSubjectRepo(
         role: TourRole.admin,
@@ -358,10 +358,14 @@ void main() {
       expect(find.text('Exam tips'), findsOneWidget);
       expect(find.text('Suggestions'), findsOneWidget);
       expect(find.text('Discussion'), findsOneWidget);
-      // The modules not built yet sit at the foot of the list, so scroll them into view.
-      await tester.scrollUntilVisible(find.text('Past papers'), 300,
+      // The list is built as it scrolls, so the last modules are scrolled into view to check they are there.
+      await tester.scrollUntilVisible(find.text('Assignments'), 300,
           scrollable: find.byType(Scrollable).first);
-      expect(find.text('Coming soon'), findsWidgets);
+      expect(find.text('Assignments'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Quizzes'), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Quizzes'), findsOneWidget);
+      expect(find.text('Coming soon'), findsNothing);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
     });
     testWidgets(
@@ -500,6 +504,22 @@ void main() {
           repository: _FakeSubjectRepo(posts: posts),
         ),
       );
+      expect(find.text('Add a tip'), findsNothing);
+    });
+
+    testWidgets('past papers are added with their own label, and take a link',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyModulePostsScreen(
+          tourId: 'T',
+          subject: _physics,
+          moduleKey: StudyModuleKey.papers,
+          settings: _on(StudyModuleKey.papers, 'Past papers'),
+          repository: _FakeSubjectRepo(role: TourRole.admin),
+        ),
+      );
+      expect(find.text('Add a past paper'), findsOneWidget);
       expect(find.text('Add a tip'), findsNothing);
     });
 

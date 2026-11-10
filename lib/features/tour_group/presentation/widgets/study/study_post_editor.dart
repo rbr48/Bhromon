@@ -20,25 +20,38 @@ class StudyPostDraft {
   final String url;
 }
 
-/// Opens the editor for a post. [withLink] is true for a suggestion, which can carry a title
-/// and a link. [existing] is null for a new post. Returns what was saved, or null when
-/// cancelled.
+/// Opens the editor for a post. [withLink] is true for a suggestion or a past paper, which can
+/// carry a title and a link. [paper] names the post a past paper, so its words are the paper's.
+/// [existing] is null for a new post. Returns what was saved, or null when cancelled.
 Future<StudyPostDraft?> showStudyPostEditor(
   BuildContext context, {
   required bool withLink,
   StudyPost? existing,
+  bool paper = false,
 }) {
   return showStudyModal<StudyPostDraft>(
     context: context,
-    builder: (_) => StudyPostEditor(withLink: withLink, existing: existing),
+    builder: (_) => StudyPostEditor(
+      withLink: withLink,
+      existing: existing,
+      paper: paper,
+    ),
   );
 }
 
 class StudyPostEditor extends StatefulWidget {
-  const StudyPostEditor({super.key, required this.withLink, this.existing});
+  const StudyPostEditor({
+    super.key,
+    required this.withLink,
+    this.existing,
+    this.paper = false,
+  });
 
   final bool withLink;
   final StudyPost? existing;
+
+  /// Whether the post is a past paper.
+  final bool paper;
 
   @override
   State<StudyPostEditor> createState() => _StudyPostEditorState();
@@ -88,9 +101,11 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
         : null;
     final urlError =
         _tried && !_urlOk ? l10n.translate('study_post_url_invalid') : null;
-    final titleKey = widget.withLink
-        ? (_isNew ? 'study_post_add_suggestion' : 'study_post_edit_title')
-        : (_isNew ? 'study_post_add_tip' : 'study_post_edit_title');
+    final titleKey = widget.paper
+        ? (_isNew ? 'study_paper_add' : 'study_paper_edit_title')
+        : widget.withLink
+            ? (_isNew ? 'study_post_add_suggestion' : 'study_post_edit_title')
+            : (_isNew ? 'study_post_add_tip' : 'study_post_edit_title');
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -113,7 +128,9 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                   controller: _title,
                   style: TextStyle(color: palette.text),
                   decoration: InputDecoration(
-                    labelText: l10n.translate('study_post_title_label'),
+                    labelText: l10n.translate(widget.paper
+                        ? 'study_paper_title_label'
+                        : 'study_post_title_label'),
                   ),
                 ),
               StudyTextField(
@@ -122,9 +139,11 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                 minLines: 2,
                 maxLines: 6,
                 decoration: InputDecoration(
-                  labelText: l10n.translate(widget.withLink
-                      ? 'study_post_text_label_suggestion'
-                      : 'study_post_text_label_tip'),
+                  labelText: l10n.translate(widget.paper
+                      ? 'study_paper_text_label'
+                      : widget.withLink
+                          ? 'study_post_text_label_suggestion'
+                          : 'study_post_text_label_tip'),
                   errorText: textError,
                 ),
               ),
