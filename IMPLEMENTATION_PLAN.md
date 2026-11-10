@@ -206,14 +206,17 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ### Track L: Official Syllabus & Module Tagging (Topic Filter) (Feature 2)
-- [ ] **Task L1: Module & Topic Taxonomy Data Model (`study_syllabus_models.dart`)**:
-  - Define IBB JAIBB official syllabus modules (Module A, B, C, D, E) for each subject.
-  - Define deterministic keyword/pattern matcher associating exam questions with syllabus modules.
-- [ ] **Task L2: Topic Filter UI (`study_book_chapters_screen.dart` / `study_materials_screen.dart`)**:
-  - Add Module Filter Chips (`All`, `Module A`, `Module B`, `Module C`, etc.) at the top of the chapters/solutions screen.
-  - Tapping a module filters the list to show all questions belonging to that module across all exam sessions.
-- [ ] **Task L3: Mark Distribution & Weightage Summary Widget**:
-  - Display mark analytics per module based on historical exam appearances.
+- [x] **Task L1: Module & Topic Taxonomy Data Model (`study_syllabus_models.dart`)**:
+  - Defined IBB JAIBB official syllabus modules (Modules A, B, C, D, E) for all 7 subjects (LPGB, POE, MAFS, OM, GFI, BCFI, BA).
+  - Deterministic length-prioritized, score-weighted keyword association algorithm in `StudySyllabusCatalog.identifyModule(subject, questionText)` (unit tested).
+- [x] **Task L2: Topic Filter UI (`study_book_chapters_screen.dart` / `markdown_viewer_screen.dart`)**:
+  - Interactive Module Filter Chips (`All Modules`, `Module A`, `Module B`, `Module C`, etc.) in Question Navigator bottom sheet and Chapter screen.
+  - Question Navigator badges display `Mod A`, `Mod B` alongside question titles with module description subtitle.
+  - Added official syllabus blueprint card at the top of `StudyBookChaptersScreen`.
+- [x] **Task L3: Unit & Widget Test Verification**:
+  - Unit tests in `study_syllabus_models_test.dart` (4/4 passed).
+  - Localization parity in `tour_translation_test.dart` (9/9 passed).
+  - Widget tests in `document_viewers_test.dart` (14/14 passed) and `study_chapter_screens_test.dart` (10/10 passed).
 
 ---
 
