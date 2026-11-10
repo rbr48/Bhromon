@@ -94,7 +94,13 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   bool _showingAlternate = false;
   bool _isLoading = true;
   String? _errorMessage;
-  List<_MarkdownSection> _sections = const [];
+  bool? _userSplitOverride;
+  late final ScrollController _primaryScrollController;
+  late final ScrollController _alternateScrollController;
+  bool _isSyncingScroll = false;
+
+  List<_MarkdownSection> _primarySections = const [];
+  List<_MarkdownSection> _alternateSections = const [];
 
   String get _currentContent => _showingAlternate
       ? (widget.alternateRawContent ?? '')
@@ -108,10 +114,61 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       widget.alternateRawContent != null &&
       widget.alternateRawContent!.trim().isNotEmpty;
 
+  bool _isSplit(BuildContext context) {
+    if (!_hasAlternate) return false;
+    if (_userSplitOverride != null) return _userSplitOverride!;
+    return MediaQuery.sizeOf(context).width >= 720;
+  }
+
+  List<_MarkdownSection> get _sections =>
+      _showingAlternate ? _alternateSections : _primarySections;
+
   @override
   void initState() {
     super.initState();
+    _primaryScrollController = ScrollController();
+    _alternateScrollController = ScrollController();
+
+    _primaryScrollController.addListener(() {
+      if (!mounted || _isSyncingScroll) return;
+      if (!_isSplit(context)) return;
+      if (!_primaryScrollController.hasClients ||
+          !_alternateScrollController.hasClients) {
+        return;
+      }
+      final maxP = _primaryScrollController.position.maxScrollExtent;
+      final maxA = _alternateScrollController.position.maxScrollExtent;
+      if (maxP <= 0 || maxA <= 0) return;
+      _isSyncingScroll = true;
+      final ratio = _primaryScrollController.offset / maxP;
+      _alternateScrollController.jumpTo((ratio * maxA).clamp(0, maxA));
+      _isSyncingScroll = false;
+    });
+
+    _alternateScrollController.addListener(() {
+      if (!mounted || _isSyncingScroll) return;
+      if (!_isSplit(context)) return;
+      if (!_primaryScrollController.hasClients ||
+          !_alternateScrollController.hasClients) {
+        return;
+      }
+      final maxP = _primaryScrollController.position.maxScrollExtent;
+      final maxA = _alternateScrollController.position.maxScrollExtent;
+      if (maxP <= 0 || maxA <= 0) return;
+      _isSyncingScroll = true;
+      final ratio = _alternateScrollController.offset / maxA;
+      _primaryScrollController.jumpTo((ratio * maxP).clamp(0, maxP));
+      _isSyncingScroll = false;
+    });
+
     _loadContent();
+  }
+
+  @override
+  void dispose() {
+    _primaryScrollController.dispose();
+    _alternateScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadContent() async {
@@ -120,7 +177,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
         _primaryContent = widget.rawContent;
         _isLoading = false;
         _errorMessage = null;
-        _parseSections();
+        _parseAllSections();
       });
       return;
     }
@@ -139,7 +196,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
             setState(() {
               _primaryContent = text;
               _isLoading = false;
-              _parseSections();
+              _parseAllSections();
             });
             return;
           }
@@ -162,7 +219,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           setState(() {
             _primaryContent = response.data ?? '';
             _isLoading = false;
-            _parseSections();
+            _parseAllSections();
           });
           return;
         }
@@ -180,11 +237,15 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     }
   }
 
-  void _parseSections() {
-    final text = _currentContent;
+  void _parseAllSections() {
+    _primarySections = _parseSectionsForText(_primaryContent ?? '');
+    _alternateSections =
+        _parseSectionsForText(widget.alternateRawContent ?? '');
+  }
+
+  List<_MarkdownSection> _parseSectionsForText(String text) {
     if (text.isEmpty) {
-      _sections = const [];
-      return;
+      return const [];
     }
 
     // Pattern to detect Question headings or Exam section headers:
@@ -214,7 +275,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     }
 
     if (matches.isEmpty) {
-      _sections = [
+      return [
         _MarkdownSection(
           title: '',
           cleanTitle: '',
@@ -223,7 +284,6 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           isQuestion: false,
         ),
       ];
-      return;
     }
 
     final sections = <_MarkdownSection>[];
@@ -273,12 +333,87 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       );
     }
 
-    _sections = sections;
+    return sections;
+  }
+
+  int? _extractQuestionNumber(String text) {
+    final match =
+        RegExp(r'(?:Question|প্রশ্ন)\s*([\d০-৯]+)', caseSensitive: false)
+            .firstMatch(text);
+    if (match == null) return null;
+    final digits = match.group(1)!;
+    final normalized = digits
+        .replaceAll('০', '0')
+        .replaceAll('১', '1')
+        .replaceAll('২', '2')
+        .replaceAll('৩', '3')
+        .replaceAll('৪', '4')
+        .replaceAll('৫', '5')
+        .replaceAll('৬', '6')
+        .replaceAll('৭', '7')
+        .replaceAll('৮', '8')
+        .replaceAll('৯', '9');
+    return int.tryParse(normalized);
+  }
+
+  void _scrollToSection(_MarkdownSection section, {required bool isSplit}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final qNum = _extractQuestionNumber(section.title);
+      if (qNum != null && isSplit) {
+        _isSyncingScroll = true;
+        // Find in primary sections
+        final pSec = _primarySections.firstWhere(
+          (s) => _extractQuestionNumber(s.title) == qNum,
+          orElse: () => section,
+        );
+        final pCtx = pSec.key.currentContext;
+        if (pCtx != null) {
+          Scrollable.ensureVisible(
+            pCtx,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            alignment: 0.05,
+          );
+        }
+
+        // Find in alternate sections
+        final aSec = _alternateSections.firstWhere(
+          (s) => _extractQuestionNumber(s.title) == qNum,
+          orElse: () => section,
+        );
+        final aCtx = aSec.key.currentContext;
+        if (aCtx != null) {
+          Scrollable.ensureVisible(
+            aCtx,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            alignment: 0.05,
+          );
+        }
+
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted) _isSyncingScroll = false;
+        });
+      } else {
+        final targetCtx = section.key.currentContext;
+        if (targetCtx != null) {
+          Scrollable.ensureVisible(
+            targetCtx,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            alignment: 0.05,
+          );
+        }
+      }
+    });
   }
 
   void _openQuestionNavigator() {
+    final isSplit = _isSplit(context);
     final navSections =
-        _sections.where((s) => s.cleanTitle.isNotEmpty).toList();
+        (isSplit && _primarySections.isNotEmpty ? _primarySections : _sections)
+            .where((s) => s.cleanTitle.isNotEmpty)
+            .toList();
     if (navSections.isEmpty) return;
     final palette = context.forest;
 
@@ -382,17 +517,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                       ),
                       onTap: () {
                         Navigator.of(bottomSheetContext).pop();
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final targetCtx = section.key.currentContext;
-                          if (targetCtx != null) {
-                            Scrollable.ensureVisible(
-                              targetCtx,
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeInOut,
-                              alignment: 0.05,
-                            );
-                          }
-                        });
+                        _scrollToSection(section, isSplit: isSplit);
                       },
                     );
                   },
@@ -516,41 +641,59 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           ],
         ),
         actions: [
-          if (_hasAlternate)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _showingAlternate = !_showingAlternate;
-                      _parseSections();
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: palette.accentText.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: palette.accentText.withValues(alpha: 0.5),
-                        width: 0.8,
+          if (_hasAlternate) ...[
+            IconButton(
+              tooltip: _isSplit(context)
+                  ? l10n.translate('viewer_single_view')
+                  : l10n.translate('viewer_split_view'),
+              icon: Icon(
+                _isSplit(context)
+                    ? Icons.view_agenda_outlined
+                    : Icons.vertical_split_rounded,
+                color: palette.accentText,
+                size: 21,
+              ),
+              onPressed: () {
+                setState(() {
+                  _userSplitOverride = !_isSplit(context);
+                });
+              },
+            ),
+            if (!_isSplit(context))
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showingAlternate = !_showingAlternate;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: palette.accentText.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: palette.accentText.withValues(alpha: 0.5),
+                          width: 0.8,
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      _targetLanguageLabel(),
-                      style: TextStyle(
-                        color: palette.accentText,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      child: Text(
+                        _targetLanguageLabel(),
+                        style: TextStyle(
+                          color: palette.accentText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+          ],
           if (hasNavSections)
             IconButton(
               tooltip: l10n.translate('viewer_question_navigator'),
@@ -580,11 +723,11 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildBody(_isSplit(context)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isSplit) {
     if (_isLoading) {
       return Center(
         child: Column(
@@ -636,11 +779,178 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       );
     }
 
+    if (isSplit && _hasAlternate) {
+      return _buildSplitBody();
+    }
+
+    return _buildSingleBody();
+  }
+
+  Widget _buildSplitBody() {
+    final palette = context.forest;
+    final primaryBnCount =
+        RegExp(r'[\u0980-\u09FF]').allMatches(_primaryContent ?? '').length;
+    final primaryEnCount =
+        RegExp(r'[a-zA-Z]').allMatches(_primaryContent ?? '').length;
+    final primaryIsBangla = primaryBnCount > primaryEnCount;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1600),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left Column: Primary solution
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildPaneHeader(
+                    primaryIsBangla
+                        ? '🇧🇩 বাংলা সমাধান'
+                        : '🇬🇧 English Solution',
+                    widget.title,
+                  ),
+                  Divider(height: 1, color: palette.divider12),
+                  Expanded(
+                    child: SelectionArea(
+                      child: SingleChildScrollView(
+                        controller: _primaryScrollController,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final section in _primarySections)
+                              Container(
+                                key: section.key,
+                                child: ChatRichText(
+                                  text: section.rawText,
+                                  baseStyle: TextStyle(
+                                    color: palette.text,
+                                    fontSize: 14.5,
+                                    height: 1.55,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(width: 1, thickness: 1, color: palette.divider12),
+            // Right Column: Alternate solution
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildPaneHeader(
+                    primaryIsBangla
+                        ? '🇬🇧 English Solution'
+                        : '🇧🇩 বাংলা সমাধান',
+                    widget.alternateTitle ??
+                        (primaryIsBangla ? 'English' : 'বাংলা সমাধান'),
+                  ),
+                  Divider(height: 1, color: palette.divider12),
+                  Expanded(
+                    child: SelectionArea(
+                      child: SingleChildScrollView(
+                        controller: _alternateScrollController,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final section in _alternateSections)
+                              Container(
+                                key: section.key,
+                                child: ChatRichText(
+                                  text: section.rawText,
+                                  baseStyle: TextStyle(
+                                    color: palette.text,
+                                    fontSize: 14.5,
+                                    height: 1.55,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaneHeader(String badge, String title) {
+    final palette = context.forest;
+    final l10n = context.l10n;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: palette.surfaceFor(const Color(0xFF141E18)),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: palette.accentText.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: palette.accentText.withValues(alpha: 0.5),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              badge,
+              style: TextStyle(
+                color: palette.accentText,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: palette.text70,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Tooltip(
+            message: l10n.translate('viewer_sync_scroll'),
+            child: Icon(
+              Icons.sync_alt_rounded,
+              size: 16,
+              color: palette.accentText.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleBody() {
+    final palette = context.forest;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 820),
         child: SelectionArea(
           child: SingleChildScrollView(
+            controller: _primaryScrollController,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -651,7 +961,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                     child: ChatRichText(
                       text: section.rawText,
                       baseStyle: TextStyle(
-                        color: context.forest.text,
+                        color: palette.text,
                         fontSize: 14.5,
                         height: 1.55,
                       ),

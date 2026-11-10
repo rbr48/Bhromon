@@ -144,8 +144,15 @@ Answer to question 2.
     });
 
     testWidgets(
-        'renders bilingual toggle and switches between English and Bangla solutions on tap',
+        'renders bilingual toggle and switches between English and Bangla solutions on tap on mobile',
         (tester) async {
+      tester.view.physicalSize = const Size(500, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(
         buildTestApp(
           const MarkdownViewerScreen(
@@ -166,6 +173,50 @@ Answer to question 2.
 
       expect(find.text('🇬🇧 English'), findsOneWidget);
       expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
+    });
+
+    testWidgets(
+        'renders dual-language synchronized split reader on wide screens and toggles mode',
+        (tester) async {
+      tester.view.physicalSize = const Size(1000, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        buildTestApp(
+          const MarkdownViewerScreen(
+            title: '98th BPE - Accounting (English)',
+            rawContent: '### Question 1\nEnglish answer here.',
+            alternateRawContent: '### প্রশ্ন ১\nবাংলা সমাধান এখানে।',
+            alternateTitle: '৯৮তম বিপিই - অ্যাকাউন্টিং (বাংলা)',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // In split view, both pane headers and content are visible concurrently
+      expect(find.text('🇬🇧 English Solution'), findsOneWidget);
+      expect(find.text('🇧🇩 বাংলা সমাধান'), findsOneWidget);
+      expect(find.textContaining('English answer here.'), findsOneWidget);
+      expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
+      expect(find.byIcon(Icons.view_agenda_outlined), findsOneWidget);
+
+      // Toggle to single-column mode
+      await tester.tap(find.byIcon(Icons.view_agenda_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.vertical_split_rounded), findsOneWidget);
+      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+
+      // Toggle back to split view
+      await tester.tap(find.byIcon(Icons.vertical_split_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('🇬🇧 English Solution'), findsOneWidget);
+      expect(find.text('🇧🇩 বাংলা সমাধান'), findsOneWidget);
     });
 
     testWidgets(
@@ -214,6 +265,74 @@ Answer to question 2.
       final sheetTitle = tester.widget<Text>(find.text('Question Navigator'));
       expect(sheetTitle.style?.color, Colors.white);
     });
+
+    testWidgets(
+        'jumps to a distant question in split view and scrolls both panes simultaneously',
+        (tester) async {
+      tester.view.physicalSize = const Size(1000, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      // Build 50 questions for primary and alternate content
+      final primaryBuilder = StringBuffer();
+      final alternateBuilder = StringBuffer();
+      for (int i = 1; i <= 50; i++) {
+        primaryBuilder.writeln('### Question $i [Marks: 10]');
+        primaryBuilder
+            .writeln('Detailed answer paragraph for English question $i.\n\n');
+        alternateBuilder.writeln('### প্রশ্ন $i [মান: ১০]');
+        alternateBuilder
+            .writeln('বাংলা সমাধান অনুচ্ছেদ প্রশ্ন $i এর জন্য।\n\n');
+      }
+
+      await tester.pumpWidget(
+        buildTestApp(
+          MarkdownViewerScreen(
+            title: 'Long Exam Paper (English)',
+            rawContent: primaryBuilder.toString(),
+            alternateRawContent: alternateBuilder.toString(),
+            alternateTitle: 'দীর্ঘ পরীক্ষার প্রশ্নপত্র (বাংলা)',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open Question Navigator bottom sheet
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Question Navigator'), findsOneWidget);
+
+      // Scroll bottom sheet to find Question 40 item in the bottom sheet
+      final bottomSheetFinder = find.byType(BottomSheet);
+      final question40Finder = find.descendant(
+        of: bottomSheetFinder,
+        matching: find.textContaining('Question 40'),
+      );
+      await tester.scrollUntilVisible(
+        question40Finder,
+        300,
+        scrollable: find.descendant(
+          of: bottomSheetFinder,
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(question40Finder, findsOneWidget);
+
+      await tester.tap(question40Finder);
+      await tester.pumpAndSettle(const Duration(milliseconds: 600));
+
+      // Verify that both split panes scrolled down significantly past 0
+      final scrollables = tester
+          .widgetList<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .toList();
+      expect(scrollables.length, greaterThanOrEqualTo(2));
+      expect(scrollables[0].controller!.offset, greaterThan(200.0));
+      expect(scrollables[1].controller!.offset, greaterThan(200.0));
+    });
   });
 
   group('PdfViewerScreen', () {
@@ -245,6 +364,7 @@ Answer to question 2.
       final darkTitle = tester.widget<Text>(find.text('Dark Document.pdf'));
       expect(darkTitle.style?.color, Colors.white);
     });
+
     testWidgets('renders PDF badge in AppBar and error state for invalid input',
         (tester) async {
       await tester.pumpWidget(

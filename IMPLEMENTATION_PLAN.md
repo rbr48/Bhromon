@@ -184,6 +184,109 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 - [x] **Task J4: Test Verification & Version Bump**:
   - Add light mode and dark mode contrast tests to `document_viewers_test.dart` and `study_chapter_screens_test.dart`.
   - Bump version to `1.8.172+226`.
-- [ ] **Task J5: Dual-Agent Review Gate, Merge & Deployment**:
-  - Open PR, run Claude CLI peer review, ensure 100% green CI, merge to `main`.
-  - Deploy to Firebase Hosting and release APK to Hostinger VPS.
+- [x] **Task J5: Dual-Agent Review Gate, Merge & Deployment**:
+  - Open PR, run Claude CLI peer review, ensure 100% green CI, merge to `main` ([PR #466](https://github.com/rbr48/Bhromon/pull/466)).
+  - Deployed to Firebase Hosting (`https://app.bhromon.fun`) and release APK deployed to Hostinger VPS (`v1.8.172+226`).
+
+---
+
+## 9-Pillar Banking Exam Master Plan (Pure Deterministic & Collaborative Engineering)
+
+### Track K: Dual-Language Synchronized Split Reader (Feature 1)
+- [x] **Task K1: Dual-Pane Layout Builder (`markdown_viewer_screen.dart`)**:
+  - Add split-view mode when alternate content exists.
+  - Automatically activate side-by-side mode on wide screens (`width >= 720`), with manual toggle icon on tablets/foldables.
+  - Render English solution in left pane, Bangla solution in right pane with distinct subtle language header tags.
+- [x] **Task K2: Synchronized Bidirectional Scroll Controller**:
+  - Implement bidirectional synchronized scroll physics: scrolling either column smoothly drives the other column to the corresponding question anchor.
+  - Jump-to-question in Question Navigator syncs both columns simultaneously.
+- [x] **Task K3: Unit & Widget Tests**:
+  - Test split-view rendering on wide vs narrow constraints in `document_viewers_test.dart` (all 12 tests passed).
+
+---
+
+### Track L: Official Syllabus & Module Tagging (Topic Filter) (Feature 2)
+- [ ] **Task L1: Module & Topic Taxonomy Data Model (`study_syllabus_models.dart`)**:
+  - Define IBB JAIBB official syllabus modules (Module A, B, C, D, E) for each subject.
+  - Define deterministic keyword/pattern matcher associating exam questions with syllabus modules.
+- [ ] **Task L2: Topic Filter UI (`study_book_chapters_screen.dart` / `study_materials_screen.dart`)**:
+  - Add Module Filter Chips (`All`, `Module A`, `Module B`, `Module C`, etc.) at the top of the chapters/solutions screen.
+  - Tapping a module filters the list to show all questions belonging to that module across all exam sessions.
+- [ ] **Task L3: Mark Distribution & Weightage Summary Widget**:
+  - Display mark analytics per module based on historical exam appearances.
+
+---
+
+### Track M: Spaced-Repetition Flashcards Engine (Leitner Algorithm) (Feature 3)
+- [ ] **Task M1: Spaced Repetition Domain Models & Engine (`study_flashcard_engine.dart`)**:
+  - Implement 5-box Leitner algorithmic scheduler with deterministic review intervals (Box 1: 1 day, Box 2: 3 days, Box 3: 7 days, Box 4: 14 days, Box 5: 30 days).
+  - Extract key question-answer flashcard pairs from master solutions.
+- [ ] **Task M2: Interactive Flashcard Study Screen (`study_flashcards_screen.dart`)**:
+  - Flip-card animation (Front: Question & Marks, Back: Structured answer bullet points).
+  - Self-rating buttons: `Again (Hard)`, `Good (Medium)`, `Easy`.
+  - Progress tracker showing cards due today, learning, and mastered.
+- [ ] **Task M3: Widget & Engine Unit Tests**:
+  - Add tests in `study_flashcard_engine_test.dart`.
+
+---
+
+### Track N: 3-Hour Timed Exam Simulator (Distraction-Free) (Feature 4)
+- [ ] **Task N1: Exam Simulator Screen (`study_exam_simulator_screen.dart`)**:
+  - Fullscreen exam mode: pick any past paper, choose timer (3 hours standard, 1h/2h practice).
+  - Floating HUD countdown timer with color shift and vibration alert at 30 min and 10 min.
+- [ ] **Task N2: Digital Scratchpad & Section Navigator**:
+  - Collapsible question tray to jump between questions.
+  - Rich draft notepad where candidates outline points, formulas, and legal sections.
+- [ ] **Task N3: Post-Exam Comparison Mode**:
+  - When time expires or submitted, split-screen review comparing the candidate's scratchpad notes against the official examiner-grade model answers.
+
+---
+
+### Track O: Group Study Accountability & Daily Branch Streak (Feature 5)
+- [ ] **Task O1: Daily Study Habit & Streak Engine (`study_streak_engine.dart`)**:
+  - Record daily study events per member in `tours/{tourId}/study_streaks/{email}`.
+  - Compute current streak days, best streak, and total study days.
+- [ ] **Task O2: Branch Activity Grid & Leaderboard Widget (`study_streak_card.dart`)**:
+  - Github-style 30-day activity dot grid on JAIBB Hub showing daily group consistency.
+  - Group reading progress leaderboard showing completed chapters per colleague.
+
+---
+
+### Track P: Per-Question Discussion Threads (Feature 6)
+- [ ] **Task P1: Question Thread Data Model & Service (`study_question_thread_service.dart`)**:
+  - Subcollection `tours/{tourId}/question_comments/{questionKey}` for lightweight, focused discussion threads.
+  - Support text notes, branch circular references, and file attachments.
+- [ ] **Task P2: In-Reader Question Comment Sheet (`markdown_viewer_screen.dart`)**:
+  - Add comment bubble icon next to each question heading in the reader.
+  - Tapping opens a slide-up discussion sheet showing colleagues' notes and tips for that specific question.
+
+---
+
+### Track Q: Full Offline Vault (1-Tap Zero-Network Mode) (Feature 7)
+- [ ] **Task Q1: Offline Study Cache Manager (`study_offline_vault.dart`)**:
+  - 1-tap "Save All JAIBB Offline" action in Study Hub.
+  - Pre-caches all Markdown documents, solutions, and chapter metadata into local Drift SQLite & encrypted storage.
+- [ ] **Task Q2: Offline Status Badge & Sync Management**:
+  - Visual status badge (`Offline Ready · 14 Solutions Cached`).
+  - Cache size display and clean eviction management.
+
+---
+
+### Track R: Native Text-to-Speech Commute Audio Player (Feature 8)
+- [ ] **Task R1: TTS Audio Controller (`study_tts_controller.dart`)**:
+  - Integrate `flutter_tts` with background-friendly playback queue.
+  - Parse markdown text into spoken paragraphs, stripping code blocks and markdown symbols.
+  - Multi-language voice selection (English voice for English text, Bengali voice for Bangla text).
+- [ ] **Task R2: Commute Audio Player Bar (`markdown_viewer_screen.dart`)**:
+  - Bottom audio dock: Play/Pause, Previous/Next question, 1.0x / 1.25x / 1.5x speed selector.
+  - Sleep timer (15m, 30m, 45m).
+
+---
+
+### Track S: Branch Printable PDF Booklets & Notice Board Poster Generator (Feature 9)
+- [ ] **Task S1: Duplex Printable A4 PDF Generator (`study_booklet_pdf_generator.dart`)**:
+  - Compile entire subject exam series into clean, printable A4 PDF.
+  - Table of contents, running headers with subject code, page numbering, and clean Bengali/English typography using `bangla_pdf`.
+- [ ] **Task S2: Branch Notice Board Poster Generator (`study_branch_poster_generator.dart`)**:
+  - Generate branded A4 printable recruitment/study poster for bank branches.
+  - Features group title, IBB emblem styling, description, and high-resolution invite QR code.
