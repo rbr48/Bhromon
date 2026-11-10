@@ -47,17 +47,17 @@ void main() {
       expect(visible, StudyModuleKey.values);
     });
 
-    test('a member sees only the live modules that are on', () {
+    test('a member sees only the modules that are on, in catalogue order', () {
       final visible = visibleStudyModules(
         settings: {
           StudyModuleKey.tips: _module(StudyModuleKey.tips),
           StudyModuleKey.suggestions:
               _module(StudyModuleKey.suggestions, enabled: false),
-          StudyModuleKey.discussion: _module(StudyModuleKey.discussion),
+          StudyModuleKey.papers: _module(StudyModuleKey.papers),
         },
         isAdmin: false,
       );
-      expect(visible, [StudyModuleKey.tips]);
+      expect(visible, [StudyModuleKey.tips, StudyModuleKey.papers]);
     });
 
     test('a member sees nothing when no module is on', () {
@@ -287,16 +287,32 @@ void main() {
   });
 
   group('modules and posts as stored', () {
-    test('tips, suggestions, shared findings, problems and challenges are live',
+    test(
+        'every module the app shows is one the group can turn on, past papers and assignments among them',
         () {
-      final live = StudyModuleKey.values.where((k) => k.isLive).toList();
-      expect(live, [
-        StudyModuleKey.tips,
-        StudyModuleKey.suggestions,
-        StudyModuleKey.findings,
-        StudyModuleKey.problems,
-        StudyModuleKey.challenges,
+      expect(StudyModuleKey.values, hasLength(12));
+      expect(
+        StudyModuleKey.values,
+        containsAll([StudyModuleKey.papers, StudyModuleKey.assignments]),
+      );
+      expect(
+          StudyModuleKey.fromName('assignments'), StudyModuleKey.assignments);
+      expect(StudyModuleKey.fromName('papers-old'), isNull);
+    });
+
+    test(
+        'a book module is one that shows the subject\'s book, and only it has no posting policy',
+        () {
+      final books = StudyModuleKey.values.where((k) => k.isBookModule).toList();
+      expect(books, [
+        StudyModuleKey.discussion,
+        StudyModuleKey.plan,
+        StudyModuleKey.glossary,
+        StudyModuleKey.flashcards,
+        StudyModuleKey.quizzes,
       ]);
+      expect(
+          StudyModuleKey.values.where((k) => !k.hasPostPolicy).toList(), books);
     });
 
     test('a module key is read from its name, and an unknown name is not', () {

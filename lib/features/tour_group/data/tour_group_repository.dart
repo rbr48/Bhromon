@@ -29,6 +29,7 @@ import '../domain/models/study_summary_models.dart';
 import '../domain/services/study_quiz_rules.dart';
 import '../domain/models/study_session_models.dart';
 import '../domain/models/study_thread_models.dart';
+import '../domain/models/study_assignment_models.dart';
 import '../domain/models/study_subject_models.dart';
 import '../domain/models/study_finding_models.dart';
 import '../domain/models/study_problem_models.dart';
@@ -2511,6 +2512,146 @@ class TourGroupRepository {
         ]);
   }
 
+  /// The assignments of a subject, newest first. The rules let a member read every one, so the screen
+  /// shows the shown ones and a member's own waiting one, as the rules for visibility say.
+  Stream<List<StudyAssignment>> watchStudyAssignments(
+    String tourId,
+    String subjectId,
+  ) {
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignments')
+        .orderBy('createdAt', descending: true)
+        .limit(200)
+        .snapshots()
+        .map((s) => [
+              for (final d in s.docs)
+                if (StudyAssignment.fromMap(d.id, _datesAsDateTimes(d.data()))
+                    case final assignment?)
+                  assignment,
+            ]);
+  }
+
+  /// Adds an assignment. Whether members see it at once is the module's post policy, decided by the caller.
+  Future<void> addStudyAssignment(
+    String tourId,
+    String subjectId, {
+    required String title,
+    required bool shown,
+    String details = '',
+    String url = '',
+    DateTime? dueAt,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignments')
+        .add({
+      'title': title.trim(),
+      'details': details.trim().isEmpty ? null : details.trim(),
+      'url': url.trim().isEmpty ? null : url.trim(),
+      'dueAt': dueAt,
+      'shown': shown,
+      'createdByEmail': email,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Changes an assignment's title, words, link and due day. Its author or an admin does this.
+  Future<void> editStudyAssignment(
+    String tourId,
+    String subjectId,
+    String assignmentId, {
+    required String title,
+    String details = '',
+    String url = '',
+    DateTime? dueAt,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .update({
+      'title': title.trim(),
+      'details': details.trim().isEmpty ? null : details.trim(),
+      'url': url.trim().isEmpty ? null : url.trim(),
+      'dueAt': dueAt,
+    });
+  }
+
+  /// Shows an assignment that waited for an admin, or takes it back. Only an admin does this.
+  Future<void> setStudyAssignmentShown(
+    String tourId,
+    String subjectId,
+    String assignmentId, {
+    required bool shown,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .update({'shown': shown});
+  }
+
+  /// Removes an assignment. Its author or an admin does this.
+  Future<void> deleteStudyAssignment(
+    String tourId,
+    String subjectId,
+    String assignmentId,
+  ) async {
+    _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .delete();
+  }
+
+  /// The ids of the assignments the signed-in member has finished. They are kept in one document of
+  /// the member's own, so one read gives them all.
+  Stream<Set<String>> watchMyFinishedAssignments(
+    String tourId,
+    String subjectId,
+  ) {
+    final email = currentEmail;
+    if (email.isEmpty) return Stream.value(const <String>{});
+    return _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignment_marks')
+        .doc(email)
+        .snapshots()
+        .map((s) {
+      final ids = s.data()?['done'];
+      if (ids is! List) return <String>{};
+      return {
+        for (final id in ids)
+          if (id is String) id,
+      };
+    });
+  }
+
+  /// Marks an assignment finished for the signed-in member, or takes the mark back. Only the
+  /// member's own mark changes.
+  Future<void> setMyAssignmentFinished(
+    String tourId,
+    String subjectId,
+    String assignmentId, {
+    required bool finished,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'study_subjects')
+        .doc(subjectId)
+        .collection('assignment_marks')
+        .doc(email)
+        .set({
+      'done': finished
+          ? FieldValue.arrayUnion([assignmentId])
+          : FieldValue.arrayRemove([assignmentId]),
+    }, SetOptions(merge: true));
+  }
+
   /// Adds a subject. An admin lists it at once; a member's subject waits for an admin.
   Future<void> addStudySubject(
     String tourId, {
@@ -2519,6 +2660,7 @@ class TourGroupRepository {
     String code = '',
     String description = '',
     DateTime? examDate,
+    String? bookId,
   }) async {
     final email = _requireEmail();
     final subject = StudySubject(
@@ -2529,6 +2671,7 @@ class TourGroupRepository {
       examDate: examDate,
       approval: approval,
       createdByEmail: email,
+      bookId: bookId,
     );
     await _sub(tourId, 'study_subjects').add(subject.toFields());
   }
@@ -2541,6 +2684,7 @@ class TourGroupRepository {
     required String code,
     required String description,
     required DateTime? examDate,
+    String? bookId,
   }) async {
     _requireEmail();
     await _sub(tourId, 'study_subjects').doc(original.id).update({
@@ -2548,6 +2692,7 @@ class TourGroupRepository {
       'code': code.trim().isEmpty ? null : code.trim(),
       'description': description.trim().isEmpty ? null : description.trim(),
       'examDate': examDate,
+      'bookId': bookId,
     });
   }
 

@@ -20,15 +20,21 @@ enum StudyModuleKey {
   glossary,
   assignments,
   challenges,
-  flashcards;
+  flashcards,
+  quizzes;
 
-  /// Whether the module is built in this version, so an admin can turn it on.
-  bool get isLive =>
-      this == StudyModuleKey.tips ||
-      this == StudyModuleKey.suggestions ||
-      this == StudyModuleKey.findings ||
-      this == StudyModuleKey.problems ||
-      this == StudyModuleKey.challenges;
+  /// Whether the module shows the book its subject studies: its discussion, glossary, flashcards,
+  /// quizzes, or the reading sessions planned for it. The subject must name a book for these.
+  bool get isBookModule =>
+      this == StudyModuleKey.discussion ||
+      this == StudyModuleKey.glossary ||
+      this == StudyModuleKey.flashcards ||
+      this == StudyModuleKey.quizzes ||
+      this == StudyModuleKey.plan;
+
+  /// Whether an admin sets who may post in the module. A book module follows its own rules instead,
+  /// so it has no policy to set.
+  bool get hasPostPolicy => !isBookModule;
 
   /// The module with [name], or null for a name the app does not know.
   static StudyModuleKey? fromName(Object? raw) {
@@ -111,6 +117,7 @@ class StudySubject {
     this.declineNote = '',
     this.createdByEmail = '',
     this.archived = false,
+    this.bookId,
   });
 
   final String id;
@@ -118,6 +125,10 @@ class StudySubject {
 
   /// The course code, such as "PHY 101". Empty when there is none.
   final String code;
+
+  /// The listed book the subject studies. Its book modules (discussion, glossary, flashcards,
+  /// quizzes and the reading plan) open this book. Null when the subject names none.
+  final String? bookId;
 
   /// What the subject covers. Empty when there is nothing to add.
   final String description;
@@ -151,6 +162,7 @@ class StudySubject {
         'approval': approval.name,
         'declineNote': declineNote.isEmpty ? null : declineNote,
         'createdByEmail': createdByEmail,
+        'bookId': bookId,
       };
 
   /// Reads one stored subject. The repository turns stored timestamps into dates first.
@@ -159,6 +171,7 @@ class StudySubject {
     final title = (map['title'] as String?)?.trim() ?? '';
     if (title.isEmpty) return null;
     final exam = map['examDate'];
+    final book = (map['bookId'] as String?)?.trim() ?? '';
     return StudySubject(
       id: id,
       title: title,
@@ -169,6 +182,7 @@ class StudySubject {
       declineNote: (map['declineNote'] as String?)?.trim() ?? '',
       createdByEmail: (map['createdByEmail'] as String?) ?? '',
       archived: map['archived'] == true,
+      bookId: book.isEmpty ? null : book,
     );
   }
 }

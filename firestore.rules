@@ -794,7 +794,7 @@ service cloud.firestore {
     // A study subject: a name, an optional course code, description and exam date, and an
     // approval like a book's.
     function validStudySubject(d) {
-      return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail', 'archived']) &&
+      return d.keys().hasOnly(['title', 'code', 'description', 'examDate', 'approval', 'declineNote', 'createdByEmail', 'archived', 'bookId']) &&
              d.title is string && d.title.size() >= 1 &&
              (d.get('code', null) == null || d.code is string) &&
              (d.get('description', null) == null || d.description is string) &&
@@ -802,11 +802,27 @@ service cloud.firestore {
              (d.get('approval', null) == null || d.approval in ['proposed', 'listed', 'declined']) &&
              (d.get('declineNote', null) == null || d.declineNote is string) &&
              (d.get('archived', null) == null || d.archived is bool) &&
+             (d.get('bookId', null) == null || d.bookId is string) &&
              d.createdByEmail is string && d.createdByEmail.size() <= 254;
     }
-    // The modules a study subject can turn on. Only these are live; the rest are coming.
+    // A subject names no book, or one book of this group that is on its list. The id is an automatic
+    // Firestore id, so a value with a slash cannot point the check at another document.
+    function studySubjectBookOk(tourId, d) {
+      return d.get('bookId', null) == null ||
+             (d.bookId.matches('[A-Za-z0-9_-]{1,128}') &&
+              exists(/databases/$(database)/documents/tours/$(tourId)/study_books/$(d.bookId)) &&
+              studyBookListed(get(/databases/$(database)/documents/tours/$(tourId)/study_books/$(d.bookId)).data));
+    }
+    // The modules a study subject can turn on: every module the app shows.
     function studyModuleLive(key) {
-      return key in ['tips', 'suggestions', 'findings', 'problems', 'challenges'];
+      return key in ['tips', 'suggestions', 'discussion', 'findings', 'problems', 'papers', 'plan', 'glossary',
+                     'assignments', 'challenges', 'flashcards', 'quizzes'];
+    }
+    // The modules that show the book their subject names. A subject must name a book before one of them is turned on.
+    function studyBookModuleOk(tourId, subjectId, moduleKey, d) {
+      return !(moduleKey in ['discussion', 'glossary', 'flashcards', 'quizzes', 'plan']) ||
+             d.enabled == false ||
+             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)).data.get('bookId', null) != null;
     }
     // A module's settings: on or off, its name, and who may post in it.
     function validStudyModule(d) {
@@ -919,6 +935,41 @@ service cloud.firestore {
              d.verdict in ['confirm', 'challenge'] &&
              (d.get('note', null) == null || d.note is string) &&
              d.createdAt is timestamp;
+    }
+    // An assignment: a title, optional details and an https link, an optional due day, whether members see it, and who
+    // added it and when.
+    function validStudyAssignment(d) {
+      return d.keys().hasOnly(['title', 'details', 'url', 'dueAt', 'shown', 'createdByEmail', 'createdAt']) &&
+             d.title is string && d.title.size() >= 1 &&
+             (d.get('details', null) == null || d.details is string) &&
+             (d.get('url', null) == null || (d.url is string && d.url.matches('https://.*'))) &&
+             (d.get('dueAt', null) == null || d.dueAt is timestamp) &&
+             d.shown is bool &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             d.createdAt is timestamp;
+    }
+    // Whether a member may add an assignment: the subject is listed, the module is on, its post policy lets this member
+    // add one, and the assignment is shown at once exactly when the policy shows posts at once.
+    function studyAssignmentCreateAllowed(tourId, subjectId, d) {
+      let byAdmin = isTourAdmin(tourId);
+      return isStudyTour(tourId) && isActiveMember(tourId) &&
+             d.createdByEmail == tourUserEmail() &&
+             d.createdAt == request.time &&
+             validStudyAssignment(d) &&
+             studySubjectListed(tourId, subjectId) &&
+             studyModuleOn(tourId, subjectId, 'assignments') &&
+             (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/assignments).data.postPolicy != 'admins') &&
+             d.shown == (byAdmin || get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/modules/assignments).data.postPolicy == 'members');
+    }
+    // Whether an update to an assignment is allowed. Its author or an admin changes the words, link and due day. Only an
+    // admin shows one that waited, so an author cannot change whether it is shown, and the author and time stay as they were.
+    function studyAssignmentUpdateAllowed(tourId, subjectId, newData, oldData) {
+      let byAdmin = isTourAdmin(tourId);
+      return isStudyTour(tourId) && isActiveMember(tourId) &&
+             validStudyAssignment(newData) &&
+             newData.createdByEmail == oldData.createdByEmail &&
+             newData.createdAt == oldData.createdAt &&
+             (byAdmin || (oldData.createdByEmail == tourUserEmail() && newData.shown == oldData.shown));
     }
     // Whether a member may add a finding to a listed subject whose findings module is on. An
     // admin's finding is always shown; a member's is shown when the module lets members post
@@ -1922,19 +1973,45 @@ service cloud.firestore {
                           request.resource.data.get('approval', null) == 'proposed') &&
                          request.resource.data.get('declineNote', null) == null &&
                          request.resource.data.get('archived', false) == false &&
-                         validStudySubject(request.resource.data);
+                         validStudySubject(request.resource.data) &&
+                         studySubjectBookOk(tourId, request.resource.data);
+        // The book is checked when it changes, so an archive or an approval still goes through when the
+        // book has since been removed.
         allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
                          validStudySubject(request.resource.data) &&
-                         studySubjectUpdateAllowed(tourId, request.resource.data, resource.data);
+                         studySubjectUpdateAllowed(tourId, request.resource.data, resource.data) &&
+                         (resource.data.get('bookId', null) == request.resource.data.get('bookId', null) ||
+                          studySubjectBookOk(tourId, request.resource.data));
 
         // The modules of a subject. Only an admin turns a live module on or changes it.
         match /modules/{moduleKey} {
           allow read: if isActiveMember(tourId);
           allow create, update: if isStudyTour(tourId) && isTourAdmin(tourId) &&
                                    studyModuleLive(moduleKey) &&
-                                   validStudyModule(request.resource.data);
+                                   validStudyModule(request.resource.data) &&
+                                   studyBookModuleOk(tourId, subjectId, moduleKey, request.resource.data);
           allow delete: if isStudyTour(tourId) && isTourAdmin(tourId);
+        }
+
+        // Assignments: a member adds one as the module's post policy lets them, and its author or an admin changes or
+        // removes it. Only an admin shows one that waited.
+        match /assignments/{assignmentId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if studyAssignmentCreateAllowed(tourId, subjectId, request.resource.data);
+          allow update: if isStudyTour(tourId) && studyAssignmentUpdateAllowed(tourId, subjectId, request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+        }
+
+        // A member's finished assignments, kept in one document of their own: the ids of the assignments they have done.
+        // Only the member reads or writes it.
+        match /assignment_marks/{voter} {
+          allow read: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
+          allow create, update: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail() &&
+                                   request.resource.data.keys().hasOnly(['done']) &&
+                                   request.resource.data.done is list && request.resource.data.done.size() <= 1000;
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) && voter == tourUserEmail();
         }
 
         // Tips. A member posts in a module that is on, as its post policy allows.
@@ -1958,6 +2035,30 @@ service cloud.firestore {
                              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/tips/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/tips/$(postId)).data.helpfulCount + 1;
             allow delete: if isActiveMember(tourId) && voter == tourUserEmail() &&
                              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/tips/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/tips/$(postId)).data.helpfulCount - 1;
+          }
+        }
+
+        // Past papers. A member posts in a module that is on, as its post policy allows.
+        match /papers/{postId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if studyPostCreateAllowed(tourId, subjectId, 'papers', request.resource.data);
+          allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           studyPostUpdateAllowed(tourId, subjectId, 'papers', postId, request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+          // One helpful mark per member: never on their own post, only on a shown one, and
+          // written or removed in the same batch as the count it moves (studyPostUpdateAllowed).
+          match /helpful/{voter} {
+            allow read: if isActiveMember(tourId);
+            allow create: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                             request.resource.data.keys().hasOnly(['createdAt']) &&
+                             request.resource.data.createdAt == request.time &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/papers/$(postId)).data.createdByEmail != tourUserEmail() &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/papers/$(postId)).data.shown == true &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/papers/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/papers/$(postId)).data.helpfulCount + 1;
+            allow delete: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/papers/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/papers/$(postId)).data.helpfulCount - 1;
           }
         }
 

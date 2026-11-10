@@ -34,14 +34,6 @@ class _StudyModuleSheetState extends State<StudyModuleSheet> {
   final Map<StudyModuleKey, TextEditingController> _names = {};
   final Map<StudyModuleKey, StudyPostPolicy> _policies = {};
 
-  /// The modules an admin can turn on in this version.
-  List<StudyModuleKey> get _live =>
-      StudyModuleKey.values.where((key) => key.isLive).toList();
-
-  /// The modules that are not built yet, listed so the group knows what is coming.
-  List<StudyModuleKey> get _coming =>
-      StudyModuleKey.values.where((key) => !key.isLive).toList();
-
   @override
   void initState() {
     super.initState();
@@ -66,7 +58,7 @@ class _StudyModuleSheetState extends State<StudyModuleSheet> {
 
   void _save() {
     final result = <StudyModuleSettings>[];
-    for (final key in _live) {
+    for (final key in StudyModuleKey.values) {
       final typed = _names[key]!.text.trim();
       result.add(StudyModuleSettings(
         key: key,
@@ -105,7 +97,7 @@ class _StudyModuleSheetState extends State<StudyModuleSheet> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final key in _live) ...[
+                    for (final key in StudyModuleKey.values) ...[
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(l10n.translate(studyModuleLabelKey(key)),
@@ -122,41 +114,38 @@ class _StudyModuleSheetState extends State<StudyModuleSheet> {
                           hintText: _defaultName(key),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.translate('study_module_policy_label'),
-                        style: TextStyle(color: palette.text70),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final policy in StudyPostPolicy.values)
-                            ChoiceChip(
-                              label:
-                                  Text(l10n.translate(studyPolicyKey(policy))),
-                              selected: _policies[key] == policy,
-                              onSelected: (_) =>
-                                  setState(() => _policies[key] = policy),
-                            ),
-                        ],
-                      ),
+                      if (key.isBookModule) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.translate('study_subject_book_hint'),
+                          style: TextStyle(color: palette.text70),
+                        ),
+                      ],
+                      // A book module shows the subject's book, so it has no posting policy of its own.
+                      if (key.hasPostPolicy) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.translate('study_module_policy_label'),
+                          style: TextStyle(color: palette.text70),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final policy in StudyPostPolicy.values)
+                              ChoiceChip(
+                                label: Text(
+                                    l10n.translate(studyPolicyKey(policy))),
+                                selected: _policies[key] == policy,
+                                onSelected: (_) =>
+                                    setState(() => _policies[key] = policy),
+                              ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 16),
                     ],
-                    // The modules not built yet: options that cannot be turned on yet.
-                    for (final key in _coming)
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.translate(studyModuleLabelKey(key)),
-                            style: TextStyle(color: palette.text54)),
-                        subtitle: Text(
-                          l10n.translate('study_module_coming_soon'),
-                          style: TextStyle(color: palette.text54),
-                        ),
-                        value: false,
-                        onChanged: null,
-                      ),
                   ],
                 ),
               ),

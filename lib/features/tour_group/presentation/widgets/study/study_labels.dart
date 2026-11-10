@@ -38,6 +38,7 @@ String studyModuleLabelKey(StudyModuleKey key) => switch (key) {
       StudyModuleKey.assignments => 'study_module_assignments',
       StudyModuleKey.challenges => 'study_module_challenges',
       StudyModuleKey.flashcards => 'study_module_flashcards',
+      StudyModuleKey.quizzes => 'study_module_quizzes',
     };
 
 /// The translation key of a posting policy, as the module sheet names it.

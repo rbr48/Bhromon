@@ -10,6 +10,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_module_posts_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_subject_screen.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/study_subjects_screen.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/study/study_subject_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,12 +24,16 @@ class _FakeSubjectRepo extends TourGroupRepository {
     this.subjects = const [],
     this.modules = const {},
     this.posts = const [],
+    this.books = const [],
     this.role,
   });
 
   final List<StudySubject> subjects;
   final Map<StudyModuleKey, StudyModuleSettings> modules;
   final List<StudyPost> posts;
+
+  /// The books of the group, which a subject's book modules open.
+  final List<StudyBook> books;
 
   /// The signed-in member's role. Null is an ordinary member.
   final TourRole? role;
@@ -150,8 +155,7 @@ class _FakeSubjectRepo extends TourGroupRepository {
       const {};
 
   @override
-  Stream<List<StudyBook>> watchStudyBooks(String tourId) =>
-      Stream.value(const []);
+  Stream<List<StudyBook>> watchStudyBooks(String tourId) => Stream.value(books);
 
   @override
   Future<bool> toggleStudyPostHelpful(
@@ -203,6 +207,35 @@ const _biology = StudySubject(
   archived: true,
   createdByEmail: 'admin@x.com',
 );
+
+const _physicsWithBook = StudySubject(
+  id: 'phy',
+  title: 'Physics 101',
+  code: 'PHY 101',
+  createdByEmail: 'admin@x.com',
+  bookId: 'phy-book',
+);
+
+const _physicsBook = StudyBook(
+  id: 'phy-book',
+  title: 'Physics Vol 1',
+  createdByEmail: 'admin@x.com',
+);
+
+const _declinedBook = StudyBook(
+  id: 'old-book',
+  title: 'Old notes',
+  createdByEmail: 'other@x.com',
+  approval: StudyBookApproval.declined,
+  declineNote: 'Too old',
+);
+
+StudyModuleSettings _on(StudyModuleKey key, String name) => StudyModuleSettings(
+      key: key,
+      enabled: true,
+      name: name,
+      postPolicy: StudyPostPolicy.members,
+    );
 
 const _tipsOn = StudyModuleSettings(
   key: StudyModuleKey.tips,
@@ -311,7 +344,7 @@ void main() {
     });
 
     testWidgets(
-        'an admin sees every module, the modules not yet built as coming soon, and can customise',
+        'an admin sees every module, each one a choice, and can customise',
         (tester) async {
       final repo = _FakeSubjectRepo(
         role: TourRole.admin,
@@ -325,8 +358,85 @@ void main() {
       expect(find.text('Exam tips'), findsOneWidget);
       expect(find.text('Suggestions'), findsOneWidget);
       expect(find.text('Discussion'), findsOneWidget);
-      expect(find.text('Coming soon'), findsWidgets);
+      // The list is built as it scrolls, so the last modules are scrolled into view to check they are there.
+      await tester.scrollUntilVisible(find.text('Assignments'), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Assignments'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Quizzes'), 300,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Quizzes'), findsOneWidget);
+      expect(find.text('Coming soon'), findsNothing);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+    });
+    testWidgets(
+        'a book module opens the subject\'s book: it shows the book, and a member can open it',
+        (tester) async {
+      final repo = _FakeSubjectRepo(
+        modules: {
+          StudyModuleKey.discussion:
+              _on(StudyModuleKey.discussion, 'Discussion')
+        },
+        books: const [_physicsBook],
+      );
+      await _pump(
+        tester,
+        StudySubjectScreen(
+            tourId: 'T', subject: _physicsWithBook, repository: repo),
+      );
+
+      final tile = find.widgetWithText(ListTile, 'Discussion');
+      expect(tile, findsOneWidget);
+      expect(find.descendant(of: tile, matching: find.text('Physics Vol 1')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: tile, matching: find.byIcon(Icons.chevron_right_rounded)),
+          findsOneWidget);
+    });
+
+    testWidgets('a member does not see a book module of a subject with no book',
+        (tester) async {
+      final repo = _FakeSubjectRepo(
+        modules: {
+          StudyModuleKey.quizzes: _on(StudyModuleKey.quizzes, 'Quizzes')
+        },
+      );
+      await _pump(
+        tester,
+        StudySubjectScreen(tourId: 'T', subject: _physics, repository: repo),
+      );
+
+      expect(find.text('Quizzes'), findsNothing);
+    });
+
+    testWidgets(
+        'an admin sees that a book module waits for a book, and cannot open it',
+        (tester) async {
+      final repo = _FakeSubjectRepo(
+        role: TourRole.admin,
+        modules: {
+          StudyModuleKey.quizzes: _on(StudyModuleKey.quizzes, 'Quizzes')
+        },
+      );
+      await _pump(
+        tester,
+        StudySubjectScreen(tourId: 'T', subject: _physics, repository: repo),
+      );
+
+      await tester.scrollUntilVisible(find.text('Quizzes'), 300,
+          scrollable: find.byType(Scrollable).first);
+      final tile = find.widgetWithText(ListTile, 'Quizzes');
+      expect(tile, findsOneWidget);
+      expect(
+          find.descendant(
+              of: tile,
+              matching: find
+                  .text('Choose a book for this subject to open this module.')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: tile, matching: find.byIcon(Icons.chevron_right_rounded)),
+          findsNothing);
     });
   });
 
@@ -397,6 +507,22 @@ void main() {
       expect(find.text('Add a tip'), findsNothing);
     });
 
+    testWidgets('past papers are added with their own label, and take a link',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyModulePostsScreen(
+          tourId: 'T',
+          subject: _physics,
+          moduleKey: StudyModuleKey.papers,
+          settings: _on(StudyModuleKey.papers, 'Past papers'),
+          repository: _FakeSubjectRepo(role: TourRole.admin),
+        ),
+      );
+      expect(find.text('Add a past paper'), findsOneWidget);
+      expect(find.text('Add a tip'), findsNothing);
+    });
+
     // A separate test, so the screen starts afresh and reads the admin role itself.
     testWidgets('an admin adds a tip to a module that only admins post in',
         (tester) async {
@@ -417,6 +543,80 @@ void main() {
         ),
       );
       expect(find.text('Add a tip'), findsOneWidget);
+    });
+  });
+
+  group('the subject editor\'s book', () {
+    Future<void> openEditor(
+      WidgetTester tester,
+      void Function(StudySubjectDraft? draft) onResult, {
+      StudySubject? existing,
+    }) async {
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('en'), Locale('bn')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () async => onResult(await showStudySubjectEditor(
+                  context,
+                  existing: existing,
+                  books: const [_physicsBook, _declinedBook],
+                )),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('offers the listed books only, and returns the one chosen',
+        (tester) async {
+      StudySubjectDraft? result;
+      await openEditor(tester, (draft) => result = draft);
+
+      await tester.tap(find.byType(DropdownButton<String?>));
+      await tester.pumpAndSettle();
+      expect(find.text('Physics Vol 1'), findsWidgets);
+      expect(find.text('Old notes'), findsNothing);
+      await tester.tap(find.text('Physics Vol 1').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Physics 101');
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+      expect(result?.bookId, 'phy-book');
+    });
+
+    testWidgets('a subject whose book was removed saves with no book',
+        (tester) async {
+      StudySubjectDraft? result;
+      await openEditor(
+        tester,
+        (draft) => result = draft,
+        existing: const StudySubject(
+          id: 'phy',
+          title: 'Physics 101',
+          createdByEmail: 'admin@x.com',
+          bookId: 'gone-book',
+        ),
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+      expect(result, isNotNull);
+      expect(result?.bookId, isNull);
     });
   });
 }

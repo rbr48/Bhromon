@@ -15,12 +15,21 @@ import 'study_session_screen.dart';
 /// A study or book club's reading plan: the sessions the group has planned, upcoming ones
 /// first. Any member plans a session. Its creator or an admin changes or removes it.
 class StudyReadingScreen extends StatefulWidget {
-  const StudyReadingScreen({super.key, required this.tourId, this.repository});
+  const StudyReadingScreen({
+    super.key,
+    required this.tourId,
+    this.repository,
+    this.book,
+  });
 
   final String tourId;
 
   /// The data source. Null in the app, where the screen makes its own; tests pass one.
   final TourGroupRepository? repository;
+
+  /// The book a subject studies. When set, the plan shows only the sessions of this book, and a
+  /// new session starts with it. Null for the plan of the whole group.
+  final StudyBook? book;
 
   @override
   State<StudyReadingScreen> createState() => _StudyReadingScreenState();
@@ -60,6 +69,7 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
       context,
       books: books,
       chaptersOf: _chaptersOf,
+      initialBookId: widget.book?.id,
     );
     if (draft == null || !mounted) return;
     await _run(
@@ -74,6 +84,16 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
       ),
       'study_session_saved',
     );
+  }
+
+  /// The sessions this screen shows: all of them, or only those of its book.
+  List<ReadingSession> _sessionsShown(List<ReadingSession> sessions) {
+    final book = widget.book;
+    if (book == null) return sessions;
+    return [
+      for (final session in sessions)
+        if (session.bookId == book.id) session,
+    ];
   }
 
   /// The chapters of a book, for the session editor's chapter choice.
@@ -192,7 +212,8 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
                 if (!snap.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final split = splitSessions(snap.data!, DateTime.now());
+                final split =
+                    splitSessions(_sessionsShown(snap.data!), DateTime.now());
                 if (split.upcoming.isEmpty && split.past.isEmpty) {
                   return Center(
                     child: Padding(

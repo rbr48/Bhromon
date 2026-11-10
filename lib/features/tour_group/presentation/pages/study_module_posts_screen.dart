@@ -48,7 +48,12 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
   /// Suggestions carry a title and a link; tips are text only.
-  bool get _withLink => widget.moduleKey == StudyModuleKey.suggestions;
+  /// A suggestion and a past paper carry a link; a past paper's words are the paper's.
+  bool get _withLink =>
+      widget.moduleKey == StudyModuleKey.suggestions ||
+      widget.moduleKey == StudyModuleKey.papers;
+
+  bool get _paper => widget.moduleKey == StudyModuleKey.papers;
 
   @override
   void initState() {
@@ -59,7 +64,11 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
   }
 
   Future<void> _add() async {
-    final draft = await showStudyPostEditor(context, withLink: _withLink);
+    final draft = await showStudyPostEditor(
+      context,
+      withLink: _withLink,
+      paper: _paper,
+    );
     if (draft == null || !mounted) return;
     final shown = postShownAtOnce(settings: widget.settings, isAdmin: _isAdmin);
     await _run(
@@ -77,8 +86,12 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
   }
 
   Future<void> _edit(StudyPost post) async {
-    final draft =
-        await showStudyPostEditor(context, withLink: _withLink, existing: post);
+    final draft = await showStudyPostEditor(
+      context,
+      withLink: _withLink,
+      existing: post,
+      paper: _paper,
+    );
     if (draft == null || !mounted) return;
     await _run(
       () => _repository.editStudyPost(
@@ -199,9 +212,11 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
             ? FloatingActionButton.extended(
                 onPressed: _add,
                 icon: const Icon(Icons.add_rounded),
-                label: Text(l10n.translate(_withLink
-                    ? 'study_post_add_suggestion'
-                    : 'study_post_add_tip')),
+                label: Text(l10n.translate(_paper
+                    ? 'study_paper_add'
+                    : _withLink
+                        ? 'study_post_add_suggestion'
+                        : 'study_post_add_tip')),
               )
             : null,
         body: StreamBuilder<List<StudyPost>>(
