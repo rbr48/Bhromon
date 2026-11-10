@@ -21,6 +21,7 @@ import '../widgets/study/study_chapter_editor.dart';
 import '../widgets/study/study_pace_sheet.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'markdown_viewer_screen.dart';
+import 'pdf_viewer_screen.dart';
 import 'study_discussion_screen.dart';
 import 'study_flashcards_screen.dart';
 import 'study_glossary_screen.dart';
@@ -751,9 +752,19 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  /// Opens a solution in the reader. A note opens from its text, and a Markdown file from its address,
-  /// which the reader fetches. The other language pairs only when its text is a note.
+  /// Opens a solution in its reader: a PDF in the PDF viewer, and a note or a Markdown file in the Markdown reader.
+  /// A note opens from its text, and a Markdown file from its address, which the reader fetches. The other
+  /// language pairs only when its text is a note.
   void _openSolution(StudyMaterial material, StudyMaterial? other) {
+    if (isPdfSolution(material)) {
+      PdfViewerScreen.open(
+        context,
+        title: material.title,
+        fileUrl: material.url,
+        tourId: widget.tourId,
+      );
+      return;
+    }
     final source = solutionSource(material, other);
     MarkdownViewerScreen.open(
       context,

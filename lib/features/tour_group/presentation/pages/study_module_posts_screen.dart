@@ -9,10 +9,13 @@ import '../../../../core/media/media_access.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/study_file_reader_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_post_editor.dart';
 
 import '../widgets/study/study_rich_text.dart';
+import 'markdown_viewer_screen.dart';
+import 'pdf_viewer_screen.dart';
 
 /// The posts in one module of a subject: exam tips, or suggestions with a link. Members add
 /// posts where the module lets them, mark posts helpful, and see the most helpful first. An
@@ -106,9 +109,31 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
     await draft.upload?.commit();
   }
 
-  /// Opens a link of a post. A file in the group's study folder is opened with its signed link.
-  Future<void> _openLink(String url) async {
-    final target = url.contains('/media/') ? signedMediaUrl(url) : url;
+  /// Opens a link of a post. A Markdown or PDF file in the group's study folder opens in the app, as the study
+  /// materials do. Any other link opens outside the app, and a study-folder file with its signed link.
+  Future<void> _openLink(String url, String title) async {
+    final isStudyFile = url.contains('/media/');
+    final reader = studyFileReader(url);
+    if (isStudyFile && reader != StudyFileReader.none) {
+      final name = title.isNotEmpty ? title : 'Document';
+      if (reader == StudyFileReader.pdf) {
+        await PdfViewerScreen.open(
+          context,
+          title: name,
+          fileUrl: url,
+          tourId: widget.tourId,
+        );
+      } else {
+        await MarkdownViewerScreen.open(
+          context,
+          title: name,
+          fileUrl: url,
+          tourId: widget.tourId,
+        );
+      }
+      return;
+    }
+    final target = isStudyFile ? signedMediaUrl(url) : url;
     final uri = Uri.tryParse(target);
     if (uri == null) return;
     try {
@@ -327,7 +352,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
             if (post.url.isNotEmpty) ...[
               const SizedBox(height: 6),
               TextButton.icon(
-                onPressed: () => _openLink(post.url),
+                onPressed: () => _openLink(post.url, post.title),
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                 label: Text(l10n.translate('study_material_open')),
               ),

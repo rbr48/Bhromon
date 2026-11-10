@@ -25,6 +25,8 @@ StudyMaterial _material({
 
 const _mdUrl =
     'https://bhromon.fun/media/T/study/0123456789abcdef0123456789abcdef.md';
+const _pdfUrl =
+    'https://bhromon.fun/media/T/study/fedcba9876543210fedcba9876543210.pdf';
 
 void main() {
   group('which materials open as a solution', () {
@@ -48,7 +50,18 @@ void main() {
       );
     });
 
-    test('a Markdown file with no address does not open', () {
+    test('a PDF with an address opens', () {
+      expect(
+        isReadableSolution(_material(
+          kind: StudyMaterialKind.file,
+          url: _pdfUrl,
+          fileName: 'Paper.pdf',
+        )),
+        isTrue,
+      );
+    });
+
+    test('a Markdown file or a PDF with no address does not open', () {
       expect(
         isReadableSolution(_material(
           kind: StudyMaterialKind.file,
@@ -56,17 +69,16 @@ void main() {
         )),
         isFalse,
       );
-    });
-
-    test('a PDF, a link or an audio file does not open', () {
       expect(
         isReadableSolution(_material(
           kind: StudyMaterialKind.file,
-          url: _mdUrl,
           fileName: 'Paper.pdf',
         )),
         isFalse,
       );
+    });
+
+    test('a link or an audio file does not open', () {
       expect(
         isReadableSolution(_material(
           kind: StudyMaterialKind.link,
@@ -82,6 +94,31 @@ void main() {
         )),
         isFalse,
       );
+    });
+  });
+
+  group('which solution is a PDF', () {
+    test('a PDF file is a PDF solution', () {
+      expect(
+        isPdfSolution(_material(
+          kind: StudyMaterialKind.file,
+          url: _pdfUrl,
+          fileName: 'Paper.pdf',
+        )),
+        isTrue,
+      );
+    });
+
+    test('a Markdown file and a note are not', () {
+      expect(
+        isPdfSolution(_material(
+          kind: StudyMaterialKind.file,
+          url: _mdUrl,
+          fileName: 'Solutions.md',
+        )),
+        isFalse,
+      );
+      expect(isPdfSolution(_material(body: 'Answer one.')), isFalse);
     });
   });
 
