@@ -38,6 +38,37 @@ void main() {
     }
   });
 
+  test('every file type the media server accepts is signed', () {
+    const folder =
+        'https://bhromon.fun/media/t1/study/0123456789abcdef0123456789abcdef';
+    const types = [
+      'md',
+      'log',
+      'json',
+      'yaml',
+      'yml',
+      'xml',
+      'sql',
+      'epub',
+      'rtf',
+      'odt',
+      'ods',
+      'odp',
+      'tsv',
+      'rar',
+      '7z',
+      'tar',
+      'gz',
+    ];
+    for (final type in types) {
+      expect(
+        signMediaUrl('$folder.$type', uid: 'uid-alice', key: _fixture),
+        startsWith('$folder.$type?u=uid-alice&s='),
+        reason: type,
+      );
+    }
+  });
+
   test('a uid with unexpected characters is not signed', () {
     expect(signMediaUrl(_url, uid: 'uid alice', key: _fixture), _url);
   });

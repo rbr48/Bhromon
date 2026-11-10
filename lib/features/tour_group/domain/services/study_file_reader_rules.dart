@@ -14,3 +14,17 @@ StudyFileReader studyFileReader(String nameOrUrl) {
   }
   return StudyFileReader.none;
 }
+
+/// The media server's address for the study folder of a group: /media/{tourId}/study/{file}.
+const String _mediaOrigin = 'https://bhromon.fun/media/';
+
+/// Whether [url] is a file in the study folder of the group [tourId] on the media server. A signed address, with
+/// its query, is still such a file. A link to another group's folder, to another folder or host, or to a deeper
+/// path is not, so it opens outside the app.
+bool isStudyFolderFile(String url, String tourId) {
+  if (tourId.isEmpty) return false;
+  final folder = '$_mediaOrigin$tourId/study/';
+  if (!url.startsWith(folder)) return false;
+  final name = url.substring(folder.length).split(RegExp(r'[?#]')).first;
+  return name.isNotEmpty && !name.contains('/');
+}

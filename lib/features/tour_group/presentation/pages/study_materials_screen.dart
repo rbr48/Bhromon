@@ -185,7 +185,20 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
                       l10n.translate('study_material_yours_heading'),
                       [for (final m in yours) _tile(context, m)],
                     ),
-                  if (published.isNotEmpty)
+                  // With every chapter shown, the shared materials are grouped by chapter, in chapter order.
+                  if (published.isNotEmpty &&
+                      _chapterId == null &&
+                      _chapters.isNotEmpty)
+                    for (final group in groupStudyMaterialsByChapter(
+                      published,
+                      [for (final chapter in _chapters) chapter.id],
+                    ))
+                      _section(
+                        context,
+                        _chapterHeading(context, group.chapterId),
+                        [for (final m in group.materials) _tile(context, m)],
+                      )
+                  else if (published.isNotEmpty)
                     _section(
                       context,
                       l10n.translate('study_material_shared_heading'),
@@ -224,6 +237,17 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
           ),
       ],
     );
+  }
+
+  /// The heading of a chapter's group: its number and title, or "Whole book" for materials under no chapter.
+  String _chapterHeading(BuildContext context, String? chapterId) {
+    final l10n = context.l10n;
+    for (final chapter in _chapters) {
+      if (chapter.id == chapterId) {
+        return '${l10n.number(chapter.number)}. ${chapter.title}';
+      }
+    }
+    return l10n.translate('study_material_whole_book');
   }
 
   Widget _section(BuildContext context, String title, List<Widget> children) {
@@ -442,14 +466,18 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
         if (isMd) {
           await MarkdownViewerScreen.open(
             context,
-            title: m.title.isNotEmpty ? m.title : (m.fileName ?? 'Document'),
+            title: m.title.isNotEmpty
+                ? m.title
+                : (m.fileName ?? l10n.translate('study_document_untitled')),
             fileUrl: target,
             tourId: widget.tourId,
           );
         } else if (isPdf) {
           await PdfViewerScreen.open(
             context,
-            title: m.title.isNotEmpty ? m.title : (m.fileName ?? 'Document'),
+            title: m.title.isNotEmpty
+                ? m.title
+                : (m.fileName ?? l10n.translate('study_document_untitled')),
             fileUrl: target,
             tourId: widget.tourId,
           );

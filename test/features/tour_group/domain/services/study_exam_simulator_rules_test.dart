@@ -188,6 +188,11 @@ Discuss the differences between a Cheque and a Bill of Exchange under Negotiable
       expect(passingAttempt.isPassed, isTrue);
     });
 
+    test('the pass mark is 45 out of 100 in each subject (IBB clause 27)', () {
+      expect(testAttempt.copyWith(scores: {'q_1': 44}).isPassed, isFalse);
+      expect(testAttempt.copyWith(scores: {'q_1': 45}).isPassed, isTrue);
+    });
+
     test('tracks per-question attempt status accurately', () {
       expect(testAttempt.questionStatus('q_1'), ExamQuestionStatus.answered);
       expect(testAttempt.questionStatus('q_2'), ExamQuestionStatus.inProgress);

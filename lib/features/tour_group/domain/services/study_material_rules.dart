@@ -184,6 +184,27 @@ List<StudyMaterial> studyMaterialsInChapter(
   ];
 }
 
+/// The materials of a book as its library shows them: one group for each chapter that has any, in the order of
+/// [chapterIds], each newest first. Materials filed under the whole book, or under a chapter that is gone, come
+/// first, with a null chapter id. A chapter with no material has no group.
+List<({String? chapterId, List<StudyMaterial> materials})>
+    groupStudyMaterialsByChapter(
+  Iterable<StudyMaterial> materials,
+  List<String> chapterIds,
+) {
+  final byChapter = <String?, List<StudyMaterial>>{};
+  for (final material in materials) {
+    final id = material.chapterId;
+    final key = id != null && chapterIds.contains(id) ? id : null;
+    byChapter.putIfAbsent(key, () => []).add(material);
+  }
+  return [
+    for (final String? id in [null, ...chapterIds])
+      if (byChapter[id] != null)
+        (chapterId: id, materials: sortStudyMaterials(byChapter[id]!)),
+  ];
+}
+
 /// The materials an admin must decide because they were reported: the hidden ones, oldest report first.
 /// A report whose time is not yet known comes last.
 List<StudyMaterial> studyReviewQueue(Iterable<StudyMaterial> materials) {

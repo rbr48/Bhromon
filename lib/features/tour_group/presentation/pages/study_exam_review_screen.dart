@@ -138,8 +138,14 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                         ),
                         child: Text(
                           isPassed
-                              ? l10n.translate('study_exam_pass')
-                              : l10n.translate('study_exam_fail'),
+                              ? l10n.translate('study_exam_pass', args: {
+                                  'percent':
+                                      l10n.number(ExamAttempt.passPercent)
+                                })
+                              : l10n.translate('study_exam_fail', args: {
+                                  'percent':
+                                      l10n.number(ExamAttempt.passPercent)
+                                }),
                           style: TextStyle(
                             color:
                                 isPassed ? AppColors.mintGreen : Colors.amber,

@@ -193,7 +193,7 @@ void main() {
       expect(revived.isPassed, isTrue);
     });
 
-    test('failing score (< 50%) is marked as not passed', () {
+    test('failing score (< 45%) is marked as not passed', () {
       final attempt = ExamAttempt(
         id: 'att_fail',
         tourId: 'tour_abc',
@@ -335,7 +335,7 @@ void main() {
       // Verify Score card
       expect(find.text('16 / 100'), findsOneWidget);
       expect(find.text('16.0%'), findsOneWidget);
-      expect(find.text('NEEDS IMPROVEMENT (< 50%)'), findsOneWidget);
+      expect(find.text('NEEDS IMPROVEMENT (< 45%)'), findsOneWidget);
 
       // Verify Candidate draft vs Model answer
       expect(

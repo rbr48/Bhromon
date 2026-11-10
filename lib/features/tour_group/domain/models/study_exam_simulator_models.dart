@@ -119,7 +119,12 @@ class ExamAttempt {
 
   double get percentage => scorePercentage;
 
-  bool get isPassed => scorePercentage >= 50.0; // IBB JAIBB pass mark is 50%
+  /// The pass mark, in percent of the full marks. IBB regulation clause 27 (JAIBB and AIBB, July 2023 edition,
+  /// revised by the 155th Council on 13-03-2025): "The pass marks are 45 out of the full marks of 100 in each of
+  /// the subjects of JAIBB and AIBB Examinations."
+  static const int passPercent = 45;
+
+  bool get isPassed => scorePercentage >= passPercent;
 
   ExamQuestionStatus questionStatus(String questionId) {
     final text = draftAnswers[questionId]?.trim() ?? '';
