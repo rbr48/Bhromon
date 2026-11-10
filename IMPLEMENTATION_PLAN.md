@@ -289,13 +289,16 @@ This implementation plan establishes the collaboration roadmap between **Claude*
 ---
 
 ### Track R: Native Text-to-Speech Commute Audio Player (Feature 8)
-- [ ] **Task R1: TTS Audio Controller (`study_tts_controller.dart`)**:
-  - Integrate `flutter_tts` with background-friendly playback queue.
-  - Parse markdown text into spoken paragraphs, stripping code blocks and markdown symbols.
-  - Multi-language voice selection (English voice for English text, Bengali voice for Bangla text).
-- [ ] **Task R2: Commute Audio Player Bar (`markdown_viewer_screen.dart`)**:
-  - Bottom audio dock: Play/Pause, Previous/Next question, 1.0x / 1.25x / 1.5x speed selector.
-  - Sleep timer (15m, 30m, 45m).
+- [x] **Task R1: TTS Audio Controller (`study_tts_controller.dart`)**:
+  - Implemented `StudyTtsController` managing playlist tracks, natural speech sanitization (`cleanTextForSpeech`), multi-language detection (`isBengaliText`), and commute sleep timer.
+  - Playlist controls: Play, Pause, Resume, Stop, Next, Previous, Jump to track, and Speed controls (0.75x, 1.0x, 1.25x, 1.5x).
+- [x] **Task R2: Commute Audio Player Bar & Reader Dock (`study_commute_audio_bar.dart`, `markdown_viewer_screen.dart`)**:
+  - Floating bottom audio control dock with responsive `context.forest` theming.
+  - Headphone AppBar button in `MarkdownViewerScreen` with synchronized auto-scrolling to active reading sections.
+- [x] **Task R3: Localization & Automated Tests**:
+  - 10 translation keys added with 100% English and Bengali parity in `tour_translation_keys.dart`.
+  - 9 unit tests in `study_tts_controller_test.dart` and 2 widget tests in `study_commute_audio_bar_test.dart` (20/20 tests passing).
+  - Monotonic version increment to `1.8.181+235`.
 
 ---
 

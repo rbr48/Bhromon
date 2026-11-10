@@ -3301,6 +3301,16 @@ class TourTranslationKeys {
       'study_offline_removed': 'Offline vault data removed from device',
       'study_offline_empty_solutions':
           'No solutions found to save for this book.',
+      'study_audio_player': 'Commute Audio Player',
+      'study_audio_listen': 'Listen Aloud',
+      'study_audio_speed': 'Playback Speed',
+      'study_audio_sleep_timer': 'Commute Sleep Timer',
+      'study_audio_minutes': '{count} min',
+      'study_audio_timer_off': 'Timer Off',
+      'study_audio_track_counter': '{current}/{total}',
+      'study_audio_no_tracks': 'No audio tracks found',
+      'study_audio_playing': 'Playing',
+      'study_audio_paused': 'Paused',
       'study_material_title': 'Materials',
       'study_material_add': 'Add material',
       'study_material_empty':
@@ -6969,6 +6979,16 @@ class TourTranslationKeys {
       'study_offline_removed': 'ডিভাইস থেকে অফলাইন ভল্ট সরানো হয়েছে',
       'study_offline_empty_solutions':
           'এই বইয়ের জন্য কোনো সমাধান পাওয়া যায়নি।',
+      'study_audio_player': 'কমিউট অডিও প্লেয়ার',
+      'study_audio_listen': 'পড়ে শোনান',
+      'study_audio_speed': 'প্লেব্যাক গতি',
+      'study_audio_sleep_timer': 'কমিউট স্লিপ টাইমার',
+      'study_audio_minutes': '{count} মিনিট',
+      'study_audio_timer_off': 'টাইমার বন্ধ',
+      'study_audio_track_counter': '{current}/{total}',
+      'study_audio_no_tracks': 'কোনো অডিও ট্র্যাক পাওয়া যায়নি',
+      'study_audio_playing': 'চলছে',
+      'study_audio_paused': 'স্থগিত',
       'study_material_title': 'উপকরণ',
       'study_material_add': 'উপকরণ যোগ করুন',
       'study_material_empty':
