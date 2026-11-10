@@ -92,8 +92,26 @@ This implementation plan establishes the collaboration roadmap between **Claude*
   - Unit tests in `media_formats_test.dart` and `study_material_rules_test.dart` (all 29 tests passing).
   - Python tests for media server upload validation (`test_media_server.py`, all 502 suite tests passing).
   - Version monotonically incremented to `1.8.168+222`.
-- [ ] **Task F5: Peer Review, Merge & Deploy**:
+- [x] **Task F5: Peer Review, Merge & Deploy**:
   - Create feature branch `feat/power-documents-pack`.
   - Push branch, open PR, request peer review from Claude, await 100% green CI.
-  - Merge after mutual review sign-off.
-  - Deploy Storage rules, update VPS media server, deploy web, build APK/AAB.
+  - Merge after mutual review sign-off ([PR #458](https://github.com/rbr48/Bhromon/pull/458) & [PR #459](https://github.com/rbr48/Bhromon/pull/459)).
+
+---
+
+### Track G: Web Mobile Google Play Store Action Button (Antigravity)
+- [x] **Task G1: Google Play Action Button Widget (`google_play_action_button.dart`)**:
+  - Create `GooglePlayActionButton` widget with custom vector `GooglePlayLogoPainter` rendering official Google Play logo.
+  - External launch handler using `url_launcher` targeting `https://play.google.com/store/apps/details?id=com.bhromon.app&pli=1`.
+  - Localized tooltip support (`hub_google_play_tooltip`).
+- [x] **Task G2: Tour Group Hub AppBar Integration (`tour_group_hub_screen.dart`)**:
+  - Insert `if (kIsWeb) const GooglePlayActionButton()` immediately before the language globe icon in AppBar `actions`.
+- [x] **Task G3: Translations & Test Verification**:
+  - Add `hub_google_play_tooltip` to English and Bengali dictionaries in `tour_translation_keys.dart`.
+  - Add unit and widget tests for `GooglePlayActionButton`.
+  - Run `flutter test test/core/localization/tour_translation_test.dart` and `dart analyze`.
+- [x] **Task G4: Version Bump & Playbook Memory Update**:
+  - Increment version to `1.8.169+223` in `pubspec.yaml` and update `AGENTS.md`.
+- [ ] **Task G5: Peer Review & Deployment Cycle**:
+  - Push branch, open PR, mutual peer review with Claude, verify 100% green CI, merge to `main`.
+  - Full deployment: Firestore rules, Storage rules, VPS media server, Web Hosting, APK to VPS, and Play Store AAB.
