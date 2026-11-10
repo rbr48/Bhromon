@@ -3233,6 +3233,35 @@ class TourTranslationKeys {
       'study_flashcard_menu': 'More options',
       'study_flashcard_device_note':
           'Cards stay on this phone. They leave it only when you export them.',
+      'study_exam_simulator_title': 'Exam Simulator',
+      'study_exam_simulator_subtitle':
+          'Timed mock exam with scratchpad & model answer review',
+      'study_exam_duration_3h': '3 Hours (Full Exam)',
+      'study_exam_duration_2h': '2 Hours (Speed Practice)',
+      'study_exam_duration_1h': '1 Hour (Sprint Drill)',
+      'study_exam_start': 'Start Exam',
+      'study_exam_submit': 'Submit Exam',
+      'study_exam_submit_confirm':
+          'Are you sure you want to submit your exam paper? You will not be able to edit your draft answers after submission.',
+      'study_exam_time_remaining': 'Time Remaining',
+      'study_exam_scratchpad_hint':
+          'Write your outline, legal sections, formulas and key points here...',
+      'study_exam_question_tray': 'Question Tray',
+      'study_exam_marks': 'Marks: {marks}',
+      'study_exam_status_unattempted': 'Unattempted',
+      'study_exam_status_in_progress': 'Drafting',
+      'study_exam_status_answered': 'Answered',
+      'study_exam_review_title': 'Exam Review & Model Answers',
+      'study_exam_candidate_draft': 'Your Scratchpad Draft',
+      'study_exam_model_answer': 'Examiner Model Answer',
+      'study_exam_self_score': 'Award Marks',
+      'study_exam_total_score': 'Score: {score} / {total} ({percent}%)',
+      'study_exam_pass': 'PASSED (>= 50%)',
+      'study_exam_fail': 'NEEDS IMPROVEMENT (< 50%)',
+      'study_exam_warning_30m': '30 minutes remaining!',
+      'study_exam_warning_10m': '10 minutes remaining! Finalize your outlines.',
+      'study_exam_time_expired':
+          'Time has expired! Submitting your exam paper...',
       'study_material_title': 'Materials',
       'study_material_add': 'Add material',
       'study_material_empty':
@@ -6833,6 +6862,35 @@ class TourTranslationKeys {
       'study_flashcard_menu': 'আরও বিকল্প',
       'study_flashcard_device_note':
           'কার্ড এই ফোনেই থাকে। আপনি রপ্তানি করলেই শুধু বাইরে যায়।',
+      'study_exam_simulator_title': 'পরীক্ষা সিমুলেটর',
+      'study_exam_simulator_subtitle':
+          'সময় নির্ধারিত মক টেস্ট ও ড্রাফট স্ক্র্যাচপ্যাড',
+      'study_exam_duration_3h': '৩ ঘণ্টা (পূর্ণাঙ্গ পরীক্ষা)',
+      'study_exam_duration_2h': '২ ঘণ্টা (দ্রুত অনুশীলন)',
+      'study_exam_duration_1h': '১ ঘণ্টা (স্প্রিন্ট ড্রিল)',
+      'study_exam_start': 'পরীক্ষা শুরু করুন',
+      'study_exam_submit': 'পরীক্ষা জমা দিন',
+      'study_exam_submit_confirm':
+          'আপনি কি নিশ্চিত যে আপনি পরীক্ষার খাতা জমা দিতে চান? জমা দেওয়ার পর আপনি আর ড্রাফট উত্তর পরিবর্তন করতে পারবেন না।',
+      'study_exam_time_remaining': 'বাকি সময়',
+      'study_exam_scratchpad_hint':
+          'এখানে আপনার মূল পয়েন্ট, আইনের ধারা, সূত্র ও নোট ড্রাফট করুন...',
+      'study_exam_question_tray': 'প্রশ্ন তালিকা',
+      'study_exam_marks': 'মান: {marks}',
+      'study_exam_status_unattempted': 'অদেখা',
+      'study_exam_status_in_progress': 'চলমান',
+      'study_exam_status_answered': 'উত্তরকৃত',
+      'study_exam_review_title': 'পরীক্ষা পর্যালোচনা ও আদর্শ উত্তর',
+      'study_exam_candidate_draft': 'আপনার ড্রাফট নোট',
+      'study_exam_model_answer': 'পরীক্ষকের আদর্শ উত্তর',
+      'study_exam_self_score': 'নম্বর প্রদান করুন',
+      'study_exam_total_score': 'মোট নম্বর: {score} / {total} ({percent}%)',
+      'study_exam_pass': 'উত্তীর্ণ (>= ৫০%)',
+      'study_exam_fail': 'আরও উন্নতি প্রয়োজন (< ৫০%)',
+      'study_exam_warning_30m': 'আর ৩০ মিনিট বাকি আছে!',
+      'study_exam_warning_10m': 'আর ১০ মিনিট বাকি আছে! আপনার খাতা গুছিয়ে নিন।',
+      'study_exam_time_expired':
+          'সময় শেষ হয়ে গেছে! পরীক্ষার খাতা জমা নেওয়া হচ্ছে...',
       'study_material_title': 'উপকরণ',
       'study_material_add': 'উপকরণ যোগ করুন',
       'study_material_empty':
