@@ -41,4 +41,29 @@ void main() {
     expect(code.language, 'dart');
     expect(blocks.whereType<ChatChartBlock>(), isEmpty);
   });
+
+  test('a fenced svg block becomes a ChatSvgBlock', () {
+    const rawSvg =
+        '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
+    final blocks = parseChatBlocks('```svg\n$rawSvg\n```');
+
+    expect(blocks, hasLength(1));
+    final svgBlock = blocks.single as ChatSvgBlock;
+    expect(svgBlock.svg, rawSvg);
+  });
+
+  test('a raw svg element in markdown prose becomes a ChatSvgBlock', () {
+    const rawSvg =
+        '<svg viewBox="0 0 100 100">\n  <rect width="100" height="100"/>\n</svg>';
+    final blocks =
+        parseChatBlocks('পূর্ববর্তী আলোচনা।\n\n$rawSvg\n\nপরবর্তী বিশ্লেষণ।');
+
+    expect(blocks.map((b) => b.runtimeType), [
+      ChatParagraphBlock,
+      ChatSvgBlock,
+      ChatParagraphBlock,
+    ]);
+    final svgBlock = blocks[1] as ChatSvgBlock;
+    expect(svgBlock.svg, rawSvg);
+  });
 }

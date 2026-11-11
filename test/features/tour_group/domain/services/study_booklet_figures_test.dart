@@ -80,6 +80,20 @@ void main() {
 
       expect(pieces.whereType<StudyBookletFigure>(), hasLength(1));
     });
+
+    test('an svg code fence becomes a StudyBookletSvgFigure', () {
+      const svg =
+          '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
+      final pieces = StudyBookletPdfGenerator.solutionPieces(
+        'শুরু।\n\n```svg\n$svg\n```\n\nশেষ।',
+      );
+
+      expect(pieces, hasLength(3));
+      expect(pieces[0], isA<StudyBookletText>());
+      expect(pieces[1], isA<StudyBookletSvgFigure>());
+      expect((pieces[1] as StudyBookletSvgFigure).svg, svg);
+      expect(pieces[2], isA<StudyBookletText>());
+    });
   });
 
   group('StudyBookletQuestionItem', () {

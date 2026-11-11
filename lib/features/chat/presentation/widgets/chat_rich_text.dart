@@ -8,6 +8,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../tour_group/domain/services/chat_markdown.dart';
 import 'chat_code_block_widget.dart';
+import 'chat_svg_widget.dart';
 import 'chat_table_widget.dart';
 import 'ppc_chart_widget.dart';
 
@@ -316,6 +317,8 @@ class _ChatRichTextState extends State<ChatRichText> {
       );
     } else if (block is ChatChartBlock) {
       return PpcChartWidget(spec: block.spec);
+    } else if (block is ChatSvgBlock) {
+      return ChatSvgWidget(svg: block.svg);
     } else if (block is ChatMathBlock) {
       if (RegExp(r'[\u0980-\u09FF]').hasMatch(block.latex)) {
         return Padding(
