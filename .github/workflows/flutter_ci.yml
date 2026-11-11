@@ -95,7 +95,7 @@ jobs:
       - name: Test the coverage script
         run: python3 -m unittest discover -s tool -p "test_*.py" -v
 
-      # Regression floor, not a target. Line coverage was 25.6% (10334 of 40353 lines) when this was last
+      # Regression floor, not a target. Line coverage was 43.82% (37769 of 86187 lines) when this was last
       # measured. Raise the floor as coverage grows. The total is read from the tracefile by
       # tool/lcov_line_coverage.py: it used to come from lcov, which apt-get installed here and
       # which hung on a stalled package mirror.

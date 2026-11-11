@@ -33,7 +33,7 @@ class LineTotalsTest(unittest.TestCase):
 
 class PercentTest(unittest.TestCase):
     def test_is_the_hit_share_of_the_found_lines(self):
-        # The figure the workflow comment recorded: 10334 of 40353 lines.
+        # An earlier figure the workflow comment recorded: 10334 of 40353 lines.
         self.assertAlmostEqual(coverage.percent(10334, 40353), 25.61, places=2)
         self.assertEqual(coverage.percent(51, 200), 25.5)
 
