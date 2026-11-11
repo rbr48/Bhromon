@@ -778,7 +778,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
       if (isCancelled) return;
 
-      String tourName = 'Banking Exam Study Circle';
+      String tourName = 'Study Circle';
       String? inviteCode;
       try {
         final group = await _repository
@@ -796,9 +796,29 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
       if (isCancelled) return;
 
+      final combinedContext = '$tourName ${widget.book.title}'.toLowerCase();
+      final isBanking = combinedContext.contains('jaibb') ||
+          combinedContext.contains('aibb') ||
+          combinedContext.contains('ibb') ||
+          combinedContext.contains('ব্যাংকিং') ||
+          combinedContext.contains('ব্যাংকার্স');
+
+      String? subjectCode;
+      if (widget.book.author.trim().isNotEmpty) {
+        subjectCode = widget.book.author.trim();
+      } else {
+        final codeMatch =
+            RegExp(r'\(([A-Z\d\-\s]{2,10})\)').firstMatch(widget.book.title);
+        if (codeMatch != null) {
+          subjectCode = codeMatch.group(1);
+        } else if (isBanking) {
+          subjectCode = 'JAIBB';
+        }
+      }
+
       final content = StudyBookletPdfGenerator.extractContent(
         subjectTitle: widget.book.title,
-        subjectCode: 'JAIBB',
+        subjectCode: subjectCode,
         tourName: tourName,
         inviteCode: inviteCode,
         chapters: _chapters,
@@ -854,7 +874,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     );
 
     try {
-      String tourName = 'Banking Professional Exam Preparation';
+      String tourName = 'Study Circle';
       String? tourDescription;
       String? inviteCode;
       try {
@@ -874,9 +894,29 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
       if (isCancelled) return;
 
+      final combinedContext = '$tourName ${widget.book.title}'.toLowerCase();
+      final isBanking = combinedContext.contains('jaibb') ||
+          combinedContext.contains('aibb') ||
+          combinedContext.contains('ibb') ||
+          combinedContext.contains('ব্যাংকিং') ||
+          combinedContext.contains('ব্যাংকার্স');
+
+      String? subjectCode;
+      if (widget.book.author.trim().isNotEmpty) {
+        subjectCode = widget.book.author.trim();
+      } else {
+        final codeMatch =
+            RegExp(r'\(([A-Z\d\-\s]{2,10})\)').firstMatch(widget.book.title);
+        if (codeMatch != null) {
+          subjectCode = codeMatch.group(1);
+        } else if (isBanking) {
+          subjectCode = 'JAIBB';
+        }
+      }
+
       final content = StudyBookletContent(
         subjectTitle: widget.book.title,
-        subjectCode: 'JAIBB',
+        subjectCode: subjectCode,
         tourName: tourName,
         tourDescription: tourDescription,
         inviteCode: inviteCode,
@@ -894,7 +934,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         Navigator.of(context, rootNavigator: true).pop();
         await PdfViewerScreen.open(
           context,
-          title: 'Branch Notice Board Poster',
+          title:
+              isBanking ? 'Branch Notice Board Poster' : 'Notice Board Poster',
           bytes: pdfBytes,
           tourId: widget.tourId,
         );

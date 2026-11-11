@@ -259,6 +259,20 @@ class StudyBookletPdfGenerator {
     );
   }
 
+  /// Returns whether this booklet or poster belongs to a banking exam circle (IBB / JAIBB / AIBB).
+  static bool isBankingContent(StudyBookletContent content) {
+    final text =
+        '${content.tourName} ${content.subjectTitle} ${content.subjectCode ?? ''} ${content.tourDescription ?? ''}'
+            .toLowerCase();
+    return text.contains('jaibb') ||
+        text.contains('aibb') ||
+        text.contains('banking') ||
+        text.contains('banker') ||
+        text.contains('ব্যাংকিং') ||
+        text.contains('ব্যাংকার্স') ||
+        text.contains('ibb');
+  }
+
   /// Generates a duplex-printable A4 examination question bank & model solutions booklet.
   ///
   /// The chapters are laid out one at a time, with a pause after each, so the screen stays
@@ -280,12 +294,52 @@ class StudyBookletPdfGenerator {
       if (isCancelled?.call() ?? false) throw const StudyBookletCancelled();
     }
 
+    final isBanking = isBankingContent(content);
+
     // 1. Cover Page
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(36),
         build: (pw.Context context) {
+          final institutionBadge = isBanking
+              ? (isBengali
+                  ? 'দ্য ইনস্টিটিউট অব ব্যাংকার্স, বাংলাদেশ (IBB)'
+                  : 'THE INSTITUTE OF BANKERS, BANGLADESH (IBB)')
+              : (content.tourName.isNotEmpty
+                  ? '${content.tourName.toUpperCase()} STUDY CIRCLE'
+                  : (isBengali
+                      ? 'পরীক্ষা প্রস্তুতি ও স্টাডি সার্কেল বুকলেট'
+                      : 'EXAM PREPARATION & STUDY BOOKLET'));
+
+          final subtitleText = isBanking
+              ? (isBengali
+                  ? 'ব্যাংকিং প্রফেশনাল পরীক্ষা (JAIBB) — বিগত প্রশ্নপত্র ও মডেল সমাধান'
+                  : 'JAIBB Examination Question Bank & Examiner-Grade Solutions')
+              : (isBengali
+                  ? '${content.subjectTitle} — প্রশ্নব্যাংক ও পরীক্ষক-মানের মডেল সমাধান'
+                  : '${content.subjectTitle} — Question Bank & Model Solutions');
+
+          final highlight1 = isBanking
+              ? (isBengali
+                  ? '• ৭টি বিগত পরীক্ষা সেশন (৯৬তম - ৭ম নতুন BPE)'
+                  : '• 7 Past Exam Sessions (96th BPE - 7th New BPE)')
+              : (isBengali
+                  ? '• ${content.chapters.isNotEmpty ? content.chapters.length : 1}টি অধ্যায় অন্তর্ভুক্ত'
+                  : '• ${content.chapters.isNotEmpty ? content.chapters.length : 1} Chapters Included');
+
+          final highlight2 = isBengali
+              ? '• ১০০% নির্ভুল পরীক্ষক-মানের বিস্তারিত সমাধান'
+              : '• 100% Comprehensive Examiner-Grade Solutions';
+
+          final highlight3 = isBanking
+              ? (isBengali
+                  ? '• সিলেবাস মডিউল ম্যাপিং ও ডুও-ল্যাঙ্গুয়েজ সাপোর্ট'
+                  : '• Official Syllabus Module Mapping (A-E)')
+              : (isBengali
+                  ? '• অফলাইন ভল্ট ও ডুও-ল্যাঙ্গুয়েজ স্টাডি সাপোর্ট'
+                  : '• Offline Vault & Dual-Language Study Support');
+
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
@@ -299,9 +353,7 @@ class StudyBookletPdfGenerator {
                   borderRadius: pw.BorderRadius.circular(6),
                 ),
                 child: pw.Text(
-                  isBengali
-                      ? 'দ্য ইনস্টিটিউট অব ব্যাংকার্স, বাংলাদেশ (IBB)'
-                      : 'THE INSTITUTE OF BANKERS, BANGLADESH (IBB)',
+                  institutionBadge,
                   style: const pw.TextStyle(
                     color: PdfColors.white,
                     fontSize: 11,
@@ -321,10 +373,11 @@ class StudyBookletPdfGenerator {
                   color: PdfColor(0.08, 0.25, 0.18),
                 ),
               ),
-              if (content.subjectCode != null) ...[
+              if (content.subjectCode != null &&
+                  content.subjectCode!.trim().isNotEmpty) ...[
                 pw.SizedBox(height: 8),
                 pw.Text(
-                  'Subject Code: ${content.subjectCode}',
+                  'Subject Code: ${content.subjectCode!.trim()}',
                   style: const pw.TextStyle(
                     fontSize: 13,
                     color: PdfColors.grey700,
@@ -341,9 +394,7 @@ class StudyBookletPdfGenerator {
 
               // Subtitle
               pw.Text(
-                isBengali
-                    ? 'ব্যাংকিং প্রফেশনাল পরীক্ষা (JAIBB) — বিগত প্রশ্নপত্র ও মডেল সমাধান'
-                    : 'JAIBB Examination Question Bank & Examiner-Grade Solutions',
+                subtitleText,
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(
                   fontSize: 14,
@@ -364,23 +415,17 @@ class StudyBookletPdfGenerator {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      isBengali
-                          ? '• ৭টি বিগত পরীক্ষা সেশন (৯৬তম - ৭ম নতুন BPE)'
-                          : '• 7 Past Exam Sessions (96th BPE - 7th New BPE)',
+                      highlight1,
                       style: const pw.TextStyle(fontSize: 10.5),
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(
-                      isBengali
-                          ? '• ১০০% নির্ভুল পরীক্ষক-মানের বিস্তারিত সমাধান'
-                          : '• 100% Comprehensive Examiner-Grade Solutions',
+                      highlight2,
                       style: const pw.TextStyle(fontSize: 10.5),
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(
-                      isBengali
-                          ? '• সিলেবাস মডিউল ম্যাপিং ও ডুও-ল্যাঙ্গুয়েজ সাপোর্ট'
-                          : '• Official Syllabus Module Mapping (A-E)',
+                      highlight3,
                       style: const pw.TextStyle(fontSize: 10.5),
                     ),
                   ],
@@ -467,7 +512,7 @@ class StudyBookletPdfGenerator {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'JAIBB Exam Study Booklet',
+                    '${content.subjectTitle} ${isBengali ? 'স্টাডি বুকলেট' : 'Study Booklet'}',
                     style: const pw.TextStyle(
                         fontSize: 8.5, color: PdfColors.grey500),
                   ),
@@ -602,6 +647,40 @@ class StudyBookletPdfGenerator {
   }) async {
     final doc = await _createDocument('${content.tourName} - Branch Poster');
 
+    final isBanking = isBankingContent(content);
+
+    final posterHeaderBadge = isBanking
+        ? 'THE INSTITUTE OF BANKERS, BANGLADESH (IBB)'
+        : (content.tourName.isNotEmpty
+            ? '${content.tourName.toUpperCase()} NOTICE BOARD'
+            : 'STUDY CIRCLE NOTICE BOARD');
+
+    final posterMainHeading = isBanking
+        ? 'JAIBB Examination Preparation'
+        : (content.tourName.isNotEmpty
+            ? content.tourName
+            : (content.subjectTitle.isNotEmpty
+                ? '${content.subjectTitle} Study Circle'
+                : 'Study Circle Preparation'));
+
+    final posterSubtitle = isBanking
+        ? 'ব্যাংকিং প্রফেশনাল পরীক্ষা প্রস্তুতি স্টাডি সার্কেল'
+        : (content.subjectTitle.isNotEmpty
+            ? '${content.subjectTitle} — পরীক্ষা প্রস্তুতি ও স্টাডি সার্কেল'
+            : 'সম্মিলিত পরীক্ষা প্রস্তুতি স্টাডি সার্কেল');
+
+    final posterHighlight1 = isBanking
+        ? '৭টি বিগত পরীক্ষার প্রশ্ন ও পরীক্ষক-মানের মডেল সমাধান (বাংলা ও ইংরেজি)'
+        : 'সম্মিলিত অধ্যায়ভিত্তিক প্রস্তুতি ও পরীক্ষক-মানের মডেল সমাধান';
+
+    final posterHighlight6 = isBanking
+        ? 'দৈনিক ব্রাঞ্চ স্টাডি স্ট্রিক ও সহকর্মী অ্যাকাউন্টেবিলিটি'
+        : 'দৈনিক স্টাডি স্ট্রিক ও সহপাঠী অ্যাকাউন্টেবিলিটি';
+
+    final posterFooter = isBanking
+        ? 'শাখার নোটিশ বোর্ডে লাগিয়ে সহকর্মীদের সাথে একসাথে ব্যাংকিং ডিপ্লোমা প্রস্তুতি নিন'
+        : 'নোটিশ বোর্ডে লাগিয়ে সহপাঠী ও বন্ধুদের সাথে একসাথে স্টাডি সার্কেলে যোগ দিন';
+
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -626,7 +705,7 @@ class StudyBookletPdfGenerator {
                     borderRadius: pw.BorderRadius.circular(6),
                   ),
                   child: pw.Text(
-                    'THE INSTITUTE OF BANKERS, BANGLADESH (IBB)',
+                    posterHeaderBadge,
                     style: const pw.TextStyle(
                       color: PdfColors.white,
                       fontSize: 12,
@@ -638,7 +717,8 @@ class StudyBookletPdfGenerator {
 
                 // Main Heading
                 pw.Text(
-                  'JAIBB Examination Preparation',
+                  posterMainHeading,
+                  textAlign: pw.TextAlign.center,
                   style: const pw.TextStyle(
                     fontSize: 22,
                     fontWeight: pw.FontWeight.bold,
@@ -647,7 +727,8 @@ class StudyBookletPdfGenerator {
                 ),
                 pw.SizedBox(height: 6),
                 pw.Text(
-                  'ব্যাংকিং প্রফেশনাল পরীক্ষা প্রস্তুতি স্টাডি সার্কেল',
+                  posterSubtitle,
+                  textAlign: pw.TextAlign.center,
                   style: const pw.TextStyle(
                     fontSize: 16,
                     color: PdfColors.grey800,
@@ -690,8 +771,7 @@ class StudyBookletPdfGenerator {
                   ),
                   child: pw.Column(
                     children: [
-                      _posterFeatureRow('•',
-                          '৭টি বিগত পরীক্ষার প্রশ্ন ও পরীক্ষক-মানের মডেল সমাধান (বাংলা ও ইংরেজি)'),
+                      _posterFeatureRow('•', posterHighlight1),
                       _posterFeatureRow('•',
                           '৫-বক্স লাইটনার অ্যালগরিদম স্পেসড-রিপিটিশন ফ্ল্যাশকার্ড'),
                       _posterFeatureRow('•',
@@ -700,8 +780,7 @@ class StudyBookletPdfGenerator {
                           'কমিউট অডিও প্লেয়ার — ট্রাফিক ও হাঁটার সময় হাতবিহীন সমাধান শ্রবণ'),
                       _posterFeatureRow('•',
                           '১০০% অফলাইন ভল্ট — নেটওয়ার্ক ছাড়া জিরো-ডাটা প্রস্তুতি'),
-                      _posterFeatureRow('•',
-                          'দৈনিক ব্রাঞ্চ স্টাডি স্ট্রিক ও সহকর্মী অ্যাকাউন্টেবিলিটি'),
+                      _posterFeatureRow('•', posterHighlight6),
                     ],
                   ),
                 ),
@@ -797,7 +876,8 @@ class StudyBookletPdfGenerator {
                 // Notice Board Footer
                 pw.Divider(color: PdfColors.grey300),
                 pw.Text(
-                  'শাখার নোটিশ বোর্ডে লাগিয়ে সহকর্মীদের সাথে একসাথে ব্যাংকিং ডিপ্লোমা প্রস্তুতি নিন',
+                  posterFooter,
+                  textAlign: pw.TextAlign.center,
                   style: const pw.TextStyle(
                     fontSize: 9.5,
                     color: PdfColors.grey700,

@@ -292,7 +292,7 @@ class StudyDailyStreakCard extends StatelessWidget {
                     final list = standings ??
                         StudyDailyStreakRules.fromTourMembers(
                           members: const [],
-                          myEmail: 'candidate@bank.org',
+                          myEmail: 'member@bhromon.fun',
                           myName: 'You',
                           myStreak: streak.currentStreak,
                         );

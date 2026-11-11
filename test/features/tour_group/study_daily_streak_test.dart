@@ -53,7 +53,7 @@ void main() {
       expect(find.text('🔥'), findsWidgets);
       expect(find.text('Active Today!'), findsOneWidget);
       expect(find.text('Steady Flame'), findsOneWidget);
-      expect(find.text('Branch Study Hall'), findsOneWidget);
+      expect(find.text('Study Hall'), findsOneWidget);
     });
 
     testWidgets('action required status shown when not active today',
@@ -96,7 +96,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final button = find.text('Branch Study Hall');
+      final button = find.text('Study Hall');
       expect(button, findsOneWidget);
       await tester.tap(button);
       await tester.pumpAndSettle();
@@ -137,9 +137,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Header and summary metrics
-      expect(find.text('Branch Study Hall'), findsOneWidget);
-      expect(find.text('Colleague accountability & rankings'), findsOneWidget);
-      expect(find.text('All Banks'), findsWidgets);
+      expect(find.text('Study Hall'), findsOneWidget);
+      expect(find.text('Member accountability & rankings'), findsOneWidget);
+      expect(find.text('All Members'), findsWidgets);
 
       // Verify current user details
       expect(find.text('Izhaan'), findsOneWidget);
