@@ -1481,6 +1481,11 @@ class TourTranslationKeys {
       'fsh_sightseeing_sub': 'Sightseeing spots and photo points',
       'fsh_alert_not_synced':
           'The alert has not reached the server yet. It goes to the group once the network is back.',
+      'fsh_hold_hint': 'Press and hold for 2 seconds to change the alert.',
+      'fsh_alerts_load_failed': 'Could not load the group\'s alerts right now.',
+      'fsh_text_family_now': 'Text family now',
+      'fsh_not_available_here':
+          'Safety alerts are not available for this group.',
       'fsh_alert_send_failed': 'Could not send the alert to the group: {error}',
       'fsh_alert_close_failed': 'Could not close the alert: {error}',
       'fsh_location_unavailable':
@@ -1996,9 +2001,9 @@ class TourTranslationKeys {
       'fsh_alert_on': 'Emergency alert is on!',
       'fsh_family_sos': 'Family emergency SOS',
       'fsh_alert_on_hint':
-          'Everyone in the group can see the alert. Tap the button to turn it off. Press and hold the button to send your location.',
+          'Everyone in the group can see the alert. Press and hold the button for 2 seconds to turn it off.',
       'fsh_alert_off_hint':
-          'In danger? Turn on the alert and the group will see it. Press and hold to share your location, or call 999.',
+          'In danger? Press and hold the button for 2 seconds to alert the group. You can also call 999.',
       'fsh_alert_turn_off': 'Turn off the alert',
       'fsh_alert_turn_on': 'Turn on the emergency alert',
       'fsh_group_alerts': 'Group emergency alerts',
@@ -5203,6 +5208,10 @@ class TourTranslationKeys {
       'fsh_sightseeing_sub': 'দর্শনীয় স্পট ও ফটো পয়েন্ট',
       'fsh_alert_not_synced':
           'এলার্ট এখনও সার্ভারে পৌঁছায়নি। নেটওয়ার্ক পেলে গ্রুপে যাবে।',
+      'fsh_hold_hint': 'এলার্ট বদলাতে ২ সেকেন্ড চেপে ধরে রাখুন।',
+      'fsh_alerts_load_failed': 'এখন গ্রুপের এলার্ট লোড করা যায়নি।',
+      'fsh_text_family_now': 'এখনই পরিবারকে মেসেজ',
+      'fsh_not_available_here': 'এই গ্রুপে নিরাপত্তা এলার্ট নেই।',
       'fsh_alert_send_failed': 'গ্রুপে এলার্ট পাঠানো যায়নি: {error}',
       'fsh_alert_close_failed': 'এলার্ট বন্ধ করা যায়নি: {error}',
       'fsh_location_unavailable':
@@ -5720,9 +5729,9 @@ class TourTranslationKeys {
       'fsh_alert_on': 'জরুরি এলার্ট চালু আছে!',
       'fsh_family_sos': 'ফ্যামিলি ইমার্জেন্সি এসওএস',
       'fsh_alert_on_hint':
-          'গ্রুপের সবাই এলার্ট দেখছেন। বন্ধ করতে বোতাম চাপুন। অবস্থান পাঠাতে বোতাম চেপে ধরুন।',
+          'গ্রুপের সবাই এলার্টটি দেখতে পাচ্ছে। বন্ধ করতে বোতামটি ২ সেকেন্ড চেপে ধরে রাখুন।',
       'fsh_alert_off_hint':
-          'বিপদে পড়লে এলার্ট চালু করুন, গ্রুপের সবাই দেখতে পাবেন। অবস্থান শেয়ার করতে চেপে ধরুন, অথবা ৯৯৯ কল করুন।',
+          'বিপদে আছেন? গ্রুপকে জানাতে বোতামটি ২ সেকেন্ড চেপে ধরে রাখুন। চাইলে ৯৯৯-এ ফোন করুন।',
       'fsh_alert_turn_off': 'এলার্ট বন্ধ করুন',
       'fsh_alert_turn_on': 'জরুরি এলার্ট চালু করুন',
       'fsh_group_alerts': 'গ্রুপের জরুরি এলার্ট',

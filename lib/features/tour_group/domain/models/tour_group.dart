@@ -366,6 +366,16 @@ class TourGroup {
     return null;
   }
 
+  /// The preset as the group keeps it from its document. A value this app does not
+  /// know is kept as it is, and is not read as no preset: the rules treat any preset as a
+  /// preset, so a group the app cannot name is not a household, and it has no SOS.
+  static String? storedPresetFrom(Object? value) {
+    final known = presetFrom(value);
+    if (known != null) return known;
+    if (value is String && value.trim().isNotEmpty) return value;
+    return null;
+  }
+
   static bool _matchesAnyKeyword(String text, List<String> keywords) {
     for (final kw in keywords) {
       if (text.contains(kw)) return true;
@@ -557,6 +567,16 @@ class TourGroup {
   /// An office or a campus: a workspace, where the household tiles and records do not
   /// apply and SOS is refused.
   bool get isManaged => isOffice || isCampus;
+
+  /// Whether this group has the SOS feature: the alert, the SOS row, the Family Safety
+  /// hub and the alert banners. Only a trip, a household (a plain family circle), a mess
+  /// and a housing society have it. Every other group is off, and an unknown preset is
+  /// off too.
+  ///
+  /// The rules (`sosAllowedTour` in firestore.rules) and the VPS (`sos_policy.py`) apply
+  /// the same rule to the stored preset, so keep the three in step.
+  bool get supportsSafetyAlerts =>
+      preset == null || preset == messPreset || preset == societyPreset;
 
   /// A plain household: a family circle with no preset. Only a household keeps
   /// dependents, the family album and family dates.
@@ -944,7 +964,7 @@ class TourGroup {
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
       kind: GroupKind.fromString(map['kind']?.toString()),
-      preset: presetFrom(map['preset']),
+      preset: storedPresetFrom(map['preset']),
       momentsEnabled: map['momentsEnabled'] != false,
       photoUrl:
           map['photoUrl'] is String && (map['photoUrl'] as String).isNotEmpty

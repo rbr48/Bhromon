@@ -92,7 +92,9 @@ void main() {
       );
     });
 
-    test('a preset is read only when it is one of the known names', () {
+    test(
+        'a known preset name is read; an unknown one is kept and is not a society',
+        () {
       expect(TourGroup.presetFrom('society'), 'society');
       expect(TourGroup.presetFrom('samity'), 'samity');
       expect(TourGroup.presetFrom('Society'), isNull);
@@ -100,7 +102,7 @@ void main() {
       final unknown =
           TourGroup.fromMap('s2', _circle(kind: 'family', preset: 'hostel'));
       expect(unknown.isSociety, isFalse);
-      expect(unknown.preset, isNull);
+      expect(unknown.preset, 'hostel');
     });
   });
 }

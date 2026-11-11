@@ -1294,20 +1294,25 @@ async def trigger_sos_notification(
     payload: Dict[str, Any],
     authorization: Optional[str] = Header(None),
 ):
+    """Pushes the caller's own safety alert now. The alert must be in the tour, theirs, open and recent
+    (notifications.push_own_sos). Nothing is pushed for an alert that is not, and the sender's name is
+    the group's name for them, not one sent here."""
     caller = await run_in_threadpool(authenticate, authorization)
-    tour_id = payload.get("tourId", "")
-    alert_id = payload.get("alertId", "")
-    sender_name = payload.get("senderName", "A member")
+    tour_id = str(payload.get("tourId", ""))
+    alert_id = str(payload.get("alertId", ""))
     check_tour_id(tour_id)
+    if not alert_id or len(alert_id) > 128 or "/" in alert_id:
+        raise HTTPException(status_code=400, detail="That alert id is not valid.")
     await run_in_threadpool(require_member, tour_id, caller)
 
     res = await run_in_threadpool(
-        notification_engine.send_sos_alert,
-        tour_id=tour_id,
-        alert_id=alert_id,
-        sender_email=caller.email,
-        sender_name=sender_name,
+        notification_engine.push_own_sos,
+        tour_id,
+        alert_id,
+        caller.email,
     )
+    if res.get("status") == "refused":
+        raise HTTPException(status_code=403, detail="That alert cannot be pushed.")
     return res
 
 

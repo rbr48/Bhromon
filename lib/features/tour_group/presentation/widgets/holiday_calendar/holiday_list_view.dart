@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/theme_context.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -51,9 +52,9 @@ class _HolidayCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: kHolidayCard,
+        color: context.forest.surfaceFor(kHolidayCard),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.borderFaint),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +78,7 @@ class _HolidayCard extends StatelessWidget {
                 ),
                 Text(
                   localizedDateFormat('MMM').format(date),
-                  style: const TextStyle(color: Colors.white60, fontSize: 11),
+                  style: TextStyle(color: context.forest.text60, fontSize: 11),
                 ),
               ],
             ),
@@ -89,8 +90,8 @@ class _HolidayCard extends StatelessWidget {
               children: [
                 Text(
                   holiday.name(bengali: bengali),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -107,7 +108,7 @@ class _HolidayCard extends StatelessWidget {
                     ),
                     HolidayChip(
                       label: localizedDateFormat('EEEE').format(date),
-                      color: Colors.white54,
+                      color: context.forest.text54,
                     ),
                     if (HolidayCalendar.isWeekend(date))
                       HolidayChip(
@@ -120,16 +121,17 @@ class _HolidayCard extends StatelessWidget {
                 if (bangla != null)
                   Text(
                     '${l10n.translate('hol_bangla_date')}: ${banglaDateLabel(context, bangla)}',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    style:
+                        TextStyle(color: context.forest.text60, fontSize: 12),
                   ),
                 Text(
                   '${l10n.translate('hol_hijri_date')}: ${hijriDateLabel(context, hijri)}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: TextStyle(color: context.forest.text60, fontSize: 12),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   holiday.description(bengali: bengali),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
               ],
             ),

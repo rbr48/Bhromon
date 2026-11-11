@@ -1359,7 +1359,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           NextStepCard(group: group, now: DateTime.now()),
 
           // 4. Safety SOS row (if not managed)
-          if (!group.isManaged) ...[
+          if (group.supportsSafetyAlerts) ...[
             SosRow(
               title: l10n.translate('hub_module_safety'),
               subtitle: l10n.translate('group_sos_sub'),

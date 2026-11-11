@@ -28,12 +28,15 @@ void main() {
       expect(family.preset, isNull);
     });
 
-    test('an unknown preset is read as no preset', () {
+    test(
+        'an unknown preset is kept, so the group is neither an office nor a household',
+        () {
       final group =
           TourGroup.fromMap('g3', _circle(kind: 'family', preset: 'hostel'));
 
       expect(group.isOffice, isFalse);
-      expect(group.preset, isNull);
+      expect(group.preset, 'hostel');
+      expect(group.isHousehold, isFalse);
     });
 
     test('the four new presets are read back, and only three manage notices',

@@ -129,21 +129,28 @@ def test_send_multicast_with_dead_token_purge():
 
 def test_send_sos_alert():
     engine = NotificationEngine()
+    engine.tour_allows_sos = MagicMock(return_value=True)
+    engine.claim_once = MagicMock(return_value=True)
     engine.get_active_tour_members = MagicMock(return_value=["alice@x.com"])
     engine.get_uids_for_emails = MagicMock(return_value=["uid_alice"])
     engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_alice", MagicMock(), "en")])
+    engine.member_display_name = MagicMock(return_value="Leader")
     engine.send_multicast = MagicMock(return_value=1)
 
     res = engine.send_sos_alert(
         tour_id="t1",
         alert_id="a1",
         sender_email="me@x.com",
-        sender_name="Leader",
+        sender_name="Someone else",
     )
 
     assert res["status"] == "success"
     assert res["devices_sent"] == 1
     assert engine.stats["sos_sent"] == 1
+    # The name is the group's name for the sender, not the one passed in.
+    title = engine.send_multicast.call_args.args[1]
+    assert "Leader" in title
+    assert "Someone else" not in title
 
 
 def test_send_channel_message_notification():
@@ -352,7 +359,7 @@ def test_api_notify_endpoints(client):
 
     # Test authenticated request with fake backend
     token_headers = {"Authorization": "Bearer tok-owner"}
-    with patch.object(main.notification_engine, "send_sos_alert", return_value={"status": "success", "devices_sent": 2}):
+    with patch.object(main.notification_engine, "push_own_sos", return_value={"status": "success", "devices_sent": 2}):
         res = client.post(
             "/notify/sos",
             json={"tourId": "t1", "alertId": "a1", "senderName": "Boss"},
@@ -360,6 +367,11 @@ def test_api_notify_endpoints(client):
         )
         assert res.status_code == 200
         assert res.json()["status"] == "success"
+
+    # An alert that is not the caller's, or not there, is refused and nothing is pushed.
+    with patch.object(main.notification_engine, "push_own_sos", return_value={"status": "refused", "reason": "not_sender"}):
+        res = client.post("/notify/sos", json={"tourId": "t1", "alertId": "a1"}, headers=token_headers)
+        assert res.status_code == 403
 
     with patch.object(main.notification_engine, "send_channel_message_notification", return_value={"status": "success"}):
         res = client.post(
