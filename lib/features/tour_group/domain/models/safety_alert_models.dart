@@ -27,16 +27,31 @@ class SafetyAlert {
     this.resolved = false,
   });
 
+  /// Reads an alert. Every field is read by its type and a value of the wrong type is left
+  /// out, so no document can make this throw. A coordinate outside the earth is left out too.
   factory SafetyAlert.fromMap(String id, Map<String, dynamic> map) {
     return SafetyAlert(
       id: id,
-      senderEmail: normalizeEmail(map['senderEmail'] as String? ?? ''),
-      senderName: map['senderName'] as String? ?? 'সদস্য',
-      latitude: (map['latitude'] as num?)?.toDouble(),
-      longitude: (map['longitude'] as num?)?.toDouble(),
+      senderEmail: normalizeEmail(_text(map['senderEmail']) ?? ''),
+      senderName: _text(map['senderName']) ?? 'সদস্য',
+      latitude: _coordinate(map['latitude'], 90),
+      longitude: _coordinate(map['longitude'], 180),
       createdAt: readDate(map['createdAt']),
-      resolved: map['resolved'] as bool? ?? false,
+      resolved: map['resolved'] == true,
     );
+  }
+
+  static String? _text(Object? raw) {
+    if (raw is! String) return null;
+    final text = raw.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  static double? _coordinate(Object? raw, double limit) {
+    if (raw is! num) return null;
+    final value = raw.toDouble();
+    if (!value.isFinite || value.abs() > limit) return null;
+    return value;
   }
 
   /// True while the alert is unresolved and inside the window. An alert whose
@@ -47,6 +62,20 @@ class SafetyAlert {
     if (raised == null) return true;
     return now.difference(raised) < kSafetyAlertWindow;
   }
+}
+
+/// The alerts in a snapshot, read one document at a time. A document that does not hold a
+/// sender email cannot be attributed to anyone, so it is left out; the others are kept. One bad
+/// document therefore never hides the rest of the list.
+List<SafetyAlert> parseSafetyAlerts(
+  Iterable<MapEntry<String, Map<String, dynamic>>> docs,
+) {
+  final alerts = <SafetyAlert>[];
+  for (final doc in docs) {
+    final alert = SafetyAlert.fromMap(doc.key, doc.value);
+    if (alert.senderEmail.contains('@')) alerts.add(alert);
+  }
+  return alerts;
 }
 
 /// A family member's battery and place, as last published from their phone.

@@ -99,10 +99,13 @@ class TourExportCollector {
         fallback: const <BusSeat>[]);
     final hotelRooms = await _safe(_repository.watchHotelRooms(id),
         fallback: const <HotelRoom>[]);
-    final safetyAlerts = await _safe(
-      _repository.watchSafetyAlerts(id, limit: 1000),
-      fallback: const <SafetyAlert>[],
-    );
+    // Alerts are read only for a group that has SOS; the export holds none for the others.
+    final safetyAlerts = latest.supportsSafetyAlerts
+        ? await _safe(
+            _repository.watchSafetyAlerts(id, limit: 1000),
+            fallback: const <SafetyAlert>[],
+          )
+        : const <SafetyAlert>[];
     final stories = await _safe(_repository.watchStories(id),
         fallback: const <TourStoryItem>[]);
     final highlights = await _safe(_repository.watchHighlights(id),

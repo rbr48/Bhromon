@@ -26,6 +26,13 @@ const _kChannelName = 'Bhromon Notifications';
 const _kChannelDesc =
     'General announcements, messages, group updates, and broadcasts from Bhromon.';
 
+/// Channel for safety alerts (SOS). It is loud and separate, so an alert is not lost in the
+/// general channel, and the server sends it on this channel by its id (notifications.py).
+const _kSosChannelId = 'bhromon_sos';
+const _kSosChannelName = 'Emergency alerts';
+const _kSosChannelDesc =
+    'Safety alerts from your group, shown loudly even when other notifications are quiet.';
+
 @singleton
 class FcmService {
   final FirebaseMessaging _messaging;
@@ -125,6 +132,17 @@ class FcmService {
             importance: Importance.high,
             enableVibration: true,
             playSound: true,
+          ),
+        );
+        await androidPlugin?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _kSosChannelId,
+            _kSosChannelName,
+            description: _kSosChannelDesc,
+            importance: Importance.max,
+            enableVibration: true,
+            playSound: true,
+            audioAttributesUsage: AudioAttributesUsage.alarm,
           ),
         );
 
@@ -254,6 +272,8 @@ class FcmService {
     required String body,
     String? payload,
     String? imageUrl,
+    bool sos = false,
+    String? tag,
   }) async {
     if (kIsWeb) return;
 
@@ -272,14 +292,17 @@ class FcmService {
       }
     }
 
+    // An alert and its end share a tag, so the end replaces the alert on the screen.
     final androidDetails = AndroidNotificationDetails(
-      _kChannelId,
-      _kChannelName,
-      channelDescription: _kChannelDesc,
-      importance: Importance.high,
-      priority: Priority.high,
+      sos ? _kSosChannelId : _kChannelId,
+      sos ? _kSosChannelName : _kChannelName,
+      channelDescription: sos ? _kSosChannelDesc : _kChannelDesc,
+      importance: sos ? Importance.max : Importance.high,
+      priority: sos ? Priority.max : Priority.high,
+      category: sos ? AndroidNotificationCategory.alarm : null,
       styleInformation: style,
       icon: '@mipmap/launcher_icon',
+      tag: tag,
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -453,12 +476,16 @@ class FcmService {
         n?.android?.imageUrl ?? (message.data['imageUrl'] as String?);
 
     if (!kIsWeb) {
+      final isSos = message.data['action'] == 'sos';
+      final alertId = (message.data['alertId'] as String?) ?? '';
       await showLocalNotification(
-        id: message.hashCode,
+        id: isSos && alertId.isNotEmpty ? alertId.hashCode : message.hashCode,
         title: title,
         body: body,
         payload: jsonEncode(message.data),
         imageUrl: imageUrl,
+        sos: isSos,
+        tag: isSos && alertId.isNotEmpty ? 'sos_$alertId' : null,
       );
     }
 

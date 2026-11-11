@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
+import '../widgets/hold_to_toggle_button.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -73,11 +74,21 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   TourGroup? _tourGroup;
   StreamSubscription<TourGroup?>? _groupSub;
   TourRole? _myRole;
-  // The alert this device raised and has not resolved yet.
+  // The alert this device raised and has not closed yet.
   String? _activeAlertId;
-  Future<bool>? _pendingRaiseFuture;
-  late final Stream<List<SafetyAlert>> _alerts =
-      _repository.watchSafetyAlerts(widget.tourId);
+  // Opened only once the group is known to have SOS (see _watchGroup). It is a broadcast
+  // stream: the list reads it, and _onAlerts keeps the siren in step with it.
+  Stream<List<SafetyAlert>>? _alerts;
+  StreamSubscription<List<SafetyAlert>>? _alertSub;
+  StreamSubscription<List<TourMember>>? _rosterSub;
+  // The names the group has for its members, by email. An alert shows the name in the group,
+  // not the name the alert was written with.
+  Map<String, String> _memberNames = const {};
+  // Own alerts past the window that this screen has already closed.
+  final Set<String> _closedStale = {};
+  // Whether the group has loaded. Until it has, nothing SOS-related is shown or started.
+  bool _groupLoaded = false;
+  bool _servicesStarted = false;
   late final Stream<List<BatteryTelemetry>> _telemetry =
       _repository.watchBatteryTelemetry(widget.tourId);
   late final Stream<List<TourMember>> _roster =
@@ -283,16 +294,46 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-
-    _initGps();
-    _startFamilySharing();
   }
 
+  /// Follows the group. Its alerts are read, and its place and battery are shared, only
+  /// once the group is known to have SOS. Any other group gets the unavailable notice.
   void _watchGroup() {
     _groupSub?.cancel();
     _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
-      if (mounted) setState(() => _tourGroup = g);
+      if (!mounted) return;
+      setState(() {
+        _groupLoaded = true;
+        _tourGroup = g;
+        if (g != null && g.supportsSafetyAlerts) {
+          _alerts ??=
+              _repository.watchSafetyAlerts(widget.tourId).asBroadcastStream();
+        }
+      });
+      if (g != null && g.supportsSafetyAlerts) {
+        _alertSub ??= _alerts?.listen(
+          _onAlerts,
+          onError: (Object error, StackTrace stack) =>
+              logWarning('Safety hub: alerts unavailable', error, stack),
+        );
+        _rosterSub ??= _roster.listen(
+          _onRoster,
+          onError: (Object error, StackTrace stack) =>
+              logWarning('Safety hub: members unavailable', error, stack),
+        );
+      }
+      if (g != null && g.supportsSafetyAlerts && !_servicesStarted) {
+        _servicesStarted = true;
+        _initGps();
+        _startFamilySharing();
+      }
     });
+  }
+
+  void _onRoster(List<TourMember> members) {
+    if (!mounted) return;
+    setState(
+        () => _memberNames = {for (final m in members) m.email: m.displayName});
   }
 
   Future<void> _loadRole() async {
@@ -307,11 +348,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     _batterySub?.cancel();
     _telemetryTimer?.cancel();
     _alertTimer?.cancel();
+    _alertSub?.cancel();
+    _rosterSub?.cancel();
     _sirenAnimController.dispose();
-    if (_isSirenActive && _activeAlertId != null) {
-      final alertId = _activeAlertId!;
-      unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId));
-    }
+    // An alert stays open when this screen closes. It is turned off from the button, or from
+    // its card, and it is shown again here if it is still open when the screen opens.
     // Stops sharing the place when the member leaves this screen.
     unawaited(_publisher.stop(DateTime.now()));
     super.dispose();
@@ -438,70 +479,149 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     return heading >= 0 ? heading : 0;
   }
 
-  /// Starts or stops the alert: a repeating vibration, the pulsing banner, and
-  /// a safety alert that every member of the tour can see.
+  /// Turns the alert on or off. The big button calls this only after a press and hold, so a
+  /// brush of the screen never alerts the group.
   void _toggleAlert() {
-    setState(() => _isSirenActive = !_isSirenActive);
-    _alertTimer?.cancel();
     if (_isSirenActive) {
+      _turnOffAlert();
+    } else {
+      _turnOnAlert();
+    }
+  }
+
+  void _turnOnAlert() {
+    final alertId = _repository.newSafetyAlertId();
+    _activeAlertId = alertId;
+    _setSiren(true);
+    unawaited(_raiseAlert(alertId));
+  }
+
+  void _turnOffAlert() {
+    _setSiren(false);
+    _resolveAlert();
+  }
+
+  /// The siren: the pulsing banner and the repeating vibration. It is on while this member's
+  /// own alert is open.
+  void _setSiren(bool on) {
+    _alertTimer?.cancel();
+    _alertTimer = null;
+    if (mounted) setState(() => _isSirenActive = on);
+    if (on) {
       _sirenAnimController.repeat(reverse: true);
       HapticFeedback.heavyImpact();
       _alertTimer = Timer.periodic(const Duration(milliseconds: 900),
           (_) => HapticFeedback.heavyImpact());
-      _raiseAlert();
     } else {
       _sirenAnimController.stop();
       _sirenAnimController.value = 0;
-      unawaited(_resolveAlert());
     }
   }
 
-  void _raiseAlert() {
-    final l10n = context.l10n;
-    final alertId = _repository.newSafetyAlertId();
-    _activeAlertId = alertId;
-    final pos = _currentPosition;
-    final future = _repository.raiseSafetyAlert(
-      tourId: widget.tourId,
-      alertId: alertId,
-      latitude: pos?.latitude,
-      longitude: pos?.longitude,
-    );
-    _pendingRaiseFuture = future;
-    future.then(
-      (synced) {
-        if (!synced && mounted) {
-          _showMessage(l10n.translate('fsh_alert_not_synced'));
-        }
-      },
-      onError: (Object e) {
-        if (_activeAlertId == alertId) {
-          _activeAlertId = null;
-        }
-        if (mounted) {
-          _showMessage(
-              l10n.translate('fsh_alert_send_failed', args: {'error': e}));
-        }
-      },
-    );
-  }
-
-  /// Resolves the alert this device raised, if any. Used when the siren stops.
-  Future<void> _resolveAlert() async {
-    final alertId = _activeAlertId;
-    final pending = _pendingRaiseFuture;
-    _activeAlertId = null;
-    _pendingRaiseFuture = null;
-    if (alertId == null) return;
-    if (pending != null) {
-      try {
-        final synced = await pending;
-        if (!synced) return;
-      } catch (_) {
-        return;
+  /// Writes the alert with the place this phone is at. The place is read first, for three
+  /// seconds at most, so the family does not get a place from an hour ago. Nothing is written
+  /// if the member turned the alert off while the place was being read.
+  Future<void> _raiseAlert(String alertId) async {
+    final fresh = await _freshPosition();
+    if (fresh != null && mounted) setState(() => _currentPosition = fresh);
+    if (_activeAlertId != alertId) return;
+    final pos = fresh ?? _currentPosition;
+    try {
+      final synced = await _repository.raiseSafetyAlert(
+        tourId: widget.tourId,
+        alertId: alertId,
+        latitude: pos?.latitude,
+        longitude: pos?.longitude,
+      );
+      if (!synced && mounted) _showNotSyncedMessage();
+    } catch (error, stack) {
+      logWarning('Safety hub: the alert was not written', error, stack);
+      if (_activeAlertId == alertId) _activeAlertId = null;
+      if (mounted) {
+        _showMessage(context.l10n
+            .translate('fsh_alert_send_failed', args: {'error': error}));
       }
     }
-    _resolveById(alertId);
+  }
+
+  /// A place fix taken within three seconds. Null when there is none, and then the last
+  /// place this screen had is used. Permission is not asked for here: an alert never waits for
+  /// a permission prompt.
+  Future<Position?> _freshPosition() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return null;
+      }
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 3),
+      );
+    } catch (error, stack) {
+      logWarning('Safety hub: no fresh place for the alert', error, stack);
+      return null;
+    }
+  }
+
+  /// The alert has not reached the server yet. It goes to the group once the phone is online,
+  /// so the family's text messages are offered now.
+  void _showNotSyncedMessage() {
+    final l10n = context.l10n;
+    final numbers = [
+      for (final c
+          in _tourGroup?.emergencyContacts ?? const <EmergencyContact>[])
+        c.phone,
+    ];
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(l10n.translate('fsh_alert_not_synced')),
+      duration: const Duration(seconds: 12),
+      action: numbers.isEmpty
+          ? null
+          : SnackBarAction(
+              label: l10n.translate('fsh_text_family_now'),
+              onPressed: () => unawaited(_textNumbers(numbers)),
+            ),
+    ));
+  }
+
+  /// Closes the alert this device raised, when the siren goes off. The close is sent at once,
+  /// even if the alert has not reached the server yet: the writes are sent in order, so the
+  /// alert is closed on the server either way.
+  void _resolveAlert() {
+    final alertId = _activeAlertId;
+    _activeAlertId = null;
+    if (alertId != null) _resolveById(alertId);
+  }
+
+  /// Keeps the siren in step with the server. An open alert of this member's own, within the
+  /// window, means the siren is on, even after the app was closed. An own alert past the window
+  /// is no longer shown to anyone, so it is closed here, once.
+  void _onAlerts(List<SafetyAlert> alerts) {
+    if (!mounted) return;
+    final me = _repository.currentEmail;
+    final now = DateTime.now();
+    final mine = [
+      for (final alert in alerts)
+        if (alert.senderEmail == me && !alert.resolved) alert,
+    ];
+    if (!_isSirenActive && _activeAlertId == null) {
+      final live = [
+        for (final alert in mine)
+          if (alert.isOpenAt(now)) alert,
+      ];
+      if (live.isNotEmpty) {
+        _activeAlertId = live.first.id;
+        _setSiren(true);
+      }
+    }
+    for (final alert in mine) {
+      if (!alert.isOpenAt(now) &&
+          alert.id != _activeAlertId &&
+          _closedStale.add(alert.id)) {
+        _resolveById(alert.id);
+      }
+    }
   }
 
   void _resolveById(String alertId) {
@@ -517,11 +637,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     ));
   }
 
-  /// Closes an alert from its card. Closing this device's own live alert also
-  /// stops the siren, so the two never disagree.
+  /// Closes an alert from its card. Closing this device's own live alert also turns the siren
+  /// off, so the two never disagree.
   void _resolveFromCard(SafetyAlert alert) {
     if (alert.id == _activeAlertId && _isSirenActive) {
-      _toggleAlert();
+      _turnOffAlert();
       return;
     }
     _resolveById(alert.id);
@@ -565,6 +685,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
   @override
   Widget build(BuildContext context) {
+    final group = _tourGroup;
+    if (!_groupLoaded) return _buildSafetyStatus(loading: true);
+    if (group == null || !group.supportsSafetyAlerts) {
+      return _buildSafetyStatus(loading: false);
+    }
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
@@ -621,6 +746,41 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               // Safety Guidelines
               _buildSafetyGuidelines(),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// What the screen shows while the group loads, or instead of the hub for a group
+  /// without SOS. Nothing here starts a location, a battery or an alert.
+  Widget _buildSafetyStatus({required bool loading}) {
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1B1E)),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          title: Text(context.l10n.translate('fsh_title'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+          backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
+          foregroundColor: context.forest.text,
+          iconTheme: IconThemeData(color: context.forest.text),
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: loading
+                ? const CircularProgressIndicator()
+                : Text(
+                    context.l10n.translate('fsh_not_available_here'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.forest.text70),
+                  ),
           ),
         ),
       ),
@@ -709,30 +869,22 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 ],
               ),
               const SizedBox(height: 14),
+              HoldToToggleButton(
+                active: _isSirenActive,
+                label: context.l10n.translate(_isSirenActive
+                    ? 'fsh_alert_turn_off'
+                    : 'fsh_alert_turn_on'),
+                onToggle: _toggleAlert,
+                onTapHint: () =>
+                    _showMessage(context.l10n.translate('fsh_hold_hint')),
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: Icon(_isSirenActive
-                      ? Icons.volume_off_rounded
-                      : Icons.volume_up_rounded),
-                  label: Text(
-                    _isSirenActive
-                        ? context.l10n.translate('fsh_alert_turn_off')
-                        : context.l10n.translate('fsh_alert_turn_on'),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isSirenActive
-                        ? Colors.white
-                        : Colors.redAccent.shade700,
-                    foregroundColor:
-                        _isSirenActive ? Colors.red.shade900 : Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: _toggleAlert,
-                  onLongPress: _shareLocation,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.share_location_rounded, size: 18),
+                  label: Text(context.l10n.translate('fsh_share_my_location')),
+                  onPressed: _shareLocation,
                 ),
               ),
             ],
@@ -747,6 +899,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     return StreamBuilder<List<SafetyAlert>>(
       stream: _alerts,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text(
+            context.l10n.translate('fsh_alerts_load_failed'),
+            style: TextStyle(color: context.forest.text70, fontSize: 12),
+          );
+        }
         final now = DateTime.now();
         final open = (snapshot.data ?? const <SafetyAlert>[])
             .where((alert) => alert.isOpenAt(now))
@@ -803,8 +961,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  context.l10n.translate('fsh_sender_sent_alert',
-                      args: {'name': alert.senderName}),
+                  context.l10n.translate('fsh_sender_sent_alert', args: {
+                    'name': _memberNames[alert.senderEmail] ?? alert.senderName,
+                  }),
                   style: TextStyle(
                       color: context.forest.text, fontWeight: FontWeight.bold),
                 ),

@@ -1046,9 +1046,9 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(addDoc(collection(db('member'), 'tours', SAM, 'notices'), notice(people.member.email)));
     });
 
-    test('a samity keeps no dependents or family dates, but its members raise SOS', async () => {
+    test('a samity keeps no dependents or family dates, and no SOS', async () => {
       await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'dependents', 'd1'), { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true }));
-      await assertSucceeds(setDoc(doc(db('member'), 'tours', SAM, 'sos', 'a1'), { senderEmail: people.member.email, senderName: 'x', resolved: false, createdAt: serverTimestamp() }));
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'sos', 'a1'), { senderEmail: people.member.email, senderName: 'x', resolved: false, createdAt: serverTimestamp() }));
     });
   });
 
@@ -1341,6 +1341,85 @@ describe('Tour Group Firestore rules', () => {
       await setDoc(doc(db('member'), ...alertPath), alert(people.member.email));
       await assertFails(updateDoc(doc(db('member'), ...alertPath), { resolved: true, senderName: 'hijack' }));
       await assertFails(updateDoc(doc(db('member'), ...alertPath), { resolved: false }));
+    });
+  });
+
+  describe('which groups have SOS', () => {
+    // A trip, a household, a mess, a housing society have SOS. Every other preset has none, and
+    // so does a preset the rules do not name. TourGroup.supportsSafetyAlerts applies the same rule.
+    const withSos = {
+      'sos-trip': { kind: 'tour' },
+      'sos-household': { kind: 'family' },
+      'sos-household-null': { kind: 'family', preset: null },
+      'sos-mess': { kind: 'family', preset: 'mess' },
+      'sos-society': { kind: 'family', preset: 'society' },
+    };
+    const withoutSos = {
+      'sos-samity': { kind: 'family', preset: 'samity' },
+      'sos-study': { kind: 'family', preset: 'study' },
+      'sos-committee': { kind: 'family', preset: 'committee' },
+      'sos-school': { kind: 'family', preset: 'school' },
+      'sos-sports': { kind: 'family', preset: 'sports' },
+      'sos-friends': { kind: 'family', preset: 'friends' },
+      'sos-office': { kind: 'family', preset: 'office' },
+      'sos-campus': { kind: 'family', preset: 'campus' },
+      'sos-unknown': { kind: 'family', preset: 'something-new' },
+    };
+    const alertFor = (sender, extra = {}) => ({ senderEmail: sender, senderName: 'Ben', resolved: false, createdAt: serverTimestamp(), ...extra });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        for (const [id, fields] of Object.entries({ ...withSos, ...withoutSos })) {
+          await setDoc(doc(f, 'tours', id), { name: id, ownerEmail: people.owner.email, ownerUid: people.owner.uid, ...fields });
+          await setDoc(doc(f, 'memberships', `${id}__${people.member.email}`), { tourId: id, email: people.member.email, role: 'member', status: 'active', displayName: 'Ben' });
+          await setDoc(doc(f, 'memberships', `${id}__${people.owner.email}`), { tourId: id, email: people.owner.email, role: 'owner', status: 'active', displayName: 'Owner' });
+          // One alert already in each group, written before the rules were in place.
+          await setDoc(doc(f, 'tours', id, 'sos', 'old'), alertFor(people.member.email));
+        }
+      });
+    });
+
+    test('a member raises an alert in every group that has SOS', async () => {
+      for (const id of Object.keys(withSos)) {
+        await assertSucceeds(setDoc(doc(db('member'), 'tours', id, 'sos', `new-${id}`), alertFor(people.member.email)));
+      }
+    });
+
+    test('a member cannot raise an alert in a group without SOS', async () => {
+      for (const id of Object.keys(withoutSos)) {
+        await assertFails(setDoc(doc(db('member'), 'tours', id, 'sos', `new-${id}`), alertFor(people.member.email)));
+      }
+    });
+
+    test('nobody reads, resolves or deletes an alert in a group without SOS', async () => {
+      for (const id of Object.keys(withoutSos)) {
+        await assertFails(getDoc(doc(db('member'), 'tours', id, 'sos', 'old')));
+        await assertFails(getDocs(collection(db('owner'), 'tours', id, 'sos')));
+        await assertFails(updateDoc(doc(db('member'), 'tours', id, 'sos', 'old'), { resolved: true, resolvedByEmail: people.member.email }));
+        await assertFails(updateDoc(doc(db('owner'), 'tours', id, 'sos', 'old'), { resolved: true, resolvedByEmail: people.owner.email }));
+        await assertFails(deleteDoc(doc(db('owner'), 'tours', id, 'sos', 'old')));
+      }
+    });
+
+    test('members still read and resolve an alert in a group that has SOS', async () => {
+      await assertSucceeds(getDoc(doc(db('member'), 'tours', 'sos-mess', 'sos', 'old')));
+      await assertSucceeds(updateDoc(doc(db('member'), 'tours', 'sos-mess', 'sos', 'old'), { resolved: true, resolvedByEmail: people.member.email }));
+    });
+
+    test('an alert is checked by type: a text position, a long name or an extra field is refused', async () => {
+      const base = 'sos-mess';
+      await assertFails(setDoc(doc(db('member'), 'tours', base, 'sos', 'bad-lat'), alertFor(people.member.email, { latitude: 'north' })));
+      await assertFails(setDoc(doc(db('member'), 'tours', base, 'sos', 'bad-lng'), alertFor(people.member.email, { latitude: 23.8, longitude: 200 })));
+      await assertFails(setDoc(doc(db('member'), 'tours', base, 'sos', 'bad-name'), alertFor(people.member.email, { senderName: 'x'.repeat(81) })));
+      await assertFails(setDoc(doc(db('member'), 'tours', base, 'sos', 'bad-name-type'), alertFor(people.member.email, { senderName: 42 })));
+      await assertFails(setDoc(doc(db('member'), 'tours', base, 'sos', 'extra'), alertFor(people.member.email, { role: 'admin' })));
+      await assertFails(setDoc(doc(db('member'), 'tours', base, 'sos', 'other-id'), alertFor(people.member.email, { id: 'someone-else' })));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', base, 'sos', 'good'), alertFor(people.member.email, { id: 'good', latitude: 23.8, longitude: 90.4 })));
+    });
+
+    test('a member cannot raise an alert under someone else\'s email', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', 'sos-mess', 'sos', 'as-owner'), alertFor(people.owner.email)));
     });
   });
 

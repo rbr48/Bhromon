@@ -64,6 +64,62 @@ void main() {
     });
   });
 
+  group('reading alerts that may be malformed', () {
+    test('a text latitude is left out, and the alert is kept', () {
+      final alert = SafetyAlert.fromMap('a1', {
+        'senderEmail': 'ana@x.com',
+        'senderName': 'Ana',
+        'resolved': false,
+        'latitude': 'north',
+        'longitude': 90.4,
+      });
+      expect(alert.latitude, isNull);
+      expect(alert.longitude, 90.4);
+      expect(alert.senderEmail, 'ana@x.com');
+    });
+
+    test('a coordinate outside the earth is left out', () {
+      final alert = SafetyAlert.fromMap('a1', {
+        'senderEmail': 'ana@x.com',
+        'latitude': 23.8,
+        'longitude': 200,
+      });
+      expect(alert.latitude, 23.8);
+      expect(alert.longitude, isNull);
+    });
+
+    test('a name that is not text reads as no name, so the default shows', () {
+      final alert = SafetyAlert.fromMap('a1', {
+        'senderEmail': 'ana@x.com',
+        'senderName': 42,
+      });
+      expect(alert.senderName, 'সদস্য');
+    });
+
+    test('a resolved flag that is not a boolean reads as open', () {
+      final alert = SafetyAlert.fromMap('a1', {
+        'senderEmail': 'ana@x.com',
+        'resolved': 'true',
+      });
+      expect(alert.resolved, isFalse);
+    });
+
+    test('one bad document does not hide the others in a snapshot', () {
+      final alerts = parseSafetyAlerts([
+        const MapEntry(
+            'good', {'senderEmail': 'ana@x.com', 'senderName': 'Ana'}),
+        const MapEntry('no-sender', {'senderName': 'Ghost', 'latitude': 'x'}),
+        const MapEntry('bad-type', {'senderEmail': 42, 'senderName': 'Odd'}),
+        const MapEntry('good-2', {'senderEmail': 'bob@x.com', 'latitude': 'x'}),
+      ]);
+      expect(alerts.map((a) => a.id), ['good', 'good-2']);
+    });
+
+    test('an empty snapshot gives an empty list', () {
+      expect(parseSafetyAlerts(const []), isEmpty);
+    });
+  });
+
   group('BatteryTelemetry', () {
     test('parses telemetry and flags low and critical battery accurately', () {
       final healthy = BatteryTelemetry.fromMap({

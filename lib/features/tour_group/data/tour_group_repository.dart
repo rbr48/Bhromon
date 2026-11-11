@@ -5175,8 +5175,9 @@ class TourGroupRepository {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((s) =>
-            s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
+        .map((s) => parseSafetyAlerts([
+              for (final d in s.docs) MapEntry(d.id, d.data()),
+            ]));
   }
 
   /// Publishes this member's battery and place sharing to the family. Only the

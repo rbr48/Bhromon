@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from push_strings import DEFAULT_LANGUAGE, normalize_language, push_text
+from sos_policy import sos_allowed
 
 logger = logging.getLogger("bhromon.notifications")
 
@@ -75,6 +76,26 @@ STUDY_PUSH_WINDOW_SECONDS = 15 * 60
 STUDY_REPEAT_REPORTS = 2
 # One record per study push that was sent, so a restart does not send it again. Clients cannot read it.
 PUSH_CLAIMS = "push_claims"
+# SOS. An alert pushes once. One sender's alerts push at most once in each window of this many seconds, so a
+# single person cannot ring the whole group again and again; the later alerts still show in the app.
+SOS_RATE_WINDOW_SECONDS = 120
+# A restart catches up on alerts raised this long before it started, so a deploy does not drop one.
+SOS_CATCH_UP_SECONDS = 10 * 60
+# The app asks the VPS to push its own alert right after writing it. The alert must be this recent.
+SOS_OWN_ALERT_SECONDS = 10 * 60
+# The channel of an SOS push: loud, and separate from the general channel every other push uses.
+SOS_CHANNEL_ID = "bhromon_sos"
+# The name of a sender with no name in the group.
+SOS_DEFAULT_NAME = "A member"
+
+
+def stamp_is_recent(stamp: Any, since: datetime) -> bool:
+    """Whether a stored time is at or after `since`. A missing time counts as recent, so a push is not lost."""
+    if not isinstance(stamp, datetime):
+        return True
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=timezone.utc)
+    return stamp >= since
 
 
 def call_may_still_ring(created_at: Any, now: Optional[datetime] = None) -> bool:
@@ -251,8 +272,13 @@ class NotificationEngine:
         body: str,
         data: Dict[str, str],
         high_priority: bool = False,
+        sos_tag: Optional[str] = None,
     ) -> int:
-        """Send multicast push notification in batches of 500."""
+        """Send multicast push notification in batches of 500.
+
+        `sos_tag` marks a safety alert. Its push goes on the SOS channel, and an iPhone shows it
+        time-sensitive. An alert and its end share the tag, so the end replaces the alert on the phone.
+        """
         if not targets:
             return 0
 
@@ -265,8 +291,29 @@ class NotificationEngine:
 
             android_config = None
             if hasattr(messaging_mod, "AndroidConfig"):
-                android_config = messaging_mod.AndroidConfig(
-                    priority="high" if high_priority else "normal"
+                if sos_tag:
+                    android_config = messaging_mod.AndroidConfig(
+                        priority="high",
+                        collapse_key=sos_tag,
+                        notification=messaging_mod.AndroidNotification(
+                            channel_id=SOS_CHANNEL_ID, tag=sos_tag
+                        ),
+                    )
+                else:
+                    android_config = messaging_mod.AndroidConfig(
+                        priority="high" if high_priority else "normal"
+                    )
+
+            apns_config = None
+            if sos_tag and hasattr(messaging_mod, "APNSConfig"):
+                apns_config = messaging_mod.APNSConfig(
+                    headers={"apns-priority": "10", "apns-collapse-id": sos_tag},
+                    payload=messaging_mod.APNSPayload(
+                        aps=messaging_mod.Aps(
+                            sound="default",
+                            custom_data={"interruption-level": "time-sensitive"},
+                        ),
+                    ),
                 )
 
             multicast = messaging_mod.MulticastMessage(
@@ -274,6 +321,7 @@ class NotificationEngine:
                 notification=messaging_mod.Notification(title=title, body=body),
                 data={str(k): str(v) for k, v in data.items()},
                 android=android_config,
+                apns=apns_config,
             )
 
             try:
@@ -313,6 +361,7 @@ class NotificationEngine:
         make_text,
         data: Dict[str, str],
         high_priority: bool = False,
+        sos_tag: Optional[str] = None,
     ) -> int:
         """Send one push per language. make_text(language) returns (title, body).
 
@@ -322,53 +371,153 @@ class NotificationEngine:
         for token, ref, language in targets:
             groups.setdefault(normalize_language(language), []).append((token, ref))
         sent = 0
+        # The SOS option is passed only for a safety alert, so other pushes keep their call as it was.
+        options: Dict[str, Any] = {"high_priority": high_priority}
+        if sos_tag:
+            options["sos_tag"] = sos_tag
         for language, group in groups.items():
             title, body = make_text(language)
-            sent += self.send_multicast(group, title, body, data, high_priority=high_priority)
+            sent += self.send_multicast(group, title, body, data, **options)
         return sent
+
+    def claim_once(self, key: str) -> bool:
+        """Records that a push was sent, under `key`, in a transaction. False when it was already recorded,
+        so a restart, or a second route to the same push, does not send it again."""
+        from google.cloud import firestore
+
+        db = self._get_db()
+        ref = db.collection(PUSH_CLAIMS).document(key)
+
+        def claim(transaction: Any, ref_: Any) -> bool:
+            if ref_.get(transaction=transaction).exists:
+                return False
+            transaction.create(ref_, {"sentAt": firestore.SERVER_TIMESTAMP})
+            return True
+
+        return firestore.transactional(claim)(db.transaction(), ref)
+
+    def tour_allows_sos(self, tour_id: str) -> bool:
+        """Whether the tour has SOS (sos_policy.py). A tour that is not there has none."""
+        snapshot = self._get_db().collection("tours").document(tour_id).get()
+        return bool(snapshot.exists) and sos_allowed(snapshot.to_dict() or {})
+
+    def member_display_name(self, tour_id: str, email: str) -> str:
+        """The name a member has in the group, from the membership row. The name an alert was written
+        with is never used, because any member can write any name there."""
+        snapshot = self._get_db().collection("memberships").document(f"{tour_id}__{email}").get()
+        name = str((snapshot.to_dict() or {}).get("displayName", "")).strip() if snapshot.exists else ""
+        return name[:80] or SOS_DEFAULT_NAME
+
+    def _sos_recipients(self, tour_id: str, sender_email: str) -> List[Tuple[str, Any, str]]:
+        """The devices of every other active member of the tour."""
+        emails = self.get_active_tour_members(tour_id, except_email=sender_email)
+        if not emails:
+            return []
+        return self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
 
     def send_sos_alert(
         self,
         tour_id: str,
         alert_id: str,
         sender_email: str,
-        sender_name: str = "A member",
+        sender_name: str = "",
     ) -> Dict[str, Any]:
-        """Send emergency SOS alert to all other active tour members."""
-        if self.is_seen(f"sos_{alert_id}"):
-            logger.info("SOS alert %s already sent; skipping duplicate", alert_id)
+        """Push a safety alert to every other active member of its tour, once.
+
+        Only a tour with SOS is pushed. The name is the one the group has for the sender, not the
+        `sender_name` given (the argument is kept so older callers still work, and it is ignored).
+        """
+        sender = sender_email.strip().lower()
+        if not self.tour_allows_sos(tour_id):
+            logger.info("SOS not pushed: tour %s has no SOS", tour_id)
+            return {"status": "not_allowed"}
+        # The rate window is claimed first, so two alerts from one sender cannot both pass.
+        bucket = int(time.time() // SOS_RATE_WINDOW_SECONDS)
+        if not self.claim_once(f"sos_rate_{tour_id}_{sender}_{bucket}"):
+            logger.info("SOS not pushed: %s has raised one in this window", sender)
+            return {"status": "rate_limited"}
+        if not self.claim_once(f"sos_{alert_id}"):
             return {"status": "already_sent"}
-        logger.info("Triggering SOS alert for tour=%s sender=%s", tour_id, sender_email)
         try:
-            emails = self.get_active_tour_members(tour_id, except_email=sender_email)
-            if not emails:
+            targets = self._sos_recipients(tour_id, sender)
+            if not targets:
                 return {"status": "no_recipients"}
-
-            uids = self.get_uids_for_emails(emails)
-            targets = self.get_push_targets_for_uids(uids)
-
-            data = {
-                "action": "sos",
-                "type": "sos",
-                "tourId": tour_id,
-                "alertId": alert_id,
-            }
-
+            name = self.member_display_name(tour_id, sender)
+            data = {"action": "sos", "type": "sos", "tourId": tour_id, "alertId": alert_id}
             count = self.send_localized(
                 targets,
                 lambda lang: (
-                    push_text(lang, "sos.title", sender=sender_name),
+                    push_text(lang, "sos.title", sender=name),
                     push_text(lang, "sos.body"),
                 ),
                 data,
                 high_priority=True,
+                sos_tag=f"sos_{alert_id}",
             )
             self.stats["sos_sent"] += 1
-            return {"status": "success", "recipients": len(emails), "devices_sent": count}
+            return {"status": "success", "recipients": len(targets), "devices_sent": count}
         except Exception as e:
             self.stats["errors"] += 1
             logger.error("Error in send_sos_alert: %s", e)
             return {"status": "error", "error": str(e)}
+
+    def send_sos_ended(self, tour_id: str, alert_id: str, sender_email: str) -> Dict[str, Any]:
+        """Tell the members an alert is over. It is sent only for an alert that was pushed, and once. It
+        shares the alert's tag, so it replaces the alert on the phones that still show it."""
+        sender = sender_email.strip().lower()
+        if not self._claim_recorded(f"sos_{alert_id}"):
+            return {"status": "not_pushed"}
+        if not self.claim_once(f"sos_ended_{alert_id}"):
+            return {"status": "already_sent"}
+        try:
+            targets = self._sos_recipients(tour_id, sender)
+            if not targets:
+                return {"status": "no_recipients"}
+            name = self.member_display_name(tour_id, sender)
+            data = {"action": "sos", "type": "sos", "tourId": tour_id, "alertId": alert_id}
+            count = self.send_localized(
+                targets,
+                lambda lang: (
+                    push_text(lang, "sos.ended.title", sender=name),
+                    push_text(lang, "sos.ended.body"),
+                ),
+                data,
+                high_priority=True,
+                sos_tag=f"sos_{alert_id}",
+            )
+            return {"status": "success", "devices_sent": count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_sos_ended: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def _claim_recorded(self, key: str) -> bool:
+        """Whether a push was already recorded under `key`."""
+        return bool(self._get_db().collection(PUSH_CLAIMS).document(key).get().exists)
+
+    def push_own_sos(self, tour_id: str, alert_id: str, sender_email: str) -> Dict[str, Any]:
+        """Push an alert the caller raised, for the request the app makes right after it writes the alert.
+
+        The alert must exist, be the caller's, be unresolved, be recent, and be in a tour with SOS. Otherwise
+        nothing is pushed and the reason is returned: the request cannot make an alert that the group cannot see.
+        """
+        sender = sender_email.strip().lower()
+        if not self.tour_allows_sos(tour_id):
+            return {"status": "refused", "reason": "not_allowed"}
+        snapshot = (
+            self._get_db().collection("tours").document(tour_id).collection("sos").document(alert_id).get()
+        )
+        if not snapshot.exists:
+            return {"status": "refused", "reason": "no_alert"}
+        data = snapshot.to_dict() or {}
+        if str(data.get("senderEmail", "")).strip().lower() != sender:
+            return {"status": "refused", "reason": "not_sender"}
+        if data.get("resolved") is not False:
+            return {"status": "refused", "reason": "resolved"}
+        recent_since = datetime.now(timezone.utc) - timedelta(seconds=SOS_OWN_ALERT_SECONDS)
+        if not stamp_is_recent(data.get("createdAt"), recent_since):
+            return {"status": "refused", "reason": "too_old"}
+        return self.send_sos_alert(tour_id, alert_id, sender)
 
     def get_active_tour_admins(self, tour_id: str, except_email: str = "") -> List[str]:
         """Emails of the active owners and admins of a tour, except one."""
@@ -1261,30 +1410,34 @@ class FirestoreNotificationWatcher:
             return False
 
     def on_sos_snapshot(self, col_snapshot, changes, read_time):
-        """Called when SOS alerts are created in Firestore."""
+        """Called when a safety alert is raised, or closed, in any tour.
+
+        A raised alert is pushed once, and an alert raised shortly before this watcher started is pushed too,
+        so a restart does not drop it. Each push is recorded, so a second start does not send it again. A
+        closed alert gets its end notice only when its alert was pushed.
+        """
+        catch_up_since = self.started_at - timedelta(seconds=SOS_CATCH_UP_SECONDS)
         for change in changes:
-            if change.type.name in {"ADDED", "MODIFIED"}:
-                doc = change.document
-                if self.is_seen(doc.id):
+            kind = change.type.name
+            if kind not in {"ADDED", "MODIFIED"}:
+                continue
+            doc = change.document
+            data = doc.to_dict() or {}
+            tour_ref = doc.reference.parent.parent
+            tour_id = tour_ref.id if tour_ref else str(data.get("tourId", ""))
+            sender = str(data.get("senderEmail", "")).strip().lower()
+            if not tour_id or "@" not in sender:
+                continue
+            if kind == "ADDED" and data.get("resolved") is not True:
+                if self.is_seen(f"sos_added_{doc.id}"):
                     continue
-                data = doc.to_dict() or {}
-                # Only notify if created after watcher started or flagged pending
-                created_at = data.get("createdAt")
-                if isinstance(created_at, datetime) and created_at < self.started_at:
+                if not self._is_recent(data.get("createdAt"), catch_up_since):
                     continue
-
-                tour_ref = doc.reference.parent.parent
-                tour_id = tour_ref.id if tour_ref else data.get("tourId")
-                sender_email = str(data.get("senderEmail", "")).strip().lower()
-                sender_name = str(data.get("senderName", "A member")).strip()
-
-                if tour_id and sender_email:
-                    self.engine.send_sos_alert(
-                        tour_id=tour_id,
-                        alert_id=doc.id,
-                        sender_email=sender_email,
-                        sender_name=sender_name,
-                    )
+                self.engine.send_sos_alert(tour_id=tour_id, alert_id=doc.id, sender_email=sender)
+            elif kind == "MODIFIED" and data.get("resolved") is True:
+                if self.is_seen(f"sos_ended_{doc.id}"):
+                    continue
+                self.engine.send_sos_ended(tour_id=tour_id, alert_id=doc.id, sender_email=sender)
 
     def on_call_snapshot(self, col_snapshot, changes, read_time):
         """Called when call documents are created or updated in Firestore."""
@@ -1385,11 +1538,7 @@ class FirestoreNotificationWatcher:
     @staticmethod
     def _is_recent(stamp: Any, since: datetime) -> bool:
         """Whether a stored time is at or after `since`. A missing time counts as recent, so a push is not lost."""
-        if not isinstance(stamp, datetime):
-            return True
-        if stamp.tzinfo is None:
-            stamp = stamp.replace(tzinfo=timezone.utc)
-        return stamp >= since
+        return stamp_is_recent(stamp, since)
 
     def _is_active_member(self, tour_id: str, email: str) -> bool:
         """Whether an email is an active member of a tour, by its membership row."""
