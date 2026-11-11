@@ -226,16 +226,6 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     } else if (dest.contains('cox')) {
       return [
         TourLandmark(
-          id: 'hotel_sea_moon',
-          name: context.l10n.translate('fsh_cox_hotel_name',
-              args: {'destination': _effectiveDestination(context)}),
-          subtitle: context.l10n.translate('fsh_main_hotel_sub'),
-          lat: 21.4326,
-          lng: 91.9774,
-          icon: Icons.hotel_rounded,
-          color: Colors.amber,
-        ),
-        TourLandmark(
           id: 'evergreen_bus',
           name: context.l10n.translate('fsh_cox_bus_name', args: {
             'origin': _tourGroup?.originCity ??

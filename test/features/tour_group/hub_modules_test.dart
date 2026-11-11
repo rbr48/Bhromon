@@ -56,6 +56,14 @@ void main() {
     );
   });
 
+  test('a study circle has no family list, and keeps its study tools', () {
+    final ids =
+        hubModulesFor(_group(family: true, preset: TourGroup.studyPreset));
+    expect(ids, isNot(contains('family_tasks')));
+    expect(
+        ids, containsAll(['study_subjects', 'study_reading', 'study_books']));
+  });
+
   test('a household shows its family tools, and no trip tools', () {
     final ids = hubModulesFor(_group(family: true));
     expect(

@@ -7,7 +7,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath, arrayUnion, arrayRemove, deleteField } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, writeBatch, FieldPath, arrayUnion, arrayRemove, deleteField } = require('firebase/firestore');
 
 // Starting the emulator and loading the rules can take longer than Jest's default five-second hook timeout.
 jest.setTimeout(120000);
@@ -28,6 +28,19 @@ describe('Tour Group Firestore rules', () => {
   jest.setTimeout(60000);
   let env;
   const db = (who) => env.authenticatedContext(people[who].uid, { email: people[who].email, email_verified: true }).firestore();
+  // The Dhaka day a write made now is counted on, as the rules compute it (familyTaskDayKey in firestore.rules).
+  const dhakaDayKey = () => {
+    const d = new Date(Date.now() + 6 * 60 * 60 * 1000);
+    return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  };
+  // A shared shopping or to-do item, written the way the app writes it: the item and the member's count for the day in one batch.
+  const addFamilyTaskAsApp = (who, tourId, fields) => {
+    const database = db(who);
+    const batch = writeBatch(database);
+    batch.set(doc(collection(database, 'tours', tourId, 'family_tasks')), { ...fields, createdAt: serverTimestamp() });
+    batch.set(doc(database, 'tours', tourId, 'family_task_daily', `${fields.createdByEmail}__${dhakaDayKey()}`), { count: 1, email: fields.createdByEmail });
+    return batch.commit();
+  };
   const anon = () => env.unauthenticatedContext().firestore();
 
   beforeAll(async () => {
@@ -480,7 +493,7 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'family_dates'), { ...date, kind: 'invalid_kind' }));
 
       await assertSucceeds(setDoc(doc(db('member'), 'tours', HOUSE, 'dependents', 'd1'), dependent));
-      await assertSucceeds(addDoc(collection(db('member'), 'tours', HOUSE, 'family_tasks'), task));
+      await assertSucceeds(addFamilyTaskAsApp('member', HOUSE, task));
       await assertSucceeds(addDoc(collection(db('member'), 'tours', HOUSE, 'family_dates'), date));
     });
   });
@@ -549,7 +562,9 @@ describe('Tour Group Firestore rules', () => {
     });
 
     test('a mess keeps the shared shopping and to-do list', async () => {
-      await assertSucceeds(addDoc(collection(db('member'), 'tours', MESS, 'family_tasks'), task(people.member.email)));
+      await assertSucceeds(addFamilyTaskAsApp('member', MESS, task(people.member.email)));
+      // The item alone is refused: its count for the day must be written in the same batch.
+      await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'family_tasks'), task(people.member.email)));
     });
 
     test('a mess keeps no dependents, but keeps shared lists and important dates', async () => {
@@ -891,8 +906,20 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(setDoc(doc(db('member'), 'tours', SOC, 'dependents', 'd1'), dependent));
       await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'family_dates'), { ...dateRecord(people.member.email), kind: 'maintenance' }));
       await assertFails(setDoc(doc(db('member'), 'tours', SOC, 'meals', `2026-11-01__${people.member.email}`), { dateKey: '2026-11-01', email: people.member.email, breakfast: 1, lunch: 0, dinner: 0, updatedByEmail: people.member.email }));
-      await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'family_tasks'), task(people.member.email)));
+      await assertSucceeds(addFamilyTaskAsApp('member', SOC, task(people.member.email)));
       await assertSucceeds(setDoc(doc(db('member'), 'tours', SOC, 'sos', 'a1'), alert(people.member.email)));
+    });
+
+    test('a study circle keeps no shared list, and no day counts for one', async () => {
+      const STUDY = 'stu1';
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', STUDY), { name: 'Exam circle', kind: 'family', preset: 'study', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'STUDYCD1' });
+        await setDoc(doc(f, 'memberships', `${STUDY}__${people.member.email}`), { tourId: STUDY, email: people.member.email, role: 'member', status: 'active', displayName: people.member.email });
+      });
+      const item = { title: 'Rice', kind: 'shopping', done: false, assigneeEmail: null, doneByEmail: null, createdByEmail: people.member.email };
+      await assertFails(addFamilyTaskAsApp('member', STUDY, item));
+      await assertFails(addDoc(collection(db('member'), 'tours', STUDY, 'family_tasks'), item));
     });
 
     test('a family circle with no preset keeps its household records', async () => {

@@ -1230,7 +1230,98 @@ describe('tour content purge', () => {
     expect(calls.storage).toEqual([]);
   });
 
+  it('a shared list keeps what the person added or ticked under the stand-in, releases what was given to them, and drops their day counts', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const tasks = `tours/${TOUR}/family_tasks`;
+    // Added and ticked by the leaver.
+    await db.doc(`${tasks}/t_leaver`).set({
+      title: 'Rice',
+      kind: 'shopping',
+      done: true,
+      assigneeEmail: null,
+      doneByEmail: LEAVER,
+      createdByEmail: LEAVER,
+      createdAt: new Date(1000),
+      doneAt: new Date(2000),
+    });
+    // Added by another member and given to the leaver.
+    await db.doc(`${tasks}/t_given`).set({
+      title: 'Milk',
+      kind: 'shopping',
+      done: false,
+      assigneeEmail: LEAVER,
+      createdByEmail: OTHER,
+      createdAt: new Date(3000),
+    });
+    // Another member’s item, ticked by the leaver.
+    await db.doc(`${tasks}/t_ticked`).set({
+      title: 'Eggs',
+      kind: 'shopping',
+      done: true,
+      assigneeEmail: OTHER,
+      doneByEmail: LEAVER,
+      createdByEmail: OTHER,
+      createdAt: new Date(4000),
+      doneAt: new Date(5000),
+    });
+    // Another member’s item with nothing to do with the leaver.
+    await db.doc(`${tasks}/t_other`).set({
+      title: 'Bread',
+      kind: 'todo',
+      done: false,
+      assigneeEmail: OTHER,
+      createdByEmail: OTHER,
+      createdAt: new Date(6000),
+    });
+    await db.doc(`tours/${TOUR}/family_task_daily/${LEAVER}__20261111`).set({ count: 2, email: LEAVER });
+    await db.doc(`tours/${TOUR}/family_task_daily/${OTHER}__20261111`).set({ count: 1, email: OTHER });
+
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    expect(await read(`${tasks}/t_leaver`)).toMatchObject({
+      title: 'Rice',
+      done: true,
+      createdByEmail: STAND_IN,
+      doneByEmail: STAND_IN,
+      assigneeEmail: null,
+    });
+    expect(await read(`${tasks}/t_given`)).toMatchObject({
+      title: 'Milk',
+      done: false,
+      createdByEmail: OTHER,
+      assigneeEmail: null,
+    });
+    expect(await read(`${tasks}/t_ticked`)).toMatchObject({
+      title: 'Eggs',
+      done: true,
+      createdByEmail: OTHER,
+      doneByEmail: STAND_IN,
+      assigneeEmail: OTHER,
+    });
+    expect(await read(`${tasks}/t_other`)).toMatchObject({
+      title: 'Bread',
+      done: false,
+      createdByEmail: OTHER,
+      assigneeEmail: OTHER,
+    });
+    expect(await exists(`tours/${TOUR}/family_task_daily/${LEAVER}__20261111`)).toBe(false);
+    expect(await read(`tours/${TOUR}/family_task_daily/${OTHER}__20261111`)).toEqual({
+      count: 1,
+      email: OTHER,
+    });
+  });
+
   it('deleting a tour removes everything in it and its media, and no other tour', async () => {
+    await db.doc(`tours/${TOUR}/family_tasks/t_deleted`).set({
+      title: 'Salt',
+      kind: 'shopping',
+      done: false,
+      assigneeEmail: null,
+      createdByEmail: OTHER,
+      createdAt: new Date(7000),
+    });
+    await db.doc(`tours/${TOUR}/family_task_daily/${OTHER}__20261111`).set({ count: 1, email: OTHER });
     const { calls, deps } = fakes();
     await purgeTour(db, TOUR, deps);
 
@@ -1241,6 +1332,8 @@ describe('tour content purge', () => {
     expect(await exists(`tours/${TOUR}/channels/general/messages/m_other`)).toBe(false);
     expect(await exists(`tours/${TOUR}/expenses/e_leaver`)).toBe(false);
     expect(await exists(`tours/${TOUR}/games/g1/private/s1`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/family_tasks/t_deleted`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/family_task_daily/${OTHER}__20261111`)).toBe(false);
     expect(await exists(`tours/${TOUR}/locations/${LEAVER}`)).toBe(false);
     expect(await exists(`memberships/${TOUR}__${LEAVER}`)).toBe(false);
     expect(await exists(`memberships/${TOUR}__${OTHER}`)).toBe(false);

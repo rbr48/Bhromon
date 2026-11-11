@@ -234,6 +234,22 @@ export function sosOf(email: string, standIn: string): Decide {
   };
 }
 
+/**
+ * A shared shopping or to-do item the person added or ticked stays for the circle, with the stand-in in
+ * their place: its words and its tick stay. An item given to the person is open to anyone again, so its
+ * assignment is cleared.
+ */
+export function familyTaskOf(email: string, standIn: string): Decide {
+  const named = anonymize({ emails: ['createdByEmail', 'doneByEmail'] }, email, standIn);
+  return (data, id) => {
+    const fields: Fields = {};
+    if (normalizeEmail(data.assigneeEmail) === email) fields.assigneeEmail = null;
+    const replaced = named(data, id);
+    if (replaced !== null && replaced.kind === 'update') Object.assign(fields, replaced.fields);
+    return Object.keys(fields).length > 0 ? { kind: 'update', fields } : null;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Records that go. What the person put into the tour for themselves is
 // removed, and so is what only they can use.

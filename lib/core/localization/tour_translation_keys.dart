@@ -1473,7 +1473,6 @@ class TourTranslationKeys {
       'fsh_nilachal_sub': 'Sunset and cloud viewing point',
       'fsh_nilgiri_name': 'Nilgiri hilltop resort peak',
       'fsh_nilgiri_sub': 'Hill peak and cloud scenery',
-      'fsh_cox_hotel_name': '{destination} main hotel and resort',
       'fsh_cox_bus_name': '{origin} ➔ {destination} bus parking',
       'fsh_main_bus_sub': 'Main bus and transport point',
       'fsh_cox_meetup_name': '{destination} main meeting point',
@@ -2015,7 +2014,7 @@ class TourTranslationKeys {
       'fsh_sea_guide_title': 'Family safety and sea caution guide',
       'ig_sea_safety_title': 'Sea safety and tide information',
       'fsh_sea_guide_body':
-          "• When the red flag is up, do not go into the sea under any circumstances.\n• At low tide the sea's pull (rip current) is very strong, so do not wade deeper than your waist.\n• Save the compass directions to Hotel Sea Moon and the bus parking point so you do not lose your way in a crowd.\n• In any unexpected situation, call the tourist police (01320-163599) or 999 directly.",
+          "• When the red flag is up, do not go into the sea under any circumstances.\n• At low tide the sea's pull (rip current) is very strong, so do not wade deeper than your waist.\n• Save the compass direction to the bus parking point so you do not lose your way in a crowd.\n• In any unexpected situation, call the tourist police (01320-163599) or 999 directly.",
       // ── Family circles ─────────────────────────────────────────────────────
       'hub_create_family': 'Create a family circle',
       'hub_family_title': 'New family circle',
@@ -3494,8 +3493,6 @@ class TourTranslationKeys {
       'ft_section_shopping': 'To buy',
       'ft_section_todo': 'To do',
       'ft_section_done': 'Done',
-      'ft_empty':
-          'The list is empty. Add what the house needs, or a job to do.',
       'ft_rename_title': 'Change the item',
       'ft_edit': 'Change',
       'ft_remove': 'Remove',
@@ -3503,6 +3500,61 @@ class TourTranslationKeys {
       'ft_delete_body': 'It is removed from the list for everyone.',
       'ft_save_failed': 'Could not save. Check your connection and try again.',
       'ft_load_failed': 'Could not load the list. Check your connection.',
+      'ft_untitled': 'Untitled item',
+      'ft_former_member': 'Former member',
+      'ft_unnamed': 'A member',
+      'ft_saved_offline':
+          'Saved on this phone. It reaches the others when you are online.',
+      'ft_limit_reached':
+          'You can add up to {limit} items a day. Try again tomorrow.',
+      'ft_try_again': 'Try again',
+      'ft_item_options': 'Item options',
+      'ft_assign_action': 'Give to',
+      'ft_assign_title': 'Give this item to',
+      'ft_move_to_buy': 'Move to to buy',
+      'ft_move_to_todo': 'Move to to do',
+      'ft_clear_done': 'Clear finished',
+      'ft_clear_done_title': 'Clear finished items?',
+      'ft_clear_done_body':
+          'Finished items you added will be removed: {count}. Items others added stay.',
+      'ft_long_list':
+          'This list is getting long. Clear finished items to keep it easy to use.',
+      'ft_scope_tooltip': 'Scope & help',
+      'ft_scope_subtitle': 'Shared group coordination and planning',
+      'ft_scope_title': 'To-do activity scope',
+      'ft_scope_shopping_title': 'Shopping & groceries',
+      'ft_scope_shopping_body':
+          'Shared groceries, supplies and shopping lists for a household, a mess, a housing society or another family-style circle.',
+      'ft_scope_chores_title': 'Daily chores & tasks',
+      'ft_scope_chores_body':
+          'Bills, room cleaning, laundry, maintenance and routine jobs for the circle.',
+      'ft_scope_members_title': 'Member assignment & accountability',
+      'ft_scope_members_body':
+          'Give an item to one member. The tick records who finished it and when.',
+      'ft_scope_events_title': 'Events & gatherings',
+      'ft_scope_events_body':
+          'What to buy and prepare for a family event, a picnic or a gathering.',
+      'ft_scope_excluded':
+          'Offices, campuses and study circles do not have this list. Trips keep their own checklist.',
+      'ft_got_it': 'Got it',
+      'ft_cancel': 'Cancel',
+      'ft_save': 'Save',
+      'ft_send': 'Add item',
+      'ft_suggest_shopping_1': 'Groceries',
+      'ft_suggest_shopping_2': 'Fresh vegetables',
+      'ft_suggest_shopping_3': 'Medicines',
+      'ft_suggest_shopping_4': 'Milk & fruits',
+      'ft_suggest_shopping_5': 'Stationery',
+      'ft_suggest_todo_1': 'Pay electricity bill',
+      'ft_suggest_todo_2': 'Clean room',
+      'ft_suggest_todo_3': 'Book tickets',
+      'ft_suggest_todo_4': 'Laundry',
+      'ft_suggest_todo_5': 'Finish packing',
+      'ft_empty_shopping_title': 'Shopping list is empty',
+      'ft_empty_shopping_body':
+          'Add items you need, or tap a quick suggestion.',
+      'ft_empty_todo_title': 'To-do list is empty',
+      'ft_empty_todo_body': 'Add group tasks, or assign chores to members.',
       'fh_title': 'Today at home',
       'fh_dates_none': 'No dates in the next thirty days',
       'fh_dates_next': '{title} · {when}',
@@ -5200,7 +5252,6 @@ class TourTranslationKeys {
       'fsh_nilachal_sub': 'সূর্যাস্ত ও মেঘ দর্শন পয়েন্ট',
       'fsh_nilgiri_name': 'নীলগিরি হিলটপ রিসোর্ট চূড়া',
       'fsh_nilgiri_sub': 'পাহাড় চূড়া ও মেঘের সমারোহ',
-      'fsh_cox_hotel_name': '{destination} প্রধান হোটেল / রিসোর্ট',
       'fsh_cox_bus_name': '{origin} ➔ {destination} বাস পার্কিং',
       'fsh_main_bus_sub': 'প্রধান বাস ও পরিবহন পয়েন্ট',
       'fsh_cox_meetup_name': '{destination} প্রধান মিলনমেলা পয়েন্ট',
@@ -5743,7 +5794,7 @@ class TourTranslationKeys {
       'fsh_sea_guide_title': 'পরিবারের সুরক্ষা ও সমুদ্র সতর্কতা নির্দেশিকা',
       'ig_sea_safety_title': 'সমুদ্র নিরাপত্তা ও জোয়ার-ভাটা তথ্য',
       'fsh_sea_guide_body':
-          '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n• হোটেল সি মুন ও বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
+          '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n• বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
       // ── পরিবার গ্রুপ ───────────────────────────────────────────────────────
       'hub_create_family': 'পরিবারের গ্রুপ তৈরি করুন',
       'hub_family_title': 'নতুন পরিবারের গ্রুপ',
@@ -7222,8 +7273,6 @@ class TourTranslationKeys {
       'ft_section_shopping': 'কিনতে হবে',
       'ft_section_todo': 'করতে হবে',
       'ft_section_done': 'হয়ে গেছে',
-      'ft_empty':
-          'তালিকা খালি। বাড়ির যা লাগবে, বা যে কাজ করতে হবে তা যোগ করুন।',
       'ft_rename_title': 'জিনিসটি বদলান',
       'ft_edit': 'বদলান',
       'ft_remove': 'সরান',
@@ -7231,6 +7280,62 @@ class TourTranslationKeys {
       'ft_delete_body': 'সবার তালিকা থেকে এটি সরে যাবে।',
       'ft_save_failed': 'সেভ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
       'ft_load_failed': 'তালিকা আনা যায়নি। ইন্টারনেট সংযোগ দেখুন।',
+      'ft_untitled': 'নামহীন জিনিস',
+      'ft_former_member': 'সাবেক সদস্য',
+      'ft_unnamed': 'একজন সদস্য',
+      'ft_saved_offline':
+          'এই ফোনে সেভ হয়েছে। অনলাইনে এলে বাকিদের কাছে পৌঁছাবে।',
+      'ft_limit_reached':
+          'দিনে সর্বোচ্চ {limit}টি জিনিস যোগ করা যায়। কাল আবার চেষ্টা করুন।',
+      'ft_try_again': 'আবার চেষ্টা করুন',
+      'ft_item_options': 'জিনিসের বিকল্প',
+      'ft_assign_action': 'কাকে দেবেন',
+      'ft_assign_title': 'এই জিনিসটি কাকে দেবেন',
+      'ft_move_to_buy': 'কেনার তালিকায় নিন',
+      'ft_move_to_todo': 'করার তালিকায় নিন',
+      'ft_clear_done': 'সম্পন্নগুলো সরান',
+      'ft_clear_done_title': 'সম্পন্ন জিনিসগুলো সরাবেন?',
+      'ft_clear_done_body':
+          'আপনার যোগ করা সম্পন্ন জিনিস সরে যাবে: {count}টি। অন্যদের যোগ করা জিনিস থেকে যাবে।',
+      'ft_long_list':
+          'তালিকাটি বড় হয়ে যাচ্ছে। সম্পন্ন জিনিসগুলো সরালে ব্যবহার সহজ থাকবে।',
+      'ft_scope_tooltip': 'কার্যপরিধি ও সহায়তা',
+      'ft_scope_subtitle': 'গ্রুপের সবার সমন্বিত কাজ ও পরিকল্পনা',
+      'ft_scope_title': 'করণীয় মডিউলের কার্যপরিধি',
+      'ft_scope_shopping_title': 'বাজার ও প্রয়োজনীয় কেনাকাটা',
+      'ft_scope_shopping_body':
+          'পরিবার, মেস, আবাসন সমিতি বা অন্য পারিবারিক গোষ্ঠীর মুদি বাজার ও প্রয়োজনীয় জিনিসের সম্মিলিত তালিকা।',
+      'ft_scope_chores_title': 'দৈনন্দিন কাজ ও গৃহস্থালি দায়িত্ব',
+      'ft_scope_chores_body':
+          'বিল পরিশোধ, ঘর পরিষ্কার, লন্ড্রি বা রুটিনমাফিক কাজ।',
+      'ft_scope_members_title': 'সদস্যভিত্তিক দায়িত্ব বণ্টন',
+      'ft_scope_members_body':
+          'একজন সদস্যকে জিনিস দিন। কে কাজটি শেষ করেছেন এবং কখন, তা টিকের সঙ্গে লেখা থাকে।',
+      'ft_scope_events_title': 'অনুষ্ঠান ও জমায়েত',
+      'ft_scope_events_body':
+          'পারিবারিক অনুষ্ঠান, পিকনিক বা জমায়েতের জন্য কী কিনতে ও কী প্রস্তুত করতে হবে।',
+      'ft_scope_excluded':
+          'অফিস, ক্যাম্পাস ও স্টাডি গ্রুপে এই তালিকা নেই। ট্রিপের নিজস্ব চেকলিস্ট আছে।',
+      'ft_got_it': 'বুঝেছি',
+      'ft_cancel': 'বাতিল',
+      'ft_save': 'সেভ করুন',
+      'ft_send': 'জিনিস যোগ করুন',
+      'ft_suggest_shopping_1': 'মুদি বাজার',
+      'ft_suggest_shopping_2': 'কাঁচাবাজার',
+      'ft_suggest_shopping_3': 'ওষুধ আনা',
+      'ft_suggest_shopping_4': 'দুধ ও ফলমূল',
+      'ft_suggest_shopping_5': 'স্টেশনারি',
+      'ft_suggest_todo_1': 'বিদ্যুৎ বিল পরিশোধ',
+      'ft_suggest_todo_2': 'রুম পরিষ্কার',
+      'ft_suggest_todo_3': 'টিকেট বুকিং',
+      'ft_suggest_todo_4': 'লন্ড্রি করা',
+      'ft_suggest_todo_5': 'প্যাকিং সম্পন্ন',
+      'ft_empty_shopping_title': 'কেনাকাটার তালিকা খালি',
+      'ft_empty_shopping_body':
+          'প্রয়োজনীয় জিনিস লিখে রাখুন, বা নিচের সাজেশনে ট্যাপ করুন।',
+      'ft_empty_todo_title': 'করণীয় তালিকা খালি',
+      'ft_empty_todo_body':
+          'যৌথ কাজ যোগ করুন, বা সদস্যের নামে দায়িত্ব বণ্টন করুন।',
       'fh_title': 'আজ বাড়িতে',
       'fh_dates_none': 'আগামী ত্রিশ দিনে কোনো তারিখ নেই',
       'fh_dates_next': '{title} · {when}',

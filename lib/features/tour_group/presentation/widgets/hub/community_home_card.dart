@@ -49,9 +49,10 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
       _repository
           .watchNotices(id)
           .listen((v) => _update(() => _notices = v), onError: (Object _) {}),
-      _repository
-          .watchFamilyTasks(id)
-          .listen((v) => _update(() => _tasks = v), onError: (Object _) {}),
+      if (!widget.group.isStudy)
+        _repository
+            .watchFamilyTasks(id)
+            .listen((v) => _update(() => _tasks = v), onError: (Object _) {}),
       if (widget.group.isCommittee)
         _repository.watchServiceRequests(id).listen(
             (v) => _update(() => _requests = v),
@@ -217,27 +218,29 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
                           fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        openTasksCount > 0
-                            ? l10n.translate('fh_tasks', args: {
-                                'buy': l10n.number(_tasks
-                                    .where((t) =>
-                                        t.kind == FamilyTaskKind.shopping &&
-                                        !t.done)
-                                    .length),
-                                'todo': l10n.number(_tasks
-                                    .where((t) =>
-                                        t.kind == FamilyTaskKind.todo &&
-                                        !t.done)
-                                    .length),
-                              })
-                            : l10n.translate('fh_tasks_none'),
-                        style: TextStyle(
-                          color: context.forest.text60,
-                          fontSize: 12,
+                      if (!g.isStudy) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          openTasksCount > 0
+                              ? l10n.translate('fh_tasks', args: {
+                                  'buy': l10n.number(_tasks
+                                      .where((t) =>
+                                          t.kind == FamilyTaskKind.shopping &&
+                                          !t.done)
+                                      .length),
+                                  'todo': l10n.number(_tasks
+                                      .where((t) =>
+                                          t.kind == FamilyTaskKind.todo &&
+                                          !t.done)
+                                      .length),
+                                })
+                              : l10n.translate('fh_tasks_none'),
+                          style: TextStyle(
+                            color: context.forest.text60,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

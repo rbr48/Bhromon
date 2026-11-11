@@ -54,7 +54,7 @@ List<String> hubModulesFor(TourGroup group, {bool? momentsOpen}) {
     'ledger',
     if (isTrip && group.modules.seatsRooms) 'seats',
     'calendar',
-    if (group.isFamily && !group.isManaged) 'family_tasks',
+    if (group.isFamily && !group.isManaged && !group.isStudy) 'family_tasks',
     if (group.isMess) 'meals',
     if (group.isSociety || group.isCommittee) 'requests',
     if (group.isSamity) 'samity',
