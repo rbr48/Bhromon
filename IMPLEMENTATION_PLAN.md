@@ -1,28 +1,26 @@
-# Implementation Plan: Immediate Asset Cache Busting for 3D Green Emblem
+# Implementation Plan: Transparent Logo Container, Bottle Green Header Title & "Walk Together" Tag
 
-## Context & Root Cause
-- Mobile browsers (Chrome/Safari) aggressively cache `assets/assets/logo.png` in disk cache and PWA Service Worker CacheStorage.
-- Even after deploying the authentic 3D green logo in PR #487, devices that previously visited `app.bhromon.fun` serve the stale yellow 'B' from disk cache.
-- The logo appears in 4 UI locations:
-  1. `desktop_tour_sidebar.dart` (desktop sidebar header)
-  2. `tour_group_hub_screen.dart` (mobile group hub appbar)
-  3. `login_screen.dart` (auth screen)
-  4. `join_group_screen.dart` (invite link landing screen)
+## Context & Objectives
+1. **Logo Background Transparency**:
+   - The logo container in `desktop_tour_sidebar.dart`, `tour_group_hub_screen.dart`, `join_group_screen.dart`, and `login_screen.dart` was previously wrapped with dark green container backgrounds (`Color(0xFF1B4332)` or `_kCardBg`) and green circular borders.
+   - Because the 3D emblem itself is green, the dark green background made the emblem's silhouette and 3D contours blend into the background, obscuring its depth.
+   - Removing the circular/squircle dark green container background and making it 100% transparent allows the authentic 3D sculpted emblem to float cleanly on the header/appbar with its full geometry, highlights, and drop-shadows intact.
+2. **Bottle Green "Bhromon" Title**:
+   - In `tour_group_hub_screen.dart` and `join_group_screen.dart`, the app name "Bhromon" was rendered in white (`context.forest.text`), whereas `desktop_tour_sidebar.dart` rendered it in the brand bottle green (`context.forest.accentText`).
+   - Standardize all app headings to use `context.forest.accentText` for "Bhromon".
+3. **"Walk Together" Tag Replacement**:
+   - In `tour_group_hub_screen.dart`, the header tag previously used `'hub_title'` ("Your groups" / "আপনার গ্রুপ").
+   - Replace this with the official brand tagline **"Walk Together"** (Bengali: **"একসাথে পথচলা"**) across `hub_title` in `tour_translation_keys.dart` and bind to `login_tagline` with `context.forest.text54`.
 
 ## Action Items
-1. **Asset Renaming & Cache Busting**:
-   - Create `assets/bhromon_emblem.png` containing the 100% transparent authentic 3D green compass emblem.
-   - Maintain `assets/logo.png` and `assets/Bhromon.png` identically.
-   - Register `assets/bhromon_emblem.png` in `pubspec.yaml`.
-2. **UI Updates**:
-   - Point `desktop_tour_sidebar.dart`, `tour_group_hub_screen.dart`, `login_screen.dart`, and `join_group_screen.dart` to `'assets/bhromon_emblem.png'`.
-   - Update `join_group_screen_test.dart` to expect `assets/bhromon_emblem.png`.
-   - Use `fit: BoxFit.contain` with slight padding so the 3D compass needle facets and tips are never clipped by `BoxFit.cover`.
-3. **PWA & Firebase Hosting Cache Busting**:
-   - In `web/index.html`, purge CacheStorage on startup (`caches.delete(...)`).
-   - In `firebase.json`, add `Cache-Control: no-cache, no-store, must-revalidate` for `/assets/**`.
-4. **Verification & Monotonic Version Bump**:
-   - Bump version in `pubspec.yaml` to `1.8.189+243`.
-   - Run `dart format`, `dart analyze`, and `flutter test`.
-   - Build web release: `flutter build web --release`.
-   - PR, dual-agent sign-offs, merge, and deploy to Firebase Hosting.
+- [x] Make logo container transparent (remove `Color(0xFF1B4332)`, `_kCardBg`, borders, and `ClipOval`/`ClipRRect` wrappers) across:
+  - `lib/features/tour_group/presentation/widgets/desktop_tour_sidebar.dart`
+  - `lib/features/tour_group/presentation/pages/tour_group_hub_screen.dart`
+  - `lib/features/tour_group/presentation/pages/join_group_screen.dart`
+  - `lib/features/auth/presentation/pages/login_screen.dart`
+- [x] In `tour_group_hub_screen.dart` and `join_group_screen.dart`, change the app name "Bhromon" color to bottle green (`context.forest.accentText`).
+- [x] In `tour_group_hub_screen.dart`, replace subtitle tag with "Walk Together" (`context.l10n.translate('login_tagline')` with `context.forest.text54`).
+- [x] In `lib/core/localization/tour_translation_keys.dart`, update `'hub_title'` to `'Walk Together'` (EN) and `'একসাথে পথচলা'` (BN).
+- [x] Monotonically bump version in `pubspec.yaml` to `1.8.190+244`.
+- [x] Run `dart format`, `dart analyze` (0 issues), and `flutter test test/features/tour_group/join_group_screen_test.dart` (all 6 tests pass).
+- [ ] Push to GitHub, create PR, exchange mutual Antigravity & Claude peer reviews, merge to `main`, build web, and deploy to Firebase Hosting.
