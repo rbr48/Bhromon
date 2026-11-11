@@ -1,36 +1,37 @@
-# Implementation Plan: Update JAIBB BA All 8 Accounting Exams English Version & Compendiums
+# Implementation Plan: Fix Document Viewer Share and Open in External App
 
 ## Context & Objectives
-1. **All 8 Accounting Exams English Edition Ingestion**:
-   - The user provided `C:\Users\USER\Downloads\IBB_All_8_Accounting_Exams_English_MD_DOCX_PDF.zip` containing expanded, full problem statements and step-by-step examiner-grade English solutions for all 8 Banking Professional Examinations (BPE) for JAIBB subject Basic Accounting & Business Analytics (`BA`, book ID: `41eTecc9pVGKDjw74hVw`).
-   - The archive also contains 3 comprehensive English Master Solution Compendiums:
-     - 5-Exam Master (96th–5th BPE): 377,015 characters
-     - 3-Exam Master (6th–8th BPE): 231,531 characters
-     - Complete 8-Exam Master: 607,855 characters
-2. **Database Updates**:
-   - Updated all 8 chapter English solutions with complete verbatim problem statements, Trial Balances, Comparative Balance Sheets, Income Statements, journal entries, and ledger accounts.
-   - Added the 3 English Master Compendiums at the book level (`chapterId: None`).
-3. **Verification**:
-   - Verified 8 distinct chapters in JAIBB BA, all with dual English and Bengali solutions.
-   - Verified 5 Master Compendiums (2 Bengali, 3 English).
-   - Total study materials in JAIBB BA: 21.
+1. **User Issue**:
+   - In the in-app document viewer (e.g., when viewing the generated "Branch Notice Board Poster", Exam Booklets, or Markdown solutions/compendiums), tapping the **Share** button (`Icons.share_rounded`) or the **Open in external app** button (`Icons.open_in_new_rounded`, tooltip `'viewer_open_external'`) did nothing or failed.
+2. **Root Cause Analysis**:
+   - `PdfViewerScreen` and `MarkdownViewerScreen` previously checked `if (widget.filePath != null)` or `if (widget.fileUrl != null)`.
+   - When viewing dynamically generated PDFs (e.g. `bytes: pdfBytes` for Branch Notice Board Posters and Booklets) or in-memory Markdown solutions, `widget.filePath` is null and `widget.fileUrl` is null.
+   - Consequently, both `_shareDocument()` and `_openExternally()` silently did nothing.
+   - On Web (`kIsWeb`), `_openExternally()` did not handle blob object URLs or opening in a new tab / downloading, and `_shareDocument()` did not provide a fallback when Web Share API file sharing was unsupported.
+3. **Resolution**:
+   - Implemented `_ensureBytes()` and `_ensureLocalFile()` / `_ensureLocalMarkdownFile()` in both `PdfViewerScreen` and `MarkdownViewerScreen`.
+   - On Mobile/Desktop (`!kIsWeb`):
+     - Saves in-memory bytes/content to a temporary file in `getTemporaryDirectory()`.
+     - Opens the physical file via `OpenFilex.open()` with proper MIME type (`application/pdf`, `text/markdown`, fallback `text/plain`).
+     - Shares via `SharePlus.instance.share(ShareParams(files: [XFile(...)], ...))` with proper filename overrides.
+     - Displays informative feedback if no external application is installed, offering a direct 1-tap fallback to Share.
+   - On Web (`kIsWeb`):
+     - Opens binary payloads directly in a new browser tab via `openWebBlob(bytes, mimeType: ..., filename: ...)`.
+     - Falls back to `downloadWebFile(bytes, filename)` if popup blockers intercept the new tab or Web Share API file sharing is not supported.
+   - Added localized UI feedback strings (`viewer_downloaded`, `viewer_no_external_app`, `viewer_open_failed`) in both English and Bengali dictionaries.
+   - Monotonically incremented version in `pubspec.yaml` to `1.8.199+253`.
 
 ## Action Items
-- [x] Ingest and update 96th BPE English solution (86,356 chars) in Chapter 1 (`cd78gCCNAKlsdUYq8HyC`).
-- [x] Ingest and update 97th BPE English solution (74,325 chars) in Chapter 2 (`f4ZneP05J6e9diSTebZK`).
-- [x] Ingest and update 98th BPE English solution (74,542 chars) in Chapter 3 (`68zW5IFMbcRYD9lczrNA`).
-- [x] Ingest and update 99th BPE English solution (85,731 chars) in Chapter 4 (`OV7lEoq5r9uA4b6rJY5C`).
-- [x] Ingest and update 5th BPE English solution (55,274 chars) in Chapter 5 (`oieZyfyOZYHv9fVqWEgl`).
-- [x] Ingest and update 6th BPE English solution (60,411 chars) in Chapter 6 (`01BeLXhxRs4IeMUTMJFY`).
-- [x] Ingest and update 7th BPE English solution (81,358 chars) in Chapter 7 (`mAwzzP3KPBPkWVDUzLnU`).
-- [x] Ingest and update 8th BPE English solution (89,098 chars) in Chapter 8 (`BcjuHBTL5faJL8C8gNFw`).
-- [x] Upload 5-Exam English Master Compendium (377,015 chars, `V8kA5HBLWgChzGvpLeEd`).
-- [x] Upload 3-Exam English Master Compendium (231,531 chars, `FINNFfYbEUjfdfPfFVpC`).
-- [x] Upload Complete 8-Exam English Master Compendium (607,855 chars, `4qsSnCjvRcTYiRh26DNO`).
-- [x] Verify complete JAIBB BA structure across all 8 chapters and 21 materials.
-- [x] Monotonically bump version in `pubspec.yaml` to `1.8.198+252`.
-- [ ] Run `dart format`, `dart analyze`, and unit test suite.
-- [ ] Commit and push to branch `feat/update-jaibb-ba-english-all8`.
+- [x] Update `tour_pdf_download_stub.dart` and `tour_pdf_download_web.dart` to support `openWebBlob` and dynamic MIME types.
+- [x] Add localized feedback keys to `tour_translation_keys.dart` (EN & BN).
+- [x] Fix `_shareDocument()` and `_openExternally()` in `PdfViewerScreen` with local temp caching, `SharePlus`, `OpenFilex`, and web blob export.
+- [x] Fix `_shareDocument()` and `_openExternally()` in `MarkdownViewerScreen` with local temp caching, `SharePlus`, `OpenFilex`, and web blob export.
+- [x] Monotonically bump version in `pubspec.yaml` to `1.8.199+253`.
+- [x] Run `dart format` (0 changes needed).
+- [x] Run `dart analyze lib/` (0 issues).
+- [x] Run unit tests (`study_banking_master_catalog_test.dart` passed, 5/5).
+- [ ] Commit changes to Git on branch `fix/viewer-share-and-open-external`.
+- [ ] Push to `origin/fix/viewer-share-and-open-external`.
 - [ ] Create Pull Request on GitHub.
 - [ ] Exchange mutual Antigravity & Claude peer review sign-offs.
 - [ ] Verify green CI checks and squash-merge to `main`.

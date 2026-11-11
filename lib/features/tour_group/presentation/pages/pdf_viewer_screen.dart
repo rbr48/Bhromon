@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,6 +15,7 @@ import '../../../../core/media/media_access.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../tour_pdf_download.dart';
 import '../widgets/group_back_button.dart';
 
 /// Fullscreen in-app viewer for PDF documents (.pdf) with pinch-to-zoom,
@@ -65,6 +68,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   int _currentPage = 1;
   bool _isLoading = true;
   String? _errorMessage;
+  Uint8List? _activeBytes;
+  String? _activeFilePath;
 
   @override
   void initState() {
@@ -88,10 +93,12 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       Future<PdfDocument> docFuture;
 
       if (widget.bytes != null && widget.bytes!.isNotEmpty) {
+        _activeBytes = widget.bytes;
         docFuture = PdfDocument.openData(widget.bytes!);
       } else if (!kIsWeb &&
           widget.filePath != null &&
           widget.filePath!.isNotEmpty) {
+        _activeFilePath = widget.filePath;
         docFuture = PdfDocument.openFile(widget.filePath!);
       } else if (widget.fileUrl != null && widget.fileUrl!.isNotEmpty) {
         final targetUrl = signedMediaUrl(widget.fileUrl!);
@@ -100,6 +107,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           options: Options(responseType: ResponseType.bytes),
         );
         final data = Uint8List.fromList(response.data!);
+        _activeBytes = data;
         docFuture = PdfDocument.openData(data);
       } else {
         throw Exception('No valid PDF source provided.');
@@ -123,23 +131,186 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
+  String _safeFileName(String title,
+      {String fallback = 'document', String ext = 'pdf'}) {
+    final clean = title
+        .trim()
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+    final base = clean.isEmpty ? fallback : clean;
+    return base.toLowerCase().endsWith('.$ext') ? base : '$base.$ext';
+  }
+
+  Future<Uint8List?> _ensureBytes() async {
+    if (_activeBytes != null && _activeBytes!.isNotEmpty) {
+      return _activeBytes;
+    }
+    if (!kIsWeb && _activeFilePath != null) {
+      final file = File(_activeFilePath!);
+      if (file.existsSync()) {
+        try {
+          final read = await file.readAsBytes();
+          _activeBytes = read;
+          return read;
+        } catch (e, st) {
+          logWarning(
+              '[PdfViewerScreen] Failed to read bytes from local file', e, st);
+        }
+      }
+    }
+    if (widget.fileUrl != null && widget.fileUrl!.isNotEmpty) {
+      try {
+        final targetUrl = signedMediaUrl(widget.fileUrl!);
+        final response = await Dio().get<List<int>>(
+          targetUrl,
+          options: Options(responseType: ResponseType.bytes),
+        );
+        if (response.data != null) {
+          final read = Uint8List.fromList(response.data!);
+          _activeBytes = read;
+          return read;
+        }
+      } catch (e, st) {
+        logWarning('[PdfViewerScreen] Failed to fetch bytes from url', e, st);
+      }
+    }
+    return null;
+  }
+
+  Future<File?> _ensureLocalFile() async {
+    if (kIsWeb) return null;
+    if (_activeFilePath != null) {
+      final file = File(_activeFilePath!);
+      if (file.existsSync()) return file;
+    }
+    final bytes = await _ensureBytes();
+    if (bytes == null || bytes.isEmpty) return null;
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final name = _safeFileName(widget.title, ext: 'pdf');
+      final file = File('${tempDir.path}/$name');
+      await file.writeAsBytes(bytes, flush: true);
+      _activeFilePath = file.path;
+      return file;
+    } catch (e, st) {
+      logWarning('[PdfViewerScreen] Failed to cache local file', e, st);
+      return null;
+    }
+  }
+
   Future<void> _shareDocument() async {
-    // ignore: deprecated_member_use
-    if (widget.filePath != null && !kIsWeb) {
-      // ignore: deprecated_member_use
-      await Share.shareXFiles([XFile(widget.filePath!)], text: widget.title);
-    } else if (widget.fileUrl != null) {
-      // ignore: deprecated_member_use
-      await Share.share(signedMediaUrl(widget.fileUrl!), subject: widget.title);
+    final fileName = _safeFileName(widget.title, ext: 'pdf');
+    try {
+      if (kIsWeb) {
+        final bytes = await _ensureBytes();
+        if (bytes != null) {
+          try {
+            await SharePlus.instance.share(
+              ShareParams(
+                files: [
+                  XFile.fromData(
+                    bytes,
+                    mimeType: 'application/pdf',
+                    name: fileName,
+                  ),
+                ],
+                fileNameOverrides: [fileName],
+                text: widget.title,
+              ),
+            );
+          } catch (e) {
+            // Web Share API may not support files on this browser; download as fallback
+            await downloadWebFile(bytes, fileName, mimeType: 'application/pdf');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(context.l10n.translate('viewer_downloaded')),
+                ),
+              );
+            }
+          }
+        } else if (widget.fileUrl != null) {
+          await SharePlus.instance.share(
+            ShareParams(
+              text: signedMediaUrl(widget.fileUrl!),
+              subject: widget.title,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Mobile & Desktop platforms
+      final file = await _ensureLocalFile();
+      if (file != null) {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [
+              XFile(
+                file.path,
+                mimeType: 'application/pdf',
+                name: fileName,
+              ),
+            ],
+            fileNameOverrides: [fileName],
+            text: widget.title,
+          ),
+        );
+      } else if (widget.fileUrl != null) {
+        await SharePlus.instance.share(
+          ShareParams(
+            text: signedMediaUrl(widget.fileUrl!),
+            subject: widget.title,
+          ),
+        );
+      }
+    } catch (e, st) {
+      logWarning('[PdfViewerScreen] Share document failed', e, st);
     }
   }
 
   Future<void> _openExternally() async {
+    final fileName = _safeFileName(widget.title, ext: 'pdf');
     try {
-      if (!kIsWeb && widget.filePath != null) {
-        await OpenFilex.open(widget.filePath!);
+      if (kIsWeb) {
+        final bytes = await _ensureBytes();
+        if (bytes != null) {
+          await openWebBlob(bytes,
+              mimeType: 'application/pdf', filename: fileName);
+        } else if (widget.fileUrl != null) {
+          final uri = Uri.parse(signedMediaUrl(widget.fileUrl!));
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, webOnlyWindowName: '_blank');
+          }
+        }
         return;
       }
+
+      // Mobile & Desktop
+      final file = await _ensureLocalFile();
+      if (file != null) {
+        final result = await OpenFilex.open(file.path, type: 'application/pdf');
+        if (result.type != ResultType.done && mounted) {
+          logWarning(
+              '[PdfViewerScreen] OpenFilex error: ${result.type} - ${result.message}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.type == ResultType.noAppToOpen
+                    ? context.l10n.translate('viewer_no_external_app')
+                    : context.l10n.translate('viewer_open_failed'),
+              ),
+              action: SnackBarAction(
+                label: context.l10n.translate('viewer_share'),
+                onPressed: _shareDocument,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       if (widget.fileUrl != null) {
         final uri = Uri.parse(signedMediaUrl(widget.fileUrl!));
         if (await canLaunchUrl(uri)) {
@@ -148,6 +319,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       }
     } catch (e, st) {
       logWarning('[PdfViewerScreen] External launch error', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('${context.l10n.translate('viewer_open_failed')}: $e')),
+        );
+      }
     }
   }
 
