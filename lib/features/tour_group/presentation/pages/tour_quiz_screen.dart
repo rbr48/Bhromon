@@ -1,6 +1,7 @@
 import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
+import 'package:bhromon/core/theme/theme_context.dart';
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -387,13 +388,16 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF142C33), Color(0xFF0C1B20)],
+              gradient: LinearGradient(
+                colors: [
+                  context.forest.surfaceFor(const Color(0xFF142C33)),
+                  context.forest.surfaceFor(const Color(0xFF0C1B20)),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: context.borderFaint),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black38,
@@ -404,8 +408,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             ),
             child: Text(
               q.question,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 height: 1.4,

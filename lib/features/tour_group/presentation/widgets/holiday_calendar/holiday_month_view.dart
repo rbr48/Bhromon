@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/theme_context.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -268,9 +269,9 @@ class _MiniMonth extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: kHolidayCard,
+          color: context.forest.surfaceFor(kHolidayCard),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: context.borderFaint),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,15 +279,15 @@ class _MiniMonth extends StatelessWidget {
             Text(
               localizedDateFormat('MMMM')
                   .format(DateTime(calendar.year, month)),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               '${context.l10n.number(stats.netWorkdays)} / ${context.l10n.number(stats.totalDays)}',
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
+              style: TextStyle(color: context.forest.text54, fontSize: 11),
             ),
             const SizedBox(height: 4),
             Expanded(

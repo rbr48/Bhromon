@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/theme_context.dart';
 import 'dart:convert';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:typed_data';
@@ -141,7 +142,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: kHolidayCard,
+            color: context.forest.surfaceFor(kHolidayCard),
             borderRadius: BorderRadius.circular(16),
             border:
                 Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
@@ -159,7 +160,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
               if (sessions.isEmpty)
                 Text(
                   l10n.translate('study_calendar_empty'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12),
                 ),
               FutureBuilder<List<StudyAssignment>>(
                 future: _assignmentsOf(widget.tourId),
@@ -180,8 +181,8 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
                                   .format(assignment.dueAt!),
                               'title': assignment.title,
                             }),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.forest.text,
                               fontSize: 13,
                             ),
                           ),
@@ -209,16 +210,16 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
                       children: [
                         Text(
                           session.title,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: context.forest.text,
                             fontSize: 13,
                           ),
                         ),
                         Text(
                           localizedDateFormat('d MMM y, h:mm a')
                               .format(session.startsAt),
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: context.forest.text70,
                             fontSize: 12,
                           ),
                         ),
@@ -323,24 +324,24 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       width: 150,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: kHolidayCard,
+        color: context.forest.surfaceFor(kHolidayCard),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.borderFaint),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.forest.text,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(color: Colors.white60, fontSize: 12),
+            style: TextStyle(color: context.forest.text60, fontSize: 12),
           ),
         ],
       ),
@@ -358,7 +359,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: kHolidayCard,
+        color: context.forest.surfaceFor(kHolidayCard),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
       ),
@@ -375,7 +376,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
           const SizedBox(height: 4),
           Text(
             '${holidayDateLabel(context, trip.start)} – ${holidayDateLabel(context, trip.end)}',
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: TextStyle(color: context.forest.text, fontSize: 13),
           ),
           const SizedBox(height: 4),
           Text(
@@ -384,7 +385,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
               'count': trip.leaveDays,
               'n': trip.holidays.length,
             }),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            style: TextStyle(color: context.forest.text70, fontSize: 12),
           ),
           if (trip.holidays.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -395,7 +396,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
                         o.holiday.name(bengali: holidayIsBengali(context)))
                     .join(', '),
               }),
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(color: context.forest.text70, fontSize: 12),
             ),
           ],
           if (outsideYear) ...[

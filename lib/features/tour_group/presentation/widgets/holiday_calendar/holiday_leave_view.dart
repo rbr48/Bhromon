@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/theme_context.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -81,9 +82,9 @@ class _HolidayLeaveViewState extends State<HolidayLeaveView> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: kHolidayCard,
+                  color: context.forest.surfaceFor(kHolidayCard),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white10),
+                  border: Border.all(color: context.borderFaint),
                 ),
                 child: Row(
                   children: [
@@ -93,8 +94,8 @@ class _HolidayLeaveViewState extends State<HolidayLeaveView> {
                         children: [
                           Text(
                             holidayDateLabel(context, option.leaveDay),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.forest.text,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -108,8 +109,8 @@ class _HolidayLeaveViewState extends State<HolidayLeaveView> {
                                     holidayDateLabel(context, option.range.end),
                               },
                             ),
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: context.forest.text54,
                               fontSize: 12,
                             ),
                           ),
@@ -173,7 +174,7 @@ class _CheckResult extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: kHolidayCard,
+          color: context.forest.surfaceFor(kHolidayCard),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
         ),
@@ -182,8 +183,8 @@ class _CheckResult extends StatelessWidget {
           children: [
             Text(
               '${localizedDateFormat('EEEE').format(day)}, ${holidayDateLabel(context, day)}',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -191,7 +192,7 @@ class _CheckResult extends StatelessWidget {
             Text(message, style: const TextStyle(color: AppColors.mintGreen)),
             if (range != null)
               Text(range,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
           ],
         ),
       ),
