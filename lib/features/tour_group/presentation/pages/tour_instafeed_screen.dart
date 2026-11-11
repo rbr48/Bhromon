@@ -122,7 +122,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   late Stream<List<TourStoryItem>> _storiesStream;
   late Stream<List<TourPostItem>> _postsStream;
   late Stream<List<TourStoryHighlight>> _highlightsStream;
-  late Stream<List<SafetyAlert>> _alertsStream;
+  // Null until the group is known: only a group with SOS reads its alerts.
+  Stream<List<SafetyAlert>>? _alertsStream;
 
   @override
   void initState() {
@@ -135,7 +136,6 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
     _postsStream = _feed.stream;
     _highlightsStream = _repository.watchHighlights(widget.tourId);
-    _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
     _restoreFeedView();
     _feedScroll.addListener(_rememberFeedOffset);
@@ -309,7 +309,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   void _watchGroup() {
     _groupSub = _repository.watchGroup(widget.tourId).listen(
       (g) {
-        if (mounted) setState(() => _tourGroup = g);
+        if (!mounted) return;
+        setState(() {
+          _tourGroup = g;
+          // The alerts are read only for a group that has SOS. Any other group gets an
+          // empty list, so no banner shows and no read is made.
+          _alertsStream ??= g == null
+              ? null
+              : g.supportsSafetyAlerts
+                  ? _repository.watchSafetyAlerts(widget.tourId)
+                  : Stream.value(const <SafetyAlert>[]);
+        });
       },
       onError: (Object e) => logWarning('[TourInstaFeed] group watch: $e'),
     );

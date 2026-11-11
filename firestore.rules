@@ -697,6 +697,14 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus'];
     }
+    // The SOS feature: a trip, a household (no preset), a mess and a housing society. Every
+    // other preset has no SOS, and so does a preset this list does not name. Keep this in
+    // step with TourGroup.supportsSafetyAlerts in the app and sos_policy.py on the VPS.
+    function sosAllowedTour(tId) {
+      let tour = get(/databases/$(database)/documents/tours/$(tId));
+      let preset = tour.data.get('preset', '');
+      return preset == null || preset in ['', 'mess', 'society'];
+    }
     // An office, a campus, a mess, a housing society or a samity: the owner and admins post
     // the notices and members answer them.
     function hasManagedNotices(tId) {
@@ -3044,19 +3052,33 @@ service cloud.firestore {
         allow delete: if isActiveMember(tourId) && email == tourUserEmail();
       }
 
+      // A safety alert. Only a group with SOS keeps one (sosAllowedTour): nobody reads,
+      // raises, resolves or deletes one in any other group. The fields are checked by type,
+      // so a document the app cannot read cannot be written.
       match /sos/{alertId} {
-        allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) && !isManagedTour(tourId) &&
+        allow read: if isActiveMember(tourId) && sosAllowedTour(tourId);
+        allow create: if isActiveMember(tourId) && sosAllowedTour(tourId) &&
+                         request.resource.data.keys().hasOnly(
+                           ['id', 'senderEmail', 'senderName', 'resolved', 'latitude', 'longitude', 'createdAt']) &&
+                         (!('id' in request.resource.data) || request.resource.data.id == alertId) &&
                          request.resource.data.senderEmail == tourUserEmail() &&
+                         request.resource.data.senderName is string &&
+                         request.resource.data.senderName.size() <= 80 &&
                          request.resource.data.resolved == false &&
-                         request.resource.data.createdAt == request.time;
-        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.createdAt == request.time &&
+                         (!('latitude' in request.resource.data) ||
+                           (request.resource.data.latitude is number &&
+                            request.resource.data.latitude >= -90 && request.resource.data.latitude <= 90)) &&
+                         (!('longitude' in request.resource.data) ||
+                           (request.resource.data.longitude is number &&
+                            request.resource.data.longitude >= -180 && request.resource.data.longitude <= 180));
+        allow update: if isActiveMember(tourId) && sosAllowedTour(tourId) &&
                          (resource.data.senderEmail == tourUserEmail() || isTourAdmin(tourId)) &&
                          request.resource.data.senderEmail == resource.data.senderEmail &&
                          request.resource.data.resolved == true &&
                          request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['resolved', 'resolvedByEmail', 'resolvedAt']);
-        allow delete: if isActiveMember(tourId) &&
+        allow delete: if isActiveMember(tourId) && sosAllowedTour(tourId) &&
                          (resource.data.senderEmail == tourUserEmail() || isTourAdmin(tourId));
       }
 

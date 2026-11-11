@@ -63,12 +63,15 @@ void main() {
       expect(kMessChannelIds, contains(kBuiltInVoiceChannelId));
     });
 
-    test('an unknown preset is read as no preset', () {
+    test(
+        'an unknown preset is kept, so the group is neither a mess nor a household',
+        () {
       final group =
           TourGroup.fromMap('m2', _circle(kind: 'family', preset: 'hostel'));
 
       expect(group.isMess, isFalse);
-      expect(group.preset, isNull);
+      expect(group.preset, 'hostel');
+      expect(group.isHousehold, isFalse);
     });
   });
 }

@@ -66,7 +66,8 @@ List<String> hubModulesFor(TourGroup group, {bool? momentsOpen}) {
     if (group.isStudy) 'study_reading',
     if (group.isStudy) 'study_books',
     if (isTrip) 'journey',
-    if (!group.isManaged) 'safety',
+    // The Family Safety hub is the SOS feature, which only some groups have.
+    if (group.supportsSafetyAlerts) 'safety',
     if (group.modules.games) 'games',
     if (isTrip) 'quiz',
     if (isTrip) 'scrapbook',

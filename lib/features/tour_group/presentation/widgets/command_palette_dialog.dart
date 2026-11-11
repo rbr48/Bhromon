@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
+import '../../data/tour_group_repository.dart';
+import '../../domain/models/tour_group.dart';
 import '../tour_routes.dart';
 
 class CommandPaletteItem {
@@ -25,7 +29,11 @@ class CommandPaletteItem {
 class CommandPaletteDialog extends StatefulWidget {
   final String tourId;
 
-  const CommandPaletteDialog({super.key, required this.tourId});
+  /// The data source. Null uses a fresh repository; a test can pass its own.
+  final TourGroupRepository? repository;
+
+  const CommandPaletteDialog(
+      {super.key, required this.tourId, this.repository});
 
   static Future<void> show(BuildContext context, String tourId) {
     return showDialog<void>(
@@ -42,6 +50,22 @@ class CommandPaletteDialog extends StatefulWidget {
 class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
   final TextEditingController _searchCtrl = TextEditingController();
   int _selectedIndex = 0;
+  StreamSubscription<TourGroup?>? _groupSub;
+
+  /// The Safety hub is the SOS feature, so it is listed only for a group that has SOS.
+  bool _supportsSafety = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final repository = widget.repository ?? TourGroupRepository();
+    _groupSub = repository.watchGroup(widget.tourId).listen((group) {
+      final supports = group?.supportsSafetyAlerts ?? false;
+      if (mounted && supports != _supportsSafety) {
+        setState(() => _supportsSafety = supports);
+      }
+    });
+  }
 
   List<CommandPaletteItem> _getItems(String tourId) {
     return [
@@ -178,13 +202,17 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
 
   @override
   void dispose() {
+    _groupSub?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final allItems = _getItems(widget.tourId);
+    final safetyRoute = '/group/${widget.tourId}/safety';
+    final allItems = _getItems(widget.tourId)
+        .where((item) => _supportsSafety || item.route != safetyRoute)
+        .toList();
     final query = _searchCtrl.text.trim().toLowerCase();
     final filtered = query.isEmpty
         ? allItems

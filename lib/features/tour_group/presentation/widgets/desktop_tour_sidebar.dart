@@ -275,15 +275,17 @@ class DesktopTourSidebar extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildSectionHeader(
                         context, l10n.translate('desktop_sidebar_superpowers')),
-                    _buildToolItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_safety'),
-                      badge: 'GPS',
-                      icon: Icons.fmd_good_rounded,
-                      route: '/group/$tourId/safety',
-                      badgeColor: Colors.redAccent,
-                      isActive: _isActive('/group/$tourId/safety'),
-                    ),
+                    // The Safety hub is the SOS feature: only the groups that have SOS show it.
+                    if (group != null && group.supportsSafetyAlerts)
+                      _buildToolItem(
+                        context,
+                        title: l10n.translate('desktop_sidebar_safety'),
+                        badge: 'GPS',
+                        icon: Icons.fmd_good_rounded,
+                        route: '/group/$tourId/safety',
+                        badgeColor: Colors.redAccent,
+                        isActive: _isActive('/group/$tourId/safety'),
+                      ),
                     _buildToolItem(
                       context,
                       title: l10n.translate('desktop_sidebar_tide'),
