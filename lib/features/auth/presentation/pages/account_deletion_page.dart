@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/features/chat/data/e2ee/e2ee_chat_controller.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,10 +7,10 @@ import 'package:go_router/go_router.dart';
 
 // ─── Brand colours (mirrors login_screen.dart) ────────────────────────────────
 const Color _kBg = Color(0xFF050C08);
-const Color _kCardBg = Color(0xFF0D1A12);
+const Color _kCardBg = AppColors.forestScaffold;
 const Color _kFieldBg = Color(0xFF0A140D);
 const Color _kBorder = Color(0xFF1E3A26);
-const Color _kGreen = Color(0xFF52B788);
+const Color _kGreen = AppColors.freshGreen;
 const Color _kRed = Color(0xFFE63946);
 const Color _kWhite = Color(0xFFECF0F1);
 const Color _kWhite54 = Color(0x8AECF0F1);

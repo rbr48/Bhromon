@@ -21,8 +21,8 @@ import '../widgets/notice/notice_composer.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/widgets/swipe_step.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 
 /// "in 1h 20m", "in 3 days", "now", "25m ago".
 String noticeCountdown(AppLocalizations l10n, DateTime at, DateTime now) {
@@ -1133,7 +1133,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.forest.divider10),
       ),

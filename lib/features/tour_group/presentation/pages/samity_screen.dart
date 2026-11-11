@@ -17,8 +17,8 @@ import '../../domain/services/samity_engine.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../samity_pdf_export.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 const _sheetShape = RoundedRectangleBorder(
   borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
 );
@@ -1133,8 +1133,7 @@ class _SetupSheetState extends State<_SetupSheet> {
               ),
               DropdownButtonFormField<int>(
                 initialValue: _dueDay,
-                dropdownColor:
-                    context.forest.surfaceFor(const Color(0xFF1B4332)),
+                dropdownColor: context.forest.surfaceFor(AppColors.darkGreen),
                 style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('samity_due_day_label'),

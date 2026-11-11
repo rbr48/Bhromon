@@ -322,7 +322,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final plan = await showModalBottomSheet<LegPlan>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _LegSheet(leg: leg),
@@ -365,7 +365,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final result = await showModalBottomSheet<RouteCheckpoint>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _CheckpointSheet(
@@ -402,7 +402,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -534,10 +534,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        backgroundColor: context.forest.surfaceFor(AppColors.tealPanelDeep),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
           foregroundColor: context.forest.text,
           elevation: 0,
           title: Text(l10n.translate('route_title'),
@@ -694,8 +694,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               ActionChip(
                 avatar: Icon(n.$2, size: 16, color: context.forest.accentText),
                 label: Text(l10n.translate(n.$3)),
-                backgroundColor:
-                    context.forest.surfaceFor(const Color(0xFF142428)),
+                backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
                 labelStyle: TextStyle(color: context.forest.text, fontSize: 12),
                 onPressed: () => _open(nearbySearchUri(n.$1,
                     lat: pos?.latitude, lng: pos?.longitude)),
@@ -777,7 +776,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),
@@ -958,7 +957,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
       ),
@@ -1039,7 +1038,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: context.forest.surfaceFor(const Color(0xFF142428)),
+              color: context.forest.surfaceFor(AppColors.tealPanel),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: context.forest.divider12),
             ),
@@ -1444,7 +1443,7 @@ class _LegSheetState extends State<_LegSheet> {
                     selected: m == _p.mode,
                     selectedColor: AppColors.mintGreen,
                     backgroundColor:
-                        context.forest.surfaceFor(const Color(0xFF1E3326)),
+                        context.forest.surfaceFor(AppColors.forestRaised),
                     labelStyle: TextStyle(
                         color: m == _p.mode
                             ? AppColors.darkGreen

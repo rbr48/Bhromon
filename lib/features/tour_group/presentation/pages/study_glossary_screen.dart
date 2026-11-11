@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
@@ -241,15 +242,9 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
         if (!term.approved) term,
     ];
     if (approved.isEmpty && proposals.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.translate('study_glossary_empty'),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.text70),
-          ),
-        ),
+      return EmptyState(
+        icon: Icons.translate_rounded,
+        message: l10n.translate('study_glossary_empty'),
       );
     }
     return ListView(

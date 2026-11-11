@@ -2432,7 +2432,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: context.chat.text24)),
                 focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF00A884))),
+                    borderSide: BorderSide(color: AppColors.chatGreen)),
               ),
             ),
             const SizedBox(height: 12),
@@ -2445,7 +2445,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: context.chat.text24)),
                 focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF00A884))),
+                    borderSide: BorderSide(color: AppColors.chatGreen)),
               ),
             ),
           ],
@@ -2458,7 +2458,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A884),
+              backgroundColor: AppColors.chatGreen,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
@@ -2863,7 +2863,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             const Icon(Icons.arrow_downward_rounded, size: 18),
                         label: Text(l10n.translate('chat_pinned_jump')),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00A884),
+                          backgroundColor: AppColors.chatGreen,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -2985,7 +2985,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.translate('chat_copied')),
-          backgroundColor: const Color(0xFF00A884),
+          backgroundColor: AppColors.chatGreen,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -3021,7 +3021,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.translate('chat_pinned_done')),
-            backgroundColor: const Color(0xFF00A884),
+            backgroundColor: AppColors.chatGreen,
           ),
         );
       }
@@ -3099,7 +3099,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.translate('chat_forwarded_done')),
-            backgroundColor: const Color(0xFF00A884),
+            backgroundColor: AppColors.chatGreen,
           ),
         );
       }
@@ -3236,7 +3236,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.translate('chats_call_members_only')),
-          backgroundColor: const Color(0xFF1F2C34),
+          backgroundColor: AppColors.chatPanel,
         ),
       );
       return;
@@ -4099,7 +4099,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             if (!hasAnyMessages && _messagesSub == null) {
                               return const Center(
                                   child: CircularProgressIndicator(
-                                      color: Color(0xFF00A884)));
+                                      color: AppColors.chatGreen));
                             }
                             if (!hasAnyMessages) {
                               return Center(
@@ -4144,7 +4144,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         width: 20,
                                         height: 20,
                                         child: CircularProgressIndicator(
-                                          color: Color(0xFF00A884),
+                                          color: AppColors.chatGreen,
                                           strokeWidth: 2,
                                         ),
                                       ),
@@ -4932,10 +4932,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       },
                                       child: Container(
                                         color: isSelected
-                                            ? const Color(0xFF00A884)
+                                            ? AppColors.chatGreen
                                                 .withValues(alpha: 0.18)
                                             : isHighlighted
-                                                ? const Color(0xFF00A884)
+                                                ? AppColors.chatGreen
                                                     .withValues(alpha: 0.28)
                                                 : Colors.transparent,
                                         padding: const EdgeInsets.symmetric(
@@ -5094,7 +5094,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                   BorderRadius.circular(12),
                                               border: const Border(
                                                 left: BorderSide(
-                                                    color: Color(0xFF00A884),
+                                                    color: AppColors.chatGreen,
                                                     width: 4),
                                               ),
                                             ),

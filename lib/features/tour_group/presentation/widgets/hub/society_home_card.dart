@@ -13,7 +13,7 @@ import '../../../domain/models/service_request_models.dart';
 import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
 
-const _card = Color(0xFF142428);
+const _card = AppColors.tealPanel;
 
 /// Purpose-driven hero status card for a Housing Society / Apartment Building.
 /// Displays open service requests, maintenance status, building notices, and one-tap actions.
@@ -134,7 +134,7 @@ class _SocietyHomeCardState extends State<SocietyHomeCard> {
                   size: 20,
                   color: activeRequests.isNotEmpty
                       ? AppColors.gold
-                      : context.forest.readable(const Color(0xFF52B788)),
+                      : context.forest.readable(AppColors.freshGreen),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -211,7 +211,7 @@ class _SocietyHomeCardState extends State<SocietyHomeCard> {
                   onPressed: () => context.push('$base/requests'),
                   icon: Icon(Icons.add_task_rounded,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('society_home_report_btn'),
                     style: const TextStyle(fontSize: 12),
@@ -232,7 +232,7 @@ class _SocietyHomeCardState extends State<SocietyHomeCard> {
                   onPressed: () => context.push('$base/notices'),
                   icon: Icon(Icons.campaign_outlined,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('society_home_notices_btn'),
                     style: const TextStyle(fontSize: 12),

@@ -36,7 +36,7 @@ class IncomingCallDialog extends StatelessWidget {
     final url = avatarUrl;
     final hasAvatar = url != null && url.isNotEmpty;
     return AlertDialog(
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: AppColors.chatPanel,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       content: Column(
@@ -44,7 +44,7 @@ class IncomingCallDialog extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 40,
-            backgroundColor: const Color(0xFF00A884),
+            backgroundColor: AppColors.chatGreen,
             backgroundImage: hasAvatar
                 ? CachedNetworkImageProvider(signedMediaUrl(url),
                     maxWidth: kMaxDecodeDimension)
@@ -74,7 +74,7 @@ class IncomingCallDialog extends StatelessWidget {
             children: [
               Icon(
                 isVideo ? Icons.videocam : Icons.call,
-                color: const Color(0xFF00A884),
+                color: AppColors.chatGreen,
                 size: 16,
               ),
               const SizedBox(width: 6),
@@ -130,7 +130,7 @@ class IncomingCallDialog extends StatelessWidget {
                       width: 52,
                       height: 52,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF00A884),
+                        color: AppColors.chatGreen,
                         shape: BoxShape.circle,
                       ),
                       child:
@@ -141,7 +141,7 @@ class IncomingCallDialog extends StatelessWidget {
                         context.l10n.translate(
                             waiting ? 'call_end_and_answer' : 'call_accept'),
                         style: const TextStyle(
-                            color: Color(0xFF00A884), fontSize: 12)),
+                            color: AppColors.chatGreen, fontSize: 12)),
                   ],
                 ),
               ),

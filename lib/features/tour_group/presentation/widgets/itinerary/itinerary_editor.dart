@@ -117,7 +117,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
     return showModalBottomSheet<TourStop>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
       constraints: const BoxConstraints(maxWidth: 560),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -132,10 +132,10 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
     return GroupPopScope(
       tourId: widget.group.id,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        backgroundColor: context.forest.surfaceFor(AppColors.tealPanelDeep),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.group.id),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
           foregroundColor: context.forest.text,
           title: Text(l10n.translate('itin_title'),
               style: TextStyle(
@@ -185,7 +185,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                 l10n.translate('itin_start')),
             for (var i = 0; i < _stops.length; i++)
               Card(
-                color: context.forest.surfaceFor(const Color(0xFF142428)),
+                color: context.forest.surfaceFor(AppColors.tealPanel),
                 margin: const EdgeInsets.only(top: 10),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
@@ -327,7 +327,7 @@ class _StopSheetState extends State<_StopSheet> {
                     selected: t == _s.kind,
                     selectedColor: AppColors.mintGreen,
                     backgroundColor:
-                        context.forest.surfaceFor(const Color(0xFF1E3326)),
+                        context.forest.surfaceFor(AppColors.forestRaised),
                     labelStyle: TextStyle(
                         color: t == _s.kind
                             ? AppColors.darkGreen
@@ -448,7 +448,7 @@ Future<DestinationPick?> showDestinationPicker(BuildContext context) {
   return showModalBottomSheet<DestinationPick>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+    backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
     constraints: const BoxConstraints(maxWidth: 560),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,11 +14,11 @@ import '../cubit/auth_state.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const Color _kBg = Color(0xFF050C08); // deepest dark green-black
-const Color _kCardBg = Color(0xFF0D1A12); // dark card, fully opaque
+const Color _kCardBg = AppColors.forestScaffold; // dark card, fully opaque
 const Color _kBorder = Color(0xFF1E3A26); // subtle border
-const Color _kGreen = Color(0xFF52B788); // vibrant mint-green
-const Color _kGreenDark = Color(0xFF1B4332);
-const Color _kGold = Color(0xFFF4A261);
+const Color _kGreen = AppColors.freshGreen; // vibrant mint-green
+const Color _kGreenDark = AppColors.darkGreen;
+const Color _kGold = AppColors.gold;
 const Color _kWhite = Color(0xFFECF0F1);
 const Color _kWhite54 = Color(0x8AECF0F1);
 const Color _kWhite30 = Color(0x4DECF0F1);

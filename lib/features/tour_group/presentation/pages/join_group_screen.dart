@@ -316,7 +316,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       height: 72,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF1B4332),
+        color: AppColors.darkGreen,
         border: Border.all(
           color: AppColors.mintGreen.withValues(alpha: 0.4),
           width: 1.5,

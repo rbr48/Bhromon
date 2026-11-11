@@ -9,8 +9,8 @@ import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/family_date_models.dart';
 import '../../../domain/models/tour_group.dart';
 
-const _sheet = Color(0xFF142428);
-const _chip = Color(0xFF1E3326);
+const _sheet = AppColors.tealPanel;
+const _chip = AppColors.forestRaised;
 
 /// Adds a family date, or shows and changes an existing one. Returns true when
 /// the list changed (a date was saved or removed).

@@ -223,7 +223,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
   Color _getProviderColor(String provider) {
     switch (provider.toLowerCase()) {
       case 'bkash':
-        return const Color(0xFFE2136E);
+        return AppColors.bkashPink;
       case 'nagad':
         return const Color(0xFFF7931E);
       case 'rocket':

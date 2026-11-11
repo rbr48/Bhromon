@@ -198,7 +198,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 580, maxHeight: 540),
         child: Material(
-          color: context.forest.surfaceFor(const Color(0xFF1E1E1E)),
+          color: context.forest.surfaceFor(AppColors.cardDark),
           borderRadius: BorderRadius.circular(16),
           elevation: 24,
           clipBehavior: Clip.antiAlias,

@@ -124,6 +124,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
   }
 
   Future<void> _toggleLike() async {
+    HapticFeedback.lightImpact();
     final email = widget.repository.currentEmail;
     final currentLiked = _optimisticLiked ?? widget.post.isLikedBy(email);
     final targetLiked = !currentLiked;

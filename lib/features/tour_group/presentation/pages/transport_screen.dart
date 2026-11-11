@@ -166,7 +166,7 @@ class _TransportScreenState extends State<TransportScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
         title: Text(
             l10n.translate('veh_delete_confirm', args: {'name': v.name}),
             style: TextStyle(color: context.forest.text)),
@@ -207,7 +207,7 @@ class _TransportScreenState extends State<TransportScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
         title: Text(l10n.translate('veh_auto_title'),
             style: TextStyle(color: context.forest.text)),
         content: Text(
@@ -239,7 +239,7 @@ class _TransportScreenState extends State<TransportScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
         title: Text(l10n.translate('veh_clear_confirm'),
             style: TextStyle(color: context.forest.text)),
         actions: [
@@ -291,7 +291,7 @@ class _TransportScreenState extends State<TransportScreen> {
     final manifestText = lines.join('\n');
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -407,7 +407,7 @@ class _TransportScreenState extends State<TransportScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => _SeatSheet(
@@ -456,10 +456,10 @@ class _TransportScreenState extends State<TransportScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
           elevation: 0,
           title: Text(l10n.translate('veh_title'),
               style: TextStyle(
@@ -520,7 +520,7 @@ class _TransportScreenState extends State<TransportScreen> {
                 selected: id == current,
                 selectedColor: AppColors.mintGreen,
                 backgroundColor:
-                    context.forest.surfaceFor(const Color(0xFF14241B)),
+                    context.forest.surfaceFor(AppColors.forestCard),
                 labelStyle: TextStyle(
                     color: id == current
                         ? AppColors.darkGreen
@@ -534,8 +534,7 @@ class _TransportScreenState extends State<TransportScreen> {
               avatar: Icon(Icons.add,
                   size: 18, color: context.forest.readable(AppColors.gold)),
               label: Text(l10n.translate('veh_add')),
-              backgroundColor:
-                  context.forest.surfaceFor(const Color(0xFF14241B)),
+              backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
               labelStyle:
                   TextStyle(color: context.forest.readable(AppColors.gold)),
               side: const BorderSide(color: AppColors.gold),
@@ -545,7 +544,7 @@ class _TransportScreenState extends State<TransportScreen> {
             avatar: const Icon(Icons.calculate_outlined,
                 size: 18, color: AppColors.mintGreen),
             label: const Text('ভাড়া গাইড'),
-            backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+            backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
             labelStyle: const TextStyle(color: AppColors.mintGreen),
             side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.5)),
             onPressed: () => showLocalFareGuideSheet(
@@ -608,7 +607,7 @@ class _TransportScreenState extends State<TransportScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: context.forest.surfaceFor(const Color(0xFF14241B)),
+                    color: context.forest.surfaceFor(AppColors.forestCard),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                         color: AppColors.mintGreen.withValues(alpha: 0.3),
@@ -637,7 +636,7 @@ class _TransportScreenState extends State<TransportScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF14241B)),
+        color: context.forest.surfaceFor(AppColors.forestCard),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),

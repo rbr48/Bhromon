@@ -101,7 +101,7 @@ class _JourneyAlarmPageState extends State<JourneyAlarmPage> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: AppColors.forestScaffold,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),

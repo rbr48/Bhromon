@@ -234,7 +234,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         const SnackBar(
           content:
               Text('🛡️ AdBlock Enabled — Clean & ad-free browsing active'),
-          backgroundColor: Color(0xFF1B4332),
+          backgroundColor: AppColors.darkGreen,
           duration: Duration(seconds: 2),
         ),
       );
@@ -439,8 +439,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           backgroundColor: const Color(0xFFF9FAFB),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back,
-                color: Color(0xFF111827), size: 24),
+            icon: const Icon(Icons.arrow_back, color: AppColors.ink, size: 24),
             tooltip: 'Go back',
             onPressed: _handleBackPress,
           ),
@@ -448,7 +447,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           title: Text(
             widget.paper?.name ?? _pageTitle,
             style: const TextStyle(
-              color: Color(0xFF111827),
+              color: AppColors.ink,
               fontSize: 18,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.2,
@@ -468,7 +467,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: const Color(0xFF111827),
+                    color: AppColors.ink,
                     width: 1.2,
                   ),
                 ),
@@ -479,14 +478,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                       _isAdBlockEnabled
                           ? Icons.shield_rounded
                           : Icons.shield_outlined,
-                      color: const Color(0xFF111827),
+                      color: AppColors.ink,
                       size: 16,
                     ),
                     const SizedBox(width: 5),
                     Text(
                       '$_blockedAdsCount',
                       style: const TextStyle(
-                        color: Color(0xFF111827),
+                        color: AppColors.ink,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -501,7 +500,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
             IconButton(
               icon: Icon(
                 _isLoading ? Icons.close_rounded : Icons.refresh_rounded,
-                color: const Color(0xFF111827),
+                color: AppColors.ink,
                 size: 24,
               ),
               tooltip: _isLoading ? 'Stop' : 'Reload',
@@ -517,7 +516,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
             // 3-dots Overflow Menu
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded,
-                  color: Color(0xFF111827), size: 24),
+                  color: AppColors.ink, size: 24),
               color: Colors.white,
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -559,7 +558,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                         _isAdBlockEnabled
                             ? Icons.shield_moon_rounded
                             : Icons.shield_rounded,
-                        color: const Color(0xFF111827),
+                        color: AppColors.ink,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -567,8 +566,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                         _isAdBlockEnabled
                             ? 'Allow ads on this site'
                             : 'Block ads on this site',
-                        style: const TextStyle(
-                            color: Color(0xFF111827), fontSize: 14),
+                        style:
+                            const TextStyle(color: AppColors.ink, fontSize: 14),
                       ),
                     ],
                   ),
@@ -578,11 +577,10 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   child: Row(
                     children: [
                       Icon(Icons.chrome_reader_mode_rounded,
-                          color: Color(0xFF111827), size: 20),
+                          color: AppColors.ink, size: 20),
                       SizedBox(width: 12),
                       Text('Clean Reader Mode',
-                          style: TextStyle(
-                              color: Color(0xFF111827), fontSize: 14)),
+                          style: TextStyle(color: AppColors.ink, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -590,12 +588,10 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'share',
                   child: Row(
                     children: [
-                      Icon(Icons.share_rounded,
-                          color: Color(0xFF111827), size: 20),
+                      Icon(Icons.share_rounded, color: AppColors.ink, size: 20),
                       SizedBox(width: 12),
                       Text('Share this page',
-                          style: TextStyle(
-                              color: Color(0xFF111827), fontSize: 14)),
+                          style: TextStyle(color: AppColors.ink, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -604,11 +600,10 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   child: Row(
                     children: [
                       Icon(Icons.open_in_browser_rounded,
-                          color: Color(0xFF111827), size: 20),
+                          color: AppColors.ink, size: 20),
                       SizedBox(width: 12),
                       Text('Open in browser',
-                          style: TextStyle(
-                              color: Color(0xFF111827), fontSize: 14)),
+                          style: TextStyle(color: AppColors.ink, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -620,14 +615,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                         _isDesktopMode
                             ? Icons.phone_android_rounded
                             : Icons.desktop_windows_rounded,
-                        color: const Color(0xFF111827),
+                        color: AppColors.ink,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         _isDesktopMode ? 'Mobile View' : 'Desktop View',
-                        style: const TextStyle(
-                            color: Color(0xFF111827), fontSize: 14),
+                        style:
+                            const TextStyle(color: AppColors.ink, fontSize: 14),
                       ),
                     ],
                   ),
@@ -636,12 +631,10 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'copy',
                   child: Row(
                     children: [
-                      Icon(Icons.copy_rounded,
-                          color: Color(0xFF111827), size: 20),
+                      Icon(Icons.copy_rounded, color: AppColors.ink, size: 20),
                       SizedBox(width: 12),
                       Text('Copy Link',
-                          style: TextStyle(
-                              color: Color(0xFF111827), fontSize: 14)),
+                          style: TextStyle(color: AppColors.ink, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -649,7 +642,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.close_rounded,
-                  color: Color(0xFF111827), size: 24),
+                  color: AppColors.ink, size: 24),
               tooltip: 'Close browser',
               onPressed: () {
                 if (context.canPop()) {

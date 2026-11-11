@@ -242,7 +242,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
     final content = cell.plainText;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -359,7 +359,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
   void _showExportSheet() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -520,7 +520,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
     final contentWidget = Scaffold(
       backgroundColor: const Color(0xFF0B1410),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF142428),
+        backgroundColor: AppColors.tealPanel,
         elevation: 0,
         title: Text(
           widget.title ?? 'টেবিল ভিউ ($rowCount সারি, $colCount কলাম)',
@@ -628,7 +628,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF142428),
+                  color: AppColors.tealPanel,
                   border: Border(
                       top: BorderSide(color: Colors.white12, width: 0.8)),
                 ),
@@ -727,7 +727,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
 
   Widget _buildGridTable(BuildContext context) {
     const borderColor = Color(0xFF264639);
-    const headerBg = Color(0xFF1B4332);
+    const headerBg = AppColors.darkGreen;
     const zebraBg = Color(0xFF13221C);
 
     final colCount = widget.table.headers.length;

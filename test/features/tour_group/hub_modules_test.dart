@@ -101,4 +101,25 @@ void main() {
         hubModulesFor(_group(family: true, preset: TourGroup.messPreset));
     expect(ids.indexOf('meals'), greaterThan(ids.indexOf('channels')));
   });
+
+  group('foldHubModules', () {
+    test('keeps the first six and puts the rest behind More tools', () {
+      final ids = [for (var i = 0; i < 11; i++) 't$i'];
+      final fold = foldHubModules(ids);
+      expect(fold.shown, ids.sublist(0, 6));
+      expect(fold.more, ids.sublist(6));
+    });
+
+    test('shows everything when only one or two tools would be hidden', () {
+      final ids = [for (var i = 0; i < 8; i++) 't$i'];
+      final fold = foldHubModules(ids);
+      expect(fold.shown, ids);
+      expect(fold.more, isEmpty);
+    });
+
+    test('folds from nine tools up', () {
+      final ids = [for (var i = 0; i < 9; i++) 't$i'];
+      expect(foldHubModules(ids).more, ['t6', 't7', 't8']);
+    });
+  });
 }

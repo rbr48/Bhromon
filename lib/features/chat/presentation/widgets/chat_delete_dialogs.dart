@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/utils/app_logger.dart';
@@ -143,7 +144,7 @@ Future<Set<String>?> showDeleteMessagesDialog(
     messenger.showSnackBar(
       SnackBar(
         content: Text(failedText),
-        backgroundColor: const Color(0xFF1F2C34),
+        backgroundColor: AppColors.chatPanel,
       ),
     );
     return null;
@@ -211,7 +212,7 @@ Future<bool> showDeleteChatDialog(
     messenger.showSnackBar(
       SnackBar(
         content: Text(doneText),
-        backgroundColor: const Color(0xFF00A884),
+        backgroundColor: AppColors.chatGreen,
       ),
     );
     return true;
@@ -220,7 +221,7 @@ Future<bool> showDeleteChatDialog(
     messenger.showSnackBar(
       SnackBar(
         content: Text(failedText),
-        backgroundColor: const Color(0xFF1F2C34),
+        backgroundColor: AppColors.chatPanel,
       ),
     );
     return false;

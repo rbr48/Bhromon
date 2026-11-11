@@ -700,8 +700,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               gradient: LinearGradient(
                 colors: [
                   Color(0xFF081C15),
-                  Color(0xFF1B4332),
-                  Color(0xFF2D6A4F),
+                  AppColors.darkGreen,
+                  AppColors.midGreen,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -885,7 +885,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   Widget _buildAvatarFallback(ExplorerProfile profile) {
     return Container(
-      color: const Color(0xFF1B4332),
+      color: AppColors.darkGreen,
       alignment: Alignment.center,
       child: Text(
         profile.displayName.isNotEmpty
@@ -2297,7 +2297,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: context.forest.surfaceFor(const Color(0xFF142428)),
+                color: context.forest.surfaceFor(AppColors.tealPanel),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.forest.divider12),
               ),

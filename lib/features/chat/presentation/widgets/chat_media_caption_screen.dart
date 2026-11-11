@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:io';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -162,7 +163,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF00A884) : Colors.white24,
+            color: isSelected ? AppColors.chatGreen : Colors.white24,
             width: isSelected ? 2.5 : 1.0,
           ),
         ),
@@ -353,7 +354,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1F2C34),
+                            color: AppColors.chatPanel,
                             borderRadius: BorderRadius.circular(28),
                             boxShadow: [
                               BoxShadow(
@@ -400,7 +401,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                                 style: const TextStyle(fontSize: 13),
                               ),
                               duration: const Duration(seconds: 2),
-                              backgroundColor: const Color(0xFF1F2C34),
+                              backgroundColor: AppColors.chatPanel,
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -411,12 +412,11 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: _isViewOnce
-                                ? const Color(0xFF00A884)
-                                    .withValues(alpha: 0.25)
-                                : const Color(0xFF1F2C34),
+                                ? AppColors.chatGreen.withValues(alpha: 0.25)
+                                : AppColors.chatPanel,
                             border: Border.all(
                               color: _isViewOnce
-                                  ? const Color(0xFF00A884)
+                                  ? AppColors.chatGreen
                                   : Colors.white54,
                               width: 1.5,
                             ),
@@ -426,7 +426,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                               '1',
                               style: TextStyle(
                                 color: _isViewOnce
-                                    ? const Color(0xFF00A884)
+                                    ? AppColors.chatGreen
                                     : Colors.white70,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -440,7 +440,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                         onTap: _submit,
                         child: const CircleAvatar(
                           radius: 24,
-                          backgroundColor: Color(0xFF00A884),
+                          backgroundColor: AppColors.chatGreen,
                           child:
                               Icon(Icons.send, color: Colors.white, size: 20),
                         ),

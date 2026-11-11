@@ -174,7 +174,7 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                     final isExpanded = _viewingRegion?.id == region.id;
 
                     return Card(
-                      color: context.forest.surfaceFor(const Color(0xFF1E3326)),
+                      color: context.forest.surfaceFor(AppColors.forestRaised),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

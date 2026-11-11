@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
@@ -397,15 +398,9 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
       return const ListRowsSkeleton();
     }
     if (_threads.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.translate('study_discussion_empty'),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.text70),
-          ),
-        ),
+      return EmptyState(
+        icon: Icons.forum_outlined,
+        message: l10n.translate('study_discussion_empty'),
       );
     }
     if (shown.isEmpty) {

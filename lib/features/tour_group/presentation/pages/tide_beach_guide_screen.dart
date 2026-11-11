@@ -65,10 +65,10 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
           elevation: 0,
           title: Text(
             _isBeachView
@@ -282,7 +282,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF14241B)),
+        color: context.forest.surfaceFor(AppColors.forestCard),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -466,7 +466,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
       decoration: BoxDecoration(
         color: isCurrent
             ? color.withValues(alpha: 0.12)
-            : context.forest.surfaceFor(const Color(0xFF14241B)),
+            : context.forest.surfaceFor(AppColors.forestCard),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCurrent ? color : context.forest.divider12,
@@ -558,7 +558,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF14241B)),
+        color: context.forest.surfaceFor(AppColors.forestCard),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
@@ -86,7 +87,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                   if (!snap.hasData) {
                     return const Center(
                       child:
-                          CircularProgressIndicator(color: Color(0xFF00A884)),
+                          CircularProgressIndicator(color: AppColors.chatGreen),
                     );
                   }
                   final docs = snap.data!.docs;
@@ -130,7 +131,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                         dense: true,
                         selected: isSelected,
                         selectedTileColor:
-                            const Color(0xFF00A884).withValues(alpha: 0.15),
+                            AppColors.chatGreen.withValues(alpha: 0.15),
                         leading: CircleAvatar(
                           backgroundColor: context.chat.outgoing,
                           radius: 18,
@@ -175,7 +176,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A884),
+                    backgroundColor: AppColors.chatGreen,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),

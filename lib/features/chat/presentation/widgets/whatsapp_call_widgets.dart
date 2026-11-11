@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,9 +15,9 @@ class WhatsAppCallTheme {
   WhatsAppCallTheme._();
 
   static const Color background = Color(0xFF0B141A);
-  static const Color surface = Color(0xFF1F2C34);
+  static const Color surface = AppColors.chatPanel;
   static const Color surfaceElevated = Color(0xFF2A3942);
-  static const Color primary = Color(0xFF00A884);
+  static const Color primary = AppColors.chatGreen;
   static const Color primaryDark = Color(0xFF075E54);
   static const Color accentRed = Color(0xFFEA4335);
   static const Color textMuted = Color(0xFF8696A0);

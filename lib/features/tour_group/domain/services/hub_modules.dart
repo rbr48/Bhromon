@@ -82,3 +82,21 @@ List<String> hubModulesFor(TourGroup group, {bool? momentsOpen}) {
       if (!order.contains(id)) id,
   ];
 }
+
+/// How many tools the group page shows before the rest go behind "More tools".
+const int kHubToolsShown = 6;
+
+/// Splits the group page's tools into the ones always shown and the ones behind
+/// "More tools", keeping their order.
+///
+/// A group with at most two tools past [shown] shows them all: hiding one or two
+/// tiles would cost a tap and save almost no space.
+({List<String> shown, List<String> more}) foldHubModules(
+  List<String> ids, {
+  int shown = kHubToolsShown,
+}) {
+  if (ids.length <= shown + 2) {
+    return (shown: List<String>.of(ids), more: const <String>[]);
+  }
+  return (shown: ids.sublist(0, shown), more: ids.sublist(shown));
+}

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:intl/date_symbol_data_local.dart';
@@ -129,7 +130,7 @@ void main() {
               margin: const EdgeInsets.all(4),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(8),
                 border:
                     Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
@@ -522,7 +523,7 @@ class SecurityCompromisedApp extends StatelessWidget {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: Color(0xFF121212),
+        backgroundColor: AppColors.backgroundDark,
         body: SafeArea(
           child: Padding(
             padding: EdgeInsets.all(24.0),

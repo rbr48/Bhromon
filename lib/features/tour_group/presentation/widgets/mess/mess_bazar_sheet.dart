@@ -10,7 +10,7 @@ import '../../../domain/models/mess_bazar_model.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/meal_engine.dart';
 
-const _sheetBg = Color(0xFF142428);
+const _sheetBg = AppColors.tealPanel;
 const _cardBg = Color(0xFF1B2E33);
 
 /// Opens the Mess Bazar Duty & Routine manager bottom sheet.

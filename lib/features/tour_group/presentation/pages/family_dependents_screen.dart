@@ -9,8 +9,8 @@ import '../../data/tour_group_repository.dart';
 import '../../domain/models/dependent_models.dart';
 import '../../domain/models/tour_group.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 
 /// The people in a family who have no account, such as children and grandparents.
 /// Each one is listed under the member who looks after them, and that member's
@@ -213,7 +213,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
                   leading: CircleAvatar(
                     radius: 16,
                     backgroundColor:
-                        context.forest.surfaceFor(const Color(0xFF1E3326)),
+                        context.forest.surfaceFor(AppColors.forestRaised),
                     child: Text(
                       String.fromCharCode(d.name.runes.first).toUpperCase(),
                       style: TextStyle(color: context.forest.text),

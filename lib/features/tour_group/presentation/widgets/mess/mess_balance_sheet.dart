@@ -138,7 +138,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
         title: Text(
           isDue ? 'বকেয়া সেটলমেন্ট রেকর্ড' : 'অতিরিক্ত ফেরত পরিশোধ',
           style: TextStyle(color: context.forest.text),
@@ -250,7 +250,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
         child: Container(
           height: media.size.height * 0.88,
           decoration: BoxDecoration(
-            color: context.forest.surfaceFor(const Color(0xFF14241B)),
+            color: context.forest.surfaceFor(AppColors.forestCard),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border:
                 isDesktop ? Border.all(color: context.forest.divider10) : null,

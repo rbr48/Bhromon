@@ -101,7 +101,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                     ? (context.forest.isDark
                         ? AppColors.midGreen
                         : kOwnBubbleLight)
-                    : context.forest.surfaceFor(const Color(0xFF1E3326))),
+                    : context.forest.surfaceFor(AppColors.forestRaised)),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14),
               topRight: const Radius.circular(14),

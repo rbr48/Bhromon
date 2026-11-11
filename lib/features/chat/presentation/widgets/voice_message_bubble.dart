@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
@@ -165,7 +166,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                   height: 42,
                   decoration: BoxDecoration(
                     color: widget.isMe
-                        ? const Color(0xFF00A884)
+                        ? AppColors.chatGreen
                         : const Color(0xFF53BDEB),
                     shape: BoxShape.circle,
                   ),
@@ -202,12 +203,12 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         overlayShape:
                             const RoundSliderOverlayShape(overlayRadius: 10),
                         activeTrackColor: widget.isMe
-                            ? const Color(0xFF00A884)
+                            ? AppColors.chatGreen
                             : const Color(0xFF53BDEB),
                         inactiveTrackColor: context.chat.text24,
                         thumbColor: context.chat.isDark
                             ? Colors.white
-                            : const Color(0xFF00A884),
+                            : AppColors.chatGreen,
                       ),
                       child: Slider(
                         value: progress,

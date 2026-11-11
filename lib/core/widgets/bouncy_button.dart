@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class BouncyButton extends StatefulWidget {
   final Widget child;
@@ -51,6 +52,7 @@ class _BouncyButtonState extends State<BouncyButton>
       onTapDown: (_) => _controller.forward(),
       onTapUp: (_) {
         _controller.reverse();
+        HapticFeedback.selectionClick();
         widget.onTap();
       },
       onTapCancel: () => _controller.reverse(),

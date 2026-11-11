@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
@@ -231,17 +232,11 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
             }
             final books = snap.data!;
             if (books.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    l10n.translate(_isAdmin
-                        ? 'study_books_empty'
-                        : 'study_books_empty_member'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text70),
-                  ),
-                ),
+              return EmptyState(
+                icon: Icons.library_books_outlined,
+                message: l10n.translate(_isAdmin
+                    ? 'study_books_empty'
+                    : 'study_books_empty_member'),
               );
             }
             final proposals = studyBookProposals(books);

@@ -118,7 +118,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
         child: Container(
           height: media.size.height * 0.88,
           decoration: BoxDecoration(
-            color: context.forest.surfaceFor(const Color(0xFF14241B)),
+            color: context.forest.surfaceFor(AppColors.forestCard),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border:
                 isDesktop ? Border.all(color: context.forest.divider10) : null,
@@ -310,7 +310,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
               )
             : null,
         filled: true,
-        fillColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        fillColor: context.forest.surfaceFor(AppColors.forestCard),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         border: OutlineInputBorder(
@@ -591,7 +591,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.mintGreen
-                  : context.forest.surfaceFor(const Color(0xFF14241B)),
+                  : context.forest.surfaceFor(AppColors.forestCard),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

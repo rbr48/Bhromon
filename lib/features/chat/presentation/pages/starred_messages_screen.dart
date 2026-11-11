@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
@@ -84,7 +85,7 @@ class StarredMessagesScreen extends StatelessWidget {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
                           child: CircularProgressIndicator(
-                            color: Color(0xFF00A884),
+                            color: AppColors.chatGreen,
                           ),
                         );
                       }

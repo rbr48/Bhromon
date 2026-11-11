@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 
 /// The colours of the chat screens, for the active theme.
@@ -15,13 +16,11 @@ class ChatPalette {
   final bool isDark;
 
   /// The brand accent: buttons, ticks, links, unread badges.
-  Color get accent =>
-      isDark ? const Color(0xFF52B788) : const Color(0xFF2D6A4F);
+  Color get accent => isDark ? AppColors.freshGreen : AppColors.midGreen;
 
   /// The accent as a text or icon colour. In light mode it is darker, so it
   /// stays readable on light surfaces; buttons keep [accent].
-  Color get accentText =>
-      isDark ? const Color(0xFF52B788) : const Color(0xFF2D6A4F);
+  Color get accentText => isDark ? AppColors.freshGreen : AppColors.midGreen;
 
   /// Money owed to you.
   Color get owedToYou =>
@@ -36,7 +35,7 @@ class ChatPalette {
 
   /// The conversation background behind the bubbles.
   Color get wallpaper =>
-      isDark ? const Color(0xFF0D1A12) : const Color(0xFFEFEAE2);
+      isDark ? AppColors.forestScaffold : const Color(0xFFEFEAE2);
 
   /// The faint doodles drawn on the wallpaper.
   Color get wallpaperDoodle => isDark
@@ -44,7 +43,7 @@ class ChatPalette {
       : Colors.black.withValues(alpha: 0.035);
 
   /// App bars, sheets, dialogs and menus.
-  Color get bar => isDark ? const Color(0xFF14241B) : Colors.white;
+  Color get bar => isDark ? AppColors.forestCard : Colors.white;
 
   /// Incoming bubbles and the message input.
   Color get panel => isDark ? const Color(0xFF1B2E23) : Colors.white;
@@ -61,8 +60,7 @@ class ChatPalette {
       isDark ? const Color(0xFF121E17) : const Color(0xFFE9EDEF);
 
   /// Outgoing bubbles.
-  Color get outgoing =>
-      isDark ? const Color(0xFF1B4332) : const Color(0xFFD9FDD3);
+  Color get outgoing => isDark ? AppColors.darkGreen : const Color(0xFFD9FDD3);
 
   /// Cards and quotes inside an outgoing bubble.
   Color get outgoingRecessed =>

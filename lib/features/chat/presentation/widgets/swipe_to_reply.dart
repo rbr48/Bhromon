@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/services.dart';
@@ -121,7 +122,7 @@ class _SwipeToReplyState extends State<SwipeToReply>
                   height: 32,
                   decoration: BoxDecoration(
                     color: _thresholdTriggered
-                        ? const Color(0xFF00A884)
+                        ? AppColors.chatGreen
                         : context.chat.bar,
                     shape: BoxShape.circle,
                     boxShadow: [

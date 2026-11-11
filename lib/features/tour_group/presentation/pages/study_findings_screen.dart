@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
@@ -344,15 +345,9 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
             ));
             _askChecks([for (final finding in shown) finding.id]);
             if (shown.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    l10n.translate('study_finding_empty'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text70),
-                  ),
-                ),
+              return EmptyState(
+                icon: Icons.lightbulb_outline_rounded,
+                message: l10n.translate('study_finding_empty'),
               );
             }
             return ListView(
