@@ -49,7 +49,7 @@ void main() {
       }
     });
 
-    test('resolves all 14 AIBB subject codes accurately', () {
+    test('resolves all 13 active AIBB subject codes accurately', () {
       final aibbCases = <String, String>{
         'Risk Management in Financial Institutions (RMFI)':
             StudyBankingMasterCatalog.codeRMFI,
@@ -96,10 +96,6 @@ void main() {
         'Investment Banking (IB)': StudyBankingMasterCatalog.codeIB,
         'IB-212': StudyBankingMasterCatalog.codeIB,
         'ইনভেস্টমেন্ট ব্যাংকিং': StudyBankingMasterCatalog.codeIB,
-        'Accounting for Financial Institutions (AFI)':
-            StudyBankingMasterCatalog.codeAFI,
-        'AFI 206A': StudyBankingMasterCatalog.codeAFI,
-        'আর্থিক প্রতিষ্ঠানের হিসাববিজ্ঞান': StudyBankingMasterCatalog.codeAFI,
         'Management Accounting (MA)': StudyBankingMasterCatalog.codeMA,
         'MA-208A': StudyBankingMasterCatalog.codeMA,
         'ব্যবস্থাপনা হিসাববিজ্ঞান': StudyBankingMasterCatalog.codeMA,
@@ -115,6 +111,31 @@ void main() {
           StudyBankingMasterCatalog.resolveSubjectCode(subject),
           equals(entry.value),
           reason: 'Failed to resolve AIBB code for: ${entry.key}',
+        );
+      }
+    });
+
+    test('resolves former AIBB AFI queries and materials to JAIBB BA code', () {
+      final afiToBaCases = [
+        'Accounting for Financial Institutions (AFI)',
+        'AFI 206A',
+        '206A',
+        'AFI',
+        'আর্থিক প্রতিষ্ঠানের হিসাববিজ্ঞান',
+        '৯৬তম BPE (মে ২০২৩) — BA / AFI সমাধান (বাংলা)',
+        '96th BPE (May 2023) — BA / AFI Solutions (English)',
+      ];
+
+      for (final title in afiToBaCases) {
+        final subject = StudySubject(
+          id: 'test_afi_sub',
+          title: title,
+          code: title,
+        );
+        expect(
+          StudyBankingMasterCatalog.resolveSubjectCode(subject),
+          equals(StudyBankingMasterCatalog.codeBA),
+          reason: 'Failed to route AFI to BA for: $title',
         );
       }
     });
