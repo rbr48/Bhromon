@@ -287,7 +287,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                 if (_savedQrUrl != null && _savedQrUrl!.isNotEmpty)
                   IconButton(
                     tooltip: 'কিউআর মুছে ফেলুন',
-                    icon: const Icon(Icons.delete_outline,
+                    icon: const Icon(Icons.delete_outline_rounded,
                         color: Colors.redAccent, size: 20),
                     onPressed: _isSaving ? null : _deleteQr,
                   ),
@@ -344,7 +344,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                                   _savedQrUrl!,
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, __, ___) => const Center(
-                                    child: Icon(Icons.broken_image,
+                                    child: Icon(Icons.broken_image_rounded,
                                         size: 40, color: Colors.grey),
                                   ),
                                 )
@@ -564,7 +564,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.person,
+                          Icon(Icons.person_rounded,
                               size: 16,
                               color: _selectedAccountType == 'personal'
                                   ? AppColors.mintGreen
@@ -610,7 +610,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.storefront,
+                          Icon(Icons.storefront_rounded,
                               size: 16,
                               color: _selectedAccountType == 'merchant'
                                   ? AppColors.mintGreen

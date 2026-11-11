@@ -54,7 +54,7 @@ class InstafeedTideBanner extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              isHighTide ? Icons.waves : Icons.warning_amber_rounded,
+              isHighTide ? Icons.waves_rounded : Icons.warning_amber_rounded,
               color: isHighTide ? Colors.tealAccent : Colors.orangeAccent,
               size: 20,
             ),
@@ -81,7 +81,8 @@ class InstafeedTideBanner extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: context.forest.text54, size: 18),
+            Icon(Icons.chevron_right_rounded,
+                color: context.forest.text54, size: 18),
           ],
         ),
       ),
@@ -274,7 +275,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
           Divider(color: context.forest.divider10),
           _buildInfoRow(
             context: context,
-            icon: Icons.directions_bus,
+            icon: Icons.directions_bus_rounded,
             label: context.l10n.translate('ig_bus_seat_label'),
             value: seatNumber != null && seatNumber!.isNotEmpty
                 ? context.l10n
@@ -287,7 +288,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
           const SizedBox(height: 10),
           _buildInfoRow(
             context: context,
-            icon: Icons.hotel,
+            icon: Icons.hotel_rounded,
             label: context.l10n.translate('ig_hotel_room_label'),
             value: roomNumber != null && roomNumber!.isNotEmpty
                 ? context.l10n
@@ -300,7 +301,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
             const SizedBox(height: 10),
             _buildInfoRow(
               context: context,
-              icon: Icons.family_restroom,
+              icon: Icons.family_restroom_rounded,
               label: context.l10n.translate('ig_family_members'),
               value: context.l10n.translate('ig_people_count',
                   args: {'count': '$familyCount'}),

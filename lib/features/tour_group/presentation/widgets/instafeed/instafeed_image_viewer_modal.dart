@@ -322,7 +322,8 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                 children: [
                   IconButton(
                     tooltip: context.l10n.translate('ig_back'),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                   CircleAvatar(
@@ -391,7 +392,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                   const SizedBox(width: 4),
                   IconButton(
                     tooltip: context.l10n.translate('ig_close'),
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -455,7 +456,9 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                             : context.l10n.translate('ig_like'),
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
-                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          isLiked
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
                           color: isLiked ? Colors.redAccent : Colors.white,
                         ),
                         onPressed: _toggleLike,
@@ -472,7 +475,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                       IconButton(
                         tooltip: context.l10n.translate('ig_comment'),
                         visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.chat_bubble_outline,
+                        icon: const Icon(Icons.chat_bubble_outline_rounded,
                             color: Colors.white),
                         onPressed: () => widget.onOpenComments?.call(
                             widget.post,
@@ -488,7 +491,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                       const Spacer(),
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.receipt_long,
+                        icon: const Icon(Icons.receipt_long_rounded,
                             color: AppColors.mintGreen),
                         tooltip: context.l10n.translate('ig_add_to_ledger'),
                         onPressed: () =>

@@ -317,8 +317,8 @@ class _TransportScreenState extends State<TransportScreen> {
                   ),
                 ),
                 IconButton(
-                  icon:
-                      Icon(Icons.close, color: context.forest.text54, size: 20),
+                  icon: Icon(Icons.close_rounded,
+                      color: context.forest.text54, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -531,7 +531,7 @@ class _TransportScreenState extends State<TransportScreen> {
             ),
           if (_isAdmin)
             ActionChip(
-              avatar: Icon(Icons.add,
+              avatar: Icon(Icons.add_rounded,
                   size: 18, color: context.forest.readable(AppColors.gold)),
               label: Text(l10n.translate('veh_add')),
               backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
@@ -678,7 +678,8 @@ class _TransportScreenState extends State<TransportScreen> {
                 ),
               if (_isAdmin && v != null)
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: context.forest.text54),
+                  icon: Icon(Icons.more_vert_rounded,
+                      color: context.forest.text54),
                   color: context.forest.card,
                   onSelected: (choice) {
                     switch (choice) {
@@ -917,7 +918,7 @@ class _SeatSheetState extends State<_SeatSheet> {
                     ),
                   if (occupied && widget.canEdit)
                     TextButton.icon(
-                      icon: Icon(Icons.clear,
+                      icon: Icon(Icons.clear_rounded,
                           color: context.forest.readable(Colors.redAccent),
                           size: 16),
                       label: Text(l10n.translate('tour_free_seat'),
@@ -943,8 +944,8 @@ class _SeatSheetState extends State<_SeatSheet> {
                   onChanged: (v) => setState(() => _query = v),
                   style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
-                    prefixIcon:
-                        Icon(Icons.search, color: context.forest.text54),
+                    prefixIcon: Icon(Icons.search_rounded,
+                        color: context.forest.text54),
                     hintText: l10n.translate('veh_search'),
                     hintStyle: TextStyle(color: context.forest.text38),
                   ),
@@ -985,7 +986,7 @@ class _SeatSheetState extends State<_SeatSheet> {
                               color: context.forest.text54, fontSize: 12),
                         ),
                         trailing: isHere
-                            ? Icon(Icons.check_circle,
+                            ? Icon(Icons.check_circle_rounded,
                                 color: context.forest.accentText)
                             : null,
                         onTap: isHere ? null : () => widget.onAssign(m),

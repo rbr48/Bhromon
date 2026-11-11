@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bhromon/core/theme/app_motion.dart';
 import 'di/injection.dart';
 import '../core/utils/logger.dart';
 import 'route_not_found_screen.dart';
@@ -568,23 +569,9 @@ class AppRouter {
       key: key ?? state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurveTween(curve: Curves.easeInOut).animate(animation),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.06, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.fastOutSlowIn,
-              ),
-            ),
-            child: child,
-          ),
-        );
+        return AppMotion.pageTransition(context, animation, child);
       },
-      transitionDuration: const Duration(milliseconds: 320),
+      transitionDuration: AppMotion.page,
     );
   }
 }

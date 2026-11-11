@@ -179,7 +179,7 @@ class _WarningStep extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.remove_circle_outline,
+                  const Icon(Icons.remove_circle_outline_rounded,
                       color: _kRed, size: 18),
                   const SizedBox(width: 10),
                   Expanded(

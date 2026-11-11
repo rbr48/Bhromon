@@ -176,7 +176,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                     xf.path,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(
-                      Icons.image,
+                      Icons.image_rounded,
                       color: Colors.white38,
                       size: 20,
                     ),
@@ -185,7 +185,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                     File(xf.path),
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(
-                      Icons.image,
+                      Icons.image_rounded,
                       color: Colors.white38,
                       size: 20,
                     ),
@@ -213,7 +213,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
           border: Border.all(color: Colors.white38, width: 1.0),
         ),
         child: const Center(
-          child: Icon(Icons.add, color: Colors.white, size: 24),
+          child: Icon(Icons.add_rounded, color: Colors.white, size: 24),
         ),
       ),
     );
@@ -273,8 +273,8 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon:
-                        const Icon(Icons.close, color: Colors.white, size: 28),
+                    icon: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 28),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   if (_files.length > 1) ...[
@@ -306,14 +306,14 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                     ),
                     if (_files.length > 1)
                       IconButton(
-                        icon: const Icon(Icons.delete_outline,
+                        icon: const Icon(Icons.delete_outline_rounded,
                             color: Colors.white, size: 26),
                         tooltip: context.l10n.translate('chat_remove_photo'),
                         onPressed: _removeCurrentImage,
                       ),
                   ],
                   IconButton(
-                    icon: const Icon(Icons.rotate_right,
+                    icon: const Icon(Icons.rotate_right_rounded,
                         color: Colors.white, size: 26),
                     tooltip: context.l10n.translate('chat_media_rotate'),
                     onPressed: _rotateCurrentImage,
@@ -441,8 +441,8 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                         child: const CircleAvatar(
                           radius: 24,
                           backgroundColor: AppColors.chatGreen,
-                          child:
-                              Icon(Icons.send, color: Colors.white, size: 20),
+                          child: Icon(Icons.send_rounded,
+                              color: Colors.white, size: 20),
                         ),
                       ),
                     ],

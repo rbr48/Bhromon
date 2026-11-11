@@ -196,7 +196,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.table_chart,
+                    const Icon(Icons.table_chart_rounded,
                         color: AppColors.mintGreen, size: 22),
                     const SizedBox(width: 8),
                     Text(
@@ -209,7 +209,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close_rounded),
                   color: context.forest.text70,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
@@ -301,11 +301,11 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     _alignButton(c, ChatTableAlign.left,
-                                        Icons.format_align_left),
+                                        Icons.format_align_left_rounded),
                                     _alignButton(c, ChatTableAlign.center,
-                                        Icons.format_align_center),
+                                        Icons.format_align_center_rounded),
                                     _alignButton(c, ChatTableAlign.right,
-                                        Icons.format_align_right),
+                                        Icons.format_align_right_rounded),
                                   ],
                                 ),
                               ],
@@ -370,7 +370,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                 ),
                 elevation: 2,
               ),
-              icon: const Icon(Icons.check_circle_outline, size: 20),
+              icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
               label: Text(
                 l10n.translate('table_builder_insert'),
                 style: const TextStyle(
@@ -445,7 +445,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                 iconSize: 18,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                icon: const Icon(Icons.remove_circle_outline),
+                icon: const Icon(Icons.remove_circle_outline_rounded),
                 color: value > min
                     ? context.forest.accentText
                     : context.forest.text38,
@@ -467,7 +467,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                 iconSize: 18,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                icon: const Icon(Icons.add_circle_outline),
+                icon: const Icon(Icons.add_circle_outline_rounded),
                 color: value < max
                     ? context.forest.accentText
                     : context.forest.text38,

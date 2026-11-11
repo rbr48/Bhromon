@@ -142,12 +142,12 @@ void main() {
     testWidgets('a message still waiting for the server shows a clock',
         (tester) async {
       await _pump(tester, _bubble(_message(isPending: true)));
-      expect(find.byIcon(Icons.schedule), findsOneWidget);
+      expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
     });
 
     testWidgets('a sent message shows no clock', (tester) async {
       await _pump(tester, _bubble(_message()));
-      expect(find.byIcon(Icons.schedule), findsNothing);
+      expect(find.byIcon(Icons.schedule_rounded), findsNothing);
     });
 
     testWidgets('a long press opens the message actions', (tester) async {
@@ -218,7 +218,7 @@ void main() {
 
     testWidgets('shows pin icon when message is pinned', (tester) async {
       await _pump(tester, _bubble(_message(isPinned: true)));
-      expect(find.byIcon(Icons.push_pin), findsOneWidget);
+      expect(find.byIcon(Icons.push_pin_rounded), findsOneWidget);
     });
   });
 
@@ -451,11 +451,11 @@ void main() {
       expect(find.text('Alice Explorer'), findsOneWidget);
 
       // Call buttons exist for Alice
-      expect(find.byIcon(Icons.call), findsOneWidget);
-      expect(find.byIcon(Icons.videocam), findsOneWidget);
+      expect(find.byIcon(Icons.call_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.videocam_rounded), findsOneWidget);
 
       // Tap Audio Call
-      await tester.tap(find.byIcon(Icons.call));
+      await tester.tap(find.byIcon(Icons.call_rounded));
       await tester.pumpAndSettle();
 
       expect(calledMember?.email, 'alice@x.com');
@@ -606,9 +606,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.reply), findsOneWidget);
+      expect(find.byIcon(Icons.reply_rounded), findsOneWidget);
       expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.push_pin_outlined));
       await tester.pumpAndSettle();
@@ -663,7 +663,7 @@ void main() {
       await tester.pump();
 
       // Switch to Voice segment
-      await tester.tap(find.byIcon(Icons.volume_up));
+      await tester.tap(find.byIcon(Icons.volume_up_rounded));
       await tester.pump();
 
       // Save

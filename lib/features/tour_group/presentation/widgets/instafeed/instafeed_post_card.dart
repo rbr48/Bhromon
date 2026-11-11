@@ -407,7 +407,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   controller: locationCtrl,
                   style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
-                    prefixIcon: Icon(Icons.location_on,
+                    prefixIcon: Icon(Icons.location_on_rounded,
                         color: context.forest.accentText, size: 18),
                     hintText: context.l10n.translate('ig_place_hint'),
                     hintStyle: TextStyle(color: context.forest.text54),
@@ -597,7 +597,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       leading: Icon(
                         widget.post.isPinned
                             ? Icons.push_pin_outlined
-                            : Icons.push_pin,
+                            : Icons.push_pin_rounded,
                         color: Colors.amber,
                       ),
                       title: Text(
@@ -614,7 +614,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ListTile(
                       leading: Icon(
                         widget.post.hideLikeCount
-                            ? Icons.visibility
+                            ? Icons.visibility_rounded
                             : Icons.visibility_off_outlined,
                         color: context.forest.text70,
                       ),
@@ -632,8 +632,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ListTile(
                       leading: Icon(
                         widget.post.disableComments
-                            ? Icons.chat_bubble
-                            : Icons.chat_bubble_outline,
+                            ? Icons.chat_bubble_rounded
+                            : Icons.chat_bubble_outline_rounded,
                         color: context.forest.text70,
                       ),
                       title: Text(
@@ -649,7 +649,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ),
                   ],
                   ListTile(
-                    leading: Icon(Icons.receipt_long,
+                    leading: Icon(Icons.receipt_long_rounded,
                         color: context.forest.accentText),
                     title: Text(context.l10n.translate('ig_add_as_expense'),
                         style: TextStyle(color: context.forest.text)),
@@ -659,7 +659,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     },
                   ),
                   ListTile(
-                    leading: Icon(Icons.bookmark_border,
+                    leading: Icon(Icons.bookmark_border_rounded,
                         color: context.forest.text70),
                     title: Text(
                       widget.isBookmarked
@@ -686,7 +686,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ),
                   if (canManage)
                     ListTile(
-                      leading: const Icon(Icons.delete_outline,
+                      leading: const Icon(Icons.delete_outline_rounded,
                           color: Colors.redAccent),
                       title: Text(
                           context.l10n.translate('ig_delete_post_label'),
@@ -773,7 +773,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 errorWidget: Container(
                   color: context.forest.feedPlaceholder,
                   child: Center(
-                    child: Icon(Icons.slow_motion_video,
+                    child: Icon(Icons.slow_motion_video_rounded,
                         size: 40, color: context.forest.text54),
                   ),
                 ),
@@ -794,7 +794,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
                 ),
                 child: Center(
-                  child: Icon(Icons.slow_motion_video,
+                  child: Icon(Icons.slow_motion_video_rounded,
                       size: 40, color: context.forest.text54),
                 ),
               ),
@@ -881,7 +881,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.slow_motion_video,
+                        const Icon(Icons.slow_motion_video_rounded,
                             size: 14, color: Colors.white),
                         const SizedBox(width: 4),
                         Text(
@@ -914,7 +914,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       border: Border.all(color: context.forest.text38),
                     ),
                     child: Icon(
-                      _isVideoMuted ? Icons.volume_off : Icons.volume_up,
+                      _isVideoMuted
+                          ? Icons.volume_off_rounded
+                          : Icons.volume_up_rounded,
                       size: 16,
                       color: Colors.white,
                     ),
@@ -945,7 +947,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       border: Border.all(color: context.forest.text38),
                     ),
                     child: Icon(
-                      _showTags ? Icons.person : Icons.person_outline,
+                      _showTags
+                          ? Icons.person_rounded
+                          : Icons.person_outline_rounded,
                       size: 18,
                       color: Colors.white,
                     ),
@@ -1093,7 +1097,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               color: Colors.amber.withValues(alpha: 0.12),
               child: Row(
                 children: [
-                  const Icon(Icons.push_pin, size: 14, color: Colors.amber),
+                  const Icon(Icons.push_pin_rounded,
+                      size: 14, color: Colors.amber),
                   const SizedBox(width: 6),
                   Text(
                     context.l10n.translate('ig_pinned_post'),
@@ -1265,8 +1270,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         children: [
                           Icon(
                             _isPlayingAudio
-                                ? Icons.pause_circle_filled
-                                : Icons.play_circle_fill,
+                                ? Icons.pause_circle_filled_rounded
+                                : Icons.play_circle_fill_rounded,
                             size: 14,
                             color: _isPlayingAudio
                                 ? context.forest.accentText
@@ -1289,7 +1294,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
                 IconButton(
                   tooltip: context.l10n.translate('ig_more_options'),
-                  icon: Icon(Icons.more_vert, color: context.forest.text70),
+                  icon: Icon(Icons.more_vert_rounded,
+                      color: context.forest.text70),
                   onPressed: _showPostMenu,
                 ),
               ],
@@ -1345,7 +1351,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                           border: Border.all(color: context.forest.text38),
                         ),
                         child: Icon(
-                          _showTags ? Icons.person : Icons.person_outline,
+                          _showTags
+                              ? Icons.person_rounded
+                              : Icons.person_outline_rounded,
                           size: 18,
                           color: Colors.white,
                         ),
@@ -1397,7 +1405,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ? context.l10n.translate('ig_unlike')
                       : context.l10n.translate('ig_like'),
                   icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    isLiked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: isLiked ? Colors.redAccent : context.forest.text,
                     size: 26,
                   ),
@@ -1406,7 +1416,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 if (!widget.post.disableComments)
                   IconButton(
                     tooltip: context.l10n.translate('ig_comment'),
-                    icon: Icon(Icons.chat_bubble_outline,
+                    icon: Icon(Icons.chat_bubble_outline_rounded,
                         color: context.forest.text, size: 24),
                     onPressed: () => widget.onOpenComments?.call(widget.post),
                   ),
@@ -1437,8 +1447,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         : context.l10n.translate('ig_save'),
                     icon: Icon(
                       widget.isBookmarked
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
                       color: widget.isBookmarked
                           ? context.forest.accentText
                           : context.forest.text,

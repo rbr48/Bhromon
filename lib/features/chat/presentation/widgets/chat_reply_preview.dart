@@ -107,7 +107,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                       height: 40,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.broken_image, size: 18),
+                          const Icon(Icons.broken_image_rounded, size: 18),
                     )
                   : CachedNetworkImage(
                       imageUrl: signedMediaUrl(reply.mediaUrl!),
@@ -122,12 +122,13 @@ class ChatReplyInputBanner extends StatelessWidget {
                         height: 40,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.broken_image, size: 18),
+                            const Icon(Icons.broken_image_rounded, size: 18),
                       ),
                     ),
             ),
           IconButton(
-            icon: Icon(Icons.close, color: context.chat.text60, size: 18),
+            icon:
+                Icon(Icons.close_rounded, color: context.chat.text60, size: 18),
             onPressed: onCancel,
             tooltip: context.l10n.translate('chat_reply_cancel'),
             padding: EdgeInsets.zero,
@@ -144,29 +145,29 @@ class ChatReplyInputBanner extends StatelessWidget {
 
     switch (reply.type) {
       case 'image':
-        icon = Icons.photo_camera;
+        icon = Icons.photo_camera_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_label_photo');
         }
         break;
       case 'video':
-        icon = Icons.videocam;
+        icon = Icons.videocam_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_video_label');
         }
         break;
       case 'audio':
-        icon = Icons.mic;
+        icon = Icons.mic_rounded;
         label = context.l10n.translate('chat_voice_message');
         break;
       case 'document':
-        icon = Icons.insert_drive_file;
+        icon = Icons.insert_drive_file_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_attach_document');
         }
         break;
       case 'location':
-        icon = Icons.location_on;
+        icon = Icons.location_on_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_attach_location');
         }
@@ -262,7 +263,7 @@ class ChatQuotedBubble extends StatelessWidget {
                         height: 32,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.broken_image, size: 14),
+                            const Icon(Icons.broken_image_rounded, size: 14),
                       )
                     : CachedNetworkImage(
                         imageUrl: signedMediaUrl(reply.mediaUrl!),
@@ -277,7 +278,7 @@ class ChatQuotedBubble extends StatelessWidget {
                           height: 32,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.broken_image, size: 14),
+                              const Icon(Icons.broken_image_rounded, size: 14),
                         ),
                       ),
               ),
@@ -294,29 +295,29 @@ class ChatQuotedBubble extends StatelessWidget {
 
     switch (reply.type) {
       case 'image':
-        icon = Icons.photo_camera;
+        icon = Icons.photo_camera_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_label_photo');
         }
         break;
       case 'video':
-        icon = Icons.videocam;
+        icon = Icons.videocam_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_video_label');
         }
         break;
       case 'audio':
-        icon = Icons.mic;
+        icon = Icons.mic_rounded;
         label = context.l10n.translate('chat_voice_message');
         break;
       case 'document':
-        icon = Icons.insert_drive_file;
+        icon = Icons.insert_drive_file_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_attach_document');
         }
         break;
       case 'location':
-        icon = Icons.location_on;
+        icon = Icons.location_on_rounded;
         if (label.isEmpty) {
           label = context.l10n.translate('chat_attach_location');
         }

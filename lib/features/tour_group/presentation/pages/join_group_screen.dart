@@ -380,7 +380,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                             'assets/bhromon_emblem.png',
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
-                              Icons.explore,
+                              Icons.explore_rounded,
                               color: AppColors.mintGreen,
                               size: 24,
                             ),

@@ -35,12 +35,12 @@ void main() {
     expect(find.text('2'), findsOneWidget);
 
     // Tap plus
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byIcon(Icons.add_rounded));
     await tester.pumpAndSettle();
     expect(find.text('3'), findsOneWidget);
 
     // Tap minus
-    await tester.tap(find.byIcon(Icons.remove));
+    await tester.tap(find.byIcon(Icons.remove_rounded));
     await tester.pumpAndSettle();
     expect(find.text('2'), findsOneWidget);
   });

@@ -89,7 +89,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () {
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
@@ -187,7 +187,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         color: Colors.redAccent,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
       onDismissed: (_) => _delete([n.id]),
       child: ListTile(
@@ -297,11 +297,11 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   }
 
   static IconData _iconFor(String? action) => switch (action) {
-        'chat' => Icons.chat_bubble_outline,
+        'chat' => Icons.chat_bubble_outline_rounded,
         'channel' => Icons.forum_outlined,
         'sos' => Icons.warning_amber_rounded,
         'call' => Icons.call_outlined,
-        'post' || 'comment' || 'like' => Icons.favorite_border,
+        'post' || 'comment' || 'like' => Icons.favorite_border_rounded,
         'notice' => Icons.campaign_outlined,
         'ledger' || 'expense' => Icons.receipt_long_outlined,
         'journey' => Icons.route_outlined,

@@ -194,7 +194,7 @@ void main() {
       expect(find.text('Ayesha'), findsOneWidget);
       expect(find.text('Hotel booking confirmed'), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pump();
       expect(cancelled, isTrue);
     });
@@ -261,7 +261,7 @@ void main() {
       expect(find.text('Laboni Beach Point'), findsOneWidget);
       expect(find.text('Cox\'s Bazar, Chittagong Division'), findsOneWidget);
       expect(find.text('11:15 AM'), findsOneWidget);
-      expect(find.byIcon(Icons.directions), findsOneWidget);
+      expect(find.byIcon(Icons.directions_rounded), findsOneWidget);
     });
 
     testWidgets('ChatExpenseBubble renders travel bill split and settle action',

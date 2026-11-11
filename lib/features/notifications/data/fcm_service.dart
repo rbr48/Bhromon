@@ -335,7 +335,7 @@ class FcmService {
               },
               child: Row(
                 children: [
-                  const Icon(Icons.notifications_active,
+                  const Icon(Icons.notifications_active_rounded,
                       color: AppColors.chatGreen, size: 22),
                   const SizedBox(width: 12),
                   Expanded(

@@ -36,7 +36,7 @@ class StarredMessagesScreen extends StatelessWidget {
           backgroundColor: context.chat.bar,
           elevation: 1,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.chat.text),
+            icon: Icon(Icons.arrow_back_rounded, color: context.chat.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -268,7 +268,7 @@ class StarredMessagesScreen extends StatelessWidget {
                                   const SizedBox(width: 8),
                                   IconButton(
                                     icon: const Icon(
-                                      Icons.star,
+                                      Icons.star_rounded,
                                       color: Colors.amber,
                                       size: 20,
                                     ),

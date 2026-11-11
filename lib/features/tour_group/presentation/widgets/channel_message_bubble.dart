@@ -256,11 +256,11 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (m.isPending) ...[
-          Icon(Icons.schedule, size: 11, color: meta),
+          Icon(Icons.schedule_rounded, size: 11, color: meta),
           const SizedBox(width: 4),
         ],
         if (m.isPinned) ...[
-          Icon(Icons.push_pin,
+          Icon(Icons.push_pin_rounded,
               size: 11, color: context.forest.readable(AppColors.gold)),
           const SizedBox(width: 4),
         ],
@@ -360,7 +360,8 @@ class _AttachmentGrid extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.play_circle_fill, size: 44, color: Colors.white70),
+            const Icon(Icons.play_circle_fill_rounded,
+                size: 44, color: Colors.white70),
             const SizedBox(height: 4),
             Text(
               context.l10n.translate('chan_attachment_video_label'),
@@ -404,7 +405,8 @@ class _ExpenseCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.receipt_long, color: context.forest.accentText),
+              Icon(Icons.receipt_long_rounded,
+                  color: context.forest.accentText),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -493,8 +495,8 @@ class _PollBlock extends StatelessWidget {
                       children: [
                         Icon(
                           mine == i
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
                           size: 16,
                           color: context.forest.accentText,
                         ),

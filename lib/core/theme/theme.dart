@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
+import 'app_motion.dart';
 import 'colors.dart';
 
 /// Bhromon design system.
@@ -158,6 +159,11 @@ class AppTheme {
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
         TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        // Elsewhere, pushed routes arrive the way the router's pages do.
+        TargetPlatform.linux: AppPageTransitionsBuilder(),
+        TargetPlatform.macOS: AppPageTransitionsBuilder(),
+        TargetPlatform.windows: AppPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: AppPageTransitionsBuilder(),
       }),
 
       appBarTheme: AppBarTheme(

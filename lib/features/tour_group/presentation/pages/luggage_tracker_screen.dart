@@ -557,7 +557,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                             ),
                           ),
                           child: selectedColor == color
-                              ? const Icon(Icons.check,
+                              ? const Icon(Icons.check_rounded,
                                   size: 16, color: Colors.white)
                               : null,
                         ),

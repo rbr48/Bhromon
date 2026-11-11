@@ -644,10 +644,10 @@ class _CallScreenState extends State<CallScreen> {
               ListTile(
                 leading: Icon(
                   switch (audioOutputKind(output.deviceId, output.label)) {
-                    AudioOutputKind.bluetooth => Icons.bluetooth_audio,
-                    AudioOutputKind.headset => Icons.headphones,
-                    AudioOutputKind.earpiece => Icons.phone_in_talk,
-                    _ => Icons.volume_up,
+                    AudioOutputKind.bluetooth => Icons.bluetooth_audio_rounded,
+                    AudioOutputKind.headset => Icons.headphones_rounded,
+                    AudioOutputKind.earpiece => Icons.phone_in_talk_rounded,
+                    _ => Icons.volume_up_rounded,
                   },
                   color: output.deviceId == _outputDeviceId
                       ? AppColors.chatGreen
@@ -854,7 +854,7 @@ class _CallScreenState extends State<CallScreen> {
                         child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back,
+                              icon: const Icon(Icons.arrow_back_rounded,
                                   color: Colors.white, size: 24),
                               onPressed: _endCall,
                             ),

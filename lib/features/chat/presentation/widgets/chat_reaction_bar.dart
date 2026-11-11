@@ -62,7 +62,7 @@ class ChatReactionBar extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.add,
+                Icons.add_rounded,
                 color: context.chat.text70,
                 size: 20,
               ),

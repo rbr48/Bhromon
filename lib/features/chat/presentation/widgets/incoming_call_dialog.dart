@@ -73,7 +73,7 @@ class IncomingCallDialog extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                isVideo ? Icons.videocam : Icons.call,
+                isVideo ? Icons.videocam_rounded : Icons.call_rounded,
                 color: AppColors.chatGreen,
                 size: 16,
               ),
@@ -112,7 +112,7 @@ class IncomingCallDialog extends StatelessWidget {
                         color: Colors.redAccent,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.call_end,
+                      child: const Icon(Icons.call_end_rounded,
                           color: Colors.white, size: 26),
                     ),
                     const SizedBox(height: 6),
@@ -133,8 +133,8 @@ class IncomingCallDialog extends StatelessWidget {
                         color: AppColors.chatGreen,
                         shape: BoxShape.circle,
                       ),
-                      child:
-                          const Icon(Icons.call, color: Colors.white, size: 26),
+                      child: const Icon(Icons.call_rounded,
+                          color: Colors.white, size: 26),
                     ),
                     const SizedBox(height: 6),
                     Text(

@@ -315,7 +315,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           GestureDetector(
                             onTap: () =>
                                 setState(() => _taggedSlideIndex = null),
-                            child: Icon(Icons.close,
+                            child: Icon(Icons.close_rounded,
                                 size: 12, color: context.forest.accentText),
                           ),
                         ],
@@ -325,7 +325,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   const Spacer(),
                   IconButton(
                     tooltip: context.l10n.translate('ig_close'),
-                    icon: Icon(Icons.close, color: context.forest.text70),
+                    icon:
+                        Icon(Icons.close_rounded, color: context.forest.text70),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -361,7 +362,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.chat_bubble_outline,
+                          Icon(Icons.chat_bubble_outline_rounded,
                               size: 48,
                               color:
                                   context.forest.text.withValues(alpha: 0.2)),
@@ -449,8 +450,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                                       ),
                                       Icon(
                                         isExpanded
-                                            ? Icons.keyboard_arrow_up
-                                            : Icons.keyboard_arrow_down,
+                                            ? Icons.keyboard_arrow_up_rounded
+                                            : Icons.keyboard_arrow_down_rounded,
                                         size: 16,
                                         color: context.forest.text54,
                                       ),
@@ -483,7 +484,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 color: Colors.grey.shade900,
                 child: Row(
                   children: [
-                    Icon(Icons.reply,
+                    Icon(Icons.reply_rounded,
                         size: 16, color: context.forest.accentText),
                     const SizedBox(width: 8),
                     Text(
@@ -495,7 +496,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     const Spacer(),
                     IconButton(
                       tooltip: context.l10n.translate('ig_close'),
-                      icon: Icon(Icons.close,
+                      icon: Icon(Icons.close_rounded,
                           size: 18, color: context.forest.text54),
                       onPressed: _cancelReply,
                       padding: EdgeInsets.zero,
@@ -662,7 +663,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     ],
                     if (comment.isPinned) ...[
                       const SizedBox(width: 6),
-                      const Icon(Icons.push_pin, size: 12, color: Colors.amber),
+                      const Icon(Icons.push_pin_rounded,
+                          size: 12, color: Colors.amber),
                       Text(
                         context.l10n.translate('ig_pinned'),
                         style: const TextStyle(
@@ -709,7 +711,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         const SizedBox(width: 12),
                         Row(
                           children: [
-                            const Icon(Icons.favorite,
+                            const Icon(Icons.favorite_rounded,
                                 size: 12, color: Colors.redAccent),
                             const SizedBox(width: 3),
                             Text(
@@ -769,7 +771,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     ? context.l10n.translate('ig_unlike')
                     : context.l10n.translate('ig_like'),
                 icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  isLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
                   size: 18,
                   color: isLiked ? Colors.redAccent : context.forest.text38,
                 ),

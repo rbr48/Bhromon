@@ -1493,7 +1493,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => _openMfsSettlementSheet(),
-                    icon: const Icon(Icons.receipt_long,
+                    icon: const Icon(Icons.receipt_long_rounded,
                         size: 15, color: AppColors.bkashPink),
                     label: Text(l10n.translate('fund_record_mfs'),
                         style: const TextStyle(
@@ -1511,7 +1511,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   ),
                   FilledButton.tonalIcon(
                     onPressed: () => _transfer(),
-                    icon: Icon(Icons.add,
+                    icon: Icon(Icons.add_rounded,
                         size: 16, color: context.forest.accentText),
                     label: Text(l10n.translate('fund_record_payment'),
                         style: TextStyle(

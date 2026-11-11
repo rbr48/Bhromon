@@ -446,7 +446,8 @@ class _ReelPageItemState extends State<_ReelPageItem>
                   children: [
                     IconButton(
                       tooltip: context.l10n.translate('ig_back'),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: const Icon(Icons.arrow_back_rounded,
+                          color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
                     Text(
@@ -499,7 +500,9 @@ class _ReelPageItemState extends State<_ReelPageItem>
                           ? context.l10n.translate('ig_unlike')
                           : context.l10n.translate('ig_like'),
                       icon: Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        isLiked
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
                         color: isLiked ? Colors.redAccent : Colors.white,
                         size: 32,
                       ),
@@ -523,7 +526,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     // Comments button
                     IconButton(
                       tooltip: context.l10n.translate('ig_comment'),
-                      icon: const Icon(Icons.chat_bubble_outline,
+                      icon: const Icon(Icons.chat_bubble_outline_rounded,
                           color: Colors.white, size: 30),
                       onPressed: widget.onOpenComments,
                     ),
@@ -588,7 +591,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                           color: Colors.grey.shade900,
                           border: Border.all(color: Colors.white30, width: 2),
                         ),
-                        child: const Icon(Icons.music_note,
+                        child: const Icon(Icons.music_note_rounded,
                             color: Colors.white, size: 20),
                       ),
                     ),
@@ -650,7 +653,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.location_on,
+                                const Icon(Icons.location_on_rounded,
                                     size: 11, color: Colors.redAccent),
                                 const SizedBox(width: 2),
                                 Text(
@@ -685,7 +688,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     // Sound Track Attribution
                     Row(
                       children: [
-                        const Icon(Icons.graphic_eq,
+                        const Icon(Icons.graphic_eq_rounded,
                             color: Colors.white70, size: 14),
                         const SizedBox(width: 4),
                         Text(

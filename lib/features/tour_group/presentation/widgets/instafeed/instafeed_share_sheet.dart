@@ -116,12 +116,12 @@ class InstafeedShareSheet extends StatelessWidget {
   static const List<Map<String, dynamic>> _channels = [
     {
       'id': 'general',
-      'icon': Icons.chat_bubble_outline,
+      'icon': Icons.chat_bubble_outline_rounded,
       'color': Colors.blueAccent,
     },
     {
       'id': 'food',
-      'icon': Icons.restaurant_menu,
+      'icon': Icons.restaurant_menu_rounded,
       'color': Colors.orangeAccent,
     },
     {
@@ -328,7 +328,7 @@ class InstafeedShareSheet extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const CircleAvatar(
                     backgroundColor: AppColors.mintGreen,
-                    child: Icon(Icons.auto_stories,
+                    child: Icon(Icons.auto_stories_rounded,
                         color: AppColors.darkGreen, size: 20),
                   ),
                   title: Text(context.l10n.translate('ig_add_to_story'),
@@ -391,13 +391,13 @@ class InstafeedShareSheet extends StatelessWidget {
                   children: [
                     _buildActionButton(
                       context: context,
-                      icon: Icons.link,
+                      icon: Icons.link_rounded,
                       label: context.l10n.translate('ig_copy_link'),
                       onTap: () => _copyLink(context),
                     ),
                     _buildActionButton(
                       context: context,
-                      icon: Icons.share,
+                      icon: Icons.share_rounded,
                       label: context.l10n.translate('ig_other_apps'),
                       onTap: () {
                         Navigator.pop(context);
@@ -459,12 +459,12 @@ class InstafeedStoryShareSheet extends StatelessWidget {
   static const List<Map<String, dynamic>> _channels = [
     {
       'id': 'general',
-      'icon': Icons.chat_bubble_outline,
+      'icon': Icons.chat_bubble_outline_rounded,
       'color': Colors.blueAccent,
     },
     {
       'id': 'food',
-      'icon': Icons.restaurant_menu,
+      'icon': Icons.restaurant_menu_rounded,
       'color': Colors.orangeAccent,
     },
     {
@@ -615,8 +615,8 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               backgroundColor: context.forest.divider12,
-                              child:
-                                  Icon(Icons.link, color: context.forest.text),
+                              child: Icon(Icons.link_rounded,
+                                  color: context.forest.text),
                             ),
                             const SizedBox(height: 6),
                             Text(context.l10n.translate('ig_copy_link'),
@@ -640,8 +640,8 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               backgroundColor: context.forest.divider12,
-                              child:
-                                  Icon(Icons.share, color: context.forest.text),
+                              child: Icon(Icons.share_rounded,
+                                  color: context.forest.text),
                             ),
                             const SizedBox(height: 6),
                             Text(context.l10n.translate('ig_other_apps'),

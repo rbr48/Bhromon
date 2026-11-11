@@ -250,7 +250,9 @@ class VehicleSeatMap extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
-              driver ? Icons.sports_motorsports_rounded : Icons.sensor_door,
+              driver
+                  ? Icons.sports_motorsports_rounded
+                  : Icons.sensor_door_rounded,
               color: Colors.white38,
               size: 20),
         ),

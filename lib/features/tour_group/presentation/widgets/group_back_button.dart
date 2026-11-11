@@ -49,7 +49,7 @@ class GroupBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: color ?? context.forest.text),
+      icon: Icon(Icons.arrow_back_rounded, color: color ?? context.forest.text),
       tooltip: MaterialLocalizations.of(context).backButtonTooltip,
       onPressed: onCustomBack ?? () => navigateBackOrToGroup(context, tourId),
     );

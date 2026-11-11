@@ -138,7 +138,8 @@ class _ChannelComposerState extends State<ChannelComposer> {
                   ),
                   IconButton(
                     tooltip: l10n.translate('tour_cancel'),
-                    icon: Icon(Icons.close, color: context.forest.text54),
+                    icon:
+                        Icon(Icons.close_rounded, color: context.forest.text54),
                     onPressed: widget.onCancelUpload,
                   ),
                 ],
@@ -276,7 +277,7 @@ class _ChannelComposerState extends State<ChannelComposer> {
                               child: IconButton(
                                 tooltip: l10n.translate('chan_attach_tooltip'),
                                 padding: EdgeInsets.zero,
-                                icon: Icon(Icons.attach_file,
+                                icon: Icon(Icons.attach_file_rounded,
                                     color: context.forest.text70, size: 22),
                                 onPressed:
                                     widget.sending ? null : widget.onAttach,
@@ -355,7 +356,8 @@ class _ContextBanner extends StatelessWidget {
           ),
           IconButton(
             tooltip: context.l10n.translate('tour_cancel'),
-            icon: const Icon(Icons.close, size: 18, color: Colors.white54),
+            icon: const Icon(Icons.close_rounded,
+                size: 18, color: Colors.white54),
             onPressed: onCancel,
           ),
         ],
@@ -385,10 +387,10 @@ class _PendingRow extends StatelessWidget {
           return Chip(
             avatar: Icon(
               item.isVideo
-                  ? Icons.videocam
+                  ? Icons.videocam_rounded
                   : item.isDocument
-                      ? Icons.insert_drive_file
-                      : Icons.photo,
+                      ? Icons.insert_drive_file_rounded
+                      : Icons.photo_rounded,
               size: 16,
               color: AppColors.mintGreen,
             ),
@@ -433,7 +435,7 @@ class _MentionList extends StatelessWidget {
             for (final choice in choices)
               ListTile(
                 dense: true,
-                leading: Icon(Icons.alternate_email,
+                leading: Icon(Icons.alternate_email_rounded,
                     size: 18, color: context.forest.accentText),
                 title: Text(
                   choice.display,

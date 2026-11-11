@@ -146,7 +146,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
 
       // Tap fullscreen button
-      await tester.tap(find.byIcon(Icons.fullscreen));
+      await tester.tap(find.byIcon(Icons.fullscreen_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

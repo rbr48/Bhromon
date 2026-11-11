@@ -44,12 +44,12 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
   static const List<Map<String, dynamic>> _defaultChannels = [
     {
       'id': 'general',
-      'icon': Icons.chat_bubble_outline,
+      'icon': Icons.chat_bubble_outline_rounded,
       'color': Colors.blueAccent,
     },
     {
       'id': 'food',
-      'icon': Icons.restaurant_menu,
+      'icon': Icons.restaurant_menu_rounded,
       'color': Colors.orangeAccent,
     },
     {
@@ -427,7 +427,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
                       width: 50,
                       height: 50,
                       color: context.forest.divider12,
-                      child: Icon(Icons.image,
+                      child: Icon(Icons.image_rounded,
                           size: 20, color: context.forest.text54),
                     ),
                   ),
@@ -574,7 +574,8 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 18, color: Colors.orange),
+                const Icon(Icons.info_outline_rounded,
+                    size: 18, color: Colors.orange),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

@@ -535,7 +535,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 context.forest.surfaceFor(AppColors.forestScaffold),
             elevation: 0,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: context.forest.text),
+              icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
               onPressed: () {
                 if (_searching) {
                   _toggleSearch();
@@ -579,7 +579,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             actions: [
               IconButton(
                 tooltip: l10n.translate('chan_search_tooltip'),
-                icon: Icon(_searching ? Icons.close : Icons.search,
+                icon: Icon(
+                    _searching ? Icons.close_rounded : Icons.search_rounded,
                     color: context.forest.text70),
                 onPressed: _toggleSearch,
               ),
@@ -603,7 +604,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ),
               ),
               PopupMenuButton<_ChannelMenu>(
-                icon: Icon(Icons.more_vert, color: context.forest.text70),
+                icon:
+                    Icon(Icons.more_vert_rounded, color: context.forest.text70),
                 color: context.forest.surfaceFor(AppColors.chatPanel),
                 onSelected: (choice) => _onMenu(choice, selected),
                 itemBuilder: (_) => [
@@ -744,7 +746,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     ),
                   ),
                   Icon(
-                    _itineraryOpen ? Icons.expand_less : Icons.expand_more,
+                    _itineraryOpen
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
                     color: context.forest.text54,
                   ),
                 ],
@@ -764,7 +768,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       selectedTileColor: context.forest.divider10,
                       leading: Icon(
                         s.id == _liveStopId
-                            ? Icons.my_location
+                            ? Icons.my_location_rounded
                             : Icons.circle_outlined,
                         size: 16,
                         color: context.forest.accentText,
@@ -1229,7 +1233,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(24)),
                                 ),
-                                icon: const Icon(Icons.call),
+                                icon: const Icon(Icons.call_rounded),
                                 label: Text(
                                   l10n.translate('chan_voice_join'),
                                   style: const TextStyle(
@@ -1277,7 +1281,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(28)),
                               ),
-                              icon: const Icon(Icons.call),
+                              icon: const Icon(Icons.call_rounded),
                               label: Text(
                                 l10n.translate('chan_voice_join'),
                                 style: const TextStyle(
@@ -1433,7 +1437,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    p.isAudioMuted ? Icons.mic_off : Icons.mic,
+                    p.isAudioMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
                     size: 14,
                     color:
                         p.isAudioMuted ? Colors.redAccent : AppColors.mintGreen,
@@ -1468,7 +1472,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           IconButton(
             icon: Icon(
               _voiceService.isSpeakerOn
-                  ? Icons.volume_up
+                  ? Icons.volume_up_rounded
                   : Icons.volume_down_rounded,
               color: _voiceService.isSpeakerOn
                   ? context.forest.accentText
@@ -1479,7 +1483,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ),
           IconButton(
             icon: Icon(
-              _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,
+              _voiceService.isAudioMuted
+                  ? Icons.mic_off_rounded
+                  : Icons.mic_rounded,
               color: _voiceService.isAudioMuted
                   ? context.forest.readable(Colors.redAccent)
                   : context.forest.accentText,
@@ -1491,7 +1497,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ),
           IconButton(
             icon: Icon(
-              _voiceService.isVideoOn ? Icons.videocam : Icons.videocam_off,
+              _voiceService.isVideoOn
+                  ? Icons.videocam_rounded
+                  : Icons.videocam_off_rounded,
               color: _voiceService.isVideoOn
                   ? context.forest.accentText
                   : context.forest.text70,
@@ -1503,7 +1511,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ),
           if (!kIsWeb && _voiceService.isVideoOn)
             IconButton(
-              icon: Icon(Icons.cameraswitch, color: context.forest.text70),
+              icon: Icon(Icons.cameraswitch_rounded,
+                  color: context.forest.text70),
               onPressed: () => _voiceService.switchCamera(),
             ),
           GestureDetector(
@@ -1514,7 +1523,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 color: Colors.redAccent,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.call_end, color: Colors.white, size: 22),
+              child: const Icon(Icons.call_end_rounded,
+                  color: Colors.white, size: 22),
             ),
           ),
         ],
@@ -1544,7 +1554,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ),
           child: Row(
             children: [
-              Icon(Icons.volume_up, color: context.forest.accentText, size: 20),
+              Icon(Icons.volume_up_rounded,
+                  color: context.forest.accentText, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -1633,7 +1644,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               ),
               IconButton(
                 icon: Icon(
-                  _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,
+                  _voiceService.isAudioMuted
+                      ? Icons.mic_off_rounded
+                      : Icons.mic_rounded,
                   color: _voiceService.isAudioMuted
                       ? context.forest.readable(Colors.redAccent)
                       : context.forest.accentText,
@@ -1645,7 +1658,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 onPressed: () => _voiceService.toggleAudio(),
               ),
               IconButton(
-                icon: Icon(Icons.call_end,
+                icon: Icon(Icons.call_end_rounded,
                     color: context.forest.readable(Colors.redAccent), size: 20),
                 tooltip: l10n.translate('chan_voice_leave'),
                 onPressed: () => _voiceService.leaveVoiceRoom(),
@@ -1990,7 +2003,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: context.forest.text70),
+                      icon: Icon(Icons.close_rounded,
+                          color: context.forest.text70),
                       onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
@@ -2026,7 +2040,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                         height: 140,
                                         width: 140,
                                         color: Colors.black26,
-                                        child: const Icon(Icons.broken_image),
+                                        child: const Icon(
+                                            Icons.broken_image_rounded),
                                       ),
                                     ),
                                   ),
@@ -2257,7 +2272,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     ),
                   for (final p in pins)
                     ListTile(
-                      leading: Icon(Icons.push_pin,
+                      leading: Icon(Icons.push_pin_rounded,
                           size: 18,
                           color: context.forest.readable(AppColors.gold)),
                       title: Text(
@@ -2290,7 +2305,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                           if (_isAdmin)
                             IconButton(
                               tooltip: l10n.translate('chan_action_unpin'),
-                              icon: Icon(Icons.close,
+                              icon: Icon(Icons.close_rounded,
                                   color: context.forest.text54, size: 18),
                               onPressed: () => unawaited(_guard(() =>
                                   _repo.setPinned(

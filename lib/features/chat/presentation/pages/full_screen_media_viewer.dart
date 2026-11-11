@@ -165,7 +165,8 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back_rounded,
+                            color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       if (_urls.length > 1) ...[
