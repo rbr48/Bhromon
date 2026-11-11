@@ -1531,22 +1531,16 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
+                SizedBox(
                   width: 34,
                   height: 34,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFF1B4332),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        Icons.explore,
-                        color: context.forest.accentText,
-                        size: 20,
-                      ),
+                  child: Image.asset(
+                    'assets/bhromon_emblem.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.explore,
+                      color: context.forest.accentText,
+                      size: 20,
                     ),
                   ),
                 ),
@@ -1561,18 +1555,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: context.forest.text,
+                          color: context.forest.accentText,
                           fontWeight: FontWeight.w900,
                           fontSize: 18,
                           letterSpacing: 0.5,
                         ),
                       ),
                       Text(
-                        context.l10n.translate('hub_title'),
+                        context.l10n.translate('login_tagline'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: context.forest.accentText,
+                          color: context.forest.text54,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),

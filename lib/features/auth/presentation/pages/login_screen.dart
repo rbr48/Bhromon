@@ -287,39 +287,34 @@ class _BrandHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: Container(
+          child: SizedBox(
             width: 110,
             height: 110,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _kCardBg,
-              border:
-                  Border.all(color: _kGreen.withValues(alpha: .35), width: 2),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.explore, color: _kGreen, size: 54),
-              ),
+            child: Image.asset(
+              'assets/bhromon_emblem.png',
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.explore, color: _kGreen, size: 54),
             ),
           ),
         ),
         const SizedBox(height: 18),
-        // The brand wordmark. The name is a group app's, so it does not say "travel".
-        Image.asset(
-          'assets/Bhromon.png',
-          height: 64,
-          semanticLabel: 'Bhromon',
-          errorBuilder: (_, __, ___) => const Text(
-            'Bhromon',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w700,
-              color: _kWhite,
-            ),
+        // Bangla brand name
+        const Text(
+          'ভ্রমণ',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 46,
+            fontWeight: FontWeight.w700,
+            color: _kWhite,
+            letterSpacing: 2,
+            shadows: [
+              Shadow(
+                color: Colors.black45,
+                offset: Offset(0, 3),
+                blurRadius: 10,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 6),

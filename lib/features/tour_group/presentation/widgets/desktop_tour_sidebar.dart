@@ -71,26 +71,15 @@ class DesktopTourSidebar extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Container(
+                        SizedBox(
                           width: 36,
                           height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1B4332),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.mintGreen.withValues(alpha: 0.4),
-                              width: 1,
-                            ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.asset(
-                              'assets/logo.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(Icons.explore_rounded,
-                                    color: Colors.white, size: 20),
-                              ),
+                          child: Image.asset(
+                            'assets/bhromon_emblem.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.explore_rounded,
+                                  color: Colors.white, size: 20),
                             ),
                           ),
                         ),
