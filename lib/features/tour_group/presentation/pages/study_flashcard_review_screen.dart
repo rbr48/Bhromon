@@ -8,6 +8,7 @@ import '../../data/study_flashcard_store.dart';
 import '../../domain/models/study_flashcard_models.dart';
 import '../../data/study_activity_log.dart';
 import '../../domain/services/study_flashcard_rules.dart';
+import '../../domain/services/study_plain_text.dart';
 
 /// Reviews the cards that are due. The member sees the question, shows the answer, and says whether they knew it.
 /// Each answer moves the card's Leitner box and is saved before the next card is shown, so a review that is cut
@@ -229,7 +230,7 @@ class _StudyFlashcardReviewScreenState
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    card.front,
+                    plainTextFromMarkdown(card.front),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         color: palette.text,
@@ -239,7 +240,7 @@ class _StudyFlashcardReviewScreenState
                   if (_shown) ...[
                     const Divider(height: 28),
                     Text(
-                      card.back,
+                      plainTextFromMarkdown(card.back),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: palette.text, fontSize: 16),
                     ),

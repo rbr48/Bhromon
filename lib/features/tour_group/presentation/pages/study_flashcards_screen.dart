@@ -19,6 +19,7 @@ import '../../domain/models/study_flashcard_models.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/services/study_flashcard_extractor.dart';
 import '../../domain/services/study_flashcard_rules.dart';
+import '../../domain/services/study_plain_text.dart';
 import '../../domain/services/study_solution_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
 import 'study_flashcard_review_screen.dart';
@@ -515,7 +516,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
             ],
             Expanded(
               child: Text(
-                card.front,
+                plainTextFromMarkdown(card.front),
                 style:
                     TextStyle(color: palette.text, fontWeight: FontWeight.w600),
                 maxLines: 2,
@@ -526,7 +527,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
         ),
         subtitle: Text(
           [
-            card.back,
+            plainTextFromMarkdown(card.back),
             l10n.translate('study_flashcard_box', args: {
               'box': l10n.number(card.box),
               'date': due == null
