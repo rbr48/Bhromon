@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+
 import '../models/study_subject_models.dart';
 
 /// Represents a pre-packaged, examiner-grade post for JAIBB subject modules (Tips or Past Papers).
@@ -326,6 +330,19 @@ class StudyBankingMasterCatalog {
   /// Whether the subject corresponds to an official JAIBB banking course.
   static bool isBankingSubject(StudySubject subject) =>
       resolveSubjectCode(subject) != null;
+
+  /// The scope of glossary terms. A term belongs to its book, not to a subject, so two
+  /// subjects that share a book share its terms.
+  static const String glossaryScope = 'glossary';
+
+  /// The id of an official item, from its scope, its kind and its title. The same item
+  /// always gets the same id, so loading the pack again finds the item it already made
+  /// and adds nothing. A subject's items are scoped by its subject code.
+  static String masterItemId(String scope, String kind, String title) {
+    final key = '${scope.trim()}|${kind.trim()}|${title.trim()}';
+    final digest = sha256.convert(utf8.encode(key)).toString();
+    return 'master_${digest.substring(0, 32)}';
+  }
 
   /// Returns examiner tips & tricks for the given subject code.
   static List<StudyMasterPostDraft> tipsFor(String subjectCode) =>

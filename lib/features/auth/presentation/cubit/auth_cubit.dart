@@ -49,6 +49,10 @@ class AuthCubit extends Cubit<AuthState> {
       (failure) => emit(const Unauthenticated()),
       (profile) {
         if (profile != null) {
+          // A saved session starts here, so the member rows are brought up to date
+          // with the saved name and photo. A row written before the photo existed, or
+          // a save that failed offline, heals at the next start.
+          _syncGroupMembership();
           emit(Authenticated(profile));
         } else {
           emit(const Unauthenticated());

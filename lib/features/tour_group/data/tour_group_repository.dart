@@ -1381,7 +1381,8 @@ class TourGroupRepository {
 
   /// Brings the signed-in person's own membership rows up to date with the in-app name,
   /// photo and uid. It writes only the fields that differ, logs each failed write, and
-  /// runs on sign-in and after a profile save. It never runs from a read.
+  /// runs when a person signs in, when a saved session starts, and after a profile save.
+  /// It never runs from a read, so a row that missed the photo is healed at the next start.
   /// Returns how many rows were written.
   Future<int> syncMyMemberProfile() async {
     final email = currentEmail;
@@ -2962,6 +2963,50 @@ class TourGroupRepository {
     });
   }
 
+  /// Creates the document at [ref] with [data] when nothing is there yet, and returns
+  /// whether it created it. An existing document is left as it is, so an edit made since
+  /// is kept. The official pack loads through this, so loading it again adds nothing.
+  Future<bool> _createIfAbsent(
+    DocumentReference<Map<String, dynamic>> ref,
+    Map<String, dynamic> data,
+  ) async {
+    final existing = await ref.get();
+    if (existing.exists) return false;
+    await ref.set(data);
+    return true;
+  }
+
+  /// Creates a post under a known [id] unless that post exists already, and returns
+  /// whether it was created. See [_createIfAbsent].
+  Future<bool> addStudyPostIfAbsent(
+    String tourId,
+    String subjectId,
+    StudyModuleKey key, {
+    required String id,
+    required String text,
+    required bool shown,
+    String title = '',
+    String url = '',
+  }) async {
+    final email = _requireEmail();
+    return _createIfAbsent(
+      _sub(tourId, 'study_subjects')
+          .doc(subjectId)
+          .collection(key.name)
+          .doc(id),
+      {
+        'text': text.trim(),
+        'title': title.trim().isEmpty ? null : title.trim(),
+        'url': url.trim().isEmpty ? null : url.trim(),
+        'createdByEmail': email,
+        'createdAt': FieldValue.serverTimestamp(),
+        'helpfulCount': 0,
+        'shown': shown,
+        'pinned': false,
+      },
+    );
+  }
+
   /// Changes a post's words. Its author does this.
   Future<void> editStudyPost(
     String tourId,
@@ -3549,6 +3594,56 @@ class TourGroupRepository {
       'pinned': false,
     });
     return ref.id;
+  }
+
+  /// Creates a problem under a known [id] unless it exists already, and returns whether it
+  /// was created. See [_createIfAbsent].
+  Future<bool> addStudyProblemIfAbsent(
+    String tourId,
+    String subjectId, {
+    required String id,
+    required String text,
+    required String title,
+    required DateTime? releaseAt,
+    required bool shown,
+  }) async {
+    final email = _requireEmail();
+    return _createIfAbsent(
+      _sub(tourId, 'study_subjects')
+          .doc(subjectId)
+          .collection('problems')
+          .doc(id),
+      {
+        'text': text.trim(),
+        if (title.trim().isNotEmpty) 'title': title.trim(),
+        'createdByEmail': email,
+        'createdAt': FieldValue.serverTimestamp(),
+        if (releaseAt != null) 'releaseAt': releaseAt,
+        'shown': shown,
+        'pinned': false,
+      },
+    );
+  }
+
+  /// Saves the reference solution of a problem unless it has one, and returns whether it
+  /// was saved. A solution saved on an earlier load stays as it is.
+  Future<bool> saveStudyReferenceIfAbsent(
+    String tourId,
+    String subjectId,
+    String problemId, {
+    required String text,
+  }) async {
+    final email = _requireEmail();
+    return _createIfAbsent(
+      _problemRef(tourId, subjectId, problemId)
+          .collection('reference')
+          .doc('solution'),
+      {
+        'text': text.trim(),
+        'reviewedByEmail': email,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+    );
   }
 
   /// Changes a problem's words or title. Its author does this.
@@ -6558,6 +6653,32 @@ class TourGroupRepository {
       createdByEmail: email,
     );
     await _glossaryCol(tourId, bookId).add({
+      ...entry.toFields(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Adds a glossary term under a known [id] unless the book has that term already, and
+  /// returns whether it was added. See [_createIfAbsent].
+  Future<bool> addGlossaryTermIfAbsent(
+    String tourId,
+    String bookId, {
+    required String id,
+    required String term,
+    required String definition,
+    String? chapterId,
+    required bool approved,
+  }) async {
+    final email = _requireEmail();
+    final entry = StudyGlossaryTerm(
+      id: id,
+      term: term.trim(),
+      definition: definition.trim(),
+      chapterId: chapterId,
+      approved: approved,
+      createdByEmail: email,
+    );
+    return _createIfAbsent(_glossaryCol(tourId, bookId).doc(id), {
       ...entry.toFields(),
       'createdAt': FieldValue.serverTimestamp(),
     });
