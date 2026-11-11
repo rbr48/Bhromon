@@ -74,6 +74,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -91,17 +92,16 @@ jobs:
       - name: Run tests with coverage
         run: flutter test --coverage
 
-      # Regression floor, not a target. Line coverage was 25.6% (10334 of 40353
-      # lines) when this was last measured. Raise the floor as coverage grows.
+      - name: Test the coverage script
+        run: python3 -m unittest discover -s tool -p "test_*.py" -v
+
+      # Regression floor, not a target. Line coverage was 25.6% (10334 of 40353 lines) when this was last
+      # measured. Raise the floor as coverage grows. The total is read from the tracefile by
+      # tool/lcov_line_coverage.py: it used to come from lcov, which apt-get installed here and
+      # which hung on a stalled package mirror.
       - name: Check coverage regression floor (min 25.5%)
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq lcov
-          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+(?=%)' | head -1)
-          echo "Line coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 25.5" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% fell below the 25.5% regression floor"
-            exit 1
-          fi
+        timeout-minutes: 5
+        run: python3 tool/lcov_line_coverage.py --min 25.5 coverage/lcov.info
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
