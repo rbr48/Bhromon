@@ -1473,7 +1473,6 @@ class TourTranslationKeys {
       'fsh_nilachal_sub': 'Sunset and cloud viewing point',
       'fsh_nilgiri_name': 'Nilgiri hilltop resort peak',
       'fsh_nilgiri_sub': 'Hill peak and cloud scenery',
-      'fsh_cox_hotel_name': '{destination} main hotel and resort',
       'fsh_cox_bus_name': '{origin} ➔ {destination} bus parking',
       'fsh_main_bus_sub': 'Main bus and transport point',
       'fsh_cox_meetup_name': '{destination} main meeting point',
@@ -2015,7 +2014,7 @@ class TourTranslationKeys {
       'fsh_sea_guide_title': 'Family safety and sea caution guide',
       'ig_sea_safety_title': 'Sea safety and tide information',
       'fsh_sea_guide_body':
-          "• When the red flag is up, do not go into the sea under any circumstances.\n• At low tide the sea's pull (rip current) is very strong, so do not wade deeper than your waist.\n• Save the compass directions to Hotel Sea Moon and the bus parking point so you do not lose your way in a crowd.\n• In any unexpected situation, call the tourist police (01320-163599) or 999 directly.",
+          "• When the red flag is up, do not go into the sea under any circumstances.\n• At low tide the sea's pull (rip current) is very strong, so do not wade deeper than your waist.\n• Save the compass direction to the bus parking point so you do not lose your way in a crowd.\n• In any unexpected situation, call the tourist police (01320-163599) or 999 directly.",
       // ── Family circles ─────────────────────────────────────────────────────
       'hub_create_family': 'Create a family circle',
       'hub_family_title': 'New family circle',
@@ -5253,7 +5252,6 @@ class TourTranslationKeys {
       'fsh_nilachal_sub': 'সূর্যাস্ত ও মেঘ দর্শন পয়েন্ট',
       'fsh_nilgiri_name': 'নীলগিরি হিলটপ রিসোর্ট চূড়া',
       'fsh_nilgiri_sub': 'পাহাড় চূড়া ও মেঘের সমারোহ',
-      'fsh_cox_hotel_name': '{destination} প্রধান হোটেল / রিসোর্ট',
       'fsh_cox_bus_name': '{origin} ➔ {destination} বাস পার্কিং',
       'fsh_main_bus_sub': 'প্রধান বাস ও পরিবহন পয়েন্ট',
       'fsh_cox_meetup_name': '{destination} প্রধান মিলনমেলা পয়েন্ট',
@@ -5796,7 +5794,7 @@ class TourTranslationKeys {
       'fsh_sea_guide_title': 'পরিবারের সুরক্ষা ও সমুদ্র সতর্কতা নির্দেশিকা',
       'ig_sea_safety_title': 'সমুদ্র নিরাপত্তা ও জোয়ার-ভাটা তথ্য',
       'fsh_sea_guide_body':
-          '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n• হোটেল সি মুন ও বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
+          '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n• বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
       // ── পরিবার গ্রুপ ───────────────────────────────────────────────────────
       'hub_create_family': 'পরিবারের গ্রুপ তৈরি করুন',
       'hub_family_title': 'নতুন পরিবারের গ্রুপ',
