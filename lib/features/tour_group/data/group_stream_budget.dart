@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Counts the shared upstream subscriptions the groups screens hold: one for the
-/// groups list, and one per tour for its members. In the style of
+/// groups list, and one per tour for its members and for its family list. In the style of
 /// [ChannelListenerBudget]. A debug build asserts when one key holds more than
 /// [maxPerKey] upstreams, which would mean a screen has opened its own listener
 /// again instead of sharing the one it has.
@@ -13,6 +13,9 @@ class GroupStreamBudget {
 
   /// The key of one tour's members stream.
   static String membersKey(String tourId) => 'members:$tourId';
+
+  /// The key of one circle's shared family list.
+  static String familyTasksKey(String tourId) => 'family_tasks:$tourId';
 
   /// The most upstreams one key may hold at once.
   static const int maxPerKey = 1;

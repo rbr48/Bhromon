@@ -49,6 +49,7 @@ import '../domain/models/service_request_models.dart';
 import '../domain/services/meal_engine.dart';
 import '../domain/services/dependent_rules.dart';
 import '../domain/services/family_date_rules.dart';
+import '../domain/services/family_task_rules.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
@@ -448,6 +449,16 @@ class TourGroupRepository {
         GroupStreamBudget.close(GroupStreamBudget.membersKey(tourId)),
   );
 
+  /// One family list per circle, shared by every screen and card that shows it. Its upstreams
+  /// are counted by [GroupStreamBudget].
+  static final SharedStreamRegistry<String, List<FamilyTask>>
+      _sharedFamilyTasks = SharedStreamRegistry<String, List<FamilyTask>>(
+    onUpstreamStart: (tourId) =>
+        GroupStreamBudget.open(GroupStreamBudget.familyTasksKey(tourId)),
+    onUpstreamEnd: (tourId) =>
+        GroupStreamBudget.close(GroupStreamBudget.familyTasksKey(tourId)),
+  );
+
   /// The tours as they were last seen this session. A new listen starts from these, so
   /// the eager fetch runs once per session, not once per listen.
   static final Map<String, TourGroup> _sessionTourDocs = {};
@@ -506,6 +517,7 @@ class TourGroupRepository {
       tours.remove(tourId);
       _sessionTourDocs.remove(tourId);
       unawaited(forgetMembers(tourId));
+      unawaited(forgetFamilyTasks(tourId));
     }
 
     void startTour(String tourId, String email) {
@@ -599,6 +611,7 @@ class TourGroupRepository {
       if (user == null) {
         _sessionTourDocs.clear();
         unawaited(_sharedMembers.clear());
+        unawaited(_sharedFamilyTasks.clear());
         clearUserTours();
         emit();
         return;
@@ -1340,6 +1353,7 @@ class TourGroupRepository {
     groupsServedFromCache.value = false;
     _sessionTourDocs.clear();
     await _sharedMembers.clear();
+    await _sharedFamilyTasks.clear();
     // Drop the holder as well, so the next sign-in opens a new groups upstream.
     final old = _sharedMyGroups;
     _sharedMyGroups = null;
@@ -1638,6 +1652,7 @@ class TourGroupRepository {
     }
     await _memberships.doc(_membershipId(tourId, email)).delete();
     await forgetMembers(tourId);
+    await forgetFamilyTasks(tourId);
     await clearLocalTourData(tourId);
   }
 
@@ -2073,66 +2088,150 @@ class TourGroupRepository {
   // Family shopping and to-do
   // ---------------------------------------------------------------------------
 
-  /// The circle's shared items. A stored item that does not read is left out.
-  Stream<List<FamilyTask>> watchFamilyTasks(String tourId) {
-    return _sub(tourId, 'family_tasks').limit(300).snapshots().map((s) => [
+  /// The circle's shared items, all of them. Every screen and card that asks for the same
+  /// circle shares one upstream (see [forgetFamilyTasks]). An item with no text still reads,
+  /// as an untitled item.
+  Stream<List<FamilyTask>> watchFamilyTasks(String tourId) =>
+      _sharedFamilyTasks.stream(tourId, () => _openFamilyTasks(tourId));
+
+  /// Ends the shared list of [tourId], so the next listen opens a fresh upstream. A screen calls
+  /// this to retry after an error.
+  Future<void> forgetFamilyTasks(String tourId) =>
+      _sharedFamilyTasks.remove(tourId);
+
+  /// The upstream of [watchFamilyTasks]. It only reads.
+  Stream<List<FamilyTask>> _openFamilyTasks(String tourId) {
+    return _sub(tourId, 'family_tasks').snapshots().map((s) => [
           for (final d in s.docs)
-            if (FamilyTask.fromMap(d.id, d.data()) case final task?) task,
+            FamilyTask.fromMap(d.id, _datesAsDateTimes(d.data())),
         ]);
   }
 
-  /// Adds an item for the whole circle, or for one member when [assigneeEmail] is
-  /// given. The signed-in member is recorded as its creator.
-  Future<void> addFamilyTask(
+  /// Adds an item for the whole circle, or for one member when [assigneeEmail] is given. The
+  /// signed-in member is its creator. The item and the member's count for the Dhaka day go in
+  /// one batch, so the rules can hold the day's limit (familyTaskCounted in firestore.rules).
+  ///
+  /// Returns false when the server has not confirmed the write yet. The write stays queued on
+  /// this device. Throws [FamilyTaskDailyLimitException] when the member has added the day's
+  /// limit already.
+  Future<bool> addFamilyTask(
     String tourId, {
     required String title,
     required FamilyTaskKind kind,
     String? assigneeEmail,
   }) async {
     final email = _requireEmail();
-    final assignee = assigneeEmail == null || assigneeEmail.trim().isEmpty
-        ? null
-        : normalizeEmail(assigneeEmail);
+    final counter = _sub(tourId, 'family_task_daily')
+        .doc(familyTaskCounterId(email, DateTime.now()));
+    // Offline, or on a stalled connection, the count cannot be read in time. The add is then sent
+    // anyway, and the rules hold the limit when it arrives.
+    final counted = await counter.get().timeout(_serverAckTimeout).then(
+          (s) => (s.data()?['count'] as num?)?.toInt() ?? 0,
+          onError: (Object _) => 0,
+        );
+    if (familyTaskDayFull(counted)) throw const FamilyTaskDailyLimitException();
     final task = FamilyTask(
       id: '',
       title: title.trim(),
       kind: kind,
-      assigneeEmail: assignee,
+      assigneeEmail: _assigneeOrNull(assigneeEmail),
       createdByEmail: email,
     );
-    await _sub(tourId, 'family_tasks').add(task.toFields());
+    final item = _sub(tourId, 'family_tasks').doc();
+    final batch = _firestore.batch()
+      ..set(item, {
+        ...task.toFields(),
+        'createdAt': FieldValue.serverTimestamp(),
+      })
+      ..set(
+        counter,
+        {'count': FieldValue.increment(1), 'email': email},
+        SetOptions(merge: true),
+      );
+    return _awaitServer(batch.commit());
   }
 
-  /// Ticks an item off, or takes the tick back. The tick is recorded as the
-  /// signed-in member's; taking it back clears the name.
-  Future<void> setFamilyTaskDone(
-      String tourId, String taskId, bool done) async {
+  /// Ticks an open item under the signed-in member's name, or takes a tick back, which clears
+  /// the name. Any member may do either, and the rules check the name. Returns false when the
+  /// server has not confirmed the write yet.
+  Future<bool> setFamilyTaskDone(String tourId, String taskId, bool done) {
     final email = _requireEmail();
-    await _sub(tourId, 'family_tasks').doc(taskId).update({
-      'done': done,
-      'doneByEmail': done ? email : null,
-    });
+    return _awaitServer(_familyTaskRef(tourId, taskId).update(done
+        ? {
+            'done': true,
+            'doneByEmail': email,
+            'doneAt': FieldValue.serverTimestamp(),
+          }
+        : {'done': false, 'doneByEmail': null, 'doneAt': null}));
   }
 
-  /// Changes an item's text, kind or assignee. Its creator or an admin does this.
-  /// The tick is not written here, so an edit cannot undo someone else's tick.
-  Future<void> editFamilyTask(
-    String tourId,
-    String taskId, {
-    required String title,
-    required FamilyTaskKind kind,
-    String? assigneeEmail,
-  }) async {
+  /// Changes only an item's text. Its creator or an admin does this.
+  Future<bool> renameFamilyTask(String tourId, String taskId, String title) {
     _requireEmail();
-    final assignee = assigneeEmail == null || assigneeEmail.trim().isEmpty
-        ? null
-        : normalizeEmail(assigneeEmail);
-    await _sub(tourId, 'family_tasks').doc(taskId).update({
-      'title': title.trim(),
-      'kind': kind.name,
-      'assigneeEmail': assignee,
-    });
+    return _awaitServer(
+        _familyTaskRef(tourId, taskId).update({'title': title.trim()}));
   }
+
+  /// Gives an item to one member, or to the whole circle when [assigneeEmail] is null. Its
+  /// creator or an admin does this.
+  Future<bool> reassignFamilyTask(
+    String tourId,
+    String taskId,
+    String? assigneeEmail,
+  ) {
+    _requireEmail();
+    return _awaitServer(_familyTaskRef(tourId, taskId)
+        .update({'assigneeEmail': _assigneeOrNull(assigneeEmail)}));
+  }
+
+  /// Moves an item between the shopping list and the to-do list. Its creator or an admin does
+  /// this.
+  Future<bool> setFamilyTaskKind(
+    String tourId,
+    String taskId,
+    FamilyTaskKind kind,
+  ) {
+    _requireEmail();
+    return _awaitServer(
+        _familyTaskRef(tourId, taskId).update({'kind': kind.name}));
+  }
+
+  /// Removes an item. Its creator or an admin does this.
+  Future<bool> deleteFamilyTask(String tourId, String taskId) {
+    _requireEmail();
+    return _awaitServer(_familyTaskRef(tourId, taskId).delete());
+  }
+
+  /// Removes the items with these ids, a batch at a time. The screen passes only the items the
+  /// signed-in member may remove, and the rules refuse the rest. Returns false when the server
+  /// has not confirmed every batch yet.
+  Future<bool> clearFamilyTasks(String tourId, List<String> taskIds) async {
+    _requireEmail();
+    var allSynced = true;
+    for (var start = 0; start < taskIds.length; start += _batchLimit) {
+      var end = start + _batchLimit;
+      if (end > taskIds.length) end = taskIds.length;
+      final batch = _firestore.batch();
+      for (final id in taskIds.sublist(start, end)) {
+        batch.delete(_familyTaskRef(tourId, id));
+      }
+      final synced = await _awaitServer(batch.commit());
+      if (!synced) allSynced = false;
+    }
+    return allSynced;
+  }
+
+  DocumentReference<Map<String, dynamic>> _familyTaskRef(
+    String tourId,
+    String taskId,
+  ) =>
+      _sub(tourId, 'family_tasks').doc(taskId);
+
+  /// An assignee's email, or null for the whole circle.
+  String? _assigneeOrNull(String? assigneeEmail) =>
+      assigneeEmail == null || assigneeEmail.trim().isEmpty
+          ? null
+          : normalizeEmail(assigneeEmail);
 
   /// One mess's meal counts for a month. A member's row is written with [saveMeal].
   Stream<List<MealLog>> watchMealsForMonth(String tourId, DateTime month) {
@@ -2370,11 +2469,6 @@ class TourGroupRepository {
   Future<void> deleteSamityPayout(String tourId, String cycleKey) async {
     _requireEmail();
     await _sub(tourId, 'samity_payouts').doc(cycleKey).delete();
-  }
-
-  Future<void> deleteFamilyTask(String tourId, String taskId) async {
-    _requireEmail();
-    await _sub(tourId, 'family_tasks').doc(taskId).delete();
   }
 
   // ---------------------------------------------------------------------------
