@@ -54,7 +54,7 @@ void main() {
       expect(find.text('Offline Study Vault'), findsOneWidget);
       expect(
         find.text(
-            'Download full book & examiner-grade solutions for commute and zero-network banking study.'),
+            'Download full book & examiner-grade solutions for commute and zero-network study.'),
         findsOneWidget,
       );
       expect(find.text('Save Offline'), findsOneWidget);
