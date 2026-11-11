@@ -1,38 +1,38 @@
-# Implementation Plan: JAIBB Master Exam Materials & In-App Loader
+# Implementation Plan: Bhromon — "Walk Together" Branding & Transparent Logo Restoration
 
-## Problem Statement
-The JAIBB banking professional exam subjects (Basic Accounting, LPGB, POE, MAFS, GFI, OM, BCFI) inside study circles require high-quality, examiner-grade materials to genuinely help candidates prepare. While raw exam markdown solutions exist, there are no structured, module-wise master dossiers for:
-1. Exam Tips & Tricks (Examiner standards, marking strategies, time allocations, pitfall warnings).
-2. Worked Problem Solving (Detailed computational and legal scenarios with step-by-step methods).
-3. Glossary & Terms (High-yield terminology with English/Bangla definitions and practical banking examples).
-4. Past Exam Papers (Organized question banks with dual-language model solutions).
-Additionally, subject screens in the app currently require manual posting and lack a 1-tap loader to populate these master materials.
+## 1. Objective
+Adopt the official app tagline **"Bhromon — Walk Together"** (Bengali: **"ভ্রমণ — একসাথে পথচলা"**) across the entire app, documentation, web manifests, and localizations. Fully restore the original iconic green sculptural 3D compass needle / 'B' emblem and original vintage wordmark with 100% transparent backgrounds for all logos, app icons, favicons, splash screens, and web assets.
 
-## Scope & Milestones
+---
 
-- [x] Task 1: Generate comprehensive, high-yield Markdown study dossiers in `C:\Users\USER\Downloads\JAIBB_Master_Materials\` for all 7 JAIBB subjects (`BA`, `LPGB`, `POE`, `MAFS`, `GFI`, `OM`, `BCFI`).
-  - Create `Exam_Tips_And_Tricks.md` for each subject.
-  - Create `Problem_Solving_Masterclass.md` / `Practical_Case_Problems.md` for each subject.
-  - Create `Glossary_And_Key_Terms.md` for each subject.
-  - Create `Past_Exam_Papers_Master_Index.md` for each subject.
-  - Package them into an organized ZIP archive in `Downloads` for immediate sharing and download (`JAIBB_Master_Exam_Materials_All_Subjects.zip`).
+## 2. Milestones & Task Breakdown
 
-- [x] Task 2: Build `study_banking_master_catalog.dart` domain service in `lib/features/tour_group/domain/services/`.
-  - Provide structured data accessors for each subject code (`BA`, `LPGB`, `POE`, `MAFS`, `GFI`, `OM`, `BCFI`):
-    - `List<StudyMasterPostDraft> tipsFor(String subjectCode)`
-    - `List<StudyMasterProblemDraft> problemsFor(String subjectCode)`
-    - `List<StudyMasterGlossaryDraft> glossaryFor(String subjectCode)`
-    - `List<StudyMasterPostDraft> pastPapersFor(String subjectCode)`
-  - Deterministically associate subject titles/codes.
+### Milestone 1: Visual Identity & Asset Restoration (Transparent Background)
+- [x] Task 1.1: Restore `assets/Bhromon.png` to original vintage transparent wordmark (blob `665da78086c304c38cf5cb82e96ef994c51d36d5`).
+- [x] Task 1.2: Place the pristine 1024x1024 transparent green 3D compass/B emblem at `logo.png` and `assets/logo.png`.
+- [x] Task 1.3: Remove redundant `logo_foreground.png`.
+- [x] Task 1.4: Update `flutter_launcher_icons.yaml` and `flutter_native_splash.yaml`.
+- [x] Task 1.5: Run `dart run flutter_launcher_icons` and `dart run flutter_native_splash:create` to regenerate all Android mipmap/drawable and iOS launcher/splash assets.
+- [x] Task 1.6: Generate `web/favicon.png` (32x32 transparent) and web icons (`Icon-192.png`, `Icon-512.png`, `Icon-maskable-192.png`, `Icon-maskable-512.png`) with clean transparent backgrounds.
 
-- [x] Task 3: Implement 1-Tap "Load JAIBB Master Materials" in `study_subject_screen.dart` (and module screens).
-  - Add an action and button (visible when subject code or title indicates a banking subject) to load master materials into the active subject.
-  - Populate Tips, Problems, Past Papers, and Glossary into Firestore through `TourGroupRepository`.
-  - Provide progress feedback, success notifications, and confirmation dialogs.
-  - Add localization keys to `tour_translation_keys.dart`.
+### Milestone 2: App Tagline & Branding Alignment Across UI & Localizations
+- [x] Task 2.1: Update `lib/core/localization/translation_keys.dart` and `tour_translation_keys.dart` with `'login_tagline'`: `'Walk Together'` (en) and `'একসাথে পথচলা'` (bn).
+- [x] Task 2.2: Update `lib/features/tour_group/presentation/pages/join_group_screen.dart` to use the localized tagline instead of `'Travel with life'`.
+- [x] Task 2.3: Update `lib/features/tour_group/presentation/widgets/desktop_tour_sidebar.dart` to use `'Walk Together'` / `'একসাথে পথচলা'`.
+- [x] Task 2.4: Update `web/index.html` with title `"Bhromon | Walk Together — Your Groups in One App"` and meta description.
+- [x] Task 2.5: Update `web/manifest.json` with "Walk together through every group" description.
 
-- [x] Task 4: Automated Verification & Unit Tests.
-  - Add unit tests for `study_banking_master_catalog_test.dart` verifying all 7 subjects have high-quality content.
-  - Verify `flutter test`, `flutter analyze`, and `dart format .`.
+### Milestone 3: Documentation & Version Increment
+- [x] Task 3.1: Update `AGENTS.md` (root) Section 1 with the official brand tagline and positioning statement.
+- [x] Task 3.2: Update `README.md` to feature `Bhromon — Walk Together | একসাথে পথচলা`.
+- [x] Task 3.3: Increment version in `pubspec.yaml` to `1.8.187+241`.
 
-- [ ] Task 5: Peer review with Claude Code CLI, merge to `main`, and deploy to Firebase Hosting.
+### Milestone 4: Verification, Dual-Agent Review & Deployment Gate
+- [x] Task 4.1: Run `dart format` across modified files (passed clean).
+- [x] Task 4.2: Run `dart analyze` to ensure 0 issues (passed clean).
+- [x] Task 4.3: Run `flutter test` for affected suites (all 15 unit tests and golden tests passed).
+- [x] Task 4.4: Verify web build with `flutter build web --release` (compiled successfully in 78.6s).
+- [ ] Task 4.5: Commit changes atomically, push branch `feat/brand-walk-together`, and open GitHub Pull Request.
+- [ ] Task 4.6: Perform Dual-Agent peer review with Claude Code CLI and obtain mutual sign-off.
+- [ ] Task 4.7: Ensure all required CI checks pass and squash-merge PR into `main`.
+- [ ] Task 4.8: Deploy production build to Firebase Hosting.

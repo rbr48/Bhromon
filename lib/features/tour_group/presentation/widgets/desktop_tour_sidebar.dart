@@ -109,9 +109,7 @@ class DesktopTourSidebar extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                l10n.locale.languageCode == 'bn'
-                                    ? 'জীবনের সাথে ভ্রমণ'
-                                    : 'Travel with life',
+                                l10n.translate('login_tagline'),
                                 style: TextStyle(
                                     color: context.forest.text54, fontSize: 10),
                               ),

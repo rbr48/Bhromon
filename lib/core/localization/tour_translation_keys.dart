@@ -324,6 +324,7 @@ class TourTranslationKeys {
       'hub_new_duration': 'New length: {duration}',
       'hub_update_failed': 'Update failed: {error}',
       'hub_joined': 'You joined "{name}"!',
+      'login_tagline': 'Walk Together',
       'hub_backup_failed': 'Could not create the backup: {error}',
       'hub_role_changed': 'The role of {name} was changed.',
       'hub_transfer_body':
@@ -4030,6 +4031,7 @@ class TourTranslationKeys {
       'hub_new_duration': 'নতুন মেয়াদ: {duration}',
       'hub_update_failed': 'আপডেট ব্যর্থ: {error}',
       'hub_joined': 'গ্রুপ "{name}" এ সফলভাবে যোগ দিয়েছেন!',
+      'login_tagline': 'একসাথে পথচলা',
       'hub_backup_failed': 'ব্যাকআপ তৈরিতে ত্রুটি: {error}',
       'hub_role_changed': '{name} এর রোল পরিবর্তন করা হয়েছে',
       'hub_transfer_body':
