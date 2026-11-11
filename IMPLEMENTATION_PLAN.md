@@ -1,32 +1,36 @@
-# Implementation Plan: Update JAIBB BA 6th, 7th & 8th BPE Examiner-Grade Solutions & Master Compendium
+# Implementation Plan: Update JAIBB BA All 8 Accounting Exams English Version & Compendiums
 
 ## Context & Objectives
-1. **JAIBB BA 6th–8th BPE Examination Expansion**:
-   - The user provided `C:\Users\USER\Downloads\IBB_JAIBB_BA_6th_7th_8th_BPE_Bangla_MD_DOCX_PDF.zip` containing expanded, full problem statements and examiner-grade solutions for the 6th, 7th, and 8th Banking Professional Examinations (BPE) for JAIBB subject Basic Accounting & Business Analytics (`BA`, book ID: `41eTecc9pVGKDjw74hVw`).
-   - The archive also contains the complete 3-exam Master Compendium (`JAIBB_BA_6th_7th_8th_BPE_Master_Solutions_Bangla.md` with 247,518 characters).
+1. **All 8 Accounting Exams English Edition Ingestion**:
+   - The user provided `C:\Users\USER\Downloads\IBB_All_8_Accounting_Exams_English_MD_DOCX_PDF.zip` containing expanded, full problem statements and step-by-step examiner-grade English solutions for all 8 Banking Professional Examinations (BPE) for JAIBB subject Basic Accounting & Business Analytics (`BA`, book ID: `41eTecc9pVGKDjw74hVw`).
+   - The archive also contains 3 comprehensive English Master Solution Compendiums:
+     - 5-Exam Master (96th–5th BPE): 377,015 characters
+     - 3-Exam Master (6th–8th BPE): 231,531 characters
+     - Complete 8-Exam Master: 607,855 characters
 2. **Database Updates**:
-   - Update Chapter 6 (`1KKL7YF6FJREZ9BhNSDA`) with the new, fully expanded Bangla solution (`JAIBB_Basic_Accounting_6th_BPE_2025_Solutions_Bangla.md`, 87,979 characters, 179,547 bytes) replacing the older 36k char version.
-   - Update Chapter 7 (`bxqoWO7EEdsQ7gkQmpbW`) with the new, fully expanded Bangla solution (`JAIBB_Basic_Accounting_7th_Exam_2026_Solutions_Bangla.md`, 79,471 characters, 165,437 bytes) replacing the older 31k char version.
-   - Update Chapter 8 (`ZkHellZ6CkyYDYv2APIX`) with the new, fully expanded Bangla solution (`JAIBB_Basic_Accounting_8th_BPE_2026_Solutions_Bangla.md`, 79,454 characters, 164,800 bytes) replacing the older 39k char version.
-   - Standardize Chapter 8's chapter title to `8th New BPE (Nov 2026)` (harmonizing with Chapters 5, 6, and 7).
-   - Standardize all 6th, 7th, 8th English material titles to `BA` instead of `BASIC`.
-   - Upload the 3-exam Master Compendium (`JAIBB_BA_6th_7th_8th_BPE_Master_Solutions_Bangla.md`, 247,518 characters) as a book-level material (`chapterId: None`).
+   - Updated all 8 chapter English solutions with complete verbatim problem statements, Trial Balances, Comparative Balance Sheets, Income Statements, journal entries, and ledger accounts.
+   - Added the 3 English Master Compendiums at the book level (`chapterId: None`).
 3. **Verification**:
    - Verified 8 distinct chapters in JAIBB BA, all with dual English and Bengali solutions.
-   - Verified 2 Master Compendiums (96th–5th BPE: 363k chars, and 6th–8th BPE: 247k chars).
-   - Total study materials in JAIBB BA: 18.
+   - Verified 5 Master Compendiums (2 Bengali, 3 English).
+   - Total study materials in JAIBB BA: 21.
 
 ## Action Items
-- [x] Extract and update 6th BPE Bangla solution (87,979 chars) in Firestore (`MCeOACTdcdWpYq1ojog0`).
-- [x] Extract and update 7th BPE Bangla solution (79,471 chars) in Firestore (`0hY5yWsm3MBiwSuaREcT`).
-- [x] Extract and update 8th BPE Bangla solution (79,454 chars) in Firestore (`PabQsuoyOO1s6RHEmTV8`).
-- [x] Upload 6th-8th BPE Master Solutions Compendium (247,518 chars) in Firestore (`XrenYGAK73icuxIHboAK`).
-- [x] Standardize English material titles to `BA Solutions (English)`.
-- [x] Harmonize Chapter 8 title to `8th New BPE (Nov 2026)`.
-- [x] Verify complete JAIBB BA structure across all 8 chapters and 18 materials.
-- [x] Monotonically bump version in `pubspec.yaml` to `1.8.197+251`.
+- [x] Ingest and update 96th BPE English solution (86,356 chars) in Chapter 1 (`cd78gCCNAKlsdUYq8HyC`).
+- [x] Ingest and update 97th BPE English solution (74,325 chars) in Chapter 2 (`f4ZneP05J6e9diSTebZK`).
+- [x] Ingest and update 98th BPE English solution (74,542 chars) in Chapter 3 (`68zW5IFMbcRYD9lczrNA`).
+- [x] Ingest and update 99th BPE English solution (85,731 chars) in Chapter 4 (`OV7lEoq5r9uA4b6rJY5C`).
+- [x] Ingest and update 5th BPE English solution (55,274 chars) in Chapter 5 (`oieZyfyOZYHv9fVqWEgl`).
+- [x] Ingest and update 6th BPE English solution (60,411 chars) in Chapter 6 (`01BeLXhxRs4IeMUTMJFY`).
+- [x] Ingest and update 7th BPE English solution (81,358 chars) in Chapter 7 (`mAwzzP3KPBPkWVDUzLnU`).
+- [x] Ingest and update 8th BPE English solution (89,098 chars) in Chapter 8 (`BcjuHBTL5faJL8C8gNFw`).
+- [x] Upload 5-Exam English Master Compendium (377,015 chars, `V8kA5HBLWgChzGvpLeEd`).
+- [x] Upload 3-Exam English Master Compendium (231,531 chars, `FINNFfYbEUjfdfPfFVpC`).
+- [x] Upload Complete 8-Exam English Master Compendium (607,855 chars, `4qsSnCjvRcTYiRh26DNO`).
+- [x] Verify complete JAIBB BA structure across all 8 chapters and 21 materials.
+- [x] Monotonically bump version in `pubspec.yaml` to `1.8.198+252`.
 - [ ] Run `dart format`, `dart analyze`, and unit test suite.
-- [ ] Commit and push to branch `feat/update-jaibb-ba-6th-8th-bpe`.
+- [ ] Commit and push to branch `feat/update-jaibb-ba-english-all8`.
 - [ ] Create Pull Request on GitHub.
 - [ ] Exchange mutual Antigravity & Claude peer review sign-offs.
 - [ ] Verify green CI checks and squash-merge to `main`.
