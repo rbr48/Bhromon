@@ -194,7 +194,7 @@ void main() {
       // A member cannot add a chapter.
       expect(find.text('Add chapter'), findsNothing);
 
-      await tester.tap(find.text('Guide questions'));
+      await tester.tap(find.textContaining('Guide questions'));
       await tester.pumpAndSettle();
       expect(find.text('Why does the first line matter?'), findsOneWidget);
     });
@@ -391,11 +391,13 @@ void main() {
         ),
       );
 
-      expect(find.text('English Solution (88 KB)'), findsOneWidget);
-      expect(find.text('English Solution (2 KB)'), findsNothing);
-      expect(find.text('বাংলা সমাধান'), findsOneWidget);
-      expect(find.text('🇬🇧'), findsOneWidget);
-      expect(find.text('🇧🇩'), findsOneWidget);
+      // The larger English file is the one offered, beside the Bangla one.
+      expect(find.text('English'), findsOneWidget);
+      expect(find.text('88 KB'), findsOneWidget);
+      expect(find.text('2 KB'), findsNothing);
+      expect(find.text('বাংলা'), findsOneWidget);
+      expect(find.text('🇬🇧'), findsNothing);
+      expect(find.text('🇧🇩'), findsNothing);
     });
   });
 
