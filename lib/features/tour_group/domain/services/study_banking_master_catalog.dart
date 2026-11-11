@@ -89,7 +89,6 @@ class StudyBankingMasterCatalog {
     codeSF,
     codeSBB,
     codeIB,
-    codeAFI,
     codeMA,
   ];
 
@@ -133,13 +132,14 @@ class StudyBankingMasterCatalog {
       return pattern.hasMatch(text);
     }
 
-    // ---------------- AIBB & Priority Code Checks ----------------
-    // AFI / Accounting for Financial Institutions (check before BA)
+    // AFI / Accounting for Financial Institutions was an AIBB subject up to 5th BPE,
+    // and from 6th BPE was discontinued from AIBB and added to JAIBB under BA (Basic Accounting).
+    // Therefore, any reference to AFI/206A resolves to codeBA in JAIBB.
     if (hasWord('AFI') ||
         hasWord('206A') ||
         text.contains('ACCOUNTING FOR FINANCIAL') ||
         text.contains('আর্থিক প্রতিষ্ঠানের হিসাববিজ্ঞান')) {
-      return codeAFI;
+      return codeBA;
     }
 
     // MA / Management Accounting (check before MAFS)
