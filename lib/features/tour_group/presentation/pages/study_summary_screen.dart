@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
 
@@ -344,7 +345,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
             style: TextStyle(color: palette.text70)),
       );
     }
-    if (!_loaded) return const Center(child: CircularProgressIndicator());
+    if (!_loaded) return const ListRowsSkeleton();
     final shown = summaryShownToGroup(_revisions, pinnedId: _pinnedId);
     // A member does not see a hidden revision. An admin sees every revision, with the hidden ones marked.
     final ordered = newestFirst(_revisions);

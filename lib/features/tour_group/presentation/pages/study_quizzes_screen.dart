@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
 
@@ -192,7 +193,7 @@ class _StudyQuizzesScreenState extends State<StudyQuizzesScreen> {
             style: TextStyle(color: palette.text70)),
       );
     }
-    if (!_loaded) return const Center(child: CircularProgressIndicator());
+    if (!_loaded) return const ListRowsSkeleton();
     if (_quizzes.isEmpty) {
       return Center(
         child: Padding(

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
 
@@ -150,7 +151,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
               )
             : null,
         body: !_loaded
-            ? const Center(child: CircularProgressIndicator())
+            ? const ListRowsSkeleton()
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                 children: [

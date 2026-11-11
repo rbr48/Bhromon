@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
 
@@ -401,7 +402,7 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
       );
     }
     if (!_threadLoaded || !_repliesLoaded) {
-      return const Center(child: CircularProgressIndicator());
+      return const ListRowsSkeleton();
     }
     if (thread == null) {
       return Center(

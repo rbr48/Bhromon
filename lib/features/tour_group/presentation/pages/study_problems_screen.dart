@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -211,7 +212,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final shown = sortStudyProblems(visibleStudyProblems(
               problems: snap.data!,

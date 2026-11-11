@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -250,7 +251,7 @@ class _StudyAssignmentsScreenState extends State<StudyAssignmentsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             return StreamBuilder<Set<String>>(
               stream: _finished,

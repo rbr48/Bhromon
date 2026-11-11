@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -294,7 +295,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final posts = sortStudyPosts(visibleStudyPosts(
               posts: snap.data!,

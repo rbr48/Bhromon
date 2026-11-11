@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
@@ -268,7 +269,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final settings = snap.data!;
             return StreamBuilder<List<StudyBook>>(
