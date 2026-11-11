@@ -306,7 +306,7 @@ static session while the user visits other screens, and asks before discarding a
 
 ---
 
-### I. Live journey and destination alarms (`kLiveJourney`, on by default)
+### J. Live journey and destination alarms (`kLiveJourney`, on by default)
 - **On by default.** `kLiveJourney` is a compile-time flag (`bool.fromEnvironment('LIVE_JOURNEY', defaultValue: true)`). A build turns it off with `--dart-define=LIVE_JOURNEY=false`. Remote Config switches can turn off the parts that matter in production: `journey_relay_enabled` (positions), `journey_alarms_enabled` (new alarms) and `analytics_enabled` (usage counts). A failed fetch keeps the feature as released.
 - **Tracking runs only during a trip the user starts** (roadmap rule 1). A trip ends when the user ends it or after 36 hours with no reading. Sharing is a separate switch, off by default (rule 2), and the relay is connected only while it is on.
 - **Alarms are per device** (rule 3). Stop notices (5 km and 1 km) and arrivals at each stop come from `HubAlertEngine`; the destination rings at 500 m, runs its overshoot alarm, and has a time alarm 25 minutes before the ETA. Scheduled alarms are absolute instants with the alarm clock mode, so no exact-alarm permission is used (D-3). The alarm page keeps the screen on and repeats up to ten rings.
@@ -317,7 +317,7 @@ static session while the user visits other screens, and asks before discarding a
 - **Store declarations.** The background-location permissions and the `location` background mode are declared in the platform commit. Do not release that commit alone: Google Play and App Store review need the declarations and the in-app disclosure first.
 - **Tests:** `flutter test test/features/tour_group/` (the `live_journey*`, `journey_*` and `leg_suggestions` files), `cd media-server && pytest tests/test_live_relay.py tests/test_journey_events.py`, and the `journey_events_rules` and `account_erasure` suites under the emulators.
 
-### J. Offline Vector Maps Engine & MapLibre Web Worker Invariant (`liberty_style.json`)
+### K. Offline Vector Maps Engine & MapLibre Web Worker Invariant (`liberty_style.json`)
 - **OpenFreeMap Liberty Vector Tiles**: Migrated from outdated raster and demo styles to OpenFreeMap Liberty vector tiles (`https://tiles.openfreemap.org/planet`).
 - **Bundled Asset Style**: The complete vector style is bundled locally in `assets/map/liberty_style.json` (registered in `pubspec.yaml`). `MapCacheManager.defaultStyleUrl` points directly to this asset, guaranteeing instant vector rendering even on zero-connectivity networks with remote fallback to `https://tiles.openfreemap.org/styles/liberty`.
 - **Web Worker Null Filter Invariant (MANDATORY)**:
@@ -332,27 +332,116 @@ static session while the user visits other screens, and asks before discarding a
 - **Curated Bangladesh Regions (`kCuratedOfflineRegions` in `offline_map_regions.dart`)**:
   - Curated bounding boxes, center coordinates, zoom boundaries, and emergency contact numbers for high-traffic and remote eco-tourism destinations: Sajek Valley, Tanguar Haor, Bandarban Highlands, Sundarbans Mangrove, Saint Martin's Island, Sreemangal Tea Country, Cox's Bazar Marine Drive, and Kuakata.
 
-### K. Push Notification Consolidation onto Hostinger VPS
+### L. Push Notification Consolidation onto Hostinger VPS
 - **Zero-Cost Firebase Spark Plan Operation**: All push notification dispatching (SOS siren alerts, channel messages, mentions, posts, comments, ledger expenses, and notice reminders) has been consolidated onto the Hostinger VPS `FirestoreNotificationWatcher` daemon (`media-server/notifications.py`).
 - **Cloud Functions Decommissioning**: Notification triggers were unexported from `functions/src/index.ts`, eliminating cloud function compute invocation costs.
 - **Realtime Collection Group Listeners**: The VPS watcher daemon connects directly to Firestore streams scoped by indexed collection groups with a deduplication ring buffer to eliminate duplicate pings.
 
-### L. Outbox Sync Guard & Backup Architecture (Option A)
+### M. Outbox Sync Guard & Backup Architecture (Option A)
 - **Sign-Out Data Loss Prevention**: `AppDatabase` provides `getTotalUnsyncedChangesCount()` by querying pending writes in `SyncOutboxTable` and unposted drafts in `TripLogsTable`.
 - `_confirmLogout` in `explorer_profile_screen.dart` inspects this count before showing the logout dialog, warning users of pending offline changes and preventing accidental local database purges before cloud sync completes.
 - **E2EE vs. Cloud Backup Invariant**: Evaluated WhatsApp-grade Google Drive app data backup. WhatsApp uses Drive backup because it stores chats solely on-device. Bhromon stores groups, ledger, and posts in Firestore (offline-cached) and chats on the Hostinger VPS. Google Drive backup is deferred until End-to-End Encryption (E2EE) is fully developed, avoiding redundant cloud storage permissions and keeping client dependencies lean.
 
-### M. Games Server & Cloud Functions Node 22 Upgrade
+### N. Games Server & Cloud Functions Node 22 Upgrade
 - Upgraded `functions/Dockerfile` to `node:22-alpine` matching `"engines": { "node": ">=22" }`.
 - Resolved all strict TypeScript compilation errors across `functions/src/gameTable/` and game callables (`(tx: Transaction)`).
 
-### N. End-to-End Encryption (E2EE) Architecture (Track E)
+### O. End-to-End Encryption (E2EE) Architecture (Track E)
 - **Scope & Platform Invariant**: E2EE is enabled for 1-to-1 chats on native mobile platforms (`!kIsWeb && (Platform.isAndroid || Platform.isIOS)`). Flutter Web (`kIsWeb`) remains plaintext client-server TLS per Decision D3. Existing chats remain plaintext per Decision D4 (no retroactive re-encryption).
 - **Cryptographic Primitives**: Double Ratchet + X3DH (Extended Triple Diffie-Hellman) utilizing libsodium (X25519 key exchange, Ed25519 signatures, XSalsa20-Poly1305 / ChaCha20-Poly1305 symmetric authenticated encryption).
 - **Auto-Provisioning**: Native users automatically publish Identity Keys, Signed Prekeys, and One-Time Prekeys on first sign-in or chat entry via `E2eeChatController.instance.ensureReady(uid)`.
 - **Key Lifecycle Hardening**: Orphaned one-time prekeys (claimed by peers but never established) are automatically pruned during `E2eeService.prepare()` using a single-field Firestore query (`claimedAt < olderThan`, default 24h lifetime), avoiding composite index requirements.
 - **Safety Number & Verification**: Hex-encoded 64-character safety numbers derived from both participants' Identity Keys can be verified and copied to the clipboard in `E2eeVerificationScreen`.
 - **Multi-Party Group Channels Architecture (`E2EE_GROUP_DESIGN.md`)**: Group E2EE uses the Megolm Sender-Key ratchet ($O(1)$ symmetric broadcast encryption) with forward/backward secrecy re-keying on membership changes (join/leave/kick), Ed25519 payload signatures for `/split` expenses preserving the integer paisa invariant, and cryptographic moderation tombstones.
+
+### P. Study Circles & Banking Examination Prep Engine (IBB JAIBB & AIBB Architecture)
+- **Overview**: Study circles (`GroupKind.study`, preset `study`) support structured peer learning, question banks, study assignments, and professional certification preparation.
+- **IBB Banking Professional Examination (BPE) Master Catalog (`StudyBankingMasterCatalog` in `study_banking_master_catalog.dart`)**:
+  - The Institute of Bankers, Bangladesh (IBB) conducts standardized professional exams with an evolving curriculum across syllabus revisions:
+    - **JAIBB (Junior Associate of IBB)**: Exactly **6 compulsory subjects**:
+      1. `101 MAFS` — Monetary and Financial System
+      2. `102 BA` — Basic Accounting and Business Analytics
+      3. `103 POE` — Principles of Economics
+      4. `104 LPGB` — Laws and Practice of General Banking
+      5. `105 BCFI` — Business Communication in Financial Institutions
+      6. `106 OM` — Organization and Management
+    - **AIBB (Associate of IBB)**: Advanced compulsory and elective subjects (13 total), including:
+      - `201 RBFM` — Risk Management in Financial Institutions
+      - `202 CB` — Credit Operations and Management
+      - `203 ITB` — Information Technology in Financial Services
+      - `204 TFE` — Treasury and Foreign Exchange Operations
+      - `205 GFI` — Governance in Financial Institutions
+      - Elective options: `206 AF`, `207 IF`, `208 SME`, `209 AM`, `210 BM`, `211 FM`, `212 DS`, `213 IA`.
+  - **Syllabus Migration Rules (MANDATORY)**:
+    - **AFI to BA Reassignment**: Accounting for Financial Institutions (AFI) was an AIBB subject up to the 5th BPE. From the 6th BPE onward, AFI was discontinued in AIBB and introduced into JAIBB under the name Basic Accounting (BA). Historical solutions from 96th to 5th BPE are catalogued under JAIBB BA to provide bankers with continuous 8-exam accounting preparation.
+    - **GFI Migration from JAIBB to AIBB**: Governance in Financial Institutions (GFI) was a JAIBB subject up to the 5th BPE, then moved to AIBB (Subject Code 205) starting from the 6th BPE. JAIBB strictly maintains the 6 active compulsory subjects (NO GFI book in JAIBB). All historical GFI chapters (Chapters 1–5: 96th BPE to 5th BPE) are consolidated in AIBB GFI (`Book 2Ck3oOffzHZk5P1xZjmY`), spanning Chapters 1 through 7 with dual-language model solutions.
+- **Examination Timeline & Historical Chapter Progression**:
+  - 8 Standard Historical Examination Editions:
+    - Ch #1: 96th BPE (May 2023)
+    - Ch #2: 97th BPE (Nov 2023)
+    - Ch #3: 98th BPE (May 2024)
+    - Ch #4: 99th BPE (Nov 2024)
+    - Ch #5: 5th New BPE (April 2025)
+    - Ch #6: 6th New BPE (Nov 2025)
+    - Ch #7: 7th New BPE (May 2026)
+    - Ch #8: 8th New BPE (Nov 2026)
+- **`StudyChapter.fromMap` Invariant (CRITICAL)**:
+  - In `StudyChapter.fromMap(String id, Map<String, dynamic> data)`, the parser requires `if (number == null || number < 1 || title.isEmpty) return null;`.
+  - Every chapter document in Firestore (`tours/{id}/study_books/{bookId}/chapters/{chapterId}`) **MUST include `number: int >= 1`** in addition to `order: int`. Missing `number` causes the chapter to be silently discarded by the client parser, making it invisible in the app UI.
+- **Dual-Language Study Materials (`StudyMaterial`)**:
+  - Each chapter document links dual-language solution materials (`kind: 'note'`) stored under `tours/{id}/study_materials` with `chapterId` and `bookId`.
+  - English solution titles follow: `8th New BPE (Nov 2026) — <CODE> Solutions (English)`
+  - Bengali solution titles follow: `৮ম নতুন BPE (নভেম্বর ২০২৬) — <CODE> সমাধান (বাংলা)`
+  - Markdown content preserves examiner question structures, mark breakdowns, accounting ledger tables, and bilingual explanations.
+
+### Q. In-App Document Viewer & Multi-Platform File Operations (`PdfViewerScreen`, `MarkdownViewerScreen`, `ViewerFileHelper`)
+- **Architecture**: In-app document previewers (`PdfViewerScreen` via `pdfx` and `MarkdownViewerScreen` via `flutter_markdown`) provide fullscreen document viewing with zoom, text scaling, search, and jump navigation.
+- **In-Memory & Dynamic Document Support**:
+  - Generated duplex A4 booklets, branch recruitment posters (`bytes: pdfBytes`), and memory-cached solutions do not have initial local file paths (`widget.filePath == null`) or remote URLs (`widget.fileUrl == null`).
+  - `_ensureBytes()` and `_ensureLocalFilePath()` dynamically resolve payloads, persisting temporary local files on native platforms and generating Uint8List blobs in memory on web.
+- **Web vs. Native Conditional Export Pattern (`viewer_file_helper.dart`)**:
+  - Strictly adheres to **Zero `dart:io` on Web**:
+    - `viewer_file_helper.dart` conditionally exports `viewer_file_helper_stub.dart` on Web and `viewer_file_helper_io.dart` on native IO platforms.
+    - `viewer_file_helper_io.dart` is registered in `tool/dart_io_allowlist.txt`.
+- **Share & External App Opening Protocol**:
+  - **Flutter Web (`kIsWeb`)**:
+    - **Share**: Uses `SharePlus.instance.share(ShareParams(files: [XFile.fromData(bytes)]))`. If the browser's Web Share API does not support file payloads, gracefully falls back to `downloadWebFile(bytes, filename)` with a translated snackbar confirmation (`viewer_downloaded`).
+    - **Open Externally**: Uses `openWebBlob(bytes, filename: filename)`, creating an Object URL Blob (`web.URL.createObjectURL(blob)`) and launching a new browser tab (`_blank`). If popup blockers intercept the window, it automatically initiates `downloadWebFile`.
+  - **Native Mobile & Desktop (`!kIsWeb`)**:
+    - Saves bytes or text into the app's cache directory via `saveTempBytes` / `saveTempText`.
+    - Invokes `SharePlus.instance.share` with native file path `XFile(path)` or `OpenFilex.open(path)`. If no third-party viewer is installed (`ResultType.noAppToOpen`), displays a localized SnackBar (`viewer_no_external_app`) with a direct action to share the file.
+
+### R. Duplex Printable A4 Booklets & Branch Recruitment Poster Generator (`StudyBookletPdfGenerator`)
+- **Native 100% Deterministic PDF Generation**:
+  - Built on `pdf` and `bangla_pdf` with custom duplex A4 geometry and zero external AI/cloud dependencies.
+  - Generates print-ready booklets with page numbering, two-column examination layouts, question headers, and answer keys.
+- **A4 Notice Board Poster (`generateBranchNoticePoster`)**:
+  - Formatted for bank branch and university notice boards.
+  - Prominently displays the forest-green IBB container (`THE INSTITUTE OF BANKERS, BANGLADESH (IBB)`), study circle name, destination/origin metadata, group invite code (`inviteCode`), and key feature callouts.
+
+### S. Visual Identity, Brand Refresh & Theme Consistency (`surfaceFor`, Forest Palette)
+- **Tagline & Brand Positioning**:
+  - Official Tagline: **"Bhromon — Walk Together"** (Bengali: **"ভ্রমণ — একসাথে পথচলা"**).
+  - Positioning: *"Walk together through every group: family, mess, campus, office, and shared journeys."*
+- **Emblem & Logo Transparency Standard**:
+  - Visual identity features the iconic 3D green sculptural compass needle / 'B' emblem.
+  - **100% Transparent Background**: Launcher icons (`android/app/src/main/res/mipmap-*`), web splash screen, favicon (`web/favicon.png`), and in-app headers must maintain clean alpha transparency with zero solid background squares. Original vintage wordmark preserved.
+- **Brand Typography**:
+  - App header titles use the official brand bottle-green accent (`#142C33` / forest dark green palette) on light and transparent surfaces rather than flat white.
+- **Light Theme Adaptation Invariant (`surfaceFor`)**:
+  - Dark mode surfaces must never bleed into light theme as fixed black/dark containers with white text.
+  - Use `context.forest.surfaceFor(kDarkColor)` for background containers, `context.forest.text`, `context.forest.text70`, `context.forest.text60`, `context.forest.text54` for labels, and `context.borderFaint` for dividers/borders.
+  - Guarantees high-contrast readability in light mode while maintaining the original moody aesthetic in dark mode.
+
+### T. CI/CD Reliability, GitHub Actions Runner Resilience & Dual-Agent Review Gate
+- **Required Workflow Gate**:
+  - Pull Requests must pass all required checks: `Dart Format`, `Analyze` (enforcing zero unauthorized `dart:io` imports and zero empty catches), `Build Web (release)`, `Test` (with coverage floor), and `Build Android (debug APK)`.
+- **Test Runner Mirror Timeout Recovery**:
+  - `Test` job runs `flutter test --coverage` and enforces the `25.5%` line coverage floor via `lcov`.
+  - If a GitHub Actions runner hangs during `sudo apt-get update` in the coverage check step due to stalled Ubuntu package mirrors, cancel the run with `gh run cancel <run_id>` and trigger a fresh runner via `gh run rerun <run_id> --failed`.
+- **Mutual Peer Review Required**:
+  - Antigravity and Claude must conduct mutual peer review on every PR before squash-merging to `main`.
+  - Never push directly to `main` on GitHub. Always use feature branches and open PRs (`gh pr create --base main`).
 
 ## 5. Testing & Quality Verification Checklist
 Before shipping or pushing changes:
