@@ -1,4 +1,4 @@
-# Bhromon — One App for Every Group (Flutter & Firebase)
+# Bhromon — Walk Together | একসাথে পথচলা (Flutter & Firebase)
 
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.bhromon.app">
@@ -15,7 +15,7 @@
   </a>
 </p>
 
-Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips. It is an offline-first Flutter app designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides group chat and channels, notices and roll calls, shared expenses and settle-up, calendars, safety alerts with SOS, the Game Zone, and an ad-free newspaper reader.
+**Bhromon** (**Walk Together** / **একসাথে পথচলা**) is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips. It is an offline-first Flutter app designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides group chat and channels, notices and roll calls, shared expenses and settle-up, calendars, safety alerts with SOS, the Game Zone, and an ad-free newspaper reader.
 
 ---
 

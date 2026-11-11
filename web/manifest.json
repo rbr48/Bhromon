@@ -1,11 +1,11 @@
 {
-    "name": "Bhromon",
+    "name": "Bhromon — Walk Together",
     "short_name": "Bhromon",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#121212",
     "theme_color": "#121212",
-    "description": "Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips.",
+    "description": "Bhromon — Walk Together. One app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
