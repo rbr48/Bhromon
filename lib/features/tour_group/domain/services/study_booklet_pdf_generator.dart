@@ -261,16 +261,13 @@ class StudyBookletPdfGenerator {
 
   /// Returns whether this booklet or poster belongs to a banking exam circle (IBB / JAIBB / AIBB).
   static bool isBankingContent(StudyBookletContent content) {
-    final text =
-        '${content.tourName} ${content.subjectTitle} ${content.subjectCode ?? ''} ${content.tourDescription ?? ''}'
+    final titleAndName =
+        '${content.tourName} ${content.subjectTitle} ${content.subjectCode ?? ''}'
             .toLowerCase();
-    return text.contains('jaibb') ||
-        text.contains('aibb') ||
-        text.contains('banking') ||
-        text.contains('banker') ||
-        text.contains('ব্যাংকিং') ||
-        text.contains('ব্যাংকার্স') ||
-        text.contains('ibb');
+    return RegExp(r'\b(jaibb|aibb|ibb|banking|banker)\b', caseSensitive: false)
+            .hasMatch(titleAndName) ||
+        titleAndName.contains('ব্যাংকিং') ||
+        titleAndName.contains('ব্যাংকার্স');
   }
 
   /// Generates a duplex-printable A4 examination question bank & model solutions booklet.
@@ -314,8 +311,8 @@ class StudyBookletPdfGenerator {
 
           final subtitleText = isBanking
               ? (isBengali
-                  ? 'ব্যাংকিং প্রফেশনাল পরীক্ষা (JAIBB) — বিগত প্রশ্নপত্র ও মডেল সমাধান'
-                  : 'JAIBB Examination Question Bank & Examiner-Grade Solutions')
+                  ? '${content.subjectTitle} — বিগত প্রশ্নপত্র ও মডেল সমাধান'
+                  : '${content.subjectTitle} — Question Bank & Examiner-Grade Solutions')
               : (isBengali
                   ? '${content.subjectTitle} — প্রশ্নব্যাংক ও পরীক্ষক-মানের মডেল সমাধান'
                   : '${content.subjectTitle} — Question Bank & Model Solutions');
@@ -655,17 +652,22 @@ class StudyBookletPdfGenerator {
             ? '${content.tourName.toUpperCase()} NOTICE BOARD'
             : 'STUDY CIRCLE NOTICE BOARD');
 
-    final posterMainHeading = isBanking
-        ? 'JAIBB Examination Preparation'
+    final posterMainHeading = content.subjectTitle.isNotEmpty &&
+            content.subjectTitle != content.tourName
+        ? content.subjectTitle
         : (content.tourName.isNotEmpty
             ? content.tourName
-            : (content.subjectTitle.isNotEmpty
-                ? '${content.subjectTitle} Study Circle'
+            : (isBanking
+                ? 'JAIBB Examination Preparation'
                 : 'Study Circle Preparation'));
 
     final posterSubtitle = isBanking
-        ? 'ব্যাংকিং প্রফেশনাল পরীক্ষা প্রস্তুতি স্টাডি সার্কেল'
-        : (content.subjectTitle.isNotEmpty
+        ? (content.subjectTitle.isNotEmpty &&
+                content.subjectTitle != posterMainHeading
+            ? '${content.subjectTitle} — ব্যাংকিং প্রফেশনাল পরীক্ষা প্রস্তুতি'
+            : 'ব্যাংকিং প্রফেশনাল পরীক্ষা প্রস্তুতি স্টাডি সার্কেল')
+        : (content.subjectTitle.isNotEmpty &&
+                content.subjectTitle != posterMainHeading
             ? '${content.subjectTitle} — পরীক্ষা প্রস্তুতি ও স্টাডি সার্কেল'
             : 'সম্মিলিত পরীক্ষা প্রস্তুতি স্টাডি সার্কেল');
 

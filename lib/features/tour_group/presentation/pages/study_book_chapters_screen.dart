@@ -17,6 +17,7 @@ import '../../domain/models/study_models.dart';
 import '../../domain/models/study_streak_models.dart';
 import '../../domain/models/study_syllabus_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/study_banking_master_catalog.dart';
 import '../../domain/services/study_booklet_pdf_generator.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_daily_streak_rules.dart';
@@ -797,11 +798,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       if (isCancelled) return;
 
       final combinedContext = '$tourName ${widget.book.title}'.toLowerCase();
-      final isBanking = combinedContext.contains('jaibb') ||
-          combinedContext.contains('aibb') ||
-          combinedContext.contains('ibb') ||
-          combinedContext.contains('ব্যাংকিং') ||
-          combinedContext.contains('ব্যাংকার্স');
+      final isBanking =
+          RegExp(r'\b(jaibb|aibb|ibb|banking|banker)\b', caseSensitive: false)
+                  .hasMatch(combinedContext) ||
+              combinedContext.contains('ব্যাংকিং') ||
+              combinedContext.contains('ব্যাংকার্স');
 
       String? subjectCode;
       if (widget.book.author.trim().isNotEmpty) {
@@ -812,7 +813,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         if (codeMatch != null) {
           subjectCode = codeMatch.group(1);
         } else if (isBanking) {
-          subjectCode = 'JAIBB';
+          subjectCode =
+              StudyBankingMasterCatalog.resolveCodeFromText(widget.book.title);
         }
       }
 
@@ -895,11 +897,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       if (isCancelled) return;
 
       final combinedContext = '$tourName ${widget.book.title}'.toLowerCase();
-      final isBanking = combinedContext.contains('jaibb') ||
-          combinedContext.contains('aibb') ||
-          combinedContext.contains('ibb') ||
-          combinedContext.contains('ব্যাংকিং') ||
-          combinedContext.contains('ব্যাংকার্স');
+      final isBanking =
+          RegExp(r'\b(jaibb|aibb|ibb|banking|banker)\b', caseSensitive: false)
+                  .hasMatch(combinedContext) ||
+              combinedContext.contains('ব্যাংকিং') ||
+              combinedContext.contains('ব্যাংকার্স');
 
       String? subjectCode;
       if (widget.book.author.trim().isNotEmpty) {
@@ -910,7 +912,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         if (codeMatch != null) {
           subjectCode = codeMatch.group(1);
         } else if (isBanking) {
-          subjectCode = 'JAIBB';
+          subjectCode =
+              StudyBankingMasterCatalog.resolveCodeFromText(widget.book.title);
         }
       }
 

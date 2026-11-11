@@ -1,38 +1,38 @@
-# Implementation Plan: Bhromon — "Walk Together" Branding & Transparent Logo Restoration
+# Implementation Plan: User Logo Asset Integration & Study Group Poster/Booklet Refinement
 
-## 1. Objective
-Adopt the official app tagline **"Bhromon — Walk Together"** (Bengali: **"ভ্রমণ — একসাথে পথচলা"**) across the entire app, documentation, web manifests, and localizations. Fully restore the original iconic green sculptural 3D compass needle / 'B' emblem and original vintage wordmark with 100% transparent backgrounds for all logos, app icons, favicons, splash screens, and web assets.
+## Context
+1. The user explicitly provided the path to their downloaded logo:
+   `C:\Users\USER\Downloads\bhromon_logo_transparent\bhromon_logo_transparent.png`.
+   This is the authentic 3D emerald-green compass needle / 'B' emblem. The file contains a baked-in checkerboard pattern from a web downloader, which we clean into a 100% transparent RGBA asset with smooth anti-aliasing.
+2. In the user's uploaded screenshots, the Android launcher icon is shown on a clean white squircle background (`media_1794370613293_8e7072ec.png`). The current adaptive background was set to `#121212`, which caused it to render dark instead of white.
+3. In previous screenshots (`Branch Notice Board Poster` and `Booklet`), non-banking study groups (`dhh`, `gyg`) were hardcoded to or falsely detected as IBB / JAIBB because of overly broad substring matching (`ibb`) and hardcoded fallback to `subjectCode = 'JAIBB'`.
 
----
+## Changes Implemented
 
-## 2. Milestones & Task Breakdown
+### 1. Master Logo & Asset Replacement
+- [x] Extracted 100% transparent RGBA master asset from user's provided file with anti-aliasing.
+- [x] Updated `assets/logo.png` with 100% transparent 1024x1024 green 3D emblem.
+- [x] Updated `assets/Bhromon.png` with 100% transparent 1024x1024 green 3D emblem.
+- [x] Restored master `logo.png` (with soft shadow on white).
+- [x] Configured `flutter_launcher_icons.yaml` with `adaptive_icon_background: "#FFFFFF"` and centered `assets/logo_foreground.png`.
+- [x] Rebuilt launcher icons (`dart run flutter_launcher_icons`) and native splash (`dart run flutter_native_splash:create`).
+- [x] Generated `web/favicon.png` and `web/icons/Icon-*.png`.
 
-### Milestone 1: Visual Identity & Asset Restoration (Transparent Background)
-- [x] Task 1.1: Restore `assets/Bhromon.png` to original vintage transparent wordmark (blob `665da78086c304c38cf5cb82e96ef994c51d36d5`).
-- [x] Task 1.2: Place the pristine 1024x1024 transparent green 3D compass/B emblem at `logo.png` and `assets/logo.png`.
-- [x] Task 1.3: Remove redundant `logo_foreground.png`.
-- [x] Task 1.4: Update `flutter_launcher_icons.yaml` and `flutter_native_splash.yaml`.
-- [x] Task 1.5: Run `dart run flutter_launcher_icons` and `dart run flutter_native_splash:create` to regenerate all Android mipmap/drawable and iOS launcher/splash assets.
-- [x] Task 1.6: Generate `web/favicon.png` (32x32 transparent) and web icons (`Icon-192.png`, `Icon-512.png`, `Icon-maskable-192.png`, `Icon-maskable-512.png`) with clean transparent backgrounds.
+### 2. Fix Study Group Booklet & Poster Overgeneralization
+- [x] Refined `isBankingContent` in `study_booklet_pdf_generator.dart` to strictly use word-boundary regex (`\b(jaibb|aibb|ibb|banking|banker)\b` / Bengali banking keywords) and excluded unrelated tour description.
+- [x] In `generateBranchNoticePoster`, made headings and subtitles dynamically adopt the group's name and subject title instead of forcing "JAIBB Examination Preparation".
+- [x] In `generateBookletPdf`, ensured booklet subtitle uses the actual subject title.
+- [x] In `study_book_chapters_screen.dart`, eliminated fallback to `subjectCode = 'JAIBB'`. Only assign banking code if resolved via `StudyBankingMasterCatalog.resolveCodeFromText(...)`.
 
-### Milestone 2: App Tagline & Branding Alignment Across UI & Localizations
-- [x] Task 2.1: Update `lib/core/localization/translation_keys.dart` and `tour_translation_keys.dart` with `'login_tagline'`: `'Walk Together'` (en) and `'একসাথে পথচলা'` (bn).
-- [x] Task 2.2: Update `lib/features/tour_group/presentation/pages/join_group_screen.dart` to use the localized tagline instead of `'Travel with life'`.
-- [x] Task 2.3: Update `lib/features/tour_group/presentation/widgets/desktop_tour_sidebar.dart` to use `'Walk Together'` / `'একসাথে পথচলা'`.
-- [x] Task 2.4: Update `web/index.html` with title `"Bhromon | Walk Together — Your Groups in One App"` and meta description.
-- [x] Task 2.5: Update `web/manifest.json` with "Walk together through every group" description.
+### 3. Verification & CI Checks
+- [x] `dart format .` passed.
+- [x] `dart analyze` passed with 0 issues.
+- [x] Tests passed: `study_booklet_pdf_generator_test.dart` (7/7 passed), `join_group_screen_test.dart` (6/6 passed), `tour_translation_test.dart` (15/15 passed), `hub_modules_golden_test.dart` (passed).
+- [x] `flutter build web --release` passed.
+- [x] Bumped version monotonically in `pubspec.yaml` to `1.8.188+242`.
 
-### Milestone 3: Documentation & Version Increment
-- [x] Task 3.1: Update `AGENTS.md` (root) Section 1 with the official brand tagline and positioning statement.
-- [x] Task 3.2: Update `README.md` to feature `Bhromon — Walk Together | একসাথে পথচলা`.
-- [x] Task 3.3: Increment version in `pubspec.yaml` to `1.8.187+241`.
-
-### Milestone 4: Verification, Dual-Agent Review & Deployment Gate
-- [x] Task 4.1: Run `dart format` across modified files (passed clean).
-- [x] Task 4.2: Run `dart analyze` to ensure 0 issues (passed clean).
-- [x] Task 4.3: Run `flutter test` for affected suites (all 15 unit tests and golden tests passed).
-- [x] Task 4.4: Verify web build with `flutter build web --release` (compiled successfully in 78.6s).
-- [ ] Task 4.5: Commit changes atomically, push branch `feat/brand-walk-together`, and open GitHub Pull Request.
-- [ ] Task 4.6: Perform Dual-Agent peer review with Claude Code CLI and obtain mutual sign-off.
-- [ ] Task 4.7: Ensure all required CI checks pass and squash-merge PR into `main`.
-- [ ] Task 4.8: Deploy production build to Firebase Hosting.
+### 4. PR & Dual-Agent Gate
+- [ ] Commit atomic changes to branch.
+- [ ] Push branch and open GitHub PR.
+- [ ] Dual-agent review: Antigravity review + Claude Code CLI review.
+- [ ] Squash-merge into `main`, update local `main`, and deploy to Firebase Hosting (`https://app.bhromon.fun`).
