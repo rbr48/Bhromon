@@ -341,6 +341,145 @@ class StudyBookletPdfGenerator {
     }
   }
 
+  /// Most visual lines one block of solution text may take. A block has to fit on a page below the
+  /// header and the footer. A block that does not fit is retried on each new page, and the layout
+  /// gives up after 20 pages with a [PdfTooBigPageException], so a long solution used to stall the
+  /// booklet and then fail. Twenty-four lines of the booklet's 9.5 pt text is well under a page.
+  static const int _blockLines = 24;
+
+  /// Characters that take one visual line at the booklet's size. It is kept low, so a block that
+  /// is estimated as short is never taller than a page.
+  static const int _charsPerLine = 80;
+
+  /// Cuts solution prose into blocks that each fit on one page. Lines keep their order and their
+  /// words, and a block joins its lines with newlines, so the blocks read as the text does. Only a
+  /// line longer than a block is cut, at a space, and then its two halves start on separate lines.
+  static List<String> proseBlocks(String text) {
+    final blocks = <String>[];
+    final current = <String>[];
+    var used = 0;
+
+    void close() {
+      if (current.isEmpty) return;
+      blocks.add(current.join('\n'));
+      current.clear();
+      used = 0;
+    }
+
+    for (final line in text.split('\n')) {
+      for (final piece in _linePieces(line)) {
+        final cost = piece.isEmpty ? 1 : (piece.length / _charsPerLine).ceil();
+        if (used + cost > _blockLines) close();
+        current.add(piece);
+        used += cost;
+      }
+    }
+    close();
+    return blocks;
+  }
+
+  /// Cuts one line that is longer than a block into pieces, at spaces where it can be.
+  static List<String> _linePieces(String line) {
+    const limit = _blockLines * _charsPerLine;
+    if (line.length <= limit) return [line];
+    final pieces = <String>[];
+    var rest = line;
+    while (rest.length > limit) {
+      var cut = rest.lastIndexOf(' ', limit);
+      if (cut <= 0) cut = limit;
+      pieces.add(rest.substring(0, cut).trimRight());
+      rest = rest.substring(cut).trimLeft();
+    }
+    pieces.add(rest);
+    return pieces;
+  }
+
+  /// The widgets of one question: its heading, its solution, then a rule. Each widget is one block
+  /// of the page, so a long solution flows across pages instead of failing to fit on one.
+  static List<pw.Widget> _questionWidgets(StudyBookletQuestionItem q) {
+    final widgets = <pw.Widget>[
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.grey200,
+          borderRadius: pw.BorderRadius.circular(4),
+        ),
+        child: pw.Row(
+          children: [
+            if (q.moduleCode != null) ...[
+              pw.Container(
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: pw.BoxDecoration(
+                  color: const PdfColor(0.08, 0.25, 0.18),
+                  borderRadius: pw.BorderRadius.circular(3),
+                ),
+                child: pw.Text(
+                  'Mod ${q.moduleCode}',
+                  style: const pw.TextStyle(
+                    color: PdfColors.white,
+                    fontSize: 8.5,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(width: 6),
+            ],
+            pw.Expanded(
+              child: pw.Text(
+                q.title,
+                style: const pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      pw.SizedBox(height: 6),
+    ];
+
+    for (var p = 0; p < q.pieces.length; p++) {
+      final List<pw.Widget> parts = switch (q.pieces[p]) {
+        StudyBookletText(:final text) => <pw.Widget>[
+            for (final block in proseBlocks(text))
+              pw.Text(
+                block,
+                style: const pw.TextStyle(
+                  fontSize: 9.5,
+                  lineSpacing: 2,
+                  color: PdfColors.grey900,
+                ),
+              ),
+          ],
+        StudyBookletFigure(:final spec) => <pw.Widget>[
+            pw.Center(child: ppcPdfFigure(spec, width: 440)),
+          ],
+        StudyBookletSvgFigure(:final svg) => <pw.Widget>[
+            pw.Center(child: _svgPdfFigure(svg, width: 440)),
+          ],
+      };
+      for (var k = 0; k < parts.length; k++) {
+        // A gap between two pieces, but none between the blocks of one prose piece.
+        if (k == 0 && p > 0) widgets.add(pw.SizedBox(height: 6));
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4),
+            child: parts[k],
+          ),
+        );
+      }
+    }
+
+    widgets
+      ..add(pw.SizedBox(height: 8))
+      ..add(pw.Divider(color: PdfColors.grey300, thickness: 0.5))
+      ..add(pw.SizedBox(height: 14));
+    return widgets;
+  }
+
   /// Loads fonts and configures [BanglaPdf] for typography.
   Future<pw.Document> _createDocument(String title) async {
     final regular = pw.Font.ttf(
@@ -672,91 +811,8 @@ class StudyBookletPdfGenerator {
                 ),
               ),
 
-              // Questions & Answers
-              for (final q in chapter.questions) ...[
-                pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 14),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      // Question Title Header
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: pw.BoxDecoration(
-                          color: PdfColors.grey200,
-                          borderRadius: pw.BorderRadius.circular(4),
-                        ),
-                        child: pw.Row(
-                          children: [
-                            if (q.moduleCode != null) ...[
-                              pw.Container(
-                                padding: const pw.EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 1),
-                                decoration: pw.BoxDecoration(
-                                  color: const PdfColor(0.08, 0.25, 0.18),
-                                  borderRadius: pw.BorderRadius.circular(3),
-                                ),
-                                child: pw.Text(
-                                  'Mod ${q.moduleCode}',
-                                  style: const pw.TextStyle(
-                                    color: PdfColors.white,
-                                    fontSize: 8.5,
-                                    fontWeight: pw.FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              pw.SizedBox(width: 6),
-                            ],
-                            pw.Expanded(
-                              child: pw.Text(
-                                q.title,
-                                style: const pw.TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: PdfColors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      pw.SizedBox(height: 6),
-
-                      // Solution Body: prose, with each figure in its place
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            for (final (index, piece) in q.pieces.indexed) ...[
-                              if (index > 0) pw.SizedBox(height: 6),
-                              switch (piece) {
-                                StudyBookletText(:final text) => pw.Text(
-                                    text,
-                                    style: const pw.TextStyle(
-                                      fontSize: 9.5,
-                                      lineSpacing: 2,
-                                      color: PdfColors.grey900,
-                                    ),
-                                  ),
-                                StudyBookletFigure(:final spec) => pw.Center(
-                                    child: ppcPdfFigure(spec, width: 440),
-                                  ),
-                                StudyBookletSvgFigure(:final svg) => pw.Center(
-                                    child: _svgPdfFigure(svg, width: 440),
-                                  ),
-                              },
-                            ],
-                          ],
-                        ),
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Divider(color: PdfColors.grey300, thickness: 0.5),
-                    ],
-                  ),
-                ),
-              ],
+              // Questions & Answers, each laid out as blocks that fit on a page
+              for (final q in chapter.questions) ..._questionWidgets(q),
             ];
           },
         ),
