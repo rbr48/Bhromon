@@ -31,6 +31,13 @@ final class StudyBookletFigure extends StudyBookletPiece {
   const StudyBookletFigure(this.spec);
 }
 
+/// A vector graphic from an ```svg fence or <svg> element, drawn in the booklet.
+final class StudyBookletSvgFigure extends StudyBookletPiece {
+  final String svg;
+
+  const StudyBookletSvgFigure(this.svg);
+}
+
 /// Question data for inclusion in the printable examination booklet.
 class StudyBookletQuestionItem {
   final String questionNumber;
@@ -256,34 +263,82 @@ class StudyBookletPdfGenerator {
   }
 
   /// Splits a solution into prose and figures, in order. A `chart:ppc` fence
-  /// that parses becomes a [StudyBookletFigure]; anything else stays in the prose
+  /// that parses becomes a [StudyBookletFigure]; an `svg` fence or `<svg>`
+  /// block becomes a [StudyBookletSvgFigure]; anything else stays in the prose
   /// and is cleaned as before. A solution with no figure is one prose piece,
   /// exactly as it was before figures existed.
   static List<StudyBookletPiece> solutionPieces(String raw) {
     final text = raw.replaceAll('\r\n', '\n');
     final fence = RegExp(
-      r'^```[ \t]*chart:ppc[ \t]*\n([\s\S]*?)^```[ \t]*$',
+      r'^```[ \t]*(chart:ppc|svg)[ \t]*\n([\s\S]*?)^```[ \t]*$',
       multiLine: true,
     );
     final pieces = <StudyBookletPiece>[];
     var cursor = 0;
     for (final match in fence.allMatches(text)) {
-      final spec = PpcSpec.parse(match.group(1) ?? '');
-      if (spec == null) continue;
-      pieces
-        ..add(StudyBookletText(
-          _sanitizeMarkdownForPdf(text.substring(cursor, match.start)),
-        ))
-        ..add(StudyBookletFigure(spec));
-      cursor = match.end;
+      final tag = match.group(1)?.trim() ?? '';
+      final body = (match.group(2) ?? '').trim();
+
+      if (tag == 'chart:ppc') {
+        final spec = PpcSpec.parse(body);
+        if (spec != null) {
+          final before =
+              _sanitizeMarkdownForPdf(text.substring(cursor, match.start));
+          if (before.isNotEmpty) pieces.add(StudyBookletText(before));
+          pieces.add(StudyBookletFigure(spec));
+          cursor = match.end;
+          continue;
+        }
+      } else if (tag == 'svg' &&
+          body.startsWith('<svg') &&
+          body.endsWith('</svg>')) {
+        final before =
+            _sanitizeMarkdownForPdf(text.substring(cursor, match.start));
+        if (before.isNotEmpty) pieces.add(StudyBookletText(before));
+        pieces.add(StudyBookletSvgFigure(body));
+        cursor = match.end;
+        continue;
+      }
     }
-    pieces.add(
-      StudyBookletText(_sanitizeMarkdownForPdf(text.substring(cursor))),
-    );
+    final after = _sanitizeMarkdownForPdf(text.substring(cursor));
+    if (after.isNotEmpty) {
+      pieces.add(StudyBookletText(after));
+    }
     return [
       for (final piece in pieces)
         if (piece is! StudyBookletText || piece.text.isNotEmpty) piece,
     ];
+  }
+
+  static pw.Widget _svgPdfFigure(
+    String svg, {
+    double width = 440,
+    double height = 230,
+  }) {
+    try {
+      return pw.Container(
+        margin: const pw.EdgeInsets.symmetric(vertical: 8),
+        alignment: pw.Alignment.center,
+        child: pw.SvgImage(
+          svg: svg,
+          width: width,
+          height: height,
+          fit: pw.BoxFit.contain,
+        ),
+      );
+    } catch (_) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(8),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        ),
+        child: pw.Text(
+          '[Vector Diagram / চিত্র]',
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+        ),
+      );
+    }
   }
 
   /// Loads fonts and configures [BanglaPdf] for typography.
@@ -687,6 +742,9 @@ class StudyBookletPdfGenerator {
                                   ),
                                 StudyBookletFigure(:final spec) => pw.Center(
                                     child: ppcPdfFigure(spec, width: 440),
+                                  ),
+                                StudyBookletSvgFigure(:final svg) => pw.Center(
+                                    child: _svgPdfFigure(svg, width: 440),
                                   ),
                               },
                             ],

@@ -164,6 +164,13 @@ class ChatChartBlock extends ChatBlock {
   const ChatChartBlock(this.spec);
 }
 
+/// A scalable vector graphic from an ```svg code fence or an embedded <svg> element.
+class ChatSvgBlock extends ChatBlock {
+  final String svg;
+
+  const ChatSvgBlock(this.svg);
+}
+
 /// Cleans raw LaTeX math commands for Bengali script text, avoiding broken font
 /// shaping in flutter_math_fork and converting fractions and symbols into legible Unicode text.
 String cleanBengaliMath(String input) {
@@ -419,13 +426,40 @@ List<ChatBlock> parseChatBlocks(String text) {
         i++;
       }
       final code = codeLines.join('\n');
-      // A chart fence that does not parse stays a plain code block, so the
-      // mistake is seen in the text rather than dropped.
-      final chart = lang == 'chart:ppc' ? PpcSpec.parse(code) : null;
-      blocks.add(chart != null
-          ? ChatChartBlock(chart)
-          : ChatCodeBlock(code: code, language: lang.isEmpty ? null : lang));
+      final normalizedLang = lang.toLowerCase();
+      final trimmedCode = code.trim();
+      final isSvgFence = normalizedLang == 'svg' ||
+          ((normalizedLang.isEmpty || normalizedLang == 'xml') &&
+              trimmedCode.startsWith('<svg') &&
+              trimmedCode.endsWith('</svg>'));
+
+      if (isSvgFence) {
+        blocks.add(ChatSvgBlock(trimmedCode));
+      } else {
+        // A chart fence that does not parse stays a plain code block, so the
+        // mistake is seen in the text rather than dropped.
+        final chart = lang == 'chart:ppc' ? PpcSpec.parse(code) : null;
+        blocks.add(chart != null
+            ? ChatChartBlock(chart)
+            : ChatCodeBlock(code: code, language: lang.isEmpty ? null : lang));
+      }
       if (i < rawLines.length) i++; // skip closing ```
+      continue;
+    }
+
+    // 1b. Raw SVG Block
+    if (trimmed.startsWith('<svg')) {
+      final svgLines = <String>[rawLines[i]];
+      var foundEnd = trimmed.contains('</svg>');
+      i++;
+      while (!foundEnd && i < rawLines.length) {
+        svgLines.add(rawLines[i]);
+        if (rawLines[i].contains('</svg>')) {
+          foundEnd = true;
+        }
+        i++;
+      }
+      blocks.add(ChatSvgBlock(svgLines.join('\n').trim()));
       continue;
     }
 
@@ -600,6 +634,7 @@ List<ChatBlock> parseChatBlocks(String text) {
       // Check if next starts another block
       final isBlockStart = nextTrimmed.startsWith('```') ||
           nextTrimmed.startsWith(r'$$') ||
+          nextTrimmed.startsWith('<svg') ||
           (nextTrimmed.contains('|') &&
               i + 1 < rawLines.length &&
               isTableDelimiter(rawLines[i + 1])) ||
