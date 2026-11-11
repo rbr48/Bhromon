@@ -197,7 +197,7 @@ void main() {
         StudyMaterialsScreen(tourId: 'T', book: _book, repository: repo),
       );
 
-      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.tap(find.byIcon(Icons.more_vert).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Report'));
       await tester.pumpAndSettle();
@@ -217,7 +217,7 @@ void main() {
       );
 
       expect(find.text('Reports to review'), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.tap(find.byIcon(Icons.more_vert).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Restore'));
       await tester.pumpAndSettle();
