@@ -24,6 +24,7 @@ import {
   aboutPerson,
   anonymize,
   deleteWhen,
+  familyTaskOf,
   formerMemberId,
   isInTour,
   leaveClientTable,
@@ -499,6 +500,14 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('transfers'), anonymize(LEDGER_TRANSFER, email, standIn));
   await applyToQuery(db, tour.collection('notices'), anonymize(NOTICE, email, standIn));
   await applyToQuery(db, tour.collection('family_dates'), anonymize(FAMILY_DATE, email, standIn));
+  // A shared shopping or to-do item stays for the circle under the stand-in, and an item given to the
+  // person is open to anyone again. Their own day counts for those items go.
+  await applyToQuery(db, tour.collection('family_tasks'), familyTaskOf(email, standIn));
+  await applyToQuery(
+    db,
+    tour.collection('family_task_daily').where('email', '==', email),
+    aboutPerson(email),
+  );
   await applyToQuery(db, tour.collection('checkpoints'), anonymize(CHECKPOINT, email, standIn));
   await applyToQuery(db, tour.collection('checklist'), anonymize(CHECKLIST_ITEM, email, standIn));
   await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));

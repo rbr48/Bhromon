@@ -785,15 +785,39 @@ service cloud.firestore {
              s.payoutOrder is list && s.payoutOrder.size() <= 200;
     }
 
-    // A shared shopping or to-do item in a family circle.
-    function validFamilyTask(d) {
-      return d.keys().hasOnly(['title', 'kind', 'done', 'assigneeEmail', 'doneByEmail', 'createdByEmail']) &&
+    // A shared shopping or to-do item in a family circle. Its tick is either open (done false,
+    // no name, no time) or taken (done true, with the ticker's name and the time). An assignee
+    // must be an active member of the circle, and the title must hold a character that is not
+    // a space.
+    function validFamilyTask(d, tourId) {
+      return d.keys().hasOnly(['title', 'kind', 'done', 'assigneeEmail', 'doneByEmail', 'createdByEmail', 'createdAt', 'doneAt']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.title.matches('.*[^ \\t\\r\\n].*') &&
              d.kind in ['shopping', 'todo'] &&
              d.done is bool &&
-             (d.get('assigneeEmail', null) == null || (d.assigneeEmail is string && d.assigneeEmail.size() <= 254)) &&
+             (d.get('assigneeEmail', null) == null || (d.assigneeEmail is string && d.assigneeEmail.size() <= 254 && familyMemberIsActive(tourId, d.assigneeEmail))) &&
              (d.get('doneByEmail', null) == null || (d.doneByEmail is string && d.doneByEmail.size() <= 254)) &&
-             d.createdByEmail is string;
+             d.done == (d.get('doneByEmail', null) != null) &&
+             d.createdByEmail is string && d.createdByEmail.size() <= 254 &&
+             (d.get('createdAt', null) == null || d.createdAt is timestamp) &&
+             (d.get('doneAt', null) == null || d.doneAt is timestamp);
+    }
+    // Whether [email] holds an active membership row in the tour. The row's id joins the tour and the email.
+    function familyMemberIsActive(tourId, email) {
+      return exists(/databases/$(database)/documents/memberships/$(tourId + '__' + email)) &&
+             get(/databases/$(database)/documents/memberships/$(tourId + '__' + email)).data.status == 'active';
+    }
+    // The Dhaka day a family item is counted on, from the server's clock (the same day rule as studies).
+    function familyTaskDayKey() {
+      let dhaka = request.time + duration.value(6, 'h');
+      return string(dhaka.year() * 10000 + dhaka.month() * 100 + dhaka.day());
+    }
+    // Whether a new family item is written with its member's counter for the day: the counter is made, or goes
+    // up by one, in the same batch. The counter's own rule keeps it at or under the day's limit.
+    function familyTaskCounted(tourId) {
+      return existsAfter(/databases/$(database)/documents/tours/$(tourId)/family_task_daily/$(tourUserEmail() + '__' + familyTaskDayKey())) &&
+             ((!exists(/databases/$(database)/documents/tours/$(tourId)/family_task_daily/$(tourUserEmail() + '__' + familyTaskDayKey())) && getAfter(/databases/$(database)/documents/tours/$(tourId)/family_task_daily/$(tourUserEmail() + '__' + familyTaskDayKey())).data.count == 1) ||
+              (exists(/databases/$(database)/documents/tours/$(tourId)/family_task_daily/$(tourUserEmail() + '__' + familyTaskDayKey())) && getAfter(/databases/$(database)/documents/tours/$(tourId)/family_task_daily/$(tourUserEmail() + '__' + familyTaskDayKey())).data.count == get(/databases/$(database)/documents/tours/$(tourId)/family_task_daily/$(tourUserEmail() + '__' + familyTaskDayKey())).data.count + 1));
     }
     // A book on a study group's list: a title, an optional author and note, one of three
     // statuses, and an approval. A member's book is proposed until an admin lists it or
@@ -1769,25 +1793,62 @@ service cloud.firestore {
       // Shared shopping and to-do items. Any member of a family circle adds one under
       // their own email and ticks items off; the member who ticked it is recorded.
       // Editing and removing are for the creator or an admin.
+      // Shared shopping and to-do items. Any member of a family circle adds one under their own
+      // email, with the day's count in the same batch. Anyone ticks an open item under their own
+      // name, and anyone unticks a taken one. The creator or an admin edits the text, the kind or
+      // the assignee, and removes the item.
       match /family_tasks/{taskId} {
         allow read: if isActiveMember(tourId);
         allow create: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == tourUserEmail() &&
-                         validFamilyTask(request.resource.data);
+                         request.resource.data.done == false &&
+                         request.resource.data.get('doneByEmail', null) == null &&
+                         request.resource.data.get('doneAt', null) == null &&
+                         request.resource.data.get('createdAt', request.time) == request.time &&
+                         validFamilyTask(request.resource.data, tourId) &&
+                         familyTaskCounted(tourId);
+        // Ticking and unticking. Only the tick fields change.
         allow update: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['done', 'doneByEmail']) &&
+                           .hasOnly(['done', 'doneByEmail', 'doneAt']) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null) &&
                          (request.resource.data.done
-                            ? request.resource.data.get('doneByEmail', null) == tourUserEmail()
-                            : request.resource.data.get('doneByEmail', null) == null) &&
-                         validFamilyTask(request.resource.data);
+                            ? (resource.data.done == false &&
+                               request.resource.data.doneByEmail == tourUserEmail() &&
+                               request.resource.data.get('doneAt', request.time) == request.time)
+                            : (request.resource.data.get('doneByEmail', null) == null &&
+                               request.resource.data.get('doneAt', null) == null)) &&
+                         validFamilyTask(request.resource.data, tourId);
+        // Editing the text, the kind or the assignee. The tick is not touched here.
         allow update: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['title', 'kind', 'assigneeEmail']) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
-                         validFamilyTask(request.resource.data);
+                         request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null) &&
+                         validFamilyTask(request.resource.data, tourId);
         allow delete: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+      }
+
+      // A member's count of shared items started on a Dhaka day. It is written in the same batch as
+      // each item it counts, and the rules keep it at or under the day's limit of 200. Only its
+      // owner reads it.
+      match /family_task_daily/{dayId} {
+        allow read: if isActiveMember(tourId) && dayId == tourUserEmail() + '__' + familyTaskDayKey();
+        allow create: if isSharedListTour(tourId) && isActiveMember(tourId) &&
+                         dayId == tourUserEmail() + '__' + familyTaskDayKey() &&
+                         request.resource.data.keys().hasOnly(['count', 'email']) &&
+                         request.resource.data.count == 1 &&
+                         request.resource.data.email == tourUserEmail();
+        allow update: if isSharedListTour(tourId) && isActiveMember(tourId) &&
+                         dayId == tourUserEmail() + '__' + familyTaskDayKey() &&
+                         request.resource.data.keys().hasOnly(['count', 'email']) &&
+                         request.resource.data.count == resource.data.count + 1 &&
+                         request.resource.data.count <= 200 &&
+                         request.resource.data.email == tourUserEmail();
+        allow delete: if false;
       }
 
       // A study or book club's book list. A member proposes a book, and it waits for an admin,
