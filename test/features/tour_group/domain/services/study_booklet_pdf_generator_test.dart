@@ -172,5 +172,59 @@ The relationship is primarily that of debtor and creditor.
       expect(String.fromCharCodes(posterBytes.sublist(0, 5)), '%PDF-');
       expect(posterBytes.length, greaterThan(2000));
     });
+
+    test(
+        'isBankingContent distinguishes banking groups from generic study circles',
+        () {
+      const bankingContent1 = StudyBookletContent(
+        subjectTitle: 'Basic Accounting (BA)',
+        subjectCode: 'JAIBB',
+        tourName: 'dhh',
+        chapters: [],
+      );
+      expect(
+          StudyBookletPdfGenerator.isBankingContent(bankingContent1), isTrue);
+
+      const bankingContent2 = StudyBookletContent(
+        subjectTitle: 'Banking Laws',
+        tourName: 'Sonali Bank Circle',
+        chapters: [],
+      );
+      expect(
+          StudyBookletPdfGenerator.isBankingContent(bankingContent2), isTrue);
+
+      const genericContent = StudyBookletContent(
+        subjectTitle: 'gyg',
+        tourName: 'dhh',
+        chapters: [
+          StudyBookletChapterItem(number: 1, title: 'fh', questions: []),
+        ],
+      );
+      expect(
+          StudyBookletPdfGenerator.isBankingContent(genericContent), isFalse);
+    });
+
+    test(
+        'generateBookletPdf and generateBranchNoticePoster work for generic non-banking circle',
+        () async {
+      const genericContent = StudyBookletContent(
+        subjectTitle: 'gyg',
+        tourName: 'dhh',
+        inviteCode: 'KHLDFFV4',
+        chapters: [
+          StudyBookletChapterItem(number: 1, title: 'fh', questions: []),
+        ],
+      );
+
+      final bookletBytes =
+          await generator.generateBookletPdf(genericContent, isBengali: true);
+      expect(bookletBytes, isNotEmpty);
+      expect(String.fromCharCodes(bookletBytes.sublist(0, 5)), '%PDF-');
+
+      final posterBytes =
+          await generator.generateBranchNoticePoster(genericContent);
+      expect(posterBytes, isNotEmpty);
+      expect(String.fromCharCodes(posterBytes.sublist(0, 5)), '%PDF-');
+    });
   });
 }

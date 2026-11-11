@@ -177,9 +177,7 @@ class StudyDailyStreakRules {
 
       final circleBank = (groupName != null && groupName.isNotEmpty)
           ? groupName
-          : (member.tourName.isNotEmpty
-              ? member.tourName
-              : 'JAIBB Study Circle');
+          : (member.tourName.isNotEmpty ? member.tourName : 'Study Circle');
 
       results.add(
         BranchStudyStanding(
@@ -203,7 +201,7 @@ class StudyDailyStreakRules {
           displayName: myName.isNotEmpty ? myName : 'You',
           bankName: (groupName != null && groupName.isNotEmpty)
               ? groupName
-              : 'JAIBB Study Circle',
+              : 'Study Circle',
           branchName: 'Member',
           streakDays: myStreak,
           chaptersRead: myChapters,
