@@ -18,4 +18,5 @@ lib/features/offline_vault/data/datasources/sync_manager.dart
 lib/features/ota/presentation/cubit/ota_cubit.dart
 lib/features/ota/presentation/widgets/ota_update_dialog.dart
 lib/features/tour_group/data/tour_media_upload_io.dart
+lib/features/tour_group/presentation/viewer_file_helper_io.dart
 lib/features/trip_log/presentation/pages/trip_log_editor.dart

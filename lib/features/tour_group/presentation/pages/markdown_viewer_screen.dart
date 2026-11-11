@@ -1,3 +1,5 @@
+import 'dart:convert' show utf8;
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -14,6 +16,8 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../domain/models/study_syllabus_models.dart';
 import '../../domain/services/study_tts_controller.dart';
+import '../tour_pdf_download.dart';
+import '../viewer_file_helper.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_commute_audio_bar.dart';
 
@@ -819,27 +823,164 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     }
   }
 
+  String _safeFileName(String title,
+      {String fallback = 'document', String ext = 'md'}) {
+    final clean = title
+        .trim()
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+    final base = clean.isEmpty ? fallback : clean;
+    return base.toLowerCase().endsWith('.$ext') ? base : '$base.$ext';
+  }
+
+  Future<String?> _ensureLocalMarkdownFilePath() async {
+    if (kIsWeb) return null;
+    if (widget.filePath != null && fileExists(widget.filePath!)) {
+      return widget.filePath;
+    }
+    final content = _currentContent;
+    if (content.isEmpty) return null;
+    final name = _safeFileName(_currentTitle, ext: 'md');
+    return await saveTempText(content, name);
+  }
+
   Future<void> _shareDocument() async {
     final title = _currentTitle;
     final content = _currentContent;
-    if (widget.filePath != null && !kIsWeb) {
-      // ignore: deprecated_member_use
-      await Share.shareXFiles([XFile(widget.filePath!)], text: title);
-    } else if (widget.fileUrl != null && !_showingAlternate) {
-      // ignore: deprecated_member_use
-      await Share.share(signedMediaUrl(widget.fileUrl!), subject: title);
-    } else if (content.isNotEmpty) {
-      // ignore: deprecated_member_use
-      await Share.share(content, subject: title);
+    final fileName = _safeFileName(title, ext: 'md');
+
+    try {
+      if (kIsWeb) {
+        if (content.isNotEmpty) {
+          try {
+            await SharePlus.instance.share(
+              ShareParams(
+                files: [
+                  XFile.fromData(
+                    Uint8List.fromList(utf8.encode(content)),
+                    mimeType: 'text/markdown',
+                    name: fileName,
+                  ),
+                ],
+                fileNameOverrides: [fileName],
+                text: title,
+              ),
+            );
+          } catch (e) {
+            try {
+              await SharePlus.instance.share(
+                ShareParams(text: content, subject: title),
+              );
+            } catch (fallbackError) {
+              // Web share unsupported or cancelled, trigger browser file download
+              await downloadWebFile(
+                Uint8List.fromList(utf8.encode(content)),
+                fileName,
+                mimeType: 'text/markdown',
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.l10n.translate('viewer_downloaded')),
+                  ),
+                );
+              }
+            }
+          }
+        } else if (widget.fileUrl != null && !_showingAlternate) {
+          await SharePlus.instance.share(
+            ShareParams(
+              text: signedMediaUrl(widget.fileUrl!),
+              subject: title,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Mobile & Desktop platforms
+      final localPath = await _ensureLocalMarkdownFilePath();
+      if (localPath != null) {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [
+              XFile(
+                localPath,
+                mimeType: 'text/markdown',
+                name: fileName,
+              ),
+            ],
+            fileNameOverrides: [fileName],
+            text: title,
+          ),
+        );
+      } else if (content.isNotEmpty) {
+        await SharePlus.instance.share(
+          ShareParams(text: content, subject: title),
+        );
+      } else if (widget.fileUrl != null && !_showingAlternate) {
+        await SharePlus.instance.share(
+          ShareParams(
+            text: signedMediaUrl(widget.fileUrl!),
+            subject: title,
+          ),
+        );
+      }
+    } catch (e, st) {
+      logWarning('[MarkdownViewer] Share document failed', e, st);
     }
   }
 
   Future<void> _openExternally() async {
+    final title = _currentTitle;
+    final content = _currentContent;
+    final fileName = _safeFileName(title, ext: 'md');
+
     try {
-      if (!kIsWeb && widget.filePath != null) {
-        await OpenFilex.open(widget.filePath!);
+      if (kIsWeb) {
+        if (content.isNotEmpty) {
+          await openWebBlob(
+            Uint8List.fromList(utf8.encode(content)),
+            mimeType: 'text/markdown; charset=utf-8',
+            filename: fileName,
+          );
+        } else if (widget.fileUrl != null) {
+          final uri = Uri.parse(signedMediaUrl(widget.fileUrl!));
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, webOnlyWindowName: '_blank');
+          }
+        }
         return;
       }
+
+      // Mobile & Desktop
+      final localPath = await _ensureLocalMarkdownFilePath();
+      if (localPath != null) {
+        var result = await OpenFilex.open(localPath, type: 'text/markdown');
+        if (result.type == ResultType.noAppToOpen) {
+          result = await OpenFilex.open(localPath, type: 'text/plain');
+        }
+        if (result.type != ResultType.done && mounted) {
+          logWarning(
+              '[MarkdownViewer] OpenFilex error: ${result.type} - ${result.message}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.type == ResultType.noAppToOpen
+                    ? context.l10n.translate('viewer_no_external_app')
+                    : context.l10n.translate('viewer_open_failed'),
+              ),
+              action: SnackBarAction(
+                label: context.l10n.translate('viewer_share'),
+                onPressed: _shareDocument,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       if (widget.fileUrl != null) {
         final uri = Uri.parse(signedMediaUrl(widget.fileUrl!));
         if (await canLaunchUrl(uri)) {
@@ -848,6 +989,13 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       }
     } catch (e, st) {
       logWarning('[MarkdownViewer] External launch error', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('${context.l10n.translate('viewer_open_failed')}: $e')),
+        );
+      }
     }
   }
 
