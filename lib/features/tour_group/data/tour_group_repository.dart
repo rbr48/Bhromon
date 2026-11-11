@@ -3431,9 +3431,9 @@ class TourGroupRepository {
             ]);
   }
 
-  /// Adds a problem. [shown] is false for a problem an admin still has to show. [releaseAt] is when
+  /// Adds a problem and returns its document id. [shown] is false for a problem an admin still has to show. [releaseAt] is when
   /// the reference solution opens to members; null leaves it unset.
-  Future<void> addStudyProblem(
+  Future<String> addStudyProblem(
     String tourId,
     String subjectId, {
     required String text,
@@ -3442,7 +3442,7 @@ class TourGroupRepository {
     required bool shown,
   }) async {
     final email = _requireEmail();
-    await _sub(tourId, 'study_subjects')
+    final ref = await _sub(tourId, 'study_subjects')
         .doc(subjectId)
         .collection('problems')
         .add({
@@ -3454,6 +3454,7 @@ class TourGroupRepository {
       'shown': shown,
       'pinned': false,
     });
+    return ref.id;
   }
 
   /// Changes a problem's words or title. Its author does this.

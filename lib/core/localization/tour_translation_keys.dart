@@ -2729,6 +2729,16 @@ class TourTranslationKeys {
       'study_subject_no_modules_admin':
           'Turn on a module to start, such as exam tips.',
       'study_subject_no_modules': 'No modules are turned on yet. Ask an admin.',
+      'study_master_materials_title': 'JAIBB Master Exam Pack',
+      'study_master_materials_desc':
+          '1-tap load examiner tips, worked problems with solutions, past exam index & glossary terms.',
+      'study_master_materials_btn': 'Load Master Materials',
+      'study_master_materials_confirm_title': 'Load JAIBB Master Materials?',
+      'study_master_materials_confirm_body':
+          'This will populate high-yield examiner tips, worked problems with model solutions, past papers index, and glossary terms directly into this subject.',
+      'study_master_materials_loading': 'Loading JAIBB Master Materials...',
+      'study_master_materials_loaded':
+          'JAIBB Master Materials loaded successfully! Modules enabled.',
       'study_module_saved': 'Modules saved.',
       'study_module_off': 'Off',
       'study_paper_add': 'Add a past paper',
@@ -6415,6 +6425,16 @@ class TourTranslationKeys {
           'শুরু করতে একটি মডিউল চালু করুন, যেমন পরীক্ষার টিপস।',
       'study_subject_no_modules':
           'এখনও কোনো মডিউল চালু হয়নি। অ্যাডমিনকে বলুন।',
+      'study_master_materials_title': 'জেএআইবিবি অফিসিয়াল প্রস্তুতি প্যাক',
+      'study_master_materials_desc':
+          '১-ট্যাপে পরীক্ষক টিপস, সমাধানকৃত সমস্যা, বিগত পরীক্ষার প্রশ্ন ইনডেক্স ও পরিভাষা লোড করুন।',
+      'study_master_materials_btn': 'উপকরণ লোড করুন',
+      'study_master_materials_confirm_title': 'অফিসিয়াল উপকরণ লোড করবেন?',
+      'study_master_materials_confirm_body':
+          'এটি এই বিষয়ে পরীক্ষক-মানের টিপস, পূর্ণাঙ্গ সমাধানসহ অনুশীলন সমস্যা, বিগত পরীক্ষার প্রশ্ন এবং গুরুত্বপূর্ণ ব্যাংকিং পরিভাষাসমূহ সরাসরি যুক্ত করবে।',
+      'study_master_materials_loading': 'উপকরণ লোড হচ্ছে...',
+      'study_master_materials_loaded':
+          'অফিসিয়াল প্রস্তুতি উপকরণ সফলভাবে যুক্ত হয়েছে! প্রয়োজনীয় মডিউল চালু করা হয়েছে।',
       'study_module_saved': 'মডিউল সংরক্ষণ হয়েছে।',
       'study_module_off': 'বন্ধ',
       'study_paper_add': 'আগের প্রশ্নপত্র যোগ করুন',

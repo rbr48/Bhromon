@@ -9,6 +9,7 @@ import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/models/study_subject_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/study_banking_master_catalog.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_module_sheet.dart';
@@ -54,6 +55,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
   late final Stream<List<StudyBook>> _books =
       _repository.watchStudyBooks(widget.tourId);
   TourRole? _myRole;
+  bool _isLoadingMasterMaterials = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
@@ -217,6 +219,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final subject = widget.subject;
+    final subjectCode = StudyBankingMasterCatalog.resolveSubjectCode(subject);
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
@@ -233,6 +236,19 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
           iconTheme: IconThemeData(color: palette.text),
           elevation: 0,
           actions: [
+            if (_isAdmin && subjectCode != null)
+              IconButton(
+                tooltip: l10n.translate('study_master_materials_title'),
+                icon: const Icon(Icons.auto_stories_rounded),
+                onPressed: _isLoadingMasterMaterials
+                    ? null
+                    : () async {
+                        final current = await _repository
+                            .watchStudyModules(widget.tourId, widget.subject.id)
+                            .first;
+                        if (mounted) _loadMasterMaterials(subjectCode, current);
+                      },
+              ),
             if (_isAdmin)
               IconButton(
                 tooltip: l10n.translate('study_subject_customise'),
@@ -269,6 +285,8 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
                     _overview(),
+                    if (_isAdmin && subjectCode != null)
+                      _masterMaterialsBanner(subjectCode, settings),
                     StudyTodayCard(
                       tourId: widget.tourId,
                       subject: widget.subject,
@@ -341,6 +359,259 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         ),
       ),
     );
+  }
+
+  Widget _masterMaterialsBanner(
+    String subjectCode,
+    Map<StudyModuleKey, StudyModuleSettings> settings,
+  ) {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    return Card(
+      color: palette.accentText.withValues(alpha: 0.12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: palette.accentText.withValues(alpha: 0.3)),
+      ),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_stories_rounded,
+                    color: palette.accentText, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.translate('study_master_materials_title'),
+                    style: TextStyle(
+                      color: palette.text,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                if (_isLoadingMasterMaterials)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.translate('study_master_materials_desc'),
+              style: TextStyle(color: palette.text70, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: Text(l10n.translate('study_master_materials_btn')),
+                onPressed: _isLoadingMasterMaterials
+                    ? null
+                    : () => _loadMasterMaterials(subjectCode, settings),
+                style: FilledButton.styleFrom(
+                  backgroundColor: palette.accentText,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadMasterMaterials(
+    String subjectCode,
+    Map<StudyModuleKey, StudyModuleSettings> currentModules,
+  ) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final palette = context.forest;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: palette.card,
+        title: Text(
+          l10n.translate('study_master_materials_confirm_title'),
+          style: TextStyle(color: palette.text, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          l10n.translate('study_master_materials_confirm_body'),
+          style: TextStyle(color: palette.text70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.translate('study_cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: palette.accentText),
+            child: Text(l10n.translate('study_master_materials_btn')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isLoadingMasterMaterials = true);
+
+    try {
+      final tips = StudyBankingMasterCatalog.tipsFor(subjectCode);
+      final problems = StudyBankingMasterCatalog.problemsFor(subjectCode);
+      final papers = StudyBankingMasterCatalog.pastPapersFor(subjectCode);
+      final glossary = StudyBankingMasterCatalog.glossaryFor(subjectCode);
+
+      // Enable modules
+      await _repository.setStudyModule(
+        widget.tourId,
+        widget.subject.id,
+        StudyModuleSettings(
+          key: StudyModuleKey.tips,
+          enabled: true,
+          name: currentModules[StudyModuleKey.tips]?.name ??
+              l10n.translate('study_module_tips'),
+          postPolicy: currentModules[StudyModuleKey.tips]?.postPolicy ??
+              StudyPostPolicy.members,
+        ),
+      );
+
+      await _repository.setStudyModule(
+        widget.tourId,
+        widget.subject.id,
+        StudyModuleSettings(
+          key: StudyModuleKey.problems,
+          enabled: true,
+          name: currentModules[StudyModuleKey.problems]?.name ??
+              l10n.translate('study_module_problems'),
+          postPolicy: currentModules[StudyModuleKey.problems]?.postPolicy ??
+              StudyPostPolicy.members,
+        ),
+      );
+
+      await _repository.setStudyModule(
+        widget.tourId,
+        widget.subject.id,
+        StudyModuleSettings(
+          key: StudyModuleKey.papers,
+          enabled: true,
+          name: currentModules[StudyModuleKey.papers]?.name ??
+              l10n.translate('study_module_papers'),
+          postPolicy: currentModules[StudyModuleKey.papers]?.postPolicy ??
+              StudyPostPolicy.members,
+        ),
+      );
+
+      if (widget.subject.bookId != null) {
+        await _repository.setStudyModule(
+          widget.tourId,
+          widget.subject.id,
+          StudyModuleSettings(
+            key: StudyModuleKey.glossary,
+            enabled: true,
+            name: currentModules[StudyModuleKey.glossary]?.name ??
+                l10n.translate('study_module_glossary'),
+            postPolicy: currentModules[StudyModuleKey.glossary]?.postPolicy ??
+                StudyPostPolicy.members,
+          ),
+        );
+      }
+
+      // Populate Tips
+      for (final tip in tips) {
+        await _repository.addStudyPost(
+          widget.tourId,
+          widget.subject.id,
+          StudyModuleKey.tips,
+          title: tip.title,
+          text: tip.text,
+          shown: true,
+        );
+      }
+
+      // Populate Problems & Reference Solutions
+      for (final p in problems) {
+        final problemId = await _repository.addStudyProblem(
+          widget.tourId,
+          widget.subject.id,
+          title: p.title,
+          text: p.text,
+          releaseAt: DateTime.now(),
+          shown: true,
+        );
+        if (p.solution.isNotEmpty) {
+          await _repository.saveStudyReference(
+            widget.tourId,
+            widget.subject.id,
+            problemId,
+            text: p.solution,
+          );
+        }
+      }
+
+      // Populate Past Papers
+      for (final paper in papers) {
+        await _repository.addStudyPost(
+          widget.tourId,
+          widget.subject.id,
+          StudyModuleKey.papers,
+          title: paper.title,
+          text: paper.text,
+          url: paper.url,
+          shown: true,
+        );
+      }
+
+      // Populate Glossary Terms if book is associated
+      final bookId = widget.subject.bookId;
+      if (bookId != null) {
+        for (final term in glossary) {
+          await _repository.addGlossaryTerm(
+            widget.tourId,
+            bookId,
+            term: term.term,
+            definition: term.definition,
+            approved: true,
+          );
+        }
+      }
+
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.translate('study_master_materials_loaded')),
+            backgroundColor: palette.accentText,
+          ),
+        );
+      }
+    } catch (error, stackTrace) {
+      logWarning('Failed to load JAIBB master materials', error, stackTrace);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.translate('study_failed')),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMasterMaterials = false);
+      }
+    }
   }
 
   IconData _iconFor(StudyModuleKey key) => switch (key) {
