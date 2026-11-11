@@ -57,6 +57,11 @@ class StudyBookletContent {
   });
 }
 
+/// Thrown by [StudyBookletPdfGenerator.generateBookletPdf] when the caller cancels it.
+class StudyBookletCancelled implements Exception {
+  const StudyBookletCancelled();
+}
+
 /// Service generating duplex-printable A4 booklets and branch notice board posters.
 /// 100% deterministic native PDF layout using [bangla_pdf] with zero external AI calls.
 class StudyBookletPdfGenerator {
@@ -255,11 +260,25 @@ class StudyBookletPdfGenerator {
   }
 
   /// Generates a duplex-printable A4 examination question bank & model solutions booklet.
+  ///
+  /// The chapters are laid out one at a time, with a pause after each, so the screen stays
+  /// responsive on the web, where the layout runs on the only thread. [onProgress] is told
+  /// how many chapters are done. When [isCancelled] turns true the work stops at the next
+  /// chapter with [StudyBookletCancelled].
   Future<Uint8List> generateBookletPdf(
     StudyBookletContent content, {
     bool isBengali = true,
+    bool Function()? isCancelled,
+    void Function(int done, int total)? onProgress,
   }) async {
     final doc = await _createDocument('${content.subjectTitle} - Exam Booklet');
+    final total = content.chapters.length;
+    var done = 0;
+    Future<void> breathe() async {
+      // Lets the frame, the taps and the timers run before the next chapter.
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+      if (isCancelled?.call() ?? false) throw const StudyBookletCancelled();
+    }
 
     // 1. Cover Page
     doc.addPage(
@@ -399,6 +418,9 @@ class StudyBookletPdfGenerator {
 
     // 2. Table of Contents & Chapter Content
     for (final chapter in content.chapters) {
+      onProgress?.call(done, total);
+      await breathe();
+      done++;
       doc.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
@@ -568,6 +590,8 @@ class StudyBookletPdfGenerator {
       );
     }
 
+    onProgress?.call(total, total);
+    await breathe();
     return doc.save();
   }
 
