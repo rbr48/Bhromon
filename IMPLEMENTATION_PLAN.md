@@ -1,27 +1,33 @@
-# Implementation Plan: Discontinue AFI from AIBB & Reassign to JAIBB BA with Complete 5 Exams
+# Implementation Plan: Update JAIBB BA 6th, 7th & 8th BPE Examiner-Grade Solutions & Master Compendium
 
 ## Context & Objectives
-1. **AFI Subject Restructuring**:
-   - In IBB syllabus history, `AFI` (Accounting for Financial Institutions, code `206A`) was an AIBB subject up to the 5th Banking Professional Examination (BPE).
-   - From the 6th BPE onward, AFI was discontinued from AIBB and introduced into JAIBB under the subject name `BA` (Basic Accounting and Business Analytics).
-2. **Database Migration & Uploads**:
-   - Completely remove the `AFI` subject (`FoY8SImug8QtWFYblHNR`), its 12 modules, study book (`hfel4m2OdR7fafCapc8a`), 5 chapters, and 10 materials from the AIBB study group (`b14c6f6b201b442e96eb`).
-   - Reassign all 5 BPE exam solutions (96th BPE through 5th New BPE) from `IBB_AIBB_AFI_All_5_Exams_Bangla_MD_DOCX.zip` into the `JAIBB` study group (`339f54482cec417b83ae`) under subject `BA` (Book ID: `41eTecc9pVGKDjw74hVw`), populating Chapters 1 to 5 with both comprehensive Bengali and English solutions, plus the Master Compendium.
-3. **Master Catalog & Mapping Alignment**:
-   - In `StudyBankingMasterCatalog`:
-     - Remove `codeAFI` from `aibbSubjectCodes` (AIBB now has 13 active subjects).
-     - Update `resolveCodeFromText` so any query/document containing AFI/206A/Accounting for Financial Institutions keywords routes to `codeBA` (JAIBB Basic Accounting).
-   - Update master catalog tests to verify 13 active AIBB subjects and verify former AFI queries map to JAIBB BA.
+1. **JAIBB BA 6th–8th BPE Examination Expansion**:
+   - The user provided `C:\Users\USER\Downloads\IBB_JAIBB_BA_6th_7th_8th_BPE_Bangla_MD_DOCX_PDF.zip` containing expanded, full problem statements and examiner-grade solutions for the 6th, 7th, and 8th Banking Professional Examinations (BPE) for JAIBB subject Basic Accounting & Business Analytics (`BA`, book ID: `41eTecc9pVGKDjw74hVw`).
+   - The archive also contains the complete 3-exam Master Compendium (`JAIBB_BA_6th_7th_8th_BPE_Master_Solutions_Bangla.md` with 247,518 characters).
+2. **Database Updates**:
+   - Update Chapter 6 (`1KKL7YF6FJREZ9BhNSDA`) with the new, fully expanded Bangla solution (`JAIBB_Basic_Accounting_6th_BPE_2025_Solutions_Bangla.md`, 87,979 characters, 179,547 bytes) replacing the older 36k char version.
+   - Update Chapter 7 (`bxqoWO7EEdsQ7gkQmpbW`) with the new, fully expanded Bangla solution (`JAIBB_Basic_Accounting_7th_Exam_2026_Solutions_Bangla.md`, 79,471 characters, 165,437 bytes) replacing the older 31k char version.
+   - Update Chapter 8 (`ZkHellZ6CkyYDYv2APIX`) with the new, fully expanded Bangla solution (`JAIBB_Basic_Accounting_8th_BPE_2026_Solutions_Bangla.md`, 79,454 characters, 164,800 bytes) replacing the older 39k char version.
+   - Standardize Chapter 8's chapter title to `8th New BPE (Nov 2026)` (harmonizing with Chapters 5, 6, and 7).
+   - Standardize all 6th, 7th, 8th English material titles to `BA` instead of `BASIC`.
+   - Upload the 3-exam Master Compendium (`JAIBB_BA_6th_7th_8th_BPE_Master_Solutions_Bangla.md`, 247,518 characters) as a book-level material (`chapterId: None`).
+3. **Verification**:
+   - Verified 8 distinct chapters in JAIBB BA, all with dual English and Bengali solutions.
+   - Verified 2 Master Compendiums (96th–5th BPE: 363k chars, and 6th–8th BPE: 247k chars).
+   - Total study materials in JAIBB BA: 18.
 
 ## Action Items
-- [x] Purge AFI from AIBB group (`b14c6f6b201b442e96eb`) in Firestore: 10 materials, 5 chapters, 1 book, 12 modules, and 1 subject deleted. Verified 0 AFI left in AIBB.
-- [x] Extract and upload all 5 exam sessions (96th to 5th BPE) in both Bengali and English + Master Compendium into JAIBB BA (`41eTecc9pVGKDjw74hVw`) Chapters 1–5. Verified 17 materials now live in JAIBB BA.
-- [x] Update `StudyBankingMasterCatalog.aibbSubjectCodes` and `resolveCodeFromText` in `lib/features/tour_group/domain/services/study_banking_master_catalog.dart`.
-- [x] Update tests in `test/features/tour_group/domain/services/study_banking_master_catalog_test.dart`.
-- [ ] Monotonically bump version in `pubspec.yaml` to `1.8.196+250`.
-- [ ] Format code (`dart format`) and run static analysis (`dart analyze`) & unit tests.
-- [ ] Commit and push to branch `feat/reassign-afi-to-jaibb-ba`.
+- [x] Extract and update 6th BPE Bangla solution (87,979 chars) in Firestore (`MCeOACTdcdWpYq1ojog0`).
+- [x] Extract and update 7th BPE Bangla solution (79,471 chars) in Firestore (`0hY5yWsm3MBiwSuaREcT`).
+- [x] Extract and update 8th BPE Bangla solution (79,454 chars) in Firestore (`PabQsuoyOO1s6RHEmTV8`).
+- [x] Upload 6th-8th BPE Master Solutions Compendium (247,518 chars) in Firestore (`XrenYGAK73icuxIHboAK`).
+- [x] Standardize English material titles to `BA Solutions (English)`.
+- [x] Harmonize Chapter 8 title to `8th New BPE (Nov 2026)`.
+- [x] Verify complete JAIBB BA structure across all 8 chapters and 18 materials.
+- [x] Monotonically bump version in `pubspec.yaml` to `1.8.197+251`.
+- [ ] Run `dart format`, `dart analyze`, and unit test suite.
+- [ ] Commit and push to branch `feat/update-jaibb-ba-6th-8th-bpe`.
 - [ ] Create Pull Request on GitHub.
-- [ ] Conduct mutual Antigravity & Claude peer review exchange.
+- [ ] Exchange mutual Antigravity & Claude peer review sign-offs.
 - [ ] Verify green CI checks and squash-merge to `main`.
 - [ ] Build Flutter Web release (`flutter build web --release`) and deploy to Firebase Hosting (`firebase deploy --only hosting`).
