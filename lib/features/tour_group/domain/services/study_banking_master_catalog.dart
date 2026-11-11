@@ -51,6 +51,48 @@ class StudyBankingMasterCatalog {
   static const String codeOM = 'OM';
   static const String codeBCFI = 'BCFI';
 
+  /// Supported AIBB Subject Codes.
+  static const String codeRMFI = 'RMFI';
+  static const String codeCOM = 'COM';
+  static const String codeTFFE = 'TFFE';
+  static const String codeICTFI = 'ICTFI';
+  static const String codeTMFI = 'TMFI';
+  static const String codeFCC = 'FCC';
+  static const String codeAM = 'AM';
+  static const String codeMBFS = 'MBFS';
+  static const String codeSF = 'SF';
+  static const String codeSBB = 'SBB';
+  static const String codeIB = 'IB';
+  static const String codeAFI = 'AFI';
+  static const String codeMA = 'MA';
+
+  static const List<String> jaibbSubjectCodes = [
+    codeBA,
+    codeLPGB,
+    codePOE,
+    codeMAFS,
+    codeGFI,
+    codeOM,
+    codeBCFI,
+  ];
+
+  static const List<String> aibbSubjectCodes = [
+    codeRMFI,
+    codeCOM,
+    codeTFFE,
+    codeICTFI,
+    codeGFI,
+    codeTMFI,
+    codeFCC,
+    codeAM,
+    codeMBFS,
+    codeSF,
+    codeSBB,
+    codeIB,
+    codeAFI,
+    codeMA,
+  ];
+
   static const List<String> allSubjectCodes = [
     codeBA,
     codeLPGB,
@@ -59,6 +101,19 @@ class StudyBankingMasterCatalog {
     codeGFI,
     codeOM,
     codeBCFI,
+    codeRMFI,
+    codeCOM,
+    codeTFFE,
+    codeICTFI,
+    codeTMFI,
+    codeFCC,
+    codeAM,
+    codeMBFS,
+    codeSF,
+    codeSBB,
+    codeIB,
+    codeAFI,
+    codeMA,
   ];
 
   /// Resolves the JAIBB subject code ('BA', 'LPGB', 'POE', 'MAFS', 'GFI', 'OM', 'BCFI')
@@ -78,6 +133,145 @@ class StudyBankingMasterCatalog {
       return pattern.hasMatch(text);
     }
 
+    // ---------------- AIBB & Priority Code Checks ----------------
+    // AFI / Accounting for Financial Institutions (check before BA)
+    if (hasWord('AFI') ||
+        hasWord('206A') ||
+        text.contains('ACCOUNTING FOR FINANCIAL') ||
+        text.contains('আর্থিক প্রতিষ্ঠানের হিসাববিজ্ঞান')) {
+      return codeAFI;
+    }
+
+    // MA / Management Accounting (check before MAFS)
+    if (raw.trim().toUpperCase() == 'MA' ||
+        raw.contains('(MA)') ||
+        raw.contains('MA-208A') ||
+        hasWord('208A') ||
+        text.contains('MANAGEMENT ACCOUNTING') ||
+        text.contains('ব্যবস্থাপনা হিসাববিজ্ঞান')) {
+      return codeMA;
+    }
+
+    // RMFI / Risk Management in Financial Institutions
+    if (hasWord('RMFI') ||
+        hasWord('201') ||
+        text.contains('RISK MANAGEMENT') ||
+        text.contains('ঝুঁকি ব্যবস্থাপনা')) {
+      return codeRMFI;
+    }
+
+    // COM / Credit Operations and Management
+    if ((!text.contains('.COM') && hasWord('COM')) ||
+        hasWord('202') ||
+        text.contains('CREDIT OPERATIONS') ||
+        text.contains('CREDIT MANAGEMENT') ||
+        text.contains('ক্রেডিট অপারেশন') ||
+        text.contains('ক্রেডিট ম্যানেজমেন্ট') ||
+        text.contains('ঋণ ব্যবস্থাপনা')) {
+      return codeCOM;
+    }
+
+    // TFFE / Trade Finance and Foreign Exchange
+    if (hasWord('TFFE') ||
+        hasWord('203') ||
+        text.contains('TRADE FINANCE') ||
+        text.contains('FOREIGN EXCHANGE') ||
+        text.contains('ট্রেড ফাইন্যান্স') ||
+        text.contains('বৈদেশিক বাণিজ্য') ||
+        text.contains('বৈদেশিক মুদ্রা')) {
+      return codeTFFE;
+    }
+
+    // ICTFI / Information & Communication Technology in Financial Institutions
+    if (hasWord('ICTFI') ||
+        hasWord('204') ||
+        text.contains('ICT IN FINANCIAL') ||
+        text.contains('ICTFI') ||
+        text.contains('INFORMATION & COMMUNICATION') ||
+        text.contains('INFORMATION AND COMMUNICATION') ||
+        text.contains('আর্থিক প্রতিষ্ঠানে আইসিটি')) {
+      return codeICTFI;
+    }
+
+    // TMFI / Treasury Management in Financial Institutions
+    if (hasWord('TMFI') ||
+        hasWord('206') ||
+        text.contains('TREASURY MANAGEMENT') ||
+        text.contains('TREASURY') ||
+        text.contains('ট্রেজারি ম্যানেজমেন্ট') ||
+        text.contains('ট্রেজারি')) {
+      return codeTMFI;
+    }
+
+    // FCC / Financial Crime and Compliance
+    if (hasWord('FCC') ||
+        hasWord('207') ||
+        text.contains('FINANCIAL CRIME') ||
+        text.contains('COMPLIANCE') ||
+        text.contains('আর্থিক অপরাধ') ||
+        text.contains('কমপ্লায়েন্স')) {
+      return codeFCC;
+    }
+
+    // AM / Agriculture and Microfinance
+    if (raw.trim().toUpperCase() == 'AM' ||
+        raw.contains('(AM)') ||
+        raw.contains('AM-208') ||
+        hasWord('208') ||
+        text.contains('AGRICULTURE') ||
+        text.contains('MICROFINANCE') ||
+        text.contains('কৃষি ও ক্ষুদ্রঋণ') ||
+        text.contains('ক্ষুদ্রঋণ') ||
+        text.contains('কৃষি ব্যাংকিং')) {
+      return codeAM;
+    }
+
+    // MBFS / Marketing and Branding in Financial Services
+    if (hasWord('MBFS') ||
+        hasWord('209') ||
+        text.contains('MARKETING AND BRANDING') ||
+        text.contains('MARKETING & BRANDING') ||
+        text.contains('মার্কেটিং ও ব্র্যান্ডিং') ||
+        text.contains('আর্থিক সেবায় মার্কেটিং')) {
+      return codeMBFS;
+    }
+
+    // SF / Sustainable Finance
+    if (raw.trim().toUpperCase() == 'SF' ||
+        raw.contains('(SF)') ||
+        raw.contains('SF-210') ||
+        hasWord('210') ||
+        text.contains('SUSTAINABLE FINANCE') ||
+        text.contains('GREEN BANKING') ||
+        text.contains('সাসটেইনেবল ফাইন্যান্স') ||
+        text.contains('গ্রিন ব্যাংকিং')) {
+      return codeSF;
+    }
+
+    // SBB / Shariah-Based Banking
+    if (hasWord('SBB') ||
+        hasWord('211') ||
+        text.contains('SHARIAH-BASED') ||
+        text.contains('SHARIAH BASED') ||
+        text.contains('SHARIAH BANKING') ||
+        text.contains('ISLAMIC BANKING') ||
+        text.contains('শরীয়াহ ভিত্তিক') ||
+        text.contains('ইসলামী ব্যাংকিং')) {
+      return codeSBB;
+    }
+
+    // IB / Investment Banking
+    if (raw.trim().toUpperCase() == 'IB' ||
+        raw.contains('(IB)') ||
+        raw.contains('IB-212') ||
+        hasWord('212') ||
+        text.contains('INVESTMENT BANKING') ||
+        text.contains('ইনভেস্টমেন্ট ব্যাংকিং') ||
+        text.contains('বিনিয়োগ ব্যাংকিং')) {
+      return codeIB;
+    }
+
+    // ---------------- JAIBB Subject Checks ----------------
     if (hasWord('BA') ||
         text.contains('BASIC ACCOUNTING') ||
         text.contains('BUSINESS ANALYTICS') ||
@@ -281,6 +475,155 @@ class StudyBankingMasterCatalog {
             '• Conciseness (Eliminate redundant wordiness in notices).\n'
             '• Consideration / "You" Attitude (Highlight customer benefit over bank convenience).\n'
             '• Clarity, Concreteness (Specific numbers and dates), Courtesy, and Correctness (Legal accuracy).',
+      ),
+    ],
+    codeRMFI: [
+      StudyMasterPostDraft(
+        title: 'RMFI Exam Blueprint: Basel III Pillar 1, 2, 3 Strategy',
+        text: 'Allocate your 180 minutes systematically:\n'
+            '1. Question Scanning (0–10 min): Target RWA calculations or CAR formula problems first.\n'
+            '2. Numerical & Ratio Solutions (10–65 min): Credit, Market, and Operational RWA step-by-step substitutions.\n'
+            '3. Core Theory (65–130 min): Three Pillars of Basel III, ICAAP framework, and Stress Testing methodologies.\n'
+            '4. BB Circulars (130–170 min): BRPD guidelines on CRAR (min 10% + 2.5% CCB), LCR (>= 100%), and NSFR (>= 100%).\n'
+            '5. Revision (170–180 min): Recheck risk weights and capital tier arithmetic.',
+      ),
+      StudyMasterPostDraft(
+        title: 'Examiner Warning: Credit Risk Mitigation (CRM) Haircuts',
+        text: 'Common errors penalised in RMFI:\n'
+            '• Unadjusted Collateral: Cash margins and FDRs require standard supervisory haircuts under the comprehensive approach.\n'
+            '• Off-Balance Sheet Conversions: Credit Conversion Factors (CCF) must be applied (e.g. 20%, 50%, 100%) before risk weighting.\n'
+            '• Always state Capital to Risk-weighted Assets Ratio (CRAR) = (Tier 1 + Tier 2 Capital) / Total RWA.',
+      ),
+    ],
+    codeCOM: [
+      StudyMasterPostDraft(
+        title: 'COM Credit Appraisal & 5 Cs Scoring Strategy',
+        text: 'Structure all credit assessment answers around the 5 Cs:\n'
+            '• Character: CIB report analysis, track record, integrity, management quality.\n'
+            '• Capacity: Cash flow adequacy, Debt Service Coverage Ratio (DSCR min 1.5x), historical turnover.\n'
+            '• Capital: Borrower equity contribution, debt-to-equity ratio, net worth.\n'
+            '• Collateral: Security perfection, legal title vetting, forced sale value (FSV) vs market value.\n'
+            '• Conditions: Macroeconomic environment, industry sector risk, regulatory caps.',
+      ),
+      StudyMasterPostDraft(
+        title: 'Loan Classification & Rescheduling Standards',
+        text: 'Master Bangladesh Bank master circular thresholds:\n'
+            '• Special Mention Account (SMA): Overdue 60 to 89 days (commercial) with qualitative weakness.\n'
+            '• Sub-Standard (SS): Overdue 90 to 179 days, 20% general provision on unhedged portion.\n'
+            '• Doubtful (DF): Overdue 180 to 269 days, 50% provision requirement.\n'
+            '• Bad/Loss (BL): Overdue 270 days or more, 100% provision requirement.',
+      ),
+    ],
+    codeTFFE: [
+      StudyMasterPostDraft(
+        title: 'TFFE Statutory Timelines & UCPDC 600 Rules',
+        text:
+            'Mandatory rules examiners look for in every trade finance paper:\n'
+            '• Article 14(b) UCPDC 600: A nominated or issuing bank has a maximum of 5 banking days following the day of presentation to determine compliance.\n'
+            '• Article 16: Notice of refusal must be given by telecommunication or expeditious means no later than the close of the 5th banking day, stating all discrepancies.\n'
+            '• Strict Compliance vs Substantial Compliance: Documents must appear on their face to constitute a complying presentation.',
+      ),
+      StudyMasterPostDraft(
+        title: 'Incoterms 2020 Risk Transfer Architecture',
+        text: 'Differentiate exact risk and cost transfer points:\n'
+            '• FOB (Free on Board): Risk passes when goods are on board the vessel. Seller pays export clearance.\n'
+            '• CFR/CIF (Cost & Freight / Insurance): Risk passes on board, but seller pays sea freight (and insurance in CIF).\n'
+            '• DAP/DDP: Risk passes only when delivered at destination; DDP requires seller to pay import duty and taxes.',
+      ),
+    ],
+    codeICTFI: [
+      StudyMasterPostDraft(
+        title: 'ICT Security Guideline & Core Banking Architecture',
+        text: 'Key standards mandated by Bangladesh Bank:\n'
+            '• 3-Tier Architecture: Web tier (DMZ), Application tier, and Database tier must be logically and physically segmented.\n'
+            '• Two-Factor Authentication (2FA): Mandatory for internet banking, mobile apps, and administrative access to servers.\n'
+            '• Disaster Recovery: Primary and DR sites must be geographically separated (min 20-30 km) with synchronous/asynchronous replication.',
+      ),
+    ],
+    codeTMFI: [
+      StudyMasterPostDraft(
+        title: 'ALM Framework & Liquidity Risk Architecture',
+        text: 'Asset Liability Management guidelines required by examiners:\n'
+            '• ALCO Mandate: Monthly ALCO meetings review structural liquidity, IRRBB, and balance sheet growth.\n'
+            '• Structural Liquidity Profile: Time buckets (1-14 days, 15-28 days, 29-90 days, etc.) with cumulative mismatch limits.\n'
+            '• BB Policy Corridor: Repo rate anchor, Standing Lending Facility (SLF) upper bound, Standing Deposit Facility (SDF) lower bound.',
+      ),
+    ],
+    codeFCC: [
+      StudyMasterPostDraft(
+        title: 'AML/CFT Statutory Architecture: MLPA 2012 & ATA 2009',
+        text: 'Examiner-grade legal principles for compliance officers:\n'
+            '• MLPA 2012 Section 25: Mandatory reporting of Cash Transaction Reports (CTR) for transactions of BDT 10 Lac and above within 21 days.\n'
+            '• Suspicious Transaction Report (STR): Report immediately upon detecting suspicion, without minimum amount threshold and without tipping off the customer.\n'
+            '• Politically Exposed Persons (PEPs): Senior management approval mandatory before account opening; ongoing enhanced monitoring.',
+      ),
+    ],
+    codeAM: [
+      StudyMasterPostDraft(
+        title: 'Agricultural Credit Policy & Priority Lending Guidelines',
+        text: 'Agricultural financing scoring parameters:\n'
+            '• Mandatory Target: Banks must disburse at least 2.5% of total net loans to agriculture and rural sectors.\n'
+            '• Crop Loan Scale of Finance: Credit limit determined by district-level agricultural technical committees based on acreage and cost.\n'
+            '• Revolving Crop Credit: 3-year validity with annual renewal based on clean repayment after harvesting.',
+      ),
+    ],
+    codeMBFS: [
+      StudyMasterPostDraft(
+        title: '7 Ps of Service Marketing in Digital Banking',
+        text: 'Apply the extended services marketing mix:\n'
+            '• Product: Tailored retail, SME, and agent banking products.\n'
+            '• Price: Interest rate spread, fees, commission transparency.\n'
+            '• Place: Omnichannel distribution (Branches, Sub-branches, ATMs, CRMs, Mobile Apps).\n'
+            '• Promotion: Financial literacy campaigns, ethical advertising.\n'
+            '• People: Well-trained front-office bankers delivering relationship banking.\n'
+            '• Process: Digital KYC, instant onboarding, seamless dispute resolution.\n'
+            '• Physical Evidence: Modern branch ambiance, intuitive mobile UI/UX.',
+      ),
+    ],
+    codeSF: [
+      StudyMasterPostDraft(
+        title: 'Sustainable Finance Policy & Green Taxonomy Standards',
+        text:
+            'Core principles of green and sustainable banking in Bangladesh:\n'
+            '• Minimum Green Financing Target: At least 5% of total term loan disbursements must be allocated to verified green products.\n'
+            '• Environmental & Social Risk Management (ESRM): Mandatory E&S screening using the sector-specific ESRM Guideline.\n'
+            '• Refinance Schemes: Low-cost refinancing available from Bangladesh Bank for 68+ green products/initiatives.',
+      ),
+    ],
+    codeSBB: [
+      StudyMasterPostDraft(
+        title: 'Islamic Banking Contracts & Shariah Governance',
+        text: 'Essential distinctions in Shariah-compliant finance:\n'
+            '• Murabaha: Cost-plus markup sale contract where cost and profit are explicitly disclosed to the buyer.\n'
+            '• Mudarabah: Partnership where one party provides capital (Rabb-ul-Mal) and the other manages (Mudarib); profit shared by ratio, loss borne by capital.\n'
+            '• Musharakah: Joint partnership where all partners contribute capital and share profits according to agreement and losses strictly by capital proportion.',
+      ),
+    ],
+    codeIB: [
+      StudyMasterPostDraft(
+        title: 'Investment Banking & Capital Market Regulations',
+        text: 'Key legal frameworks for investment bankers:\n'
+            '• Public Issue Rules: Underwriting commitment (min 35% of total issue size) by registered Merchant Banks.\n'
+            '• Book Building Method: Institutional bidding establishes the cut-off price; general public receives shares at a discount.\n'
+            '• Syndicated Financing: Lead arranger syndicates multi-bank term loans with inter-creditor agreements and escrow agency.',
+      ),
+    ],
+    codeAFI: [
+      StudyMasterPostDraft(
+        title: 'First Schedule Banking Companies Act 1991 Financial Reporting',
+        text: 'Reporting standards for scheduled banks:\n'
+            '• Form A Balance Sheet: Strict layout with Assets on left/top and Liabilities and Shareholders\' Equity on right/bottom.\n'
+            '• Form B Profit & Loss Account: Clear demarcation between Interest Income/Expense, Operating Income/Expense, and Provisions.\n'
+            '• BRPD Circular 14: Mandatory note disclosures on non-performing loans, CRAR, and maturity groupings of assets/liabilities.',
+      ),
+    ],
+    codeMA: [
+      StudyMasterPostDraft(
+        title: 'Cost-Volume-Profit (CVP) Analysis in Financial Services',
+        text: 'Marginal costing essentials for bank branch profitability:\n'
+            '• Contribution Margin = Total Revenue - Total Variable Costs.\n'
+            '• Break-Even Point (Units) = Total Fixed Costs / Contribution Margin per Unit.\n'
+            '• Margin of Safety = (Actual or Projected Sales - Break-Even Sales) / Actual Sales.',
       ),
     ],
   };
@@ -500,6 +843,192 @@ class StudyBankingMasterCatalog {
             '```',
       ),
     ],
+    codeRMFI: [
+      StudyMasterProblemDraft(
+        title: 'Credit Risk RWA Calculation (Standardized Approach)',
+        text:
+            'Bank X has loans to AAA rated corporate (BDT 100 Cr, 20% RW), unrated corporate (BDT 200 Cr, 100% RW), and retail SME (BDT 150 Cr, 75% RW). Compute Total Credit Risk Weighted Assets.',
+        solution: 'Step 1: Compute RWA per category:\n'
+            '• AAA Corporate: 100 * 20% = BDT 20.00 Crore\n'
+            '• Unrated Corporate: 200 * 100% = BDT 200.00 Crore\n'
+            '• Retail SME: 150 * 75% = BDT 112.50 Crore\n'
+            'Step 2: Total Credit RWA = 20.00 + 200.00 + 112.50 = BDT 332.50 Crore.\n'
+            'Examiner Note: If regulatory capital required is 10%, minimum capital required = 332.50 * 10% = BDT 33.25 Crore.',
+      ),
+      StudyMasterProblemDraft(
+        title: 'Capital to Risk-Weighted Assets Ratio (CRAR) Computation',
+        text:
+            'A bank reports Tier 1 Capital of BDT 600 Crore, Tier 2 Capital of BDT 400 Crore, and Total Risk Weighted Assets of BDT 8,000 Crore. Determine whether the bank satisfies Bangladesh Bank CRAR and CCB requirements.',
+        solution:
+            'Step 1: Total Eligible Regulatory Capital = Tier 1 + Tier 2 = 600 + 400 = BDT 1,000 Crore.\n'
+            'Step 2: CRAR = (Total Capital / Total RWA) * 100% = (1,000 / 8,000) * 100% = 12.50%.\n'
+            'Step 3: Benchmark comparison: Bangladesh Bank requires minimum CRAR of 10.00% plus Capital Conservation Buffer (CCB) of 2.50%, totaling 12.50%.\n'
+            'Verdict: The bank satisfies the statutory 12.50% capital requirement.',
+      ),
+    ],
+    codeCOM: [
+      StudyMasterProblemDraft(
+        title:
+            'Working Capital Limit using Maximum Permissible Bank Finance (MPBF)',
+        text:
+            'A manufacturing firm projects Total Current Assets of BDT 500 Lac and Other Current Liabilities (excluding bank borrowings) of BDT 100 Lac. Calculate MPBF under Tandon Method II (Borrower brings 25% of TCA from long-term sources).',
+        solution: 'Step 1: Total Current Assets (TCA) = BDT 500 Lac.\n'
+            'Step 2: Working Capital Gap (WCG) = TCA - OCL = 500 - 100 = BDT 400 Lac.\n'
+            'Step 3: Borrower Margin (25% of TCA) = 500 * 25% = BDT 125 Lac.\n'
+            'Step 4: MPBF = WCG - Borrower Margin = 400 - 125 = BDT 275 Lac.\n'
+            'Step 5: Current Ratio check = TCA / (OCL + MPBF) = 500 / (100 + 275) = 500 / 375 = 1.33:1 (satisfies benchmark).',
+      ),
+      StudyMasterProblemDraft(
+        title: 'Debt Service Coverage Ratio (DSCR) Calculation',
+        text:
+            'Projected Net Profit after Tax = BDT 40 Lac, Depreciation = BDT 15 Lac, Interest on Term Loan = BDT 20 Lac, Annual Principal Installment = BDT 25 Lac. Compute DSCR and evaluate project bankability.',
+        solution:
+            'Step 1: Cash Flow Available for Debt Service = Net Profit + Depreciation + Interest = 40 + 15 + 20 = BDT 75 Lac.\n'
+            'Step 2: Total Debt Service Obligation = Principal + Interest = 25 + 20 = BDT 45 Lac.\n'
+            'Step 3: DSCR = Cash Flow / Debt Service = 75 / 45 = 1.67x.\n'
+            'Verdict: DSCR of 1.67x comfortably exceeds standard banking threshold of 1.50x, demonstrating strong repayment capacity.',
+      ),
+    ],
+    codeTFFE: [
+      StudyMasterProblemDraft(
+        title: 'Export Bill Negotiation & Overdue Interest Calculation',
+        text:
+            'A bank negotiates an export usance bill of USD 100,000 at TT Buying rate of 117.50 for 90 days. Rate of interest is 9.00% p.a. Compute net proceeds payable to exporter assuming 360 days per year.',
+        solution:
+            'Step 1: Gross Taka Equivalent = USD 100,000 * 117.50 = BDT 11,750,000.\n'
+            'Step 2: Discounting Interest = Gross * Rate * (Days / 360) = 11,750,000 * 0.09 * (90 / 360) = BDT 264,375.\n'
+            'Step 3: Net proceeds to exporter = 11,750,000 - 264,375 = BDT 11,485,625.',
+      ),
+      StudyMasterProblemDraft(
+        title: 'Foreign Exchange Rate Quotation: TT & OD Selling Margin',
+        text:
+            'Interbank USD/BDT spot rate is 117.00 - 117.10. The bank requires an exchange margin of 0.50% on sales. Calculate the merchant TT Selling rate.',
+        solution:
+            'Step 1: Identify interbank base: In selling foreign currency, bank buys from market at offer rate = 117.10.\n'
+            'Step 2: Exchange Margin (0.50%) = 117.10 * 0.005 = 0.5855.\n'
+            'Step 3: TT Selling Rate = 117.10 + 0.5855 = BDT 117.6855 (rounded to BDT 117.69).',
+      ),
+    ],
+    codeICTFI: [
+      StudyMasterProblemDraft(
+        title: 'Disaster Recovery RTO and RPO Impact Analysis',
+        text:
+            'A bank database server crashes at 2:00 PM. Latest data backup was taken at 12:00 PM. Full service is restored on secondary site at 4:30 PM. Calculate the realized RTO and RPO.',
+        solution:
+            'Step 1: Recovery Point Objective (RPO) = Data loss window between last backup (12:00 PM) and crash (2:00 PM) = 2 hours of transactional data.\n'
+            'Step 2: Recovery Time Objective (RTO) = Downtime duration between crash (2:00 PM) and full restoration (4:30 PM) = 2.5 hours.\n'
+            'Examiner Note: For mission-critical CBS, Bangladesh Bank mandates near-zero RPO via synchronous storage replication.',
+      ),
+    ],
+    codeTMFI: [
+      StudyMasterProblemDraft(
+        title: 'Maturity GAP Analysis & Interest Rate Shock',
+        text:
+            'In the 1-90 day bucket, a bank has Rate Sensitive Assets (RSA) of BDT 1,200 Crore and Rate Sensitive Liabilities (RSL) of BDT 1,500 Crore. Compute the Gap and the impact on Net Interest Income (NII) if interest rates rise by 1.00% (100 bps).',
+        solution:
+            'Step 1: Interest Rate GAP = RSA - RSL = 1,200 - 1,500 = -BDT 300 Crore (Negative / Liability Sensitive GAP).\n'
+            'Step 2: Change in NII = GAP * Change in Interest Rate = (-300 Cr) * (+1.00%) = -BDT 3.00 Crore.\n'
+            'Interpretation: Because the bank has more liabilities repricing upwards than assets, a 1% rate hike reduces Net Interest Income by BDT 3.00 Crore.',
+      ),
+    ],
+    codeFCC: [
+      StudyMasterProblemDraft(
+        title: 'Smurfing & Structuring Detection Analysis',
+        text:
+            'A customer deposits BDT 9,50,000 cash in morning, BDT 9,80,000 in afternoon at different branches on the same day. Analyze the compliance reporting obligations under MLPA 2012.',
+        solution:
+            'Step 1: Structuring / Smurfing Analysis: Individual transactions are deliberately kept below the mandatory CTR threshold of BDT 10 Lac to evade detection.\n'
+            'Step 2: Aggregated daily cash deposit = 9.50 + 9.80 = BDT 19.30 Lac, which exceeds CTR threshold.\n'
+            'Step 3: Action Required: File an immediate Suspicious Transaction Report (STR) to BFIU within statutory timeline without tipping off the customer, and log for CTR.',
+      ),
+    ],
+    codeAM: [
+      StudyMasterProblemDraft(
+        title: 'Crop Loan Limit Sizing using Scale of Finance',
+        text:
+            'A farmer cultivates 5 acres of Boro rice. Approved Scale of Finance is BDT 40,000 per acre. Farmer receives 10% consumption allowance. Calculate sanctioned crop loan limit and repayment schedule.',
+        solution:
+            'Step 1: Production Cost Component = 5 acres * BDT 40,000 = BDT 200,000.\n'
+            'Step 2: Consumption Allowance (10%) = 200,000 * 10% = BDT 20,000.\n'
+            'Step 3: Total Sanctioned Crop Loan Limit = 200,000 + 20,000 = BDT 220,000.\n'
+            'Repayment: Repayable in single bullet payment 2 months post-harvest (Boro harvest in May, repayment by July 31).',
+      ),
+    ],
+    codeMBFS: [
+      StudyMasterProblemDraft(
+        title: 'Customer Acquisition Cost (CAC) & Lifetime Value (CLV)',
+        text:
+            'A digital banking unit spends BDT 50 Lac in marketing acquiring 10,000 new active accounts. Average annual net revenue per user is BDT 1,200 with an expected customer tenure of 5 years. Compute CAC and CLV.',
+        solution:
+            'Step 1: Customer Acquisition Cost (CAC) = Total Marketing Spend / New Customers Acquired = 5,000,000 / 10,000 = BDT 500 per customer.\n'
+            'Step 2: Customer Lifetime Value (CLV) = Annual Revenue * Tenure = 1,200 * 5 = BDT 6,000.\n'
+            'Step 3: CLV to CAC Ratio = 6,000 / 500 = 12:1 (indicates highly viable and profitable acquisition model).',
+      ),
+    ],
+    codeSF: [
+      StudyMasterProblemDraft(
+        title: 'Environmental and Social Risk Rating (ESRR) Evaluation',
+        text:
+            'A proposed textile dyeing unit seeking term loan of BDT 25 Crore has an Effluent Treatment Plant (ETP) with valid clearance from Department of Environment (DoE). Grade the project under Bangladesh Bank ESRM matrix.',
+        solution:
+            'Step 1: Sector Screening: Textile wet processing and dyeing belongs to Red Category under DoE Environmental Conservation Rules.\n'
+            'Step 2: Mitigation Assessment: Operational biological ETP and valid environmental clearance certificate lower residual risk.\n'
+            'Step 3: ESRR Grading: Graded as Medium-Risk subject to covenant requiring continuous real-time effluent monitoring and zero-discharge compliance.',
+      ),
+    ],
+    codeSBB: [
+      StudyMasterProblemDraft(
+        title: 'Mudarabah Profit Distribution Calculation',
+        text:
+            'In a Mudarabah investment, bank contributes BDT 1,000,000 capital. Mudarib earns gross profit of BDT 200,000. Profit-sharing ratio is 60:40 (Bank:Mudarib). In Year 2, an unforeseen market loss of BDT 100,000 occurs without negligence. Calculate Year 1 payouts and Year 2 loss allocation.',
+        solution: 'Year 1 (Profit):\n'
+            '• Bank Share = 200,000 * 60% = BDT 120,000\n'
+            '• Mudarib Share = 200,000 * 40% = BDT 80,000\n'
+            'Year 2 (Loss):\n'
+            '• Under Shariah principles, financial loss is borne 100% by Rabb-ul-Mal (Bank = BDT 100,000).\n'
+            '• Mudarib suffers loss of labor/effort and receives zero management remuneration.',
+      ),
+    ],
+    codeIB: [
+      StudyMasterProblemDraft(
+        title: 'IPO Share Valuation: Book Building Cut-off Price',
+        text:
+            'Eligible Institutional Investors bid for 10,000,000 IPO shares: 4M shares at BDT 35, 4M shares at BDT 30, and 5M shares at BDT 25. Determine the cut-off price.',
+        solution:
+            'Step 1: Arrange bids in descending price order with cumulative demand:\n'
+            '• BDT 35: 4,000,000 shares (Cumulative: 4,000,000)\n'
+            '• BDT 30: 4,000,000 shares (Cumulative: 8,000,000)\n'
+            '• BDT 25: 5,000,000 shares (Cumulative: 13,000,000)\n'
+            'Step 2: The total issue of 10,000,000 shares is fully subscribed at BDT 25 (where cumulative demand reaches 13M >= 10M).\n'
+            'Verdict: Cut-off price is established at BDT 25.00 per share.',
+      ),
+    ],
+    codeAFI: [
+      StudyMasterProblemDraft(
+        title: 'Bank Profit & Loss Statement & Loan Provisioning',
+        text:
+            'Interest Income = BDT 800 Cr, Interest Expense = BDT 500 Cr, Commission & Exchange = BDT 120 Cr, Operating Expenses = BDT 150 Cr. Loan loss provision required is BDT 100 Cr, Corporate Tax rate is 37.5%. Calculate Net Profit after Tax.',
+        solution:
+            'Step 1: Net Interest Income (NII) = 800 - 500 = BDT 300 Crore.\n'
+            'Step 2: Total Operating Income = 300 + 120 = BDT 420 Crore.\n'
+            'Step 3: Operating Profit = Total Operating Income - Operating Expenses = 420 - 150 = BDT 270 Crore.\n'
+            'Step 4: Profit before Tax = Operating Profit - Provisions = 270 - 100 = BDT 170 Crore.\n'
+            'Step 5: Corporate Tax (37.5%) = 170 * 37.5% = BDT 63.75 Crore.\n'
+            'Step 6: Net Profit after Tax = 170 - 63.75 = BDT 106.25 Crore.',
+      ),
+    ],
+    codeMA: [
+      StudyMasterProblemDraft(
+        title: 'Break-Even Point (BEP) in Banking Service Delivery',
+        text:
+            'A bank branch has annual fixed costs of BDT 60 Lac. It earns an average service fee of BDT 500 per transaction with variable cost of BDT 100 per transaction. Calculate BEP in number of transactions and revenue.',
+        solution:
+            'Step 1: Contribution Margin per transaction = Fee - Variable Cost = 500 - 100 = BDT 400.\n'
+            'Step 2: Contribution Margin (CM) Ratio = 400 / 500 = 80%.\n'
+            'Step 3: Break-Even Point (Units) = Fixed Costs / CM per unit = 6,000,000 / 400 = 15,000 transactions.\n'
+            'Step 4: Break-Even Revenue = Fixed Costs / CM Ratio = 6,000,000 / 0.80 = BDT 75,00,000.',
+      ),
+    ],
   };
 
   // ===========================================================================
@@ -637,6 +1166,127 @@ class StudyBankingMasterCatalog {
             '• 97th BPE: Semantic and psychological barriers in branch customer service.\n'
             '• 98th BPE: Non-verbal kinesics and active listening in banking.\n'
             '• 99th BPE: Digital banking customer dispute resolution communications.',
+      ),
+    ],
+    codeRMFI: [
+      StudyMasterPostDraft(
+        title: 'RMFI 96th to 7th BPE Exam Question Index & Trend Analysis',
+        text: 'Comprehensive review of past AIBB Risk Management sessions:\n'
+            '• 96th & 97th BPE: Core Focus on Credit Risk Weighted Assets, Haircuts, and Internal Credit Risk Rating System (ICRRS).\n'
+            '• 98th & 99th BPE: Operational Risk Basic Indicator Approach vs Standardized Approach; Stress Testing scenarios (Minor, Moderate, Major shocks).\n'
+            '• 5th, 6th & 7th BPE: Liquidity Coverage Ratio (LCR), Net Stable Funding Ratio (NSFR), Market Risk Duration Gap analysis.',
+      ),
+    ],
+    codeCOM: [
+      StudyMasterPostDraft(
+        title: 'COM Past Paper Themes & Case Study Master Solution Guide',
+        text: 'Frequent examination topics across 7 BPE sessions:\n'
+            '• Working Capital Assessment: MPBF Method I vs Method II comparison, Cash Budget method for seasonal industries.\n'
+            '• Term Loan Evaluation: Debt Service Coverage Ratio (DSCR), Internal Rate of Return (IRR), Net Present Value (NPV).\n'
+            '• Non-Performing Loans: BRPD Circular 16 rescheduling guidelines, write-off procedures, Artha Rin Adalat Ain 2003.',
+      ),
+    ],
+    codeTFFE: [
+      StudyMasterPostDraft(
+        title: 'TFFE 96th to 7th BPE Exam Solution Blueprint',
+        text: 'Master examiner solutions for past Trade Finance exams:\n'
+            '• Discrepancies under UCPDC 600: Inconsistent descriptions, late shipment, expired LC, unauthenticated amendments.\n'
+            '• Import/Export Financing: Packing Credit, EDF loans, Back-to-Back LC operations, UPAS (Usance Payable at Sight) LC.\n'
+            '• Exchange Rate Mechanisms: Cross rate calculation, TT Buying vs BC Selling, Crawling Peg exchange rate band.',
+      ),
+    ],
+    codeICTFI: [
+      StudyMasterPostDraft(
+        title:
+            'ICTFI Exam Trends: Cyber Resilience & Core Banking Architecture',
+        text: 'Core exam questions from 96th to 7th BPE:\n'
+            '• SWIFT Customer Security Programme (CSP) compliance and mandatory security controls.\n'
+            '• Electronic Fund Transfer systems: Real-Time Gross Settlement (RTGS), BEFTN, NPSB, and interoperable MFS.\n'
+            '• Information Security Policies: Vulnerability Assessment & Penetration Testing (VAPT), Patch management, Access controls.',
+      ),
+    ],
+    codeTMFI: [
+      StudyMasterPostDraft(
+        title: 'TMFI Past Exam Solutions & Money Market Instruments',
+        text: 'Recurring topics across 7 Treasury Management exam sessions:\n'
+            '• Asset Liability Management (ALM): Interest Rate Risk in Banking Book (IRRBB), Duration gap modeling.\n'
+            '• Money Market Operations: Treasury Bills (91, 182, 364-day), Treasury Bonds (2, 5, 10, 15, 20-year), Repo and Reverse Repo.\n'
+            '• Central Bank Liquidity Tools: CRR (Cash Reserve Ratio), SLR (Statutory Liquidity Ratio), Policy Repo Rate corridor.',
+      ),
+    ],
+    codeFCC: [
+      StudyMasterPostDraft(
+        title: 'FCC Past Exam Solutions & AML Case Investigations',
+        text: 'Key examination areas across 7 BPE compliance sessions:\n'
+            '• Statutory Framework: Money Laundering Prevention Act 2012, Anti-Terrorism Act 2009, BFIU Master Circulars.\n'
+            '• Customer Due Diligence: Beneficial ownership identification, PEP/IP monitoring, High-risk country transactions.\n'
+            '• Trade-Based Money Laundering: Over-invoicing, under-invoicing, phantom shipments, and multiple invoicing.',
+      ),
+    ],
+    codeAM: [
+      StudyMasterPostDraft(
+        title:
+            'AM Exam Trends: Agricultural Financing & Microfinance Regulation',
+        text: 'Frequent past paper themes:\n'
+            '• Agricultural and Rural Credit Policy: Sector allocation targets, interest rate ceilings, credit disbursement monitoring.\n'
+            '• MRA Act 2006: Licensing, governance, and capital requirements for NGO-MFIs in Bangladesh.\n'
+            '• Financial Inclusion Mechanisms: Agent banking, mobile financial services, group lending methodologies.',
+      ),
+    ],
+    codeMBFS: [
+      StudyMasterPostDraft(
+        title: 'MBFS Past Paper Solutions & Financial Services Marketing',
+        text: 'Essential exam questions across 7 BPE sessions:\n'
+            '• Service Marketing Mix: Managing intangibility, inseparability, variability, and perishability in banking services.\n'
+            '• Brand Equity & Customer Loyalty: Brand awareness, perceived quality, brand associations, net promoter score.\n'
+            '• Digital Marketing Channels: Social media banking, personalized product recommendations, CRM integration.',
+      ),
+    ],
+    codeSF: [
+      StudyMasterPostDraft(
+        title: 'SF Past Exam Solutions & Green Banking Taxonomy',
+        text:
+            'Core exam topics from 96th to 7th BPE Sustainable Finance sessions:\n'
+            '• Bangladesh Bank Green Taxonomy: Eligible green categories, renewable energy, energy efficiency, waste management.\n'
+            '• Environmental and Social Risk Management (ESRM): E&S Due Diligence checklist, risk rating categorization (High, Medium, Low).\n'
+            '• Climate Risk Governance: Board oversight of climate risks, carbon accounting, Green Bond issuance.',
+      ),
+    ],
+    codeSBB: [
+      StudyMasterPostDraft(
+        title: 'SBB Past Exam Blueprint & Islamic Banking Contracts',
+        text: 'Core past paper solutions for Shariah-Based Banking:\n'
+            '• Financing Modes: Murabaha, Mudarabah, Musharakah, Bai-Muajjal, Istisna, Salam, Ijarah wa Iqtina.\n'
+            '• Shariah Governance Framework: Role of Shariah Supervisory Committee, Shariah Audit, profit distribution mechanisms.\n'
+            '• Deposit Products: Mudarabah Savings/Term Deposits, Al-Wadiah Current Accounts, Profit equalization reserve (PER).',
+      ),
+    ],
+    codeIB: [
+      StudyMasterPostDraft(
+        title: 'IB Past Paper Solutions & Capital Market Operations',
+        text: 'Recurring exam themes across 7 Investment Banking sessions:\n'
+            '• Primary Market Operations: Public issue management, underwriting responsibilities, prospectus preparation, due diligence.\n'
+            '• Corporate Restructuring: Mergers and Acquisitions (M&A), divestitures, corporate debt restructuring (CDR).\n'
+            '• Project Financing: Debt-equity structuring, non-recourse financing, concession agreements, escrow mechanisms.',
+      ),
+    ],
+    codeAFI: [
+      StudyMasterPostDraft(
+        title: 'AFI Past Exam Solutions & Bank Financial Statements',
+        text:
+            'Comprehensive analysis of 5 BPE Accounting for Financial Institutions sessions:\n'
+            '• Statutory Financial Statements: Banking Companies Act 1991 First Schedule Balance Sheet and P&L formatting.\n'
+            '• Prudential Provisioning: General provisions on unclassified loans, specific provisions on classified loans (SS, DF, BL).\n'
+            '• Investment Valuation: Mark-to-market accounting for government securities (HFT vs HTM portfolio treatment).',
+      ),
+    ],
+    codeMA: [
+      StudyMasterPostDraft(
+        title: 'MA Past Exam Solutions & Management Accounting Techniques',
+        text: 'Core exam topics from 5 Management Accounting sessions:\n'
+            '• Marginal Costing & Decision Making: Make or buy, accept or reject special orders, closing unprofitable branches.\n'
+            '• Standard Costing & Variance Analysis: Material price and usage variances, labor rate and efficiency variances.\n'
+            '• Budgetary Control: Master budget preparation, flexible budgeting, cash budget forecasting.',
       ),
     ],
   };
@@ -808,6 +1458,301 @@ class StudyBankingMasterCatalog {
         term: 'Minutes of Meeting (সভার কার্যবিবরণী)',
         definition:
             'The official permanent legal record documenting proceedings, discussions, and resolutions passed during a formal meeting.',
+      ),
+    ],
+    codeRMFI: [
+      StudyMasterGlossaryDraft(
+        term:
+            'Capital to Risk-Weighted Assets Ratio - CRAR (মূলধন ও ঝুঁকিভিত্তিক সম্পদ অনুপাত)',
+        definition:
+            'The ratio of a bank\'s regulatory capital to its total risk-weighted assets (credit, market, operational risk). Bangladesh Bank requires a minimum CRAR of 10% plus 2.5% Capital Conservation Buffer.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Liquidity Coverage Ratio - LCR (তারল্য কভারেজ অনুপাত)',
+        definition:
+            'The proportion of high-quality liquid assets (HQLA) held by banks to survive a 30-day severe liquidity stress scenario. Statutory minimum is 100%.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Net Stable Funding Ratio - NSFR (নিট স্থিতিশীল তহবিল অনুপাত)',
+        definition:
+            'The amount of available stable funding relative to required stable funding over a 1-year horizon. Designed to limit over-reliance on short-term wholesale funding.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Internal Capital Adequacy Assessment Process - ICAAP (আইক্যাপ)',
+        definition:
+            'Pillar 2 framework under Basel III whereby a bank assesses its overall capital adequacy relative to its risk profile beyond minimum regulatory requirements.',
+      ),
+    ],
+    codeCOM: [
+      StudyMasterGlossaryDraft(
+        term:
+            'Maximum Permissible Bank Finance - MPBF (সর্বোচ্চ গ্রহণযোগ্য ব্যাংক ঋণ)',
+        definition:
+            'The statutory ceiling on working capital finance calculated by deducting borrower equity margin and other current liabilities from total current assets.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Debt Service Coverage Ratio - DSCR (ঋণ পরিশোধ সক্ষমতা অনুপাত)',
+        definition:
+            'Measures cash flow available for debt service divided by total debt obligations (interest plus principal installments). Benchmark is at least 1.5x.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Credit Information Bureau - CIB (ক্রেডিট ইনফরমেশন ব্যুরো)',
+        definition:
+            'Bangladesh Bank repository tracking credit history, outstanding obligations, and default status across all lending institutions in the country.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Non-Performing Loan - NPL (খেলাপি ঋণ)',
+        definition:
+            'A loan where principal or interest remains unpaid past contractual due dates, classified as Sub-standard, Doubtful, or Bad/Loss according to BRPD guidelines.',
+      ),
+    ],
+    codeTFFE: [
+      StudyMasterGlossaryDraft(
+        term: 'UCPDC 600 (আন্তর্জাতিক ঋণপত্র নীতিমালা)',
+        definition:
+            'Uniform Customs and Practice for Documentary Credits published by ICC, governing rights, obligations, and standards of document examination for commercial letters of credit.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Incoterms 2020 (আন্তর্জাতিক বাণিজ্যিক শর্তাবলি)',
+        definition:
+            'Standard international trade rules published by ICC defining division of costs, risks, and transport responsibilities between buyer and seller.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'SWIFT MT700 (সুইফট এমটি৭০০ বার্তা)',
+        definition:
+            'The standard SWIFT message format used by an issuing bank to issue an irrevocable commercial letter of credit to an advising bank.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Nostro & Vostro Accounts (নস্ট্রো ও ভস্ট্রো হিসাব)',
+        definition:
+            'A Nostro account is our bank\'s account in foreign currency held at a bank abroad. A Vostro account is a foreign bank\'s account in local currency held with our bank.',
+      ),
+    ],
+    codeICTFI: [
+      StudyMasterGlossaryDraft(
+        term: 'Core Banking Solution - CBS (সেন্ট্রাল কোর ব্যাংকিং সফটওয়্যার)',
+        definition:
+            'Centralized enterprise banking software enabling real-time transaction processing across all branches, ATMs, and digital banking channels.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'National Payment Switch Bangladesh - NPSB (জাতীয় পেমেন্ট সুইচ)',
+        definition:
+            'The national electronic switching system owned by Bangladesh Bank facilitating interoperability among ATM, POS, and internet banking transactions.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Recovery Time Objective - RTO (পুনরুদ্ধার সময় লক্ষ্যমাত্রা)',
+        definition:
+            'The maximum tolerable duration of downtime within which a business process and IT infrastructure must be restored after a disaster.',
+      ),
+      StudyMasterGlossaryDraft(
+        term:
+            'Security Operations Center - SOC (সাইবার নিরাপত্তা অপারেশন কেন্দ্র)',
+        definition:
+            'A centralized unit of cybersecurity professionals using SIEM tools to monitor, detect, analyze, and respond to cyber security incidents 24/7.',
+      ),
+    ],
+    codeTMFI: [
+      StudyMasterGlossaryDraft(
+        term:
+            'Asset Liability Committee - ALCO (সম্পদ ও দায় ব্যবস্থাপনা কমিটি)',
+        definition:
+            'The senior executive decision-making body in a bank responsible for managing balance sheet structure, liquidity gaps, interest rate risks, and pricing strategies.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Net Interest Margin - NIM (নিট সুদ মার্জিন)',
+        definition:
+            'A key profitability metric calculated as (Interest Income - Interest Expense) divided by total earning assets.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Policy Repo Rate (বাংলাদেশ ব্যাংক রেপো রেট)',
+        definition:
+            'The key monetary policy signaling rate at which Bangladesh Bank injects liquidity to commercial banks against government securities.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Call Money Market (কল মানি মার্কেট)',
+        definition:
+            'The overnight interbank money market where banks lend and borrow funds to manage temporary liquidity shortages and meet daily CRR requirements.',
+      ),
+    ],
+    codeFCC: [
+      StudyMasterGlossaryDraft(
+        term:
+            'Bangladesh Financial Intelligence Unit - BFIU (বাংলাদেশ ফিন্যান্সিয়াল ইন্টেলিজেন্স ইউনিট)',
+        definition:
+            'The central national agency of Bangladesh responsible for receiving, analyzing, and disseminating intelligence on money laundering, terrorist financing, and proliferation financing.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Cash Transaction Report - CTR (নগদ লেনদেন প্রতিবেদন)',
+        definition:
+            'A mandatory regulatory report filed by banks to BFIU for any physical cash deposit or withdrawal of BDT 10 Lac or above in a single day.',
+      ),
+      StudyMasterGlossaryDraft(
+        term:
+            'Suspicious Transaction Report - STR (সন্দেহজনক লেনদেন প্রতিবেদন)',
+        definition:
+            'An immediate confidential report filed to BFIU whenever a transaction is suspected of involving proceeds of crime or financing terrorism, regardless of amount.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Trade-Based Money Laundering - TBML (বাণিজ্যভিত্তিক অর্থপাচার)',
+        definition:
+            'The process of disguising the proceeds of crime and moving value through trade transactions using over-invoicing, under-invoicing, or false shipment declarations.',
+      ),
+    ],
+    codeAM: [
+      StudyMasterGlossaryDraft(
+        term: 'Scale of Finance (ফসলি ঋণ নির্ধারণের অর্থমান)',
+        definition:
+            'The per-acre cultivation cost benchmark fixed annually by district agricultural credit committees to determine maximum crop loan limits.',
+      ),
+      StudyMasterGlossaryDraft(
+        term:
+            'Microcredit Regulatory Authority - MRA (মাইক্রোক্রেডিট রেগুলেটরি অথরিটি)',
+        definition:
+            'The statutory regulatory body established under MRA Act 2006 to license, monitor, and regulate non-governmental microfinance institutions in Bangladesh.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Financial Inclusion (আর্থিক অন্তর্ভুক্তি)',
+        definition:
+            'Ensuring access to useful and affordable financial products and services (banking, payments, credit, insurance) to unbanked and marginalized populations.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Lead Bank Scheme (লিড ব্যাংক ব্যবস্থা)',
+        definition:
+            'An administrative coordination framework where a designated commercial bank takes the lead in coordinating rural credit planning across a district.',
+      ),
+    ],
+    codeMBFS: [
+      StudyMasterGlossaryDraft(
+        term: 'Extended Marketing Mix - 7 Ps (সেবা বিপণনের ৭টি উপাদান)',
+        definition:
+            'The service marketing framework encompassing Product, Price, Place, Promotion, People, Process, and Physical Evidence.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Customer Lifetime Value - CLV (গ্রাহক আজীবন মূল্য)',
+        definition:
+            'The projected total net profit attributed to the entire future relationship with a bank customer across all products and deposit accounts.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Net Promoter Score - NPS (গ্রাহক সন্তুষ্টি সূচক)',
+        definition:
+            'A customer satisfaction metric measuring likelihood of recommending a bank, categorized into Promoters (9-10), Passives (7-8), and Detractors (0-6).',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Agent Banking (এজেন্ট ব্যাংকিং ব্যবস্থা)',
+        definition:
+            'Delivering regulated banking services outside traditional bank branches through accredited third-party agents using biometric POS terminals and CBS integration.',
+      ),
+    ],
+    codeSF: [
+      StudyMasterGlossaryDraft(
+        term: 'Green Taxonomy (সবুজ অর্থায়ন শ্রেণিবিন্যাস)',
+        definition:
+            'Bangladesh Bank\'s comprehensive classification system identifying economic activities and technologies that contribute directly to environmental sustainability.',
+      ),
+      StudyMasterGlossaryDraft(
+        term:
+            'Environmental & Social Risk Management - ESRM (পরিবেশ ও সামাজিক ঝুঁকি ব্যবস্থাপনা)',
+        definition:
+            'A mandatory framework for evaluating and mitigating environmental degradation, pollution, and social impacts of commercial loan proposals.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Green Transformation Fund - GTF (সবুজ রূপান্তর তহবিল)',
+        definition:
+            'A specialized central bank refinancing window facilitating long-term foreign and local currency financing for green export-oriented industries.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'ESG Standards (পরিবেশ, সামাজিক ও সুশাসন মানদণ্ড)',
+        definition:
+            'Environmental, Social, and Governance criteria used by institutional investors to evaluate corporate ethics, sustainability footprint, and risk resilience.',
+      ),
+    ],
+    codeSBB: [
+      StudyMasterGlossaryDraft(
+        term: 'Mudarabah & Musharakah (মুদারাবা ও মুশারাকা)',
+        definition:
+            'Mudarabah is profit-sharing partnership where financier provides capital and manager provides expertise. Musharakah is joint equity partnership where all parties contribute capital.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Murabaha (মুরাবাহা ক্রয়-বিক্রয় চুক্তি)',
+        definition:
+            'A cost-plus sale contract where the bank purchases an asset on behalf of a customer and sells it to the customer at an agreed markup price with deferred payment.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Bai-Salam & Istisna (বাই-সালাম ও ইসতিসনা)',
+        definition:
+            'Bai-Salam is advance payment for future delivery of agricultural goods. Istisna is a manufacturing contract where payment and delivery can be staged.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Sukuk (ইসলামী বন্ড / সুকুক)',
+        definition:
+            'Shariah-compliant investment certificates representing undivided ownership shares in underlying tangible assets, usufructs, or services.',
+      ),
+    ],
+    codeIB: [
+      StudyMasterGlossaryDraft(
+        term: 'Initial Public Offering - IPO (প্রাথমিক গণপ্রস্তাব)',
+        definition:
+            'The process through which a private corporation issues shares of common stock to the general public for the first time to raise equity capital.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Book Building Method (বুক বিল্ডিং পদ্ধতি)',
+        definition:
+            'A price discovery mechanism where institutional bids within an indicative price band determine the final cut-off price of public issue shares.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Underwriting (দায়গ্রহণ চুক্তি)',
+        definition:
+            'An agreement whereby an investment bank guarantees to purchase any unsold portion of newly issued securities at an agreed price, eliminating issuer risk.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Syndicated Financing (সিন্ডিকেট অর্থায়ন)',
+        definition:
+            'A financing facility arranged by a lead manager where a group of commercial banks and FIs collectively provide large-scale term loan funds for infrastructure projects.',
+      ),
+    ],
+    codeAFI: [
+      StudyMasterGlossaryDraft(
+        term:
+            'First Schedule Form A & B (ব্যাংক ব্যালান্স শিট ও লাভ-ক্ষতি হিসাব ফরম)',
+        definition:
+            'The statutory financial statement templates mandated by the Banking Companies Act 1991 for all scheduled banks operating in Bangladesh.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Held for Trading - HFT (লেনদেনের জন্য রক্ষিত সিকিউরিটিজ)',
+        definition:
+            'Securities acquired primarily for generating profit from short-term price fluctuations, marked-to-market with unrealized gains/losses routed to profit & loss or reserves.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Held to Maturity - HTM (মেয়াদপূর্তি পর্যন্ত রক্ষিত সিকিউরিটিজ)',
+        definition:
+            'Securities that the bank has positive intent and ability to hold until contractual maturity, carried at amortized cost rather than market valuation.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Loan Loss Provision (ঋণ ক্ষতি সঞ্চিতি)',
+        definition:
+            'An expense set aside as an allowance for uncollectible loans, calculated strictly according to Bangladesh Bank prudential classification standards.',
+      ),
+    ],
+    codeMA: [
+      StudyMasterGlossaryDraft(
+        term: 'Break-Even Point - BEP (আয়-ব্যয় সমতা বিন্দু)',
+        definition:
+            'The volume of sales or transactions at which total revenue exactly equals total costs (both fixed and variable), yielding zero profit and zero loss.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Margin of Safety - MoS (নিরাপত্তা প্রান্ত)',
+        definition:
+            'The excess of budgeted or actual sales revenue over the break-even sales revenue, representing the buffer before the entity incurs financial losses.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Activity-Based Costing - ABC (কার্যক্রমভিত্তিক ব্যয় নির্ধারণ)',
+        definition:
+            'A costing methodology that identifies organizational activities and assigns indirect overhead costs to products and banking services based on actual resource consumption.',
+      ),
+      StudyMasterGlossaryDraft(
+        term: 'Contribution Margin (অবদান মার্জিন)',
+        definition:
+            'Sales revenue minus all variable expenses, representing the incremental cash flow generated to cover fixed overhead costs and produce operational profits.',
       ),
     ],
   };
