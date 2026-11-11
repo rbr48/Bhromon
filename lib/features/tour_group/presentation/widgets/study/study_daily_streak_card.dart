@@ -85,7 +85,11 @@ class StudyDailyStreakCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // A Wrap, so the tier badge drops below the count when the
+                    // two do not fit on one line.
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: 4,
                       children: [
                         Text(
                           l10n.translate(

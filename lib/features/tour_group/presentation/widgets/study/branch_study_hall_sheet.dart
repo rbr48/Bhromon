@@ -361,7 +361,12 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 6),
-                                    Row(
+                                    // A Wrap, so the counts drop to a second line on a
+                                    // narrow screen instead of running off the card.
+                                    Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      runSpacing: 4,
                                       children: [
                                         // Streak badge
                                         Container(
