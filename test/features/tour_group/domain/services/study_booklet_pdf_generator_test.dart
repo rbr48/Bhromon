@@ -120,6 +120,41 @@ The relationship is primarily that of debtor and creditor.
       expect(pdfBytes.length, greaterThan(2000));
     });
 
+    StudyBookletContent twoChapters() => const StudyBookletContent(
+          subjectTitle: 'LPGB',
+          tourName: 'Circle',
+          chapters: [
+            StudyBookletChapterItem(number: 1, title: 'One', questions: []),
+            StudyBookletChapterItem(number: 2, title: 'Two', questions: []),
+          ],
+        );
+
+    test('reports each chapter as it is laid out', () async {
+      final seen = <String>[];
+      await generator.generateBookletPdf(
+        twoChapters(),
+        onProgress: (done, total) => seen.add('$done/$total'),
+      );
+      expect(seen, ['0/2', '1/2', '2/2']);
+    });
+
+    test('stops at the next chapter once it is cancelled', () async {
+      var cancelled = false;
+      final seen = <int>[];
+      await expectLater(
+        generator.generateBookletPdf(
+          twoChapters(),
+          isCancelled: () => cancelled,
+          onProgress: (done, _) {
+            seen.add(done);
+            if (done == 1) cancelled = true;
+          },
+        ),
+        throwsA(isA<StudyBookletCancelled>()),
+      );
+      expect(seen, [0, 1]);
+    });
+
     test('generateBranchNoticePoster builds a valid A4 notice poster with QR',
         () async {
       const content = StudyBookletContent(

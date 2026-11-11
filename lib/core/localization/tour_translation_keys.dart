@@ -3320,6 +3320,10 @@ class TourTranslationKeys {
           'High-impact recruitment poster with invite QR code',
       'study_generating_booklet': 'Generating printable exam booklet...',
       'study_generating_poster': 'Generating branch notice poster...',
+      'study_booklet_collecting': 'Collecting the solutions...',
+      'study_booklet_progress': 'Chapter {done} of {total}',
+      'study_booklet_failed': 'The booklet could not be made. Try again.',
+      'study_poster_failed': 'The poster could not be made. Try again.',
       'study_material_title': 'Materials',
       'study_material_add': 'Add material',
       'study_material_empty':
@@ -7007,6 +7011,10 @@ class TourTranslationKeys {
           'ইনভাইট কিউআর কোডসহ শাখায় লাগানোর জন্য নজরকাড়া পোস্টার',
       'study_generating_booklet': 'প্রিন্টযোগ্য পরীক্ষা বুকলেট তৈরি হচ্ছে...',
       'study_generating_poster': 'ব্রাঞ্চ নোটিশ বোর্ড পোস্টার তৈরি হচ্ছে...',
+      'study_booklet_collecting': 'সমাধানগুলো সংগ্রহ করা হচ্ছে...',
+      'study_booklet_progress': 'অধ্যায় {done} / {total}',
+      'study_booklet_failed': 'বুকলেট তৈরি করা যায়নি। আবার চেষ্টা করুন।',
+      'study_poster_failed': 'পোস্টার তৈরি করা যায়নি। আবার চেষ্টা করুন।',
       'study_material_title': 'উপকরণ',
       'study_material_add': 'উপকরণ যোগ করুন',
       'study_material_empty':
