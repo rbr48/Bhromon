@@ -70,9 +70,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify Brand title & Tour OS subtitle
+    // Verify Brand title & Walk Together subtitle
     expect(find.text('Bhromon'), findsOneWidget);
-    expect(find.text('Your groups'), findsOneWidget);
+    expect(find.text('Walk Together'), findsOneWidget);
 
     // The action bar has one labelled menu for creating and joining.
     expect(find.byIcon(Icons.backup_rounded), findsNothing);

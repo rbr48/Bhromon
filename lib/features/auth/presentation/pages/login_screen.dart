@@ -287,25 +287,14 @@ class _BrandHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: Container(
+          child: SizedBox(
             width: 110,
             height: 110,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _kCardBg,
-              border:
-                  Border.all(color: _kGreen.withValues(alpha: .35), width: 2),
-            ),
-            child: ClipOval(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Image.asset(
-                  'assets/bhromon_emblem.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.explore, color: _kGreen, size: 54),
-                ),
-              ),
+            child: Image.asset(
+              'assets/bhromon_emblem.png',
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.explore, color: _kGreen, size: 54),
             ),
           ),
         ),

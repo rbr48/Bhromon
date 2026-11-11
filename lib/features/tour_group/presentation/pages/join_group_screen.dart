@@ -373,29 +373,16 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
+                        SizedBox(
                           width: 44,
                           height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF1B4332),
-                            border: Border.all(
-                              color: AppColors.mintGreen.withValues(alpha: 0.5),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: const EdgeInsets.all(2),
-                              child: Image.asset(
-                                'assets/bhromon_emblem.png',
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.explore,
-                                  color: AppColors.mintGreen,
-                                  size: 24,
-                                ),
-                              ),
+                          child: Image.asset(
+                            'assets/bhromon_emblem.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.explore,
+                              color: AppColors.mintGreen,
+                              size: 24,
                             ),
                           ),
                         ),
@@ -406,7 +393,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                             Text(
                               'Bhromon',
                               style: TextStyle(
-                                color: context.forest.text,
+                                color: context.forest.accentText,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
