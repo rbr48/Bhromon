@@ -10,8 +10,8 @@ import '../../../domain/services/trip_ledger_engine.dart';
 import 'expense_editor.dart';
 import '../../../../../core/localization/localized_date.dart';
 
-const _sheetColor = Color(0xFF142428);
-const _menuColor = Color(0xFF1B4332);
+const _sheetColor = AppColors.tealPanel;
+const _menuColor = AppColors.darkGreen;
 
 /// The key used for the fund in party pickers; members use their email.
 const String _fundKey = '__fund__';
@@ -270,7 +270,7 @@ class _TransferFormState extends State<_TransferForm> {
                   selected: _method == m,
                   selectedColor: AppColors.mintGreen,
                   backgroundColor:
-                      context.forest.surfaceFor(const Color(0xFF1E3326)),
+                      context.forest.surfaceFor(AppColors.forestRaised),
                   labelStyle: TextStyle(
                       color: _method == m
                           ? AppColors.darkGreen

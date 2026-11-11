@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
@@ -303,15 +304,9 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
               isAdmin: _isAdmin,
             ));
             if (posts.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    l10n.translate('study_post_empty'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text70),
-                  ),
-                ),
+              return EmptyState(
+                icon: Icons.sticky_note_2_outlined,
+                message: l10n.translate('study_post_empty'),
               );
             }
             return ListView(

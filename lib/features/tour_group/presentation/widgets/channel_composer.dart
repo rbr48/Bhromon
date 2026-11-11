@@ -423,7 +423,7 @@ class _MentionList extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       constraints: const BoxConstraints(maxHeight: 200),
       child: Material(
-        color: context.forest.surfaceFor(const Color(0xFF1E3326)),
+        color: context.forest.surfaceFor(AppColors.forestRaised),
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: ListView(

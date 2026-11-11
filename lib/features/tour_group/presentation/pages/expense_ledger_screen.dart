@@ -34,8 +34,8 @@ import '../widgets/mess/mess_balance_sheet.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/utils/logger.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 const _fundBlue = Color(0xFF38BDF8);
 
 /// The tour fund: what was collected and spent, against the budget, who owes
@@ -1494,14 +1494,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   OutlinedButton.icon(
                     onPressed: () => _openMfsSettlementSheet(),
                     icon: const Icon(Icons.receipt_long,
-                        size: 15, color: Color(0xFFE2136E)),
+                        size: 15, color: AppColors.bkashPink),
                     label: Text(l10n.translate('fund_record_mfs'),
                         style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFE2136E))),
+                            color: AppColors.bkashPink)),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE2136E)),
+                      side: const BorderSide(color: AppColors.bkashPink),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(
@@ -1622,7 +1622,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 IconButton(
                   tooltip: l10n.translate('fund_bkash_nagad_assist'),
                   icon: const Icon(Icons.account_balance_wallet_rounded,
-                      color: Color(0xFFE2136E), size: 18),
+                      color: AppColors.bkashPink, size: 18),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () => _showBkashNagadAssist(l10n, s),
@@ -2184,7 +2184,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     Color providerColor;
     switch (s.mfsInfo.provider) {
       case MfsProvider.bkash:
-        providerColor = const Color(0xFFE2136E);
+        providerColor = AppColors.bkashPink;
         break;
       case MfsProvider.nagad:
         providerColor = const Color(0xFFF7931E);
@@ -2413,7 +2413,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2802,7 +2802,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     if (progress == null) return child;
                     return Container(
                       height: 300,
-                      color: const Color(0xFF1B4332),
+                      color: AppColors.darkGreen,
                       child: const Center(
                         child: CircularProgressIndicator(
                             color: AppColors.mintGreen),
@@ -2812,7 +2812,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   errorBuilder: (_, __, ___) => Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1B4332),
+                      color: AppColors.darkGreen,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -2892,12 +2892,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2136E).withValues(alpha: 0.15),
+                      color: AppColors.bkashPink.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text('৳',
                         style: TextStyle(
-                            color: Color(0xFFE2136E),
+                            color: AppColors.bkashPink,
                             fontWeight: FontWeight.bold,
                             fontSize: 18)),
                   ),
@@ -2993,8 +2993,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFE2136E),
-                        side: const BorderSide(color: Color(0xFFE2136E)),
+                        foregroundColor: AppColors.bkashPink,
+                        side: const BorderSide(color: AppColors.bkashPink),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -3040,7 +3040,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 width: double.infinity,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE2136E),
+                    backgroundColor: AppColors.bkashPink,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -3133,8 +3133,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFE2136E),
-                        side: const BorderSide(color: Color(0xFFE2136E)),
+                        foregroundColor: AppColors.bkashPink,
+                        side: const BorderSide(color: AppColors.bkashPink),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),

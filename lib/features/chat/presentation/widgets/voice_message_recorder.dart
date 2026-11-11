@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
@@ -246,7 +247,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
               onTap: _stopAndSend,
               child: const CircleAvatar(
                 radius: 18,
-                backgroundColor: Color(0xFF00A884),
+                backgroundColor: AppColors.chatGreen,
                 child: Icon(Icons.send, color: Colors.white, size: 16),
               ),
             ),
@@ -263,7 +264,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
               onTap: _stopAndSend,
               child: const CircleAvatar(
                 radius: 20,
-                backgroundColor: Color(0xFF00A884),
+                backgroundColor: AppColors.chatGreen,
                 child: Icon(Icons.send, color: Colors.white, size: 18),
               ),
             ),
@@ -289,7 +290,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
               height: height.clamp(4.0, 22.0),
               decoration: BoxDecoration(
                 color: index % 2 == 0
-                    ? const Color(0xFF00A884)
+                    ? AppColors.chatGreen
                     : const Color(0xFF53BDEB),
                 borderRadius: BorderRadius.circular(2),
               ),

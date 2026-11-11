@@ -627,7 +627,7 @@ class _CallScreenState extends State<CallScreen> {
     }
     final chosen = await showModalBottomSheet<MediaDeviceInfo>(
       context: context,
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: AppColors.chatPanel,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -650,7 +650,7 @@ class _CallScreenState extends State<CallScreen> {
                     _ => Icons.volume_up,
                   },
                   color: output.deviceId == _outputDeviceId
-                      ? const Color(0xFF00A884)
+                      ? AppColors.chatGreen
                       : Colors.white70,
                 ),
                 title: Text(

@@ -529,9 +529,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           navigateBackOrToGroup(context, widget.tourId);
         },
         child: Scaffold(
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
           appBar: AppBar(
-            backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+            backgroundColor:
+                context.forest.surfaceFor(AppColors.forestScaffold),
             elevation: 0,
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: context.forest.text),
@@ -603,7 +604,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               ),
               PopupMenuButton<_ChannelMenu>(
                 icon: Icon(Icons.more_vert, color: context.forest.text70),
-                color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+                color: context.forest.surfaceFor(AppColors.chatPanel),
                 onSelected: (choice) => _onMenu(choice, selected),
                 itemBuilder: (_) => [
                   PopupMenuItem(
@@ -978,7 +979,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+        backgroundColor: context.forest.surfaceFor(AppColors.chatPanel),
         title: Text(l10n.translate('chan_delete_channel'),
             style: TextStyle(color: context.forest.text)),
         content: Text(
@@ -1025,7 +1026,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               if (!restored.contains(c.id)) c,
           ];
           return AlertDialog(
-            backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+            backgroundColor: context.forest.surfaceFor(AppColors.chatPanel),
             title: Text(l10n.translate('chan_restore_title'),
                 style: TextStyle(color: context.forest.text)),
             content: SingleChildScrollView(
@@ -1306,7 +1307,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+        color: context.forest.surfaceFor(AppColors.chatPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSpeaking
@@ -1451,7 +1452,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+        color: context.forest.surfaceFor(AppColors.chatPanel),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
@@ -1606,7 +1607,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                               child: CircleAvatar(
                                 radius: 12,
                                 backgroundColor: context.forest
-                                    .surfaceFor(const Color(0xFF1F2C34)),
+                                    .surfaceFor(AppColors.chatPanel),
                                 backgroundImage:
                                     p.photoUrl != null && p.photoUrl!.isNotEmpty
                                         ? NetworkImage(p.photoUrl!)
@@ -1839,7 +1840,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+        backgroundColor: context.forest.surfaceFor(AppColors.chatPanel),
         title: Text(l10n.translate('chan_delete_message_title'),
             style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('chan_delete_message_body'),
@@ -1933,7 +1934,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+      backgroundColor: context.forest.surfaceFor(AppColors.chatPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2124,7 +2125,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             : firstPin.text;
         return Container(
           decoration: BoxDecoration(
-            color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+            color: context.forest.surfaceFor(AppColors.chatPanel),
             border: Border(
               bottom: BorderSide(color: context.forest.divider12),
             ),
@@ -2220,7 +2221,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
+      backgroundColor: context.forest.surfaceFor(AppColors.chatPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2918,7 +2919,7 @@ class _ChannelPagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+      color: context.forest.surfaceFor(AppColors.forestScaffold),
       child: Center(
         child: Text(
           title,

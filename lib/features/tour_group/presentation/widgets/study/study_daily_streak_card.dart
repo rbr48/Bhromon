@@ -33,7 +33,7 @@ class StudyDailyStreakCard extends StatelessWidget {
       margin: margin,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: palette.isDark ? const Color(0xFF14241B) : Colors.white,
+        color: palette.isDark ? AppColors.forestCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: streak.isActiveToday

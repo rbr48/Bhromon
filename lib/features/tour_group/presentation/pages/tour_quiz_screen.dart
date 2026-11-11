@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:math';
@@ -206,7 +207,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        backgroundColor: context.forest.surfaceFor(AppColors.tealPanelDeep),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
           title: Text(
@@ -216,7 +217,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 fontWeight: FontWeight.bold,
                 fontSize: 16),
           ),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
           foregroundColor: context.forest.text,
           elevation: 0,
           actions: [
@@ -486,7 +487,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
   }
 
   Widget _buildOptionButton(ServerQuizQuestion q, int index) {
-    Color bg = context.forest.surfaceFor(const Color(0xFF142428));
+    Color bg = context.forest.surfaceFor(AppColors.tealPanel);
     Color border = context.forest.divider12;
     Color textColor = context.forest.text;
 

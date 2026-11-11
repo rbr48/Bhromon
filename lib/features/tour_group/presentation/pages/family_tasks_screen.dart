@@ -11,8 +11,8 @@ import '../../domain/models/family_task_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/family_task_rules.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 
 /// A family circle's shared shopping and to-do list. Anyone in the circle adds an
 /// item and ticks it off, and the tick says who did it. The item's creator or an
@@ -323,7 +323,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                   selected: _kind == FamilyTaskKind.shopping,
                   selectedColor: AppColors.mintGreen,
                   backgroundColor:
-                      context.forest.surfaceFor(const Color(0xFF1E3326)),
+                      context.forest.surfaceFor(AppColors.forestRaised),
                   onSelected: (_) =>
                       setState(() => _kind = FamilyTaskKind.shopping),
                 ),
@@ -334,7 +334,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                   selected: _kind == FamilyTaskKind.todo,
                   selectedColor: AppColors.mintGreen,
                   backgroundColor:
-                      context.forest.surfaceFor(const Color(0xFF1E3326)),
+                      context.forest.surfaceFor(AppColors.forestRaised),
                   onSelected: (_) =>
                       setState(() => _kind = FamilyTaskKind.todo),
                 ),

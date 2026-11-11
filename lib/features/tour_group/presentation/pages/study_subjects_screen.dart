@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
@@ -246,17 +247,11 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
                 proposed.isEmpty &&
                 declined.isEmpty &&
                 archived.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    l10n.translate(_isAdmin
-                        ? 'study_subjects_empty'
-                        : 'study_subjects_empty_member'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.text70),
-                  ),
-                ),
+              return EmptyState(
+                icon: Icons.school_outlined,
+                message: l10n.translate(_isAdmin
+                    ? 'study_subjects_empty'
+                    : 'study_subjects_empty_member'),
               );
             }
             return ListView(

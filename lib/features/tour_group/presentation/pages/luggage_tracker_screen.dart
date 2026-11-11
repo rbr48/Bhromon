@@ -103,7 +103,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: context.forest.surfaceFor(const Color(0xFF142428)),
+            color: context.forest.surfaceFor(AppColors.tealPanel),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: context.forest.divider12),
           ),
@@ -191,10 +191,10 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
+        backgroundColor: context.forest.surfaceFor(AppColors.tealPanelDeep),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
           foregroundColor: context.forest.text,
           title: Text(
             l10n.translate('luggage_title'),
@@ -222,7 +222,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: item.isLoaded
@@ -421,7 +421,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+        backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
         title: Text(l10n.translate('luggage_delete'),
             style: TextStyle(color: context.forest.text)),
         content: Text(
@@ -500,7 +500,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

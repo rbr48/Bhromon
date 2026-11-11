@@ -111,10 +111,10 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
           elevation: 0,
           title: Text(l10n.translate('room_title'),
               style: TextStyle(
@@ -171,7 +171,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 selected: h == hotel,
                 selectedColor: AppColors.mintGreen,
                 backgroundColor:
-                    context.forest.surfaceFor(const Color(0xFF14241B)),
+                    context.forest.surfaceFor(AppColors.forestCard),
                 labelStyle: TextStyle(
                     color:
                         h == hotel ? AppColors.darkGreen : context.forest.text),
@@ -240,7 +240,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: context.forest.surfaceFor(const Color(0xFF14241B)),
+            color: context.forest.surfaceFor(AppColors.forestCard),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: context.forest.divider10),
           ),
@@ -382,7 +382,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: context.forest.surfaceFor(const Color(0xFF14241B)),
+          color: context.forest.surfaceFor(AppColors.forestCard),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.6)),
         ),
@@ -407,7 +407,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                       tooltip: l10n.translate('room_options'),
                       icon: Icon(Icons.more_vert,
                           color: context.forest.text54, size: 18),
-                      color: const Color(0xFF1B4332),
+                      color: AppColors.darkGreen,
                       onSelected: (v) {
                         if (v == 'edit') {
                           _showRoomDialog(hotels, existing: room);
@@ -544,7 +544,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     final manifestText = lines.join('\n');
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -657,7 +657,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
         title: Text(
             l10n.translate('room_delete_confirm',
                 args: {'number': room.roomNumber}),
@@ -703,7 +703,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
           // Fill the screen width (up to 560) instead of shrinking to the 280 minimum.
           constraints: const BoxConstraints(minWidth: 280, maxWidth: 560),
           title: Text(
@@ -750,7 +750,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   DropdownButtonFormField<int>(
                     initialValue: capacity,
                     dropdownColor:
-                        context.forest.surfaceFor(const Color(0xFF14241B)),
+                        context.forest.surfaceFor(AppColors.forestCard),
                     decoration: InputDecoration(
                         labelText: l10n.translate('room_capacity')),
                     items: [
@@ -767,7 +767,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: bedType,
                     dropdownColor:
-                        context.forest.surfaceFor(const Color(0xFF14241B)),
+                        context.forest.surfaceFor(AppColors.forestCard),
                     decoration:
                         InputDecoration(labelText: l10n.translate('room_bed')),
                     items: [
@@ -894,7 +894,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       context: context,
       isScrollControlled: true,
       barrierColor: Colors.black.withValues(alpha: 0.75),
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
       builder: (ctx) {
         return StreamBuilder<List<HotelRoom>>(
           stream: _repository.watchHotelRooms(widget.tourId),

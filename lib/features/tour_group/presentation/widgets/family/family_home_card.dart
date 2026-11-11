@@ -16,7 +16,7 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/family_date_rules.dart';
 import '../../../domain/services/family_home_summary.dart';
 
-const _card = Color(0xFF142428);
+const _card = AppColors.tealPanel;
 
 /// The family's summary at the top of its hub: the next dates, what is still open
 /// on the shared list, notices that need an answer, and who has checked in today.

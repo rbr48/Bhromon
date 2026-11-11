@@ -13,8 +13,8 @@ import '../../domain/services/family_date_rules.dart';
 import '../../domain/services/holiday_calendar.dart';
 import '../widgets/family/family_date_editor.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 
 /// A family circle's dates: birthdays, bills, school days and medicine times.
 /// Everyone in the circle sees them and gets the reminders. The member who added
@@ -221,7 +221,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF1E3326)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestRaised),
           child: Text(date.kind.emoji),
         ),
         title: Text(date.title,

@@ -18,8 +18,8 @@ import '../../domain/services/media_rules.dart';
 import '../../domain/services/service_request_rules.dart';
 import '../widgets/fund/expense_editor.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 const _sheetShape = RoundedRectangleBorder(
   borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
 );
@@ -188,7 +188,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
               style: const TextStyle(fontSize: 12)),
           selected: _filter == null,
           selectedColor: AppColors.mintGreen,
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF1E3326)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestRaised),
           onSelected: (_) => setState(() => _filter = null),
         ),
         for (final status in ServiceRequestStatus.values)
@@ -197,7 +197,7 @@ class _SocietyRequestsScreenState extends State<SocietyRequestsScreen> {
                 style: const TextStyle(fontSize: 12)),
             selected: _filter == status,
             selectedColor: AppColors.mintGreen,
-            backgroundColor: context.forest.surfaceFor(const Color(0xFF1E3326)),
+            backgroundColor: context.forest.surfaceFor(AppColors.forestRaised),
             onSelected: (_) => setState(() => _filter = status),
           ),
       ],
@@ -580,8 +580,8 @@ class _RequestSheetState extends State<_RequestSheet> {
                               style: const TextStyle(fontSize: 12)),
                           selected: _category == category,
                           selectedColor: AppColors.mintGreen,
-                          backgroundColor: context.forest
-                              .surfaceFor(const Color(0xFF1E3326)),
+                          backgroundColor:
+                              context.forest.surfaceFor(AppColors.forestRaised),
                           onSelected: (_) =>
                               setState(() => _category = category),
                         ),
@@ -865,7 +865,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
               decoration: BoxDecoration(
                 color: active
                     ? activeColor.withValues(alpha: 0.15)
-                    : context.forest.surfaceFor(const Color(0xFF1E3326)),
+                    : context.forest.surfaceFor(AppColors.forestRaised),
                 shape: BoxShape.circle,
                 border: Border.all(color: color, width: active ? 2 : 1),
               ),
@@ -1089,7 +1089,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                             selected: _status == status,
                             selectedColor: AppColors.mintGreen,
                             backgroundColor: context.forest
-                                .surfaceFor(const Color(0xFF1E3326)),
+                                .surfaceFor(AppColors.forestRaised),
                             onSelected: _busy
                                 ? null
                                 : (_) => setState(() => _status = status),

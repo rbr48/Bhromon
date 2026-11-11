@@ -980,6 +980,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   static const Duration _toolTapGap = Duration(milliseconds: 600);
   final Map<String, DateTime> _lastToolTap = {};
 
+  /// The groups whose page shows every tool, not only the first ones.
+  final Set<String> _toolsOpen = {};
+
   /// The tap for the tool tile [tile]. A tap that comes within [_toolTapGap] of the last
   /// tap on that tile is ignored.
   VoidCallback _toolTap(String tile, VoidCallback onTap) {
@@ -988,6 +991,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       final last = _lastToolTap[tile];
       if (last != null && now.difference(last) < _toolTapGap) return;
       _lastToolTap[tile] = now;
+      HapticFeedback.selectionClick();
       onTap();
     };
   }
@@ -2374,7 +2378,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             icon: Icon(Icons.account_balance_wallet_outlined,
                                 size: 14,
                                 color: context.forest
-                                    .readable(const Color(0xFF52B788))),
+                                    .readable(AppColors.freshGreen)),
                             label: Text(
                               context.l10n.translate('hub_live_ledger_btn'),
                               style: const TextStyle(fontSize: 12),
@@ -2581,7 +2585,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             title: l10n.translate('hub_module_ledger'),
             subtitle: l10n.translate('hub_module_ledger_sub'),
             icon: Icons.account_balance_wallet_rounded,
-            color: const Color(0xFF52B788),
+            color: AppColors.freshGreen,
             onTap: () => context.push('/group/${group.id}/ledger'),
           ),
       'seats': () => _ModuleItem(
@@ -2751,7 +2755,16 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             onTap: () => context.push('/newspaper-hub?tourId='),
           ),
     };
-    final modules = [for (final id in ids) builders[id]!()];
+    // The group page shows the first tools and keeps the rest behind "More tools".
+    final fold = isGroupPage
+        ? foldHubModules(ids)
+        : (shown: ids, more: const <String>[]);
+    final toolsOpen = _toolsOpen.contains(group.id);
+    final modules = [
+      for (final id in fold.shown) builders[id]!(),
+      if (toolsOpen)
+        for (final id in fold.more) builders[id]!(),
+    ];
 
     // Each tile is a fixed width and a height set by its aspect ratio. At a larger text
     // scale the tile grows with its text, so the ratio shrinks by the same factor.
@@ -2772,7 +2785,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           childAspectRatio = 2.0;
         }
 
-        return GridView.builder(
+        final grid = GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: modules.length,
@@ -2845,6 +2858,43 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ),
             );
           },
+        );
+        if (fold.more.isEmpty) return grid;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            grid,
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    if (!_toolsOpen.remove(group.id)) {
+                      _toolsOpen.add(group.id);
+                    }
+                  });
+                },
+                icon: Icon(
+                  toolsOpen
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  size: 20,
+                ),
+                label: Text(
+                  toolsOpen
+                      ? l10n.translate('hub_tools_less')
+                      : l10n.translate('hub_tools_more', args: {
+                          'count': l10n.number(fold.more.length),
+                        }),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.forest.accentText,
+                  minimumSize: const Size(48, 48),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

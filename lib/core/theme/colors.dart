@@ -31,6 +31,19 @@ class AppColors {
   static const Color backgroundDark = Color(0xFF121212);
   static const Color cardDark = Color(0xFF1E1E1E);
 
+  // Surfaces and accents that many screens share. The values are the ones
+  // those screens already used; naming them keeps one source for each.
+  static const Color forestScaffold = Color(0xFF0D1A12);
+  static const Color forestCard = Color(0xFF14241B);
+  static const Color forestRaised = Color(0xFF1E3326);
+  static const Color tealPanel = Color(0xFF142428);
+  static const Color tealPanelDeep = Color(0xFF0F1A1C);
+  static const Color chatGreen = Color(0xFF00A884);
+  static const Color chatPanel = Color(0xFF1F2C34);
+  static const Color freshGreen = Color(0xFF52B788);
+  static const Color ink = Color(0xFF111827);
+  static const Color bkashPink = Color(0xFFE2136E);
+
   static Color forTier(TrustTier tier) {
     switch (tier) {
       case TrustTier.unverified:

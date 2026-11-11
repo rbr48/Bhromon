@@ -103,10 +103,10 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
           elevation: 0,
           title: Text(
             context.l10n.translate('hol_title'),

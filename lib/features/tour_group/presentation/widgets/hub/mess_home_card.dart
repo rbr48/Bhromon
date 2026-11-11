@@ -16,7 +16,7 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/meal_engine.dart';
 import '../mess/mess_bazar_sheet.dart';
 
-const _card = Color(0xFF142428);
+const _card = AppColors.tealPanel;
 
 /// Purpose-driven hero status card for a Mess / Shared Home.
 /// Displays today's meal counts, the member's own meal status, bazar tasks, and quick actions.
@@ -250,7 +250,7 @@ class _MessHomeCardState extends State<MessHomeCard> {
                   onPressed: () => context.push('$base/meals'),
                   icon: Icon(Icons.edit_calendar_rounded,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('mess_home_log_meals_btn'),
                     style: const TextStyle(fontSize: 12),
@@ -277,7 +277,7 @@ class _MessHomeCardState extends State<MessHomeCard> {
                   ),
                   icon: Icon(Icons.storefront_rounded,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('mess_bazar_routine_btn'),
                     style: const TextStyle(fontSize: 12),

@@ -576,7 +576,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 16)),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+          backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
           foregroundColor: context.forest.text,
           iconTheme: IconThemeData(color: context.forest.text),
           elevation: 0,
@@ -843,7 +843,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider12),
       ),
@@ -896,7 +896,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider12),
       ),
@@ -1031,7 +1031,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
           title: Text(l10n.translate('fsh_add_number_title'),
               style: TextStyle(color: context.forest.text)),
           content: Column(
@@ -1123,7 +1123,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _locationShareOn
@@ -1223,7 +1223,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: context.forest.surfaceFor(const Color(0xFF142428)),
+                color: context.forest.surfaceFor(AppColors.tealPanel),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: hasLowBattery
@@ -1529,7 +1529,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: context.forest.surfaceFor(const Color(0xFF142428)),
+          color: context.forest.surfaceFor(AppColors.tealPanel),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
@@ -1570,7 +1570,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: context.forest.surfaceFor(const Color(0xFF142428)),
+          color: context.forest.surfaceFor(AppColors.tealPanel),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
@@ -1627,7 +1627,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF142428)),
+        color: context.forest.surfaceFor(AppColors.tealPanel),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: landmark.color.withValues(alpha: 0.2)),
       ),

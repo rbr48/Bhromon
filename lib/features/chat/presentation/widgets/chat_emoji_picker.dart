@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
@@ -680,7 +681,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
                             border: Border(
                               bottom: BorderSide(
                                 color: isSelected
-                                    ? const Color(0xFF00A884)
+                                    ? AppColors.chatGreen
                                     : Colors.transparent,
                                 width: 3,
                               ),

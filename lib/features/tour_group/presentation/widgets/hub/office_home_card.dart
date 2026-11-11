@@ -11,7 +11,7 @@ import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
 
-const _card = Color(0xFF142428);
+const _card = AppColors.tealPanel;
 
 /// Purpose-driven hero status card for an Office / Workplace / Team circle.
 /// Displays latest company announcements, notice answers pending, and lunch/tea split shortcuts.
@@ -122,7 +122,7 @@ class _OfficeHomeCardState extends State<OfficeHomeCard> {
                 Icon(Icons.campaign_rounded,
                     size: 20,
                     color: latestNotice != null
-                        ? context.forest.readable(const Color(0xFF52B788))
+                        ? context.forest.readable(AppColors.freshGreen)
                         : context.forest.text38),
                 const SizedBox(width: 10),
                 Expanded(
@@ -186,7 +186,7 @@ class _OfficeHomeCardState extends State<OfficeHomeCard> {
                       .push('$base/ledger/add?title=Lunch&category=Dining'),
                   icon: Icon(Icons.fastfood_outlined,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('office_home_lunch_btn'),
                     style: const TextStyle(fontSize: 12),
@@ -207,7 +207,7 @@ class _OfficeHomeCardState extends State<OfficeHomeCard> {
                   onPressed: () => context.push('$base/notices'),
                   icon: Icon(Icons.campaign_outlined,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('office_home_notices_btn'),
                     style: const TextStyle(fontSize: 12),

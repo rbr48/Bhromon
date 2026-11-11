@@ -111,10 +111,10 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     return GroupPopScope(
       tourId: widget.tourId,
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
         appBar: AppBar(
           leading: GroupBackButton(tourId: widget.tourId),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
           elevation: 0,
           title: Text(
             l10n.translate('check_title'),
@@ -166,7 +166,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                   margin: const EdgeInsets.all(14),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: context.forest.surfaceFor(const Color(0xFF14241B)),
+                    color: context.forest.surfaceFor(AppColors.forestCard),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: context.forest.divider10),
                   ),
@@ -267,7 +267,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: context.forest.surfaceFor(const Color(0xFF14241B)),
+        color: context.forest.surfaceFor(AppColors.forestCard),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),
@@ -327,7 +327,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
         title: Text(
             l10n.translate('check_delete_confirm', args: {'title': title}),
             style: TextStyle(color: context.forest.text)),
@@ -360,7 +360,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+          backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(l10n.translate('check_add_item'),

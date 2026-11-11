@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
@@ -67,7 +68,7 @@ class ChatReplyInputBanner extends StatelessWidget {
         color: context.chat.bar,
         borderRadius: BorderRadius.circular(12),
         border: const Border(
-          left: BorderSide(color: Color(0xFF00A884), width: 4),
+          left: BorderSide(color: AppColors.chatGreen, width: 4),
         ),
       ),
       child: Row(
@@ -220,7 +221,7 @@ class ChatQuotedBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: const Border(
             left: BorderSide(
-              color: Color(0xFF00A884),
+              color: AppColors.chatGreen,
               width: 3.5,
             ),
           ),

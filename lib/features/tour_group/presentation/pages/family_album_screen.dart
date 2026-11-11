@@ -10,8 +10,8 @@ import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/family_album.dart';
 import '../widgets/instafeed/tour_safe_network_image.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 
 /// The circle's photos, grouped by the month they were posted. Photos come from
 /// the Moments feed, so anything shared there appears here too. Tapping a photo

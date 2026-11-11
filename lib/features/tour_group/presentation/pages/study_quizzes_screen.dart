@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
@@ -195,17 +196,11 @@ class _StudyQuizzesScreenState extends State<StudyQuizzesScreen> {
     }
     if (!_loaded) return const ListRowsSkeleton();
     if (_quizzes.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.translate(_isAdmin && _chapters.isEmpty
-                ? 'study_quizzes_need_chapter'
-                : 'study_quizzes_empty'),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.text70),
-          ),
-        ),
+      return EmptyState(
+        icon: Icons.quiz_outlined,
+        message: l10n.translate(_isAdmin && _chapters.isEmpty
+            ? 'study_quizzes_need_chapter'
+            : 'study_quizzes_empty'),
       );
     }
     return ListView(

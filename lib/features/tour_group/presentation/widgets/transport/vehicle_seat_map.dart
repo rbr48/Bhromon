@@ -11,9 +11,9 @@ import '../../../domain/services/seat_layout_engine.dart';
 /// Colours for the seat states, shared by the map and its legend.
 class SeatColors {
   static const free = Color(0xFF22302A);
-  static const taken = Color(0xFF2D6A4F);
+  static const taken = AppColors.midGreen;
   static const mine = Color(0xFFE8B04B);
-  static const window = Color(0xFF74C69D);
+  static const window = AppColors.mintGreen;
 }
 
 IconData vehicleKindIcon(VehicleKind? kind) => switch (kind) {

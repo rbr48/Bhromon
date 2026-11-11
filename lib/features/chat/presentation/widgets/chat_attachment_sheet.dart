@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:flutter/foundation.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
@@ -221,7 +222,7 @@ class ChatAttachmentSheet extends StatelessWidget {
           _buildItem(
             context,
             icon: Icons.payments_outlined,
-            color: const Color(0xFF00A884),
+            color: AppColors.chatGreen,
             label: context.l10n.translate('chat_split_bill'),
             onTap: () {
               Navigator.pop(context);

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/empty_state.dart';
 import 'package:bhromon/core/widgets/skeleton.dart';
 import 'package:flutter/material.dart';
 
@@ -236,15 +237,9 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
                 _askDues([for (final set in sets) set.id]);
                 // Nothing to list at all: say so, unless a set is there to show.
                 if (shown.isEmpty && sets.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        l10n.translate('study_problem_empty'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: palette.text70),
-                      ),
-                    ),
+                  return EmptyState(
+                    icon: Icons.calculate_outlined,
+                    message: l10n.translate('study_problem_empty'),
                   );
                 }
                 final titles = {for (final set in sets) set.id: set.title};

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ class ChatExpenseBubble extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00A884).withValues(alpha: 0.2),
+                  color: AppColors.chatGreen.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -109,7 +110,7 @@ class ChatExpenseBubble extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF00A884)),
+                  side: const BorderSide(color: AppColors.chatGreen),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),

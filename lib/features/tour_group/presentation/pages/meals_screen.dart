@@ -15,8 +15,8 @@ import '../../domain/services/meal_engine.dart';
 import '../widgets/mess/mess_balance_sheet.dart';
 import '../widgets/mess/mess_bazar_sheet.dart';
 
-const _bg = Color(0xFF0F1A1C);
-const _card = Color(0xFF142428);
+const _bg = AppColors.tealPanelDeep;
+const _card = AppColors.tealPanel;
 
 /// A mess's meal log. For each day, every member's breakfast, lunch and dinner. A
 /// member sets their own row; an owner or admin sets any row. The month's totals

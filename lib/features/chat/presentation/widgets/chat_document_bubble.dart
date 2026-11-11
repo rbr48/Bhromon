@@ -100,7 +100,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
       case 'GZ':
         return const Color(0xFFFB8C00);
       default:
-        return const Color(0xFF00A884);
+        return AppColors.chatGreen;
     }
   }
 
@@ -298,7 +298,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                             : (_downloadProgress > 0
                                 ? _downloadProgress
                                 : null),
-                        color: const Color(0xFF00A884),
+                        color: AppColors.chatGreen,
                         strokeWidth: 2.5,
                       ),
                     )

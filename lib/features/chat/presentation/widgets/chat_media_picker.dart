@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:io';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
@@ -80,7 +81,7 @@ class _ChatMediaPickerSheet extends StatelessWidget {
                 _MediaOption(
                   icon: Icons.camera_alt_rounded,
                   label: context.l10n.translate('chat_open_camera'),
-                  color: const Color(0xFF00A884),
+                  color: AppColors.chatGreen,
                   onTap: () => _pick(context, _PickMode.camera),
                 ),
                 _MediaOption(
@@ -119,7 +120,7 @@ class _ChatMediaPickerSheet extends StatelessWidget {
               label: context.l10n.translate('chat_open_settings'),
               onPressed: openAppSettings,
             ),
-            backgroundColor: const Color(0xFF1F2C34),
+            backgroundColor: AppColors.chatPanel,
           ),
         );
         Navigator.of(context).pop();

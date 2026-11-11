@@ -1,6 +1,7 @@
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
@@ -129,6 +130,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
   /// Shows the comment's like at once, then saves it. A tap asks for the opposite of what is
   /// shown, so two quick taps end in the state the user last asked for.
   Future<void> _toggleLike(TourCommentItem comment) async {
+    HapticFeedback.lightImpact();
     final email = widget.repository.currentEmail;
     final onServer = comment.isLikedBy(email);
     final before = LikeState.shown(

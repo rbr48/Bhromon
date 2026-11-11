@@ -228,7 +228,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: AppColors.cardDark,
         title: Text(context.l10n.translate('ig_story_delete_q'),
             style: const TextStyle(color: Colors.white)),
         content: Text(context.l10n.translate('ig_story_delete_body'),
@@ -379,7 +379,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: AppColors.cardDark,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -537,7 +537,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: AppColors.cardDark,
         title: Text(context.l10n.translate('ig_add_highlight_title'),
             style: const TextStyle(color: Colors.white)),
         content: TextField(

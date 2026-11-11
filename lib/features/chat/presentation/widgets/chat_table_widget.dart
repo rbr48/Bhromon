@@ -317,7 +317,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
   void _showExportMenu() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+      backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

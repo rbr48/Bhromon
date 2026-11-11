@@ -107,7 +107,7 @@ Future<ExpenseDraft?> showExpenseEditor(
     context: context,
     isScrollControlled: true,
     constraints: const BoxConstraints(maxWidth: 560),
-    backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+    backgroundColor: context.forest.surfaceFor(AppColors.tealPanel),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => _ExpenseEditor(
@@ -406,7 +406,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _currency,
                     dropdownColor:
-                        context.forest.surfaceFor(const Color(0xFF1B4332)),
+                        context.forest.surfaceFor(AppColors.darkGreen),
                     decoration: InputDecoration(
                         labelText: l10n.translate('fund_currency')),
                     items: [
@@ -460,7 +460,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                     selected: c == _category,
                     selectedColor: AppColors.mintGreen,
                     backgroundColor:
-                        context.forest.surfaceFor(const Color(0xFF1E3326)),
+                        context.forest.surfaceFor(AppColors.forestRaised),
                     labelStyle: TextStyle(
                         color: c == _category
                             ? AppColors.darkGreen
@@ -497,8 +497,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               DropdownButtonFormField<String?>(
                 initialValue:
                     stops.any((s) => s.id == _stopId) ? _stopId : null,
-                dropdownColor:
-                    context.forest.surfaceFor(const Color(0xFF1B4332)),
+                dropdownColor: context.forest.surfaceFor(AppColors.darkGreen),
                 decoration:
                     InputDecoration(labelText: l10n.translate('fund_where')),
                 items: [
@@ -528,8 +527,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                 initialValue: widget.members.any((m) => m.email == _payer)
                     ? _payer
                     : null,
-                dropdownColor:
-                    context.forest.surfaceFor(const Color(0xFF1B4332)),
+                dropdownColor: context.forest.surfaceFor(AppColors.darkGreen),
                 decoration:
                     InputDecoration(labelText: l10n.translate('fund_who_paid')),
                 items: [

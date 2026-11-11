@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -91,7 +92,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
               loadingBuilder: (_, child, progress) {
                 if (progress == null) return child;
                 return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF00A884)),
+                  child: CircularProgressIndicator(color: AppColors.chatGreen),
                 );
               },
               errorBuilder: (_, __, ___) => const Icon(
@@ -105,7 +106,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
               imageUrl: signedMediaUrl(url),
               fit: BoxFit.contain,
               placeholder: (_, __) => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF00A884)),
+                child: CircularProgressIndicator(color: AppColors.chatGreen),
               ),
               errorWidget: (_, __, ___) => Image.network(
                 signedMediaUrl(url),
@@ -220,7 +221,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
   Widget _buildVideoPlayer() {
     if (!_isVideoInitialized || _videoController == null) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF00A884)),
+        child: CircularProgressIndicator(color: AppColors.chatGreen),
       );
     }
     return AspectRatio(
@@ -257,7 +258,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                       value: position.clamp(0.0, duration > 0 ? duration : 1.0),
                       min: 0,
                       max: duration > 0 ? duration : 1.0,
-                      activeColor: const Color(0xFF00A884),
+                      activeColor: AppColors.chatGreen,
                       inactiveColor: Colors.white24,
                       onChanged: (v) {
                         c.seekTo(Duration(milliseconds: v.toInt()));

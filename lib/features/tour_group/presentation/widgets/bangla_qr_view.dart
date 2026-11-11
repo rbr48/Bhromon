@@ -33,7 +33,7 @@ class BanglaQrView extends StatelessWidget {
   Color get _providerColor {
     switch (payload.provider) {
       case BanglaQrProvider.bkash:
-        return const Color(0xFFE2136E);
+        return AppColors.bkashPink;
       case BanglaQrProvider.nagad:
         return const Color(0xFFF7931E);
       case BanglaQrProvider.rocket:
@@ -105,7 +105,7 @@ class BanglaQrView extends StatelessWidget {
                     style: TextStyle(
                       color: isPersonal
                           ? const Color(0xFFB78103)
-                          : const Color(0xFF1B4332),
+                          : AppColors.darkGreen,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
@@ -141,7 +141,7 @@ class _QrPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF111827)
+      ..color = AppColors.ink
       ..style = PaintingStyle.fill;
 
     final moduleCount = qrImage.moduleCount;
@@ -555,7 +555,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
               Expanded(
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B4332),
+                    backgroundColor: AppColors.darkGreen,
                     foregroundColor: Colors.white,
                     padding:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
@@ -583,8 +583,8 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1B4332),
-                  side: const BorderSide(color: Color(0xFF1B4332)),
+                  foregroundColor: AppColors.darkGreen,
+                  side: const BorderSide(color: AppColors.darkGreen),
                   padding:
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                   shape: RoundedRectangleBorder(
@@ -642,7 +642,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
         Color color;
         switch (p) {
           case BanglaQrProvider.bkash:
-            color = const Color(0xFFE2136E);
+            color = AppColors.bkashPink;
             break;
           case BanglaQrProvider.nagad:
             color = const Color(0xFFF7931E);
@@ -1047,7 +1047,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1B4332),
+                              color: AppColors.darkGreen,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -1064,7 +1064,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             _payload.payeeName,
                             style: const TextStyle(
                               fontFamily: 'NotoSansBengali',
-                              color: Color(0xFF111827),
+                              color: AppColors.ink,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),

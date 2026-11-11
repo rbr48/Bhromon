@@ -2,6 +2,7 @@ import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -223,6 +224,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       widget.post.authorEmail == widget.repository.currentEmail;
 
   Future<void> _toggleLike() async {
+    HapticFeedback.lightImpact();
     final currentLiked = _optimisticLiked ??
         widget.post.isLikedBy(widget.repository.currentEmail);
     final targetLiked = !currentLiked;
@@ -788,7 +790,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF262626), Color(0xFF121212)],
+                    colors: [Color(0xFF262626), AppColors.backgroundDark],
                   ),
                 ),
                 child: Center(

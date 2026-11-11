@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
@@ -130,7 +131,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.translate('chats_call_no_user')),
-          backgroundColor: const Color(0xFF1F2C34),
+          backgroundColor: AppColors.chatPanel,
         ),
       );
       return;
@@ -140,7 +141,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.translate('chats_call_members_only')),
-          backgroundColor: const Color(0xFF1F2C34),
+          backgroundColor: AppColors.chatPanel,
         ),
       );
       return;
@@ -440,7 +441,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   }
                                   return const Center(
                                       child: CircularProgressIndicator(
-                                          color: Color(0xFF00A884)));
+                                          color: AppColors.chatGreen));
                                 }
                                 if (snapshot.hasError) {
                                   if (_offlineConversations.isNotEmpty) {
@@ -659,7 +660,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 : null,
         // WhatsApp style floating action button (FAB)
         floatingActionButton: FloatingActionButton(
-          backgroundColor: const Color(0xFF00A884), // WhatsApp green
+          backgroundColor: AppColors.chatGreen, // WhatsApp green
           foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1276,7 +1277,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         if (snap.connectionState != ConnectionState.done) {
                           return const Center(
                               child: CircularProgressIndicator(
-                                  color: Color(0xFF00A884)));
+                                  color: AppColors.chatGreen));
                         }
                         if (snap.hasError) {
                           return Center(
@@ -1597,7 +1598,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   messenger.showSnackBar(
                     SnackBar(
                       content: Text(isLocked ? unlockedMessage : lockedMessage),
-                      backgroundColor: const Color(0xFF00A884),
+                      backgroundColor: AppColors.chatGreen,
                     ),
                   );
                 }
@@ -1874,8 +1875,8 @@ class ChatTile extends StatelessWidget {
 
   static Color _avatarColor(String name) {
     const colors = [
-      Color(0xFF2D6A4F),
-      Color(0xFF1B4332),
+      AppColors.midGreen,
+      AppColors.darkGreen,
       Color(0xFF20503B),
       Color(0xFF386641),
       Color(0xFF285A48),
@@ -1993,7 +1994,7 @@ class ChatTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF00A884),
+                color: AppColors.chatGreen,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

@@ -104,7 +104,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                 : 'You are outside this region (~${distKm.toStringAsFixed(1)} km away)',
           ),
           duration: const Duration(seconds: 3),
-          backgroundColor: context.forest.surfaceFor(const Color(0xFF1B4332)),
+          backgroundColor: context.forest.surfaceFor(AppColors.darkGreen),
         ),
       );
     }
@@ -500,7 +500,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
     return GroupPopScope(
       tourId: '',
       child: Scaffold(
-        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+        backgroundColor: context.forest.surfaceFor(AppColors.forestScaffold),
         appBar: AppBar(
           leading: const GroupBackButton(tourId: ''),
           backgroundColor: context.forest.surfaceFor(const Color(0xFF14241F)),
@@ -606,7 +606,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
               child: FloatingActionButton.small(
                 heroTag: 'offline_map_gps_fab',
                 backgroundColor:
-                    context.forest.surfaceFor(const Color(0xFF1E3326)),
+                    context.forest.surfaceFor(AppColors.forestRaised),
                 foregroundColor:
                     _isLocating ? Colors.orangeAccent : AppColors.mintGreen,
                 onPressed: _recenterOnUser,
@@ -842,7 +842,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
 
   Widget _buildRadarView() {
     return Container(
-      color: context.forest.surfaceFor(const Color(0xFF0D1A12)),
+      color: context.forest.surfaceFor(AppColors.forestScaffold),
       child: CustomPaint(
         painter: _OfflineWaypointPainter(
           region: widget.region,
@@ -1273,7 +1273,7 @@ class _OfflineWaypointPainter extends CustomPainter {
 
       // Pin halo
       final pinPaint = Paint()
-        ..color = isSelected ? AppColors.mintGreen : const Color(0xFF2D6A4F)
+        ..color = isSelected ? AppColors.mintGreen : AppColors.midGreen
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(pt, isSelected ? 12.0 : 8.0, pinPaint);
@@ -1328,7 +1328,7 @@ class _OfflineWaypointPainter extends CustomPainter {
         pt,
         isSelected ? 13.0 : 9.0,
         Paint()
-          ..color = const Color(0xFF142428)
+          ..color = AppColors.tealPanel
           ..strokeWidth = 2.0
           ..style = PaintingStyle.stroke,
       );
@@ -1337,7 +1337,7 @@ class _OfflineWaypointPainter extends CustomPainter {
       textPainter.text = TextSpan(
         text: '${i + 1}',
         style: TextStyle(
-          color: const Color(0xFF142428),
+          color: AppColors.tealPanel,
           fontSize: isSelected ? 10 : 8.5,
           fontWeight: FontWeight.bold,
         ),

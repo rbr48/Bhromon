@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:io';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
@@ -384,7 +385,7 @@ class ChatMediaBubble extends StatelessWidget {
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF00A884),
+                  color: AppColors.chatGreen,
                   strokeWidth: 2,
                 ),
               ),
@@ -412,7 +413,7 @@ class ChatMediaBubble extends StatelessWidget {
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
-              color: Color(0xFF00A884),
+              color: AppColors.chatGreen,
               strokeWidth: 2,
             ),
           ),
@@ -511,7 +512,7 @@ class ChatMediaBubble extends StatelessWidget {
                   width: 28,
                   height: 28,
                   child: CircularProgressIndicator(
-                    color: Color(0xFF00A884),
+                    color: AppColors.chatGreen,
                     strokeWidth: 2,
                   ),
                 ),
@@ -583,7 +584,7 @@ class ChatMediaBubble extends StatelessWidget {
                 value: (uploadProgress != null && uploadProgress! > 0)
                     ? uploadProgress
                     : null,
-                color: const Color(0xFF00A884),
+                color: AppColors.chatGreen,
                 backgroundColor: Colors.white24,
                 strokeWidth: 3,
               ),

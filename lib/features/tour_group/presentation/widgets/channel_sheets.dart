@@ -7,7 +7,7 @@ import '../../domain/models/channel_models.dart';
 import '../../domain/models/tour_group.dart';
 import 'groups/member_avatar.dart';
 
-const Color _sheetColor = Color(0xFF1F2C34);
+const Color _sheetColor = AppColors.chatPanel;
 
 RoundedRectangleBorder _sheetShape() => const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

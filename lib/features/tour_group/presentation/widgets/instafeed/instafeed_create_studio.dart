@@ -227,7 +227,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         labelText: context.l10n.translate('ig_place_optional'),
         labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
         filled: true,
-        fillColor: const Color(0xFF1E1E1E),
+        fillColor: AppColors.cardDark,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),
@@ -806,7 +806,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white12),
               ),
@@ -1042,7 +1042,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       hintText: context.l10n.translate('ig_caption_hint'),
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
+                      fillColor: AppColors.cardDark,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -1070,7 +1070,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               labelStyle: const TextStyle(
                                   color: Colors.white70, fontSize: 12),
                               filled: true,
-                              fillColor: const Color(0xFF1E1E1E),
+                              fillColor: AppColors.cardDark,
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none),
@@ -1106,7 +1106,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               labelStyle: const TextStyle(
                                   color: Colors.white70, fontSize: 12),
                               filled: true,
-                              fillColor: const Color(0xFF1E1E1E),
+                              fillColor: AppColors.cardDark,
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none),
@@ -1136,7 +1136,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         hintText: context.l10n.translate('ig_enter_place_name'),
                         hintStyle: const TextStyle(color: Colors.white54),
                         filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
+                        fillColor: AppColors.cardDark,
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none),
@@ -1320,7 +1320,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       hintText: context.l10n.translate('ig_music_name_hint'),
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
+                      fillColor: AppColors.cardDark,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -1533,7 +1533,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       return Container(
         height: 180,
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: AppColors.cardDark,
           borderRadius: BorderRadius.circular(16),
         ),
         child: ListView.builder(
@@ -1615,7 +1615,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     return Container(
       height: 160,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12),
       ),
@@ -1643,7 +1643,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _coverImage != null

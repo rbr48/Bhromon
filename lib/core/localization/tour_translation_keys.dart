@@ -90,6 +90,8 @@ class TourTranslationKeys {
       'hub_groups_load_failed': 'Could not load your groups.',
       'hub_try_again': 'Try again',
       'hub_modules_heading': 'Group modules & operations',
+      'hub_tools_more': 'More tools ({count})',
+      'hub_tools_less': 'Fewer tools',
       'hub_empty_title': 'No groups yet',
       'hub_empty_body':
           'Create a group for your family or friends, or join one with an invite code.',
@@ -3796,6 +3798,8 @@ class TourTranslationKeys {
       'hub_groups_load_failed': 'গ্রুপ লোড করতে সমস্যা হয়েছে',
       'hub_try_again': 'আবার চেষ্টা করুন',
       'hub_modules_heading': 'গ্রুপ মডিউল ও পরিচালনা',
+      'hub_tools_more': 'আরও টুল ({count})',
+      'hub_tools_less': 'কম টুল দেখুন',
       'hub_empty_title': 'এখনো কোনো গ্রুপ নেই',
       'hub_empty_body':
           'পরিবার বা বন্ধুদের জন্য একটি গ্রুপ তৈরি করুন, অথবা আমন্ত্রণ কোড দিয়ে যোগ দিন।',

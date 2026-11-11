@@ -13,7 +13,7 @@ import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/samity_engine.dart';
 
-const _card = Color(0xFF142428);
+const _card = AppColors.tealPanel;
 
 /// Purpose-driven hero status card for a Rotating Savings Group (Samity / ROSCA).
 /// Displays active cycle, current pot recipient, member's payment status, and quick actions.
@@ -223,7 +223,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                               fontWeight: FontWeight.w600,
                               color: isPaid
                                   ? context.forest
-                                      .readable(const Color(0xFF52B788))
+                                      .readable(AppColors.freshGreen)
                                   : AppColors.gold,
                             ),
                           ),
@@ -271,7 +271,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                   onPressed: () => context.push('$base/samity'),
                   icon: Icon(Icons.list_alt_rounded,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('samity_home_view_btn'),
                     style: const TextStyle(fontSize: 12),
@@ -292,7 +292,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                   onPressed: () => context.push('$base/ledger'),
                   icon: Icon(Icons.account_balance_wallet_outlined,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     l10n.translate('samity_home_fund_btn'),
                     style: const TextStyle(fontSize: 12),

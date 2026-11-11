@@ -22,7 +22,7 @@ class ServerPatronCard extends StatelessWidget {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
+      backgroundColor: context.forest.surfaceFor(AppColors.forestCard),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -138,8 +138,8 @@ class ServerPatronCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF1B4332).withValues(alpha: 0.9),
-            const Color(0xFF14241B),
+            AppColors.darkGreen.withValues(alpha: 0.9),
+            AppColors.forestCard,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

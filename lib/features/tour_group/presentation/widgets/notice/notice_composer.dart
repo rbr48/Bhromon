@@ -9,8 +9,8 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/notice_engine.dart';
 import '../../../../../core/localization/localized_date.dart';
 
-const _sheet = Color(0xFF142428);
-const _chip = Color(0xFF1E3326);
+const _sheet = AppColors.tealPanel;
+const _chip = AppColors.forestRaised;
 
 String noticeKindLabel(AppLocalizations l10n, NoticeKind k) =>
     l10n.translate('notice_kind_${k.name}');
@@ -391,8 +391,7 @@ class _ComposerState extends State<_Composer> {
               DropdownButtonFormField<String?>(
                 initialValue:
                     stops.any((s) => s.id == _stopId) ? _stopId : null,
-                dropdownColor:
-                    context.forest.surfaceFor(const Color(0xFF1B4332)),
+                dropdownColor: context.forest.surfaceFor(AppColors.darkGreen),
                 decoration:
                     InputDecoration(labelText: l10n.translate('notice_stop')),
                 items: [

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'package:bhromon/features/chat/data/call_notification_service.dart';
 import 'dart:convert';
@@ -317,9 +318,9 @@ class FcmService {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0xFF00A884), width: 1),
+              side: const BorderSide(color: AppColors.chatGreen, width: 1),
             ),
-            backgroundColor: const Color(0xFF1F2C34),
+            backgroundColor: AppColors.chatPanel,
             duration: const Duration(seconds: 4),
             content: InkWell(
               onTap: () {
@@ -335,7 +336,7 @@ class FcmService {
               child: Row(
                 children: [
                   const Icon(Icons.notifications_active,
-                      color: Color(0xFF00A884), size: 22),
+                      color: AppColors.chatGreen, size: 22),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

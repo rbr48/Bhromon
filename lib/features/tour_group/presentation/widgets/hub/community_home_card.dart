@@ -14,7 +14,7 @@ import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
 import '../study/study_today_card.dart';
 
-const _card = Color(0xFF142428);
+const _card = AppColors.tealPanel;
 
 /// Purpose-driven hero status card for School, Sports, Study, and Neighbourhood Committee presets.
 class CommunityHomeCard extends StatefulWidget {
@@ -194,7 +194,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
                   color: g.isCommittee && openRequestsCount > 0
                       ? AppColors.gold
                       : latestNotice != null
-                          ? context.forest.readable(const Color(0xFF52B788))
+                          ? context.forest.readable(AppColors.freshGreen)
                           : context.forest.text38,
                 ),
                 const SizedBox(width: 10),
@@ -269,7 +269,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
                   onPressed: () => context.push(action1Route),
                   icon: Icon(action1Icon,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     action1Label,
                     style: const TextStyle(fontSize: 12),
@@ -290,7 +290,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
                   onPressed: () => context.push(action2Route),
                   icon: Icon(action2Icon,
                       size: 14,
-                      color: context.forest.readable(const Color(0xFF52B788))),
+                      color: context.forest.readable(AppColors.freshGreen)),
                   label: Text(
                     action2Label,
                     style: const TextStyle(fontSize: 12),
