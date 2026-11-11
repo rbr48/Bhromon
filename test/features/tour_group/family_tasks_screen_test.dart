@@ -443,7 +443,9 @@ void main() {
     await tester.tap(find.byTooltip('Scope & help'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Offices and campuses do not have this list'),
+    expect(
+        find.textContaining(
+            'Offices, campuses and study circles do not have this list'),
         findsOneWidget);
   });
 

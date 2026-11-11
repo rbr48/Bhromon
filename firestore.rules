@@ -741,10 +741,12 @@ service cloud.firestore {
     function isHouseholdTour(tId) {
       return isFamilyTour(tId) && !hasPreset(tId);
     }
-    // Shared shopping and to-do lists also serve a mess, so they follow the family
-    // rule: any family circle that is not an office or a campus.
+    // Shared shopping and to-do lists serve a household, a mess, a housing society, a samity and
+    // the other family circles: any family circle that is not an office, a campus or a study
+    // circle. The hub shows the same rule (hubModulesFor in the app, which keeps SOS out too).
     function isSharedListTour(tId) {
-      return isFamilyTour(tId) && !isManagedTour(tId);
+      return isFamilyTour(tId) && !isManagedTour(tId) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') != 'study';
     }
 
     // A study or book club: a family circle with the study preset. Any member proposes a

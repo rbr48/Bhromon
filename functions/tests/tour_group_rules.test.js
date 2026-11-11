@@ -910,6 +910,18 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(setDoc(doc(db('member'), 'tours', SOC, 'sos', 'a1'), alert(people.member.email)));
     });
 
+    test('a study circle keeps no shared list, and no day counts for one', async () => {
+      const STUDY = 'stu1';
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', STUDY), { name: 'Exam circle', kind: 'family', preset: 'study', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'STUDYCD1' });
+        await setDoc(doc(f, 'memberships', `${STUDY}__${people.member.email}`), { tourId: STUDY, email: people.member.email, role: 'member', status: 'active', displayName: people.member.email });
+      });
+      const item = { title: 'Rice', kind: 'shopping', done: false, assigneeEmail: null, doneByEmail: null, createdByEmail: people.member.email };
+      await assertFails(addFamilyTaskAsApp('member', STUDY, item));
+      await assertFails(addDoc(collection(db('member'), 'tours', STUDY, 'family_tasks'), item));
+    });
+
     test('a family circle with no preset keeps its household records', async () => {
       await assertSucceeds(setDoc(doc(db('member'), 'tours', FAM, 'dependents', 'd1'), { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true }));
     });

@@ -3536,7 +3536,7 @@ class TourTranslationKeys {
       'ft_scope_events_body':
           'What to buy and prepare for a family event, a picnic or a gathering.',
       'ft_scope_excluded':
-          'Offices and campuses do not have this list; they use notices. Trips keep their own checklist.',
+          'Offices, campuses and study circles do not have this list. Trips keep their own checklist.',
       'ft_got_it': 'Got it',
       'ft_cancel': 'Cancel',
       'ft_save': 'Save',
@@ -7317,7 +7317,7 @@ class TourTranslationKeys {
       'ft_scope_events_body':
           'পারিবারিক অনুষ্ঠান, পিকনিক বা জমায়েতের জন্য কী কিনতে ও কী প্রস্তুত করতে হবে।',
       'ft_scope_excluded':
-          'অফিস ও ক্যাম্পাসে এই তালিকা নেই; সেখানে নোটিশ ব্যবহার হয়। ট্রিপের নিজস্ব চেকলিস্ট আছে।',
+          'অফিস, ক্যাম্পাস ও স্টাডি গ্রুপে এই তালিকা নেই। ট্রিপের নিজস্ব চেকলিস্ট আছে।',
       'ft_got_it': 'বুঝেছি',
       'ft_cancel': 'বাতিল',
       'ft_save': 'সেভ করুন',
