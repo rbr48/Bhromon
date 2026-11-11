@@ -227,7 +227,7 @@ void main() {
     final logoFinder = find.byWidgetPredicate((w) =>
         w is Image &&
         w.image is AssetImage &&
-        (w.image as AssetImage).assetName == 'assets/logo.png');
+        (w.image as AssetImage).assetName == 'assets/bhromon_emblem.png');
     expect(logoFinder, findsOneWidget);
 
     // Verify initial group name rendered

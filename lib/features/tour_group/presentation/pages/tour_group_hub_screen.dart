@@ -1539,13 +1539,16 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     color: Color(0xFF1B4332),
                   ),
                   child: ClipOval(
-                    child: Image.asset(
-                      'assets/logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        Icons.explore,
-                        color: context.forest.accentText,
-                        size: 20,
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Image.asset(
+                        'assets/bhromon_emblem.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.explore,
+                          color: context.forest.accentText,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),

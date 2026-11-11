@@ -385,13 +385,16 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                             ),
                           ),
                           child: ClipOval(
-                            child: Image.asset(
-                              'assets/logo.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.explore,
-                                color: AppColors.mintGreen,
-                                size: 24,
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Image.asset(
+                                'assets/bhromon_emblem.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.explore,
+                                  color: AppColors.mintGreen,
+                                  size: 24,
+                                ),
                               ),
                             ),
                           ),

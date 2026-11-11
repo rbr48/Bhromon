@@ -84,12 +84,15 @@ class DesktopTourSidebar extends StatelessWidget {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(9),
-                            child: Image.asset(
-                              'assets/logo.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(Icons.explore_rounded,
-                                    color: Colors.white, size: 20),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Image.asset(
+                                'assets/bhromon_emblem.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.explore_rounded,
+                                      color: Colors.white, size: 20),
+                                ),
                               ),
                             ),
                           ),
