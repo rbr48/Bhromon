@@ -1,11 +1,9 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,6 +14,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../tour_pdf_download.dart';
+import '../viewer_file_helper.dart';
 import '../widgets/group_back_button.dart';
 
 /// Fullscreen in-app viewer for PDF documents (.pdf) with pinch-to-zoom,
@@ -147,16 +146,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       return _activeBytes;
     }
     if (!kIsWeb && _activeFilePath != null) {
-      final file = File(_activeFilePath!);
-      if (file.existsSync()) {
-        try {
-          final read = await file.readAsBytes();
-          _activeBytes = read;
-          return read;
-        } catch (e, st) {
-          logWarning(
-              '[PdfViewerScreen] Failed to read bytes from local file', e, st);
-        }
+      final read = await readLocalBytes(_activeFilePath!);
+      if (read != null && read.isNotEmpty) {
+        _activeBytes = read;
+        return read;
       }
     }
     if (widget.fileUrl != null && widget.fileUrl!.isNotEmpty) {
@@ -178,25 +171,19 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     return null;
   }
 
-  Future<File?> _ensureLocalFile() async {
+  Future<String?> _ensureLocalFilePath() async {
     if (kIsWeb) return null;
-    if (_activeFilePath != null) {
-      final file = File(_activeFilePath!);
-      if (file.existsSync()) return file;
+    if (_activeFilePath != null && fileExists(_activeFilePath!)) {
+      return _activeFilePath;
     }
     final bytes = await _ensureBytes();
     if (bytes == null || bytes.isEmpty) return null;
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final name = _safeFileName(widget.title, ext: 'pdf');
-      final file = File('${tempDir.path}/$name');
-      await file.writeAsBytes(bytes, flush: true);
-      _activeFilePath = file.path;
-      return file;
-    } catch (e, st) {
-      logWarning('[PdfViewerScreen] Failed to cache local file', e, st);
-      return null;
+    final name = _safeFileName(widget.title, ext: 'pdf');
+    final savedPath = await saveTempBytes(bytes, name);
+    if (savedPath != null) {
+      _activeFilePath = savedPath;
     }
+    return savedPath;
   }
 
   Future<void> _shareDocument() async {
@@ -242,13 +229,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       }
 
       // Mobile & Desktop platforms
-      final file = await _ensureLocalFile();
-      if (file != null) {
+      final localPath = await _ensureLocalFilePath();
+      if (localPath != null) {
         await SharePlus.instance.share(
           ShareParams(
             files: [
               XFile(
-                file.path,
+                localPath,
                 mimeType: 'application/pdf',
                 name: fileName,
               ),
@@ -288,9 +275,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       }
 
       // Mobile & Desktop
-      final file = await _ensureLocalFile();
-      if (file != null) {
-        final result = await OpenFilex.open(file.path, type: 'application/pdf');
+      final localPath = await _ensureLocalFilePath();
+      if (localPath != null) {
+        final result = await OpenFilex.open(localPath, type: 'application/pdf');
         if (result.type != ResultType.done && mounted) {
           logWarning(
               '[PdfViewerScreen] OpenFilex error: ${result.type} - ${result.message}');

@@ -1,12 +1,10 @@
 import 'dart:convert' show utf8;
-import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,6 +17,7 @@ import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../domain/models/study_syllabus_models.dart';
 import '../../domain/services/study_tts_controller.dart';
 import '../tour_pdf_download.dart';
+import '../viewer_file_helper.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_commute_audio_bar.dart';
 
@@ -835,24 +834,15 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
     return base.toLowerCase().endsWith('.$ext') ? base : '$base.$ext';
   }
 
-  Future<File?> _ensureLocalMarkdownFile() async {
+  Future<String?> _ensureLocalMarkdownFilePath() async {
     if (kIsWeb) return null;
-    if (widget.filePath != null) {
-      final file = File(widget.filePath!);
-      if (file.existsSync()) return file;
+    if (widget.filePath != null && fileExists(widget.filePath!)) {
+      return widget.filePath;
     }
     final content = _currentContent;
     if (content.isEmpty) return null;
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final name = _safeFileName(_currentTitle, ext: 'md');
-      final file = File('${tempDir.path}/$name');
-      await file.writeAsString(content, flush: true);
-      return file;
-    } catch (e, st) {
-      logWarning('[MarkdownViewer] Failed to cache local markdown file', e, st);
-      return null;
-    }
+    final name = _safeFileName(_currentTitle, ext: 'md');
+    return await saveTempText(content, name);
   }
 
   Future<void> _shareDocument() async {
@@ -882,7 +872,8 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
               await SharePlus.instance.share(
                 ShareParams(text: content, subject: title),
               );
-            } catch (_) {
+            } catch (fallbackError) {
+              // Web share unsupported or cancelled, trigger browser file download
               await downloadWebFile(
                 Uint8List.fromList(utf8.encode(content)),
                 fileName,
@@ -909,13 +900,13 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       }
 
       // Mobile & Desktop platforms
-      final file = await _ensureLocalMarkdownFile();
-      if (file != null) {
+      final localPath = await _ensureLocalMarkdownFilePath();
+      if (localPath != null) {
         await SharePlus.instance.share(
           ShareParams(
             files: [
               XFile(
-                file.path,
+                localPath,
                 mimeType: 'text/markdown',
                 name: fileName,
               ),
@@ -964,11 +955,11 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
       }
 
       // Mobile & Desktop
-      final file = await _ensureLocalMarkdownFile();
-      if (file != null) {
-        var result = await OpenFilex.open(file.path, type: 'text/markdown');
+      final localPath = await _ensureLocalMarkdownFilePath();
+      if (localPath != null) {
+        var result = await OpenFilex.open(localPath, type: 'text/markdown');
         if (result.type == ResultType.noAppToOpen) {
-          result = await OpenFilex.open(file.path, type: 'text/plain');
+          result = await OpenFilex.open(localPath, type: 'text/plain');
         }
         if (result.type != ResultType.done && mounted) {
           logWarning(
