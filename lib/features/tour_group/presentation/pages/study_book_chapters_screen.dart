@@ -343,7 +343,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       logWarning('A study chapter change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -569,7 +569,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               title: Text(l10n.translate('study_printable_booklet_title'),
                   style: TextStyle(color: palette.text)),
               subtitle: Text(l10n.translate('study_printable_booklet_sub'),
-                  style: TextStyle(color: palette.text70, fontSize: 11.5)),
+                  style: TextStyle(color: palette.text70, fontSize: 12)),
               onTap: () => Navigator.of(sheetContext)
                   .pop(_LearningTool.printableBooklet),
             ),
@@ -578,7 +578,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               title: Text(l10n.translate('study_branch_poster_title'),
                   style: TextStyle(color: palette.text)),
               subtitle: Text(l10n.translate('study_branch_poster_sub'),
-                  style: TextStyle(color: palette.text70, fontSize: 11.5)),
+                  style: TextStyle(color: palette.text70, fontSize: 12)),
               onTap: () =>
                   Navigator.of(sheetContext).pop(_LearningTool.branchPoster),
             ),
@@ -695,7 +695,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: context.forest.text70,
-                                fontSize: 12.5,
+                                fontSize: 13,
                               ),
                             ),
                           ),
@@ -1160,7 +1160,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                     l10n.translate('study_syllabus_blueprint'),
                     style: TextStyle(
                       color: palette.text,
-                      fontSize: 13.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1176,7 +1176,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                       l10n.translate('viewer_filter_all_modules'),
                       style: TextStyle(
                         color: palette.accentText,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -1193,7 +1193,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                       label: Text(
                         l10n.translate('viewer_filter_all_modules'),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: _selectedModuleCode == null
                               ? FontWeight.bold
                               : FontWeight.normal,
@@ -1222,7 +1222,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                         label: Text(
                           'Module ${mod.code}',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: _selectedModuleCode == mod.code
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -1269,7 +1269,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                       'Module ${activeModule.code}: ${isBn && activeModule.titleBn.isNotEmpty ? activeModule.titleBn : activeModule.title}',
                       style: TextStyle(
                         color: palette.accentText,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1279,7 +1279,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                         activeModule.description,
                         style: TextStyle(
                           color: palette.text70,
-                          fontSize: 11.5,
+                          fontSize: 12,
                           height: 1.35,
                         ),
                       ),
@@ -1459,7 +1459,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                               .withValues(alpha: 0.4),
                         ),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                       ),
@@ -1492,7 +1492,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
                               .withValues(alpha: 0.4),
                         ),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                       ),

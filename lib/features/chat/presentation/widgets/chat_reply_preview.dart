@@ -98,7 +98,7 @@ class ChatReplyInputBanner extends StatelessWidget {
               reply.mediaUrl!.isNotEmpty &&
               reply.type == 'image')
             ClipRRect(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
               child: kIsWeb
                   ? Image.network(
                       signedMediaUrl(reply.mediaUrl!),
@@ -181,7 +181,7 @@ class ChatReplyInputBanner extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(color: context.chat.text70, fontSize: 11.5),
+            style: TextStyle(color: context.chat.text70, fontSize: 12),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -237,7 +237,7 @@ class ChatQuotedBubble extends StatelessWidget {
                     reply.senderName,
                     style: TextStyle(
                       color: context.chat.accentText,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
@@ -332,7 +332,7 @@ class ChatQuotedBubble extends StatelessWidget {
         Flexible(
           child: Text(
             label,
-            style: TextStyle(color: context.chat.text60, fontSize: 11),
+            style: TextStyle(color: context.chat.text60, fontSize: 12),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

@@ -129,7 +129,7 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed: $e'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -392,7 +392,7 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                                 style: TextStyle(
                                   color: AppColors.mintGreen
                                       .withValues(alpha: 0.8),
-                                  fontSize: 11,
+                                  fontSize: 12,
                                 ),
                               ),
                           ],
@@ -454,7 +454,7 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: context.forest.surfaceFor(_cardBg),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: schedule.isCompleted
                             ? AppColors.mintGreen.withValues(alpha: 0.4)
@@ -475,7 +475,7 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                                 color: schedule.isCompleted
                                     ? AppColors.darkGreen
                                     : const Color(0xFF332A15),
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -499,7 +499,7 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                                           ? AppColors.mintGreen
                                           : AppColors.gold,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
@@ -538,7 +538,7 @@ class _MessBazarSheetState extends State<MessBazarSheet> {
                                         .toUpperCase(),
                                     style: const TextStyle(
                                       color: AppColors.darkGreen,
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

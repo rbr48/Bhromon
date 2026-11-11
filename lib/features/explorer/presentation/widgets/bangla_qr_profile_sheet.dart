@@ -203,7 +203,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
             child: const Text('বাতিল'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('মুছে ফেলুন'),
           ),
@@ -299,7 +299,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
               style: TextStyle(
                 fontFamily: 'NotoSansBengali',
                 color: f.text70,
-                fontSize: 12.5,
+                fontSize: 13,
                 height: 1.35,
               ),
             ),
@@ -329,7 +329,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   child: _isProcessingImage
                       ? const Center(child: CircularProgressIndicator())
                       : (_enhancedBytes != null || _rawPickedBytes != null)
@@ -395,7 +395,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                       style: const TextStyle(
                         fontFamily: 'NotoSansBengali',
                         color: AppColors.mintGreen,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -425,7 +425,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                       style: TextStyle(
                         fontFamily: 'NotoSansBengali',
                         color: f.accentText,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -445,7 +445,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                 side: BorderSide(color: f.accentText),
                 padding: const EdgeInsets.symmetric(vertical: 11),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               icon: const Icon(Icons.photo_library_outlined, size: 18),
@@ -547,7 +547,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                   child: InkWell(
                     onTap: () =>
                         setState(() => _selectedAccountType = 'personal'),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           vertical: 8, horizontal: 10),
@@ -555,7 +555,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                         color: _selectedAccountType == 'personal'
                             ? AppColors.mintGreen.withValues(alpha: 0.15)
                             : f.card,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _selectedAccountType == 'personal'
                               ? AppColors.mintGreen
@@ -575,7 +575,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                               'ব্যক্তিগত (Send Money)',
                               style: TextStyle(
                                 fontFamily: 'NotoSansBengali',
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: _selectedAccountType == 'personal'
                                     ? AppColors.mintGreen
@@ -593,7 +593,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                   child: InkWell(
                     onTap: () =>
                         setState(() => _selectedAccountType = 'merchant'),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           vertical: 8, horizontal: 10),
@@ -601,7 +601,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                         color: _selectedAccountType == 'merchant'
                             ? AppColors.darkGreen.withValues(alpha: 0.2)
                             : f.card,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _selectedAccountType == 'merchant'
                               ? AppColors.mintGreen
@@ -621,7 +621,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                               'মার্চেন্ট (Bangla QR)',
                               style: TextStyle(
                                 fontFamily: 'NotoSansBengali',
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: _selectedAccountType == 'merchant'
                                     ? AppColors.mintGreen
@@ -674,7 +674,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                     labelStyle: TextStyle(
                       fontFamily: 'NotoSansBengali',
                       color: f.text70,
-                      fontSize: 12.5,
+                      fontSize: 13,
                     ),
                     hintText: isBankOrMerchant
                         ? '১৩-১৭ ডিজিটের অ্যাকাউন্ট নম্বর বা আইডি'
@@ -695,11 +695,11 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                     fillColor: f.card,
                     isDense: true,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: f.divider12),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: f.accentText, width: 1.5),
                     ),
                   ),
@@ -716,7 +716,7 @@ class _BanglaQrProfileSheetState extends State<BanglaQrProfileSheet> {
                 foregroundColor: AppColors.darkGreen,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               icon: _isSaving

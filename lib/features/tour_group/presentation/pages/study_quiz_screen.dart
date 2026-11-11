@@ -16,6 +16,7 @@ import '../widgets/study/study_question_composer.dart';
 import 'study_quiz_run_screen.dart';
 
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// One quiz. It shows the signed-in member's own record, which nobody else reads, and the questions an admin has
 /// approved. Proposed questions are listed for everyone, with the actions each person may take: an admin approves
@@ -144,7 +145,7 @@ class _StudyQuizScreenState extends State<StudyQuizScreen> {
       logWarning('A quiz question change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

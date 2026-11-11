@@ -406,7 +406,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           padding: const EdgeInsets.only(right: 6),
                           child: ActionChip(
                             label:
-                                Text(s, style: const TextStyle(fontSize: 11)),
+                                Text(s, style: const TextStyle(fontSize: 12)),
                             onPressed: () {
                               titleCtrl.text = s;
                             },
@@ -728,7 +728,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               l10n.translate('fund_family_of',
                                   args: {'n': l10n.number(m.familyCount)}),
                               style: TextStyle(
-                                  color: context.forest.text38, fontSize: 11))
+                                  color: context.forest.text38, fontSize: 12))
                           : null,
                       trailing: _isAdmin
                           ? TextButton(
@@ -861,7 +861,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           color.withValues(alpha: 0.28),
           context.forest.surfaceFor(_card),
         ], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.6)),
       ),
       child: Column(
@@ -869,7 +869,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         children: [
           Text(l10n.translate(live ? 'notice_happening_now' : 'notice_next_up'),
               style: TextStyle(
-                  color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                  color: color, fontSize: 12, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -934,7 +934,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 Text(l10n.translate('tour_live_meeting_point'),
                     style: TextStyle(
                         color: context.forest.readable(Colors.amber),
-                        fontSize: 11)),
+                        fontSize: 12)),
                 Text(_meetingTitle(l10n),
                     style: TextStyle(
                         color: context.forest.text,
@@ -1134,7 +1134,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF142428)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.forest.divider10),
       ),
       child: Row(
@@ -1158,7 +1158,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     '$pct%',
                     style: TextStyle(
                       color: ringColor,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1195,7 +1195,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           args: {'n': l10n.number(a.waiting.length)}),
                   style: TextStyle(
                     color: isDone ? AppColors.mintGreen : context.forest.text54,
-                    fontSize: 11,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -1222,7 +1222,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         ),
         const SizedBox(height: 4),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
             value: a.ratio,
             minHeight: 6,
@@ -1292,7 +1292,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           color: hot
               ? Colors.redAccent.withValues(alpha: 0.08)
               : context.forest.surfaceFor(_card),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: hot
                   ? Colors.redAccent.withValues(alpha: 0.6)
@@ -1301,7 +1301,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       : context.forest.divider12)),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => _menu(n),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -1318,7 +1318,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     ),
                     child: Text(
                         '${n.kind.emoji} ${noticeKindLabel(l10n, n.kind)}',
-                        style: TextStyle(color: color, fontSize: 11)),
+                        style: TextStyle(color: color, fontSize: 12)),
                   ),
                   if (stop != null) ...[
                     const SizedBox(width: 6),
@@ -1326,7 +1326,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       child: Text('· $stop',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: context.forest.text54, fontSize: 11)),
+                              color: context.forest.text54, fontSize: 12)),
                     ),
                   ],
                   const Spacer(),
@@ -1428,7 +1428,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               .format(n.createdAt),
                         }),
                         style: TextStyle(
-                            color: context.forest.text38, fontSize: 11)),
+                            color: context.forest.text38, fontSize: 12)),
                   ),
                   _readAloudButton(l10n, n),
                 ]),

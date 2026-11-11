@@ -75,7 +75,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
             child: Text(l10n.translate('fd_cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.translate('fd_delete')),
           ),

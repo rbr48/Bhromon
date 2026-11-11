@@ -11,6 +11,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_rules.dart';
 import '../widgets/study/reading_session_editor.dart';
 import 'study_session_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// A study or book club's reading plan: the sessions the group has planned, upcoming ones
 /// first. Any member plans a session. Its creator or an admin changes or removes it.
@@ -165,7 +166,7 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
       logWarning('A reading session change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

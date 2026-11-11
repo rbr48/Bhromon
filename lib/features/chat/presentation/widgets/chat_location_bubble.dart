@@ -109,7 +109,7 @@ class ChatLocationBubble extends StatelessWidget {
                           '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}',
                           style: const TextStyle(
                             color: Colors.white70,
-                            fontSize: 9,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -144,7 +144,7 @@ class ChatLocationBubble extends StatelessWidget {
                     address,
                     style: TextStyle(
                       color: context.chat.text70,
-                      fontSize: 11,
+                      fontSize: 12,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -169,7 +169,7 @@ class ChatLocationBubble extends StatelessWidget {
                             color: isMe
                                 ? context.chat.text
                                 : context.chat.accentText,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -190,7 +190,7 @@ class ChatLocationBubble extends StatelessWidget {
               children: [
                 Text(
                   timeStr,
-                  style: TextStyle(color: context.chat.text54, fontSize: 9.5),
+                  style: TextStyle(color: context.chat.text54, fontSize: 11),
                 ),
                 if (isMe && deliveryIcon != null) ...[
                   const SizedBox(width: 4),

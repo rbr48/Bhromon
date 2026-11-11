@@ -191,7 +191,7 @@ class _StudyFlashcardReviewScreenState
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: palette.divider10,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
                           border:
                               Border.all(color: palette.divider12, width: 0.8),
                         ),
@@ -199,7 +199,7 @@ class _StudyFlashcardReviewScreenState
                           'Box ${card.box}',
                           style: TextStyle(
                             color: palette.text54,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -210,7 +210,7 @@ class _StudyFlashcardReviewScreenState
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: palette.accentText.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: palette.accentText.withValues(alpha: 0.4),
                               width: 0.8,
@@ -220,7 +220,7 @@ class _StudyFlashcardReviewScreenState
                             'Mod ${card.moduleCode}',
                             style: TextStyle(
                               color: palette.accentText,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -251,7 +251,7 @@ class _StudyFlashcardReviewScreenState
                         : 'Tap card or button to reveal answer',
                     style: TextStyle(
                         color: palette.text54,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontStyle: FontStyle.italic),
                   ),
                 ],

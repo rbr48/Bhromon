@@ -68,7 +68,7 @@ class _ChatCodeBlockWidgetState extends State<ChatCodeBlockWidget> {
                     lang != null && lang.isNotEmpty ? lang : 'CODE',
                     style: const TextStyle(
                       color: AppColors.mintGreen,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.8,
                     ),
@@ -95,7 +95,7 @@ class _ChatCodeBlockWidgetState extends State<ChatCodeBlockWidget> {
                               color: _copied
                                   ? AppColors.mintGreen
                                   : Colors.white70,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -114,7 +114,7 @@ class _ChatCodeBlockWidgetState extends State<ChatCodeBlockWidget> {
                 widget.code,
                 style: const TextStyle(
                   fontFamily: 'monospace',
-                  fontSize: 13.5,
+                  fontSize: 14,
                   letterSpacing: 0.2,
                   color: Color(0xFFE2E8F0),
                   height: 1.4,

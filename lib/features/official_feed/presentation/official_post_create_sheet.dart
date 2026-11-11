@@ -315,7 +315,7 @@ class _OfficialPostCreateSheetState extends State<OfficialPostCreateSheet> {
                         children: [
                           if (!_isVideo)
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               child: Image.memory(
                                 _fileBytes!,
                                 fit: BoxFit.cover,
@@ -416,11 +416,11 @@ class _OfficialPostCreateSheetState extends State<OfficialPostCreateSheet> {
                 hintStyle: const TextStyle(color: Colors.white38),
                 counterStyle: const TextStyle(color: Colors.white54),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: const BorderSide(color: Colors.white24),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: const BorderSide(color: AppColors.mintGreen),
                 ),
               ),
@@ -443,7 +443,7 @@ class _OfficialPostCreateSheetState extends State<OfficialPostCreateSheet> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: _isUploading

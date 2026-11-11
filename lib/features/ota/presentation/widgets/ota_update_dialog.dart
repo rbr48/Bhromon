@@ -100,7 +100,7 @@ class OtaUpdateDialog extends StatelessWidget {
                             ? '${(state.downloadProgress * 100).toInt()}%'
                             : 'Connecting…',
                         style: TextStyle(
-                            color: context.forest.text54, fontSize: 11),
+                            color: context.forest.text54, fontSize: 12),
                       ),
                     ),
 

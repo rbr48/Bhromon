@@ -231,12 +231,12 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                                 ? '${context.l10n.number(sendPercent)}%'
                                 : _formatDuration(_position),
                             style: TextStyle(
-                                color: context.chat.text60, fontSize: 10),
+                                color: context.chat.text60, fontSize: 11),
                           ),
                           Text(
                             _formatDuration(_totalDuration),
                             style: TextStyle(
-                                color: context.chat.text60, fontSize: 10),
+                                color: context.chat.text60, fontSize: 11),
                           ),
                         ],
                       ),
@@ -253,13 +253,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
                     color: context.chat.text.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     _speedLabel,
                     style: TextStyle(
                       color: context.chat.text70,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

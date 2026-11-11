@@ -40,7 +40,7 @@ class ServerPatronCard extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: AppColors.mintGreen.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.volunteer_activism_rounded,
@@ -195,7 +195,7 @@ class ServerPatronCard extends StatelessWidget {
                   isBn ? 'স্বেচ্ছাসেবী' : 'Open Source',
                   style: const TextStyle(
                     color: AppColors.mintGreen,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -221,13 +221,13 @@ class ServerPatronCard extends StatelessWidget {
               Expanded(
                 child: InkWell(
                   onTap: () => _openSupportSheet(context),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                     decoration: BoxDecoration(
                       color: AppColors.mintGreen.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: AppColors.mintGreen.withValues(alpha: 0.4),
                       ),
@@ -256,12 +256,12 @@ class ServerPatronCard extends StatelessWidget {
               // Details & GitHub Button
               InkWell(
                 onTap: () => _openSupportSheet(context),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.white12,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white24),
                   ),
                   child: const Icon(

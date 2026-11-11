@@ -7,6 +7,7 @@ import '../../data/study_pack_pdf.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/study_models.dart';
 import '../../domain/services/study_pack_rules.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Gathers a book's study pack from what the group shares, makes the PDF on the device, and opens the share sheet.
 /// A book with nothing to put in the pack yet says so instead.
@@ -77,7 +78,7 @@ Future<void> shareStudyPack({
     logWarning('The study pack could not be made', error, stackTrace);
     messenger.showSnackBar(SnackBar(
       content: Text(l10n.translate('study_pack_failed')),
-      backgroundColor: Colors.redAccent,
+      backgroundColor: AppColors.amber,
     ));
   }
 }

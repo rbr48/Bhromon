@@ -149,7 +149,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                           style: TextStyle(
                             color:
                                 isPassed ? AppColors.mintGreen : Colors.amber,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -213,7 +213,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 14),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: palette.divider12, width: 0.8),
       ),
       child: ExpansionTile(
@@ -249,7 +249,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: palette.accentText.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'Score: $score/${question.marks}',
@@ -265,7 +265,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
         subtitle: question.moduleCode != null
             ? Text(
                 'Module ${question.moduleCode}',
-                style: TextStyle(color: palette.text54, fontSize: 11),
+                style: TextStyle(color: palette.text54, fontSize: 12),
               )
             : null,
         children: [
@@ -285,7 +285,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                     text: question.prompt,
                     baseStyle: TextStyle(
                       color: palette.text,
-                      fontSize: 13.5,
+                      fontSize: 14,
                       height: 1.45,
                     ),
                   ),
@@ -297,7 +297,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                   l10n.translate('study_exam_candidate_draft'),
                   style: TextStyle(
                     color: palette.accentText,
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -334,7 +334,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                     l10n.translate('study_exam_model_answer'),
                     style: TextStyle(
                       color: palette.text70,
-                      fontSize: 12.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -381,7 +381,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: palette.accentText.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '$score / ${question.marks}',
@@ -440,7 +440,7 @@ class _MetricItem extends StatelessWidget {
           label,
           style: TextStyle(
             color: context.forest.text54,
-            fontSize: 11.5,
+            fontSize: 12,
           ),
         ),
       ],

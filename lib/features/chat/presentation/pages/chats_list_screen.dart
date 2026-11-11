@@ -549,7 +549,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                               .translate('chats_empty_hint'),
                                           style: TextStyle(
                                               color: context.chat.accentText,
-                                              fontSize: 11),
+                                              fontSize: 12),
                                         ),
                                       ],
                                     ),
@@ -946,7 +946,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 Text(
                   context.l10n.translate('chats_calls_empty_hint'),
                   style:
-                      TextStyle(color: context.chat.accentText, fontSize: 11),
+                      TextStyle(color: context.chat.accentText, fontSize: 12),
                 ),
               ],
             ),
@@ -1237,7 +1237,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     child: Text(
                       context.l10n.translate('chats_start_subtitle'),
                       style:
-                          TextStyle(color: context.chat.text54, fontSize: 11),
+                          TextStyle(color: context.chat.text54, fontSize: 12),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1351,7 +1351,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               subtitle: Text(
                                 contact.tours.map((t) => t.name).join(' · '),
                                 style: TextStyle(
-                                    color: context.chat.text54, fontSize: 11),
+                                    color: context.chat.text54, fontSize: 12),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1984,7 +1984,7 @@ class ChatTile extends StatelessWidget {
               color: unreadCount > 0
                   ? context.chat.accentText
                   : context.chat.text54,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -1994,13 +1994,13 @@ class ChatTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: const Color(0xFF00A884),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 unreadCount >= 100 ? '99+' : '$unreadCount',
                 style: const TextStyle(
                     color: Colors.black,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold),
               ),
             ),

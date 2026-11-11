@@ -296,7 +296,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
                   color: isBangla
                       ? const Color(0xFF193B28)
                       : const Color(0xFF1E3A2B),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isBangla
                         ? const Color(0xFF81C784).withValues(alpha: 0.4)
@@ -305,12 +305,12 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
                   ),
                 ),
                 child: Text(
-                  isBangla ? '🇧🇩 বাংলা' : '🇬🇧 English',
+                  isBangla ? 'বাংলা' : 'English',
                   style: TextStyle(
                     color: isBangla
                         ? const Color(0xFF81C784)
                         : AppColors.mintGreen,
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -489,7 +489,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
           if (!opened) {
             messenger.showSnackBar(SnackBar(
               content: Text(l10n.translate('study_material_open_failed')),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.amber,
             ));
             return;
           }
@@ -498,7 +498,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
         logWarning('A study material could not be opened', error, stackTrace);
         messenger.showSnackBar(SnackBar(
           content: Text(l10n.translate('study_material_open_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
         return;
       }
@@ -703,7 +703,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       await upload?.discard();
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_material_error')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -719,7 +719,7 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
       logWarning('A study material change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

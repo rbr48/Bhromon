@@ -174,7 +174,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                                       'TRUST SCORE',
                                       style: TextStyle(
                                         color: context.forest.text54,
-                                        fontSize: 9,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 1.2,
                                       ),
@@ -199,7 +199,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   height: 1.4),
                             ),
                           ],

@@ -210,7 +210,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             const SizedBox(height: 2),
             Text(
               _timeLabel(n.timestamp),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

@@ -194,7 +194,7 @@ class _WarningStep extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _kCardBg,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _kRed.withValues(alpha: .4)),
             ),
             child: const Text(
@@ -282,11 +282,11 @@ class _ConfirmStep extends StatelessWidget {
               filled: true,
               fillColor: _kFieldBg,
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: _kBorder),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: _kRed.withValues(alpha: .8)),
               ),
               errorText: errorMessage,

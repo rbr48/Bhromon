@@ -7,6 +7,7 @@ import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_problem_models.dart';
 import '../../../domain/services/study_problem_rules.dart';
 import 'study_modal.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Opens an admin's list of the reported workings across a subject's problems, oldest report first. An admin restores a
 /// working to the group, or removes it for good.
@@ -92,7 +93,7 @@ class _StudyReportedWorkSheetState extends State<_StudyReportedWorkSheet> {
       logWarning('A reported working change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

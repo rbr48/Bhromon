@@ -6,6 +6,7 @@ import '../../../../../core/utils/app_logger.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_finding_models.dart';
 import 'study_modal.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Opens the checks on a finding for an admin, who sees who checked and what they said, and may
 /// withdraw any one of them.
@@ -104,7 +105,7 @@ class _StudyFindingChecksSheetState extends State<StudyFindingChecksSheet> {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

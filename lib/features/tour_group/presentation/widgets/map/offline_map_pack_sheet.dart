@@ -227,7 +227,7 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                                           : '✓ Saved (tap to open interactive map)',
                                       style: const TextStyle(
                                         color: AppColors.mintGreen,
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -292,7 +292,7 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                                               '• ${isBn ? contact.titleBn : contact.titleEn} (${contact.phone})',
                                               style: TextStyle(
                                                 color: context.forest.text70,
-                                                fontSize: 11,
+                                                fontSize: 12,
                                               ),
                                             ),
                                           ),
@@ -327,7 +327,7 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                                       '📍 ${isBn ? wp.nameBn : wp.nameEn} [${wp.lat.toStringAsFixed(4)}, ${wp.lng.toStringAsFixed(4)}]',
                                       style: TextStyle(
                                         color: context.forest.text54,
-                                        fontSize: 11,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   const SizedBox(height: 12),
@@ -337,7 +337,7 @@ class _OfflineMapPackSheetState extends State<OfflineMapPackSheet> {
                                       foregroundColor: AppColors.darkGreen,
                                       minimumSize: const Size.fromHeight(40),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
                                     icon: const Icon(Icons.explore_rounded,

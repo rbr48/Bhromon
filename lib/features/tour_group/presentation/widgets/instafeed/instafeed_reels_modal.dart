@@ -554,7 +554,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                       '${widget.post.effectiveViewCount}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -571,7 +571,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                       context.l10n.translate('ig_ledger_short'),
                       style: const TextStyle(
                         color: AppColors.mintGreen,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -656,7 +656,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                                 Text(
                                   widget.post.location,
                                   style: const TextStyle(
-                                      color: Colors.white, fontSize: 11),
+                                      color: Colors.white, fontSize: 12),
                                 ),
                               ],
                             ),

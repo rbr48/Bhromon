@@ -16,6 +16,7 @@ import '../../domain/services/study_progress_rules.dart';
 
 import '../widgets/study/study_text_field.dart';
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The shared summary of one chapter. The group reads the revision an admin pinned, or the newest when none is
 /// pinned. A member adds a revision, or restores an earlier one as a new revision: nothing is overwritten, so every
@@ -113,7 +114,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
       logWarning('A chapter summary change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

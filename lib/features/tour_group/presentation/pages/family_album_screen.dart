@@ -118,7 +118,7 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
                         return InkWell(
                           onTap: () => _open(url),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                             child: TourSafeNetworkImage(imageUrl: url),
                           ),
                         );

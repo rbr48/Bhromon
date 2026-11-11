@@ -77,7 +77,7 @@ class _MealsScreenState extends State<MealsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(context.l10n.translate('meals_save_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -230,7 +230,7 @@ class _MealsScreenState extends State<MealsScreen> {
         ),
         const SizedBox(height: 4),
         InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => showMessBalanceSheet(
             context,
             tourId: widget.tourId,
@@ -240,7 +240,7 @@ class _MealsScreenState extends State<MealsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: AppColors.mintGreen.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: AppColors.mintGreen.withValues(alpha: 0.35),
               ),
@@ -269,7 +269,7 @@ class _MealsScreenState extends State<MealsScreen> {
                         'বাজার খরচ ও সদস্যভিত্তিক বকেয়া/ফেরত হিসাব দেখুন',
                         style: TextStyle(
                           color: context.forest.text54,
-                          fontSize: 11,
+                          fontSize: 12,
                         ),
                       ),
                     ],

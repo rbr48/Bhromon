@@ -107,13 +107,13 @@ class StudyDailyStreakCard extends StatelessWidget {
                                 horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
                               color: palette.accentText.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               l10n.translate(streak.tierKey),
                               style: TextStyle(
                                 color: palette.accentText,
-                                fontSize: 10.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -131,7 +131,7 @@ class StudyDailyStreakCard extends StatelessWidget {
                         color: palette.isDark
                             ? Colors.white70
                             : AppColors.grayText,
-                        fontSize: 11.5,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -148,7 +148,7 @@ class StudyDailyStreakCard extends StatelessWidget {
                       : (streak.hasUsedFreeze
                           ? Colors.blue.withValues(alpha: 0.15)
                           : Colors.amber.withValues(alpha: 0.15)),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: streak.isActiveToday
                         ? palette.accentText.withValues(alpha: 0.5)
@@ -187,7 +187,7 @@ class StudyDailyStreakCard extends StatelessWidget {
                             : (streak.hasUsedFreeze
                                 ? Colors.blue
                                 : Colors.amber.shade900),
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -249,7 +249,7 @@ class StudyDailyStreakCard extends StatelessWidget {
                           : (palette.isDark
                               ? Colors.white60
                               : AppColors.grayText),
-                      fontSize: 10.5,
+                      fontSize: 11,
                       fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -270,7 +270,7 @@ class StudyDailyStreakCard extends StatelessWidget {
                   l10n.translate('study_streak_motivation'),
                   style: TextStyle(
                     color: palette.isDark ? Colors.white60 : AppColors.grayText,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontStyle: FontStyle.italic,
                   ),
                   maxLines: 2,

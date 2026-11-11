@@ -76,14 +76,14 @@ class DesktopTourSidebar extends StatelessWidget {
                           height: 36,
                           decoration: BoxDecoration(
                             color: const Color(0xFF1B4332),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: AppColors.mintGreen.withValues(alpha: 0.4),
                               width: 1,
                             ),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(9),
+                            borderRadius: BorderRadius.circular(8),
                             child: Image.asset(
                               'assets/logo.png',
                               fit: BoxFit.cover,
@@ -111,7 +111,7 @@ class DesktopTourSidebar extends StatelessWidget {
                               Text(
                                 l10n.translate('login_tagline'),
                                 style: TextStyle(
-                                    color: context.forest.text54, fontSize: 10),
+                                    color: context.forest.text54, fontSize: 11),
                               ),
                             ],
                           ),
@@ -123,7 +123,7 @@ class DesktopTourSidebar extends StatelessWidget {
                       tourTitle,
                       style: TextStyle(
                         color: context.forest.text,
-                        fontSize: 14.5,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -140,7 +140,7 @@ class DesktopTourSidebar extends StatelessWidget {
                             routeSubtitle,
                             style: TextStyle(
                               color: context.forest.text70,
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
@@ -177,7 +177,7 @@ class DesktopTourSidebar extends StatelessWidget {
                             l10n.translate('desktop_sidebar_search'),
                             style: TextStyle(
                                 color: context.forest.text70,
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -193,7 +193,7 @@ class DesktopTourSidebar extends StatelessWidget {
                             'Ctrl+K',
                             style: TextStyle(
                                 color: Colors.white38,
-                                fontSize: 9.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -342,7 +342,7 @@ class DesktopTourSidebar extends StatelessWidget {
         title.toUpperCase(),
         style: TextStyle(
           color: context.forest.text38,
-          fontSize: 9.5,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.8,
         ),
@@ -401,7 +401,7 @@ class DesktopTourSidebar extends StatelessWidget {
                       ? context.forest.accentText
                       : context.forest.text,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 12.5,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -478,7 +478,7 @@ class DesktopTourSidebar extends StatelessWidget {
                 badge,
                 style: TextStyle(
                   color: badgeColor,
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -550,7 +550,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     Text(
                       email,
                       style:
-                          TextStyle(color: context.forest.text38, fontSize: 10),
+                          TextStyle(color: context.forest.text38, fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -610,7 +610,7 @@ class DesktopTourSidebar extends StatelessWidget {
                               : 'GET IT ON',
                           style: TextStyle(
                             color: context.forest.text38,
-                            fontSize: 8.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
                           ),
@@ -619,7 +619,7 @@ class DesktopTourSidebar extends StatelessWidget {
                           'Google Play',
                           style: TextStyle(
                             color: context.forest.text,
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

@@ -215,7 +215,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
             child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(context.l10n.translate('ig_delete')),
           ),
@@ -305,7 +305,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                                 args: {'n': _taggedSlideIndex! + 1}),
                             style: TextStyle(
                               color: context.forest.accentText,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -652,7 +652,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           context.l10n.translate('ig_author_badge'),
                           style: TextStyle(
                             color: context.forest.accentText,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -665,7 +665,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         context.l10n.translate('ig_pinned'),
                         style: const TextStyle(
                           color: Colors.amber,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -714,7 +714,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                               context.l10n.translate('ig_author_liked'),
                               style: TextStyle(
                                 color: context.forest.text54,
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -732,7 +732,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                               color: comment.isPinned
                                   ? Colors.amber
                                   : context.forest.text54,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -746,7 +746,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                             context.l10n.translate('ig_delete'),
                             style: const TextStyle(
                               color: Colors.redAccent,
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -777,7 +777,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
               if (likeCount > 0)
                 Text(
                   '$likeCount',
-                  style: TextStyle(color: context.forest.text54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
             ],
           ),

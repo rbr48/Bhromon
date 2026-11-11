@@ -122,7 +122,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: context.forest.inset26,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.forest.divider10),
               ),
               child: Row(
@@ -179,7 +179,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: context.forest.inset26,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: context.forest.divider10),
                 ),
                 child: Column(
@@ -219,7 +219,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                                         .number(samity.contributionTaka - paid)
                                   }),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: isPaid
                                   ? context.forest
@@ -274,7 +274,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                       color: context.forest.readable(const Color(0xFF52B788))),
                   label: Text(
                     l10n.translate('samity_home_view_btn'),
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -295,7 +295,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
                       color: context.forest.readable(const Color(0xFF52B788))),
                   label: Text(
                     l10n.translate('samity_home_fund_btn'),
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -313,7 +313,7 @@ class _SamityHomeCardState extends State<SamityHomeCard> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),

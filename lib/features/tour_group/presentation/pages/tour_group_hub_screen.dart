@@ -421,7 +421,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               label,
               style: TextStyle(
                 color: context.forest.readable(color),
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
               maxLines: 1,
@@ -540,11 +540,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     filled: true,
                     fillColor: context.forest.inset26,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: context.forest.text24),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: AppColors.mintGreen),
                     ),
                   ),
@@ -561,11 +561,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     filled: true,
                     fillColor: context.forest.inset26,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: context.forest.text24),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: AppColors.mintGreen),
                     ),
                   ),
@@ -1111,7 +1111,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   margin: const EdgeInsets.only(bottom: 14),
                   decoration: BoxDecoration(
                     color: context.forest.card,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: context.forest.divider10),
                   ),
                   child: TextField(
@@ -1573,7 +1573,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: context.forest.accentText,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -2134,7 +2134,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           '⏱️ ${group.durationText}',
                           style: TextStyle(
                             color: context.forest.text70,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -2296,7 +2296,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               args: {'stop': currentStopName}),
                           style: TextStyle(
                             color: context.forest.text,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -2333,7 +2333,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 size: 14, color: context.forest.accentText),
                             label: Text(
                               context.l10n.translate('hub_live_route_btn'),
-                              style: const TextStyle(fontSize: 11),
+                              style: const TextStyle(fontSize: 12),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -2358,7 +2358,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 color: AppColors.gold),
                             label: Text(
                               context.l10n.translate('hub_live_notices_btn'),
-                              style: const TextStyle(fontSize: 11),
+                              style: const TextStyle(fontSize: 12),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -2383,7 +2383,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                     .readable(const Color(0xFF52B788))),
                             label: Text(
                               context.l10n.translate('hub_live_ledger_btn'),
-                              style: const TextStyle(fontSize: 11),
+                              style: const TextStyle(fontSize: 12),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -2401,7 +2401,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: context.forest.text.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: context.forest.divider10),
                 ),
                 child: Row(
@@ -2434,7 +2434,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       label: Text(
                         context.l10n.translate('hub_upcoming_checklist'),
                         style: TextStyle(
-                            color: context.forest.accentText, fontSize: 11),
+                            color: context.forest.accentText, fontSize: 12),
                       ),
                     ),
                   ],
@@ -2448,7 +2448,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: context.forest.text.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: context.forest.divider10),
                 ),
                 child: Row(
@@ -2479,7 +2479,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       label: Text(
                         context.l10n.translate('hub_completed_scrapbook'),
                         style: TextStyle(
-                            color: context.forest.accentText, fontSize: 11),
+                            color: context.forest.accentText, fontSize: 12),
                       ),
                     ),
                   ],
@@ -2811,7 +2811,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: m.color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(m.icon,
                             color: context.forest.readable(m.color), size: 20),
@@ -2829,7 +2829,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               style: TextStyle(
                                 color: context.forest.text,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12.5,
+                                fontSize: 13,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -2839,7 +2839,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: context.forest.text54,
-                                fontSize: 10.5,
+                                fontSize: 11,
                               ),
                             ),
                           ],
@@ -2962,7 +2962,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             color: m.role.isAdminOrOwner
                                 ? AppColors.gold.withValues(alpha: 0.2)
                                 : context.forest.divider10,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             m.role.toValue().toUpperCase(),
@@ -2970,7 +2970,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               color: m.role.isAdminOrOwner
                                   ? AppColors.gold
                                   : context.forest.text70,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -3038,7 +3038,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(
                   l10n.translate(pick(
                       'hub_family_title',
@@ -3128,7 +3128,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             labelText: l10n.translate('hub_family_count_label'),
                             helperText: l10n.translate('hub_family_count_hint'),
                             helperStyle: TextStyle(
-                                color: context.forest.text54, fontSize: 11),
+                                color: context.forest.text54, fontSize: 12),
                             labelStyle: TextStyle(
                                 color: context.forest.text70, fontSize: 13),
                             filled: true,
@@ -3228,7 +3228,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   content: Text(l10n.translate(
                                       'hub_create_failed',
                                       args: {'error': e})),
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -3324,7 +3324,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(context.l10n.translate('hub_create_trip_title'),
                   style: TextStyle(
                       color: context.forest.text,
@@ -3362,7 +3362,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         context.l10n.translate('hub_popular_destinations'),
                         style: TextStyle(
                             color: context.forest.text70,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
@@ -3395,7 +3395,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   color: isSelected
                                       ? Colors.black
                                       : context.forest.text,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,
@@ -3439,7 +3439,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                     color: context.forest.text70, fontSize: 12),
                                 hintText: l10n.translate('hub_origin_hint'),
                                 hintStyle: TextStyle(
-                                    color: context.forest.text54, fontSize: 11),
+                                    color: context.forest.text54, fontSize: 12),
                                 filled: true,
                                 fillColor: context.forest.inset26,
                                 border: OutlineInputBorder(
@@ -3470,7 +3470,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   value: t,
                                   child: Text(
                                       '${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
-                                      style: const TextStyle(fontSize: 11)),
+                                      style: const TextStyle(fontSize: 12)),
                                 );
                               }).toList(),
                               onChanged: (t) {
@@ -3492,7 +3492,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         l10n.translate('hub_dates_heading'),
                         style: TextStyle(
                             color: context.forest.text70,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
@@ -3566,7 +3566,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                           args: {'duration': durationText}),
                                       style: TextStyle(
                                           color: context.forest.accentText,
-                                          fontSize: 11),
+                                          fontSize: 12),
                                     ),
                                   ],
                                 ),
@@ -3582,7 +3582,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       Text(l10n.translate('hub_modules_optional'),
                           style: TextStyle(
                               color: context.forest.text70,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold)),
                       _moduleSwitch(
                           l10n.translate('hub_mod_seats_short'),
@@ -3680,7 +3680,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   content: Text(l10n.translate(
                                       'hub_create_failed',
                                       args: {'error': e})),
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -3725,7 +3725,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(l10n.translate('hub_edit_circle_title'),
                   style: TextStyle(
                       color: context.forest.text,
@@ -3872,7 +3872,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(l10n.translate('hub_edit_settings_title'),
                   style: TextStyle(
                       color: context.forest.text,
@@ -3953,7 +3953,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   value: t,
                                   child: Text(
                                       '${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
-                                      style: const TextStyle(fontSize: 11)),
+                                      style: const TextStyle(fontSize: 12)),
                                 );
                               }).toList(),
                               onChanged: (t) {
@@ -3970,7 +3970,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         l10n.translate('hub_edit_dates_heading'),
                         style: TextStyle(
                             color: context.forest.text70,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
@@ -4044,7 +4044,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                           args: {'duration': durationText}),
                                       style: TextStyle(
                                           color: context.forest.accentText,
-                                          fontSize: 11),
+                                          fontSize: 12),
                                     ),
                                   ],
                                 ),
@@ -4059,7 +4059,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       Text(l10n.translate('hub_modules_label'),
                           style: TextStyle(
                               color: context.forest.text70,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold)),
                       _moduleSwitch(
                           l10n.translate('hub_mod_seats_short'),
@@ -4163,7 +4163,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   content: Text(l10n.translate(
                                       'hub_update_failed',
                                       args: {'error': e})),
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -4207,7 +4207,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(l10n.translate('hub_join_title'),
                   style: TextStyle(
                       color: context.forest.text, fontWeight: FontWeight.bold)),
@@ -4286,7 +4286,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   content: Text(e is FormatException
                                       ? e.message
                                       : e.toString()),
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -4417,7 +4417,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         color: member.role.isAdminOrOwner
                             ? AppColors.gold
                             : context.forest.text70,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -4473,7 +4473,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.mintGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.account_circle_outlined,
                       color: context.forest.accentText, size: 22),
@@ -4617,7 +4617,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                     context.l10n.translate('tour_cancel'))),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   foregroundColor: Colors.white),
                               onPressed: () => Navigator.pop(c, true),
                               child: Text(
@@ -4647,7 +4647,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   subtitle: Text(
                     context.l10n.translate('hub_family_count_note'),
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
                   onTap: () async {
                     final count =

@@ -92,7 +92,7 @@ class _StudyChatComposerState extends State<StudyChatComposer> {
                             textInputAction: TextInputAction.newline,
                             style: TextStyle(
                               color: palette.text,
-                              fontSize: 15.5,
+                              fontSize: 16,
                               height: 1.38,
                               letterSpacing: 0.05,
                               fontFamily: 'NotoSansBengali',

@@ -18,6 +18,7 @@ import '../../domain/services/study_session_rules.dart';
 
 import '../widgets/study/study_text_field.dart';
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// One reading session: when and where it is, the agenda and the link, each member's answer and check-in,
 /// the shared focus timer, and the recap. Its creator or an admin writes the agenda, runs the timer and
@@ -358,7 +359,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       logWarning('A study session change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -366,7 +367,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   void _say(String key, {Map<String, Object> args = const {}}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(context.l10n.translate(key, args: args)),
-      backgroundColor: Colors.redAccent,
+      backgroundColor: AppColors.amber,
     ));
   }
 

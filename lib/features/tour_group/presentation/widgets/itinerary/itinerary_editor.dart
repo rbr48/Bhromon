@@ -188,7 +188,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                 color: context.forest.surfaceFor(const Color(0xFF142428)),
                 margin: const EdgeInsets.only(top: 10),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(16)),
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),

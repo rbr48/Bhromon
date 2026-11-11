@@ -408,7 +408,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         'sans-serif'
                       ],
                       color: context.forest.text,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -444,7 +444,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         'sans-serif'
                       ],
                       color: context.forest.text,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -480,7 +480,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                         'sans-serif'
                       ],
                       color: context.forest.text,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -678,7 +678,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                             ],
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
-                            fontSize: 12.5,
+                            fontSize: 13,
                           ),
                         ),
                         backgroundColor: AppColors.mintGreen,
@@ -702,7 +702,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                             ],
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            fontSize: 12.5,
+                            fontSize: 13,
                           ),
                         ),
                         backgroundColor: AppColors.darkGreen,
@@ -736,7 +736,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
       decoration: BoxDecoration(
         color: const Color(0xFF0E1A15),
         border: Border.all(color: borderColor, width: 1.2),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
             color: Colors.black45,
@@ -746,7 +746,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(8),
         child: Table(
           defaultColumnWidth: const IntrinsicColumnWidth(),
           border: const TableBorder(
@@ -775,7 +775,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                           'sans-serif'
                         ],
                         color: Colors.white,
-                        fontSize: 14.5,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.05,
                       ),

@@ -179,7 +179,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                             style: TextStyle(
                               color: context.forest.text,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                              fontSize: 13,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -190,7 +190,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
                             color: AppColors.mintGreen.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: AppColors.mintGreen.withValues(alpha: 0.3),
                             ),
@@ -200,7 +200,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                             style: TextStyle(
                               color: context.forest.accentText,
                               fontWeight: FontWeight.bold,
-                              fontSize: 10.5,
+                              fontSize: 11,
                             ),
                           ),
                         ),
@@ -215,13 +215,13 @@ class DesktopGroupListPanel extends StatelessWidget {
                           context,
                           repository: repository,
                         ),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 3.5),
                           decoration: BoxDecoration(
                             color: AppColors.mintGreen.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: AppColors.mintGreen.withValues(alpha: 0.4),
                             ),
@@ -231,7 +231,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                             style: TextStyle(
                               color: context.forest.accentText,
                               fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -296,7 +296,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                                     : '+ Create Group',
                                 style: TextStyle(
                                   color: context.forest.accentText,
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -329,7 +329,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 6),
                           child: InkWell(
                             onTap: () => _onGroupTap(context, g),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.all(8),
@@ -340,7 +340,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                                     : context.forest.surfaceFor(
                                         const Color(0xFF132219),
                                       ),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isActive
                                       ? AppColors.mintGreen
@@ -433,7 +433,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                                                   isBn ? 'সক্রিয়' : 'Active',
                                                   style: const TextStyle(
                                                     color: Colors.black,
-                                                    fontSize: 8.5,
+                                                    fontSize: 11,
                                                     fontWeight: FontWeight.w900,
                                                   ),
                                                 ),
@@ -447,7 +447,7 @@ class DesktopGroupListPanel extends StatelessWidget {
                                             color: isActive
                                                 ? context.forest.text70
                                                 : context.forest.text38,
-                                            fontSize: 10.5,
+                                            fontSize: 11,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -537,7 +537,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                         style: TextStyle(
                           color: context.forest.text,
                           fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
+                          fontSize: 13,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -547,7 +547,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                       isBn ? '(১-অন-১)' : '(1-on-1)',
                       style: TextStyle(
                         color: context.forest.text54,
-                        fontSize: 10.5,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -576,7 +576,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                   child: Text(
                     isBn ? 'চ্যাট লোড করা যায়নি' : 'Chats unavailable',
                     style:
-                        TextStyle(color: context.forest.text38, fontSize: 11),
+                        TextStyle(color: context.forest.text38, fontSize: 12),
                   ),
                 )
               : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -602,7 +602,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                               ? 'চ্যাট লোড করা যায়নি'
                               : 'Failed to load chats',
                           style: TextStyle(
-                              color: context.forest.text38, fontSize: 11),
+                              color: context.forest.text38, fontSize: 12),
                         ),
                       );
                     }
@@ -623,7 +623,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                                     ? 'কোনো সরাসরি বার্তা নেই'
                                     : 'No direct messages',
                                 style: TextStyle(
-                                    color: context.forest.text54, fontSize: 11),
+                                    color: context.forest.text54, fontSize: 12),
                               ),
                               const SizedBox(height: 8),
                               TextButton(
@@ -632,7 +632,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                                   isBn ? 'চ্যাট শুরু করুন' : 'Start Chat',
                                   style: TextStyle(
                                     color: context.forest.accentText,
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -696,7 +696,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                   Text(
                     isBn ? 'বন্ধুগণ সক্রিয়' : 'Friends active',
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 10.5),
+                        TextStyle(color: context.forest.text54, fontSize: 11),
                   ),
                 ],
               ),
@@ -707,7 +707,7 @@ class DesktopDirectChatsPanel extends StatelessWidget {
                   style: TextStyle(
                     color: context.forest.accentText,
                     fontWeight: FontWeight.bold,
-                    fontSize: 10.5,
+                    fontSize: 11,
                   ),
                 ),
               ),
@@ -837,12 +837,12 @@ class _DesktopDirectChatItem extends StatelessWidget {
                 'otherEmail': (data['memberEmails'] as Map?)?[otherUid],
               });
             },
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
               decoration: BoxDecoration(
                 color: context.forest.surfaceFor(const Color(0xFF132219)),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.forest.divider10),
               ),
               child: Row(
@@ -885,7 +885,7 @@ class _DesktopDirectChatItem extends StatelessWidget {
                           style: TextStyle(
                             color: context.forest.text,
                             fontWeight: FontWeight.bold,
-                            fontSize: 11.5,
+                            fontSize: 12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -902,7 +902,7 @@ class _DesktopDirectChatItem extends StatelessWidget {
                             fontWeight: unread > 0
                                 ? FontWeight.w600
                                 : FontWeight.normal,
-                            fontSize: 10,
+                            fontSize: 11,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -918,13 +918,13 @@ class _DesktopDirectChatItem extends StatelessWidget {
                           horizontal: 5, vertical: 1.5),
                       decoration: BoxDecoration(
                         color: AppColors.mintGreen,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '$unread',
                         style: const TextStyle(
                           color: Colors.black,
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.w900,
                         ),
                       ),

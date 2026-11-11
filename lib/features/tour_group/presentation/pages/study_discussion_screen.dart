@@ -16,6 +16,7 @@ import '../../domain/services/study_thread_rules.dart';
 import '../widgets/study/study_chat_composer.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'study_thread_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The discussions of a study book, opened as a conversation: the threads members have started, in
 /// chat order (pinned ones first, the newest at the foot), with the chat box under them. A member
@@ -141,7 +142,7 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
       logWarning('A study discussion change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -182,7 +183,7 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(context.l10n.translate('study_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
       return false;

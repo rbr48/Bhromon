@@ -413,7 +413,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                               l10n.translate('login_tagline'),
                               style: TextStyle(
                                 color: context.forest.text54,
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -486,7 +486,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                 _presetBadgeTitle(context, _preview!.preset),
                                 style: const TextStyle(
                                   color: AppColors.mintGreen,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -522,7 +522,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                             decoration: BoxDecoration(
                               color: context.forest
                                   .surfaceFor(const Color(0xFF102117)),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               border:
                                   Border.all(color: context.forest.divider10),
                             ),
@@ -536,7 +536,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                       l10n.translate('hub_join_code_label'),
                                       style: TextStyle(
                                         color: context.forest.text54,
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         letterSpacing: 0.8,
                                       ),
@@ -598,7 +598,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                               color: isAuthenticated
                                   ? AppColors.mintGreen.withValues(alpha: 0.08)
                                   : Colors.amber.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isAuthenticated
                                     ? AppColors.mintGreen
@@ -631,7 +631,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                       color: isAuthenticated
                                           ? context.forest.text
                                           : Colors.amberAccent,
-                                      fontSize: 11.5,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -648,7 +648,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.red.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color:
                                       Colors.redAccent.withValues(alpha: 0.4),
@@ -664,7 +664,7 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
                                       _errorMessage!,
                                       style: const TextStyle(
                                         color: Colors.redAccent,
-                                        fontSize: 11.5,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ),

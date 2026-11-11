@@ -161,7 +161,7 @@ class _NotificationSettingsScreenState
                                 'Add or update password for email sign-in backup',
                                 style: TextStyle(
                                     color: context.forest.text54,
-                                    fontSize: 11)),
+                                    fontSize: 12)),
                             trailing: Icon(Icons.chevron_right,
                                 color: context.forest.text54),
                             onTap: () => _showChangePasswordDialog(context),
@@ -182,7 +182,7 @@ class _NotificationSettingsScreenState
                                 'Permanently delete your profile and travel logs',
                                 style: TextStyle(
                                     color: context.forest.text54,
-                                    fontSize: 11)),
+                                    fontSize: 12)),
                             trailing: Icon(Icons.chevron_right,
                                 color:
                                     context.forest.readable(Colors.redAccent)),

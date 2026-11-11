@@ -191,7 +191,7 @@ class _ComposerState extends State<_Composer> {
         subtitle: help == null
             ? null
             : Text(help,
-                style: TextStyle(color: context.forest.text54, fontSize: 11)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
         value: value,
         activeThumbColor: AppColors.mintGreen,
         onChanged: onChanged,

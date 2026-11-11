@@ -7,6 +7,7 @@ import '../../../../../core/theme/forest_palette.dart';
 import '../../../../../core/utils/app_logger.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_models.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The "I would read this" vote on a proposed book: how many members would read it, and a
 /// button for the signed-in member to say so or take it back. Its stream is opened once, when
@@ -71,7 +72,7 @@ class _StudyVoteRowState extends State<StudyVoteRow> {
       logWarning('A study book vote failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     } finally {
       if (mounted) setState(() => _busy = false);

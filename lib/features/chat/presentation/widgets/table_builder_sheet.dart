@@ -276,7 +276,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                                         '${l10n.translate('table_builder_header')} ${c + 1}',
                                     labelStyle: TextStyle(
                                       color: context.forest.text54,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                     ),
                                     isDense: true,
                                     filled: true,
@@ -332,7 +332,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
                                         '${l10n.translate('table_builder_cell')} ${r + 1},${c + 1}',
                                     hintStyle: TextStyle(
                                       color: context.forest.text38,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                     ),
                                     isDense: true,
                                     filled: true,
@@ -425,7 +425,7 @@ class _TableBuilderSheetState extends State<TableBuilderSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: context.forest.inset26,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

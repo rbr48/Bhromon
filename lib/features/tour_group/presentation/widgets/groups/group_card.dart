@@ -126,7 +126,7 @@ class GroupCard extends StatelessWidget {
                                       l10n.translate('group_active_badge'),
                                       style: const TextStyle(
                                         color: AppColors.mintGreen,
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -142,13 +142,13 @@ class GroupCard extends StatelessWidget {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: context.forest.divider10,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             roleLabel!,
                             style: TextStyle(
                               color: context.forest.text70,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

@@ -271,12 +271,12 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                           Text(
                             _formatDuration(value.position),
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 11),
+                                color: Colors.white70, fontSize: 12),
                           ),
                           Text(
                             _formatDuration(value.duration),
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 11),
+                                color: Colors.white70, fontSize: 12),
                           ),
                         ],
                       ),

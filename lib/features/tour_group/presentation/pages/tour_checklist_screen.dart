@@ -99,7 +99,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
   void _showError(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text), backgroundColor: Colors.redAccent),
+      SnackBar(content: Text(text), backgroundColor: AppColors.amber),
     );
   }
 
@@ -189,7 +189,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                       ),
                       const SizedBox(height: 10),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
                           value: totalCount > 0
                               ? (packedCount / totalCount).clamp(0.0, 1.0)
@@ -206,7 +206,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                         child: Text(
                           l10n.translate('check_tick_own'),
                           style: TextStyle(
-                              color: context.forest.text54, fontSize: 11),
+                              color: context.forest.text54, fontSize: 12),
                         ),
                       ),
                     ],
@@ -362,7 +362,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
         return AlertDialog(
           backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(l10n.translate('check_add_item'),
               style: TextStyle(color: context.forest.text)),
           content: TextField(

@@ -211,7 +211,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('সেটলমেন্ট রেকর্ডে সমস্যা: $err'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
         setState(() => _loading = false);
@@ -291,14 +291,14 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                                   decoration: BoxDecoration(
                                     color: Colors.redAccent
                                         .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     'মোট বকেয়া: ৳${(balance.totalDuePaisa / 100).toStringAsFixed(0)}',
                                     style: TextStyle(
                                       color: context.forest
                                           .readable(Colors.redAccent),
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -345,7 +345,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: AppColors.mintGreen.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.restaurant_rounded,
@@ -433,7 +433,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
               children: [
                 Text(
                   'মোট বাজার খরচ',
-                  style: TextStyle(color: context.forest.text54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -457,7 +457,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                   Text(
                     'মোট খাওয়া মিল',
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -482,7 +482,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                   Text(
                     'মিল রেট',
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -520,7 +520,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF1B3024)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: mb.isDue
               ? Colors.redAccent.withValues(alpha: 0.3)
@@ -584,7 +584,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () => _recordSettlement(mb),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -603,7 +603,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                           mb.isDue ? 'পরিশোধ রেকর্ড' : 'ফেরত দিন',
                           style: const TextStyle(
                             color: AppColors.mintGreen,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -634,7 +634,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                   side: BorderSide(color: context.forest.text24),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -650,7 +650,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
                   side: BorderSide(color: context.forest.text24),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -669,7 +669,7 @@ class _MessBalanceSheetState extends State<MessBalanceSheet> {
               foregroundColor: AppColors.darkGreen,
               padding: const EdgeInsets.symmetric(vertical: 13),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),

@@ -558,7 +558,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                               label: Text(
                                 l10n.translate('viewer_filter_all_modules'),
                                 style: TextStyle(
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: selectedModuleCode == null
                                       ? FontWeight.bold
                                       : FontWeight.normal,
@@ -591,7 +591,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                 label: Text(
                                   'Module ${mod.code}',
                                   style: TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: selectedModuleCode == mod.code
                                         ? FontWeight.bold
                                         : FontWeight.normal,
@@ -698,7 +698,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                           'Mod ${mod.code}',
                                           style: TextStyle(
                                             color: palette.accentText,
-                                            fontSize: 10,
+                                            fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -712,7 +712,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                           color: palette.isDark
                                               ? Colors.white
                                               : AppColors.darkText,
-                                          fontSize: 13.5,
+                                          fontSize: 14,
                                           fontWeight: isQ
                                               ? FontWeight.w600
                                               : FontWeight.normal,
@@ -731,7 +731,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                           color: palette.isDark
                                               ? Colors.white70
                                               : AppColors.grayText,
-                                          fontSize: 11.5,
+                                          fontSize: 12,
                                         ),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
@@ -784,7 +784,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
   String _targetLanguageLabel() {
     final targetIsBangla =
         _showingAlternate ? _isPrimaryBangla : !_isPrimaryBangla;
-    return targetIsBangla ? '🇧🇩 বাংলা' : '🇬🇧 English';
+    return targetIsBangla ? 'বাংলা' : 'English';
   }
 
   void _toggleAudioPlayer() {
@@ -886,7 +886,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                       'MD',
                       style: TextStyle(
                         color: palette.accentText,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -1078,7 +1078,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                 context.l10n.translate('viewer_load_failed',
                     args: {'error': _errorMessage!}),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.forest.text70, fontSize: 13.5),
+                style: TextStyle(color: context.forest.text70, fontSize: 14),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -1119,9 +1119,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildPaneHeader(
-                    primaryIsBangla
-                        ? '🇧🇩 বাংলা সমাধান'
-                        : '🇬🇧 English Solution',
+                    primaryIsBangla ? 'বাংলা সমাধান' : 'English Solution',
                     widget.title,
                   ),
                   Divider(height: 1, color: palette.divider12),
@@ -1141,7 +1139,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                   text: section.rawText,
                                   baseStyle: TextStyle(
                                     color: palette.text,
-                                    fontSize: 14.5,
+                                    fontSize: 15,
                                     height: 1.55,
                                   ),
                                 ),
@@ -1161,9 +1159,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildPaneHeader(
-                    primaryIsBangla
-                        ? '🇬🇧 English Solution'
-                        : '🇧🇩 বাংলা সমাধান',
+                    primaryIsBangla ? 'English Solution' : 'বাংলা সমাধান',
                     widget.alternateTitle ??
                         (primaryIsBangla ? 'English' : 'বাংলা সমাধান'),
                   ),
@@ -1184,7 +1180,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                                   text: section.rawText,
                                   baseStyle: TextStyle(
                                     color: palette.text,
-                                    fontSize: 14.5,
+                                    fontSize: 15,
                                     height: 1.55,
                                   ),
                                 ),
@@ -1225,7 +1221,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
               badge,
               style: TextStyle(
                 color: palette.accentText,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1238,7 +1234,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: palette.text70,
-                fontSize: 12.5,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1275,7 +1271,7 @@ class _MarkdownViewerScreenState extends State<MarkdownViewerScreen> {
                       text: section.rawText,
                       baseStyle: TextStyle(
                         color: palette.text,
-                        fontSize: 14.5,
+                        fontSize: 15,
                         height: 1.55,
                       ),
                     ),

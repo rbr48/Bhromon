@@ -32,7 +32,7 @@ class TourGroupDialogs {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(
                 l10n.translate('hub_join_title'),
                 style: TextStyle(
@@ -85,7 +85,7 @@ class TourGroupDialogs {
                     backgroundColor: AppColors.midGreen,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: isJoining
                       ? null
@@ -190,7 +190,7 @@ class TourGroupDialogs {
                           style: TextStyle(
                             color: context.forest.text,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16.5,
+                            fontSize: 16,
                           ),
                         ),
                         IconButton(
@@ -445,7 +445,7 @@ class TourGroupDialogs {
                   filled: true,
                   fillColor: context.forest.inset26,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -462,7 +462,7 @@ class TourGroupDialogs {
                   filled: true,
                   fillColor: context.forest.inset26,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ],
@@ -633,7 +633,7 @@ class TourGroupDialogs {
               filled: true,
               fillColor: context.forest.inset26,
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           actions: [
@@ -750,7 +750,7 @@ class _GroupTypeOptionTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style:
-                          TextStyle(color: context.forest.text54, fontSize: 11),
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

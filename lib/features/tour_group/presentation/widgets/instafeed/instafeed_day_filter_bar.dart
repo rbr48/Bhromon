@@ -125,7 +125,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                           args: {'count': filteredCount}),
                       style: TextStyle(
                         color: context.forest.text,
-                        fontSize: 13.5,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -149,7 +149,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                           ),
                           style: TextStyle(
                             color: context.forest.accentText,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -173,7 +173,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                     children: [
                       InkWell(
                         onTap: () => onViewModeChanged(false),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
@@ -181,7 +181,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                             color: !isGridView
                                 ? AppColors.mintGreen.withValues(alpha: 0.2)
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
@@ -199,7 +199,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                                   color: !isGridView
                                       ? context.forest.accentText
                                       : context.forest.text54,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -209,7 +209,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                       ),
                       InkWell(
                         onTap: () => onViewModeChanged(true),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
@@ -217,7 +217,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                             color: isGridView
                                 ? AppColors.mintGreen.withValues(alpha: 0.2)
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
@@ -235,7 +235,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                                   color: isGridView
                                       ? context.forest.accentText
                                       : context.forest.text54,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -281,7 +281,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                             color: activeFilterSummary != 'all'
                                 ? context.forest.accentText
                                 : context.forest.text70,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -357,7 +357,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                         color: isSelected
                             ? AppColors.mintGreen
                             : context.forest.feedRaised,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color:
                               isSelected ? Colors.black : context.forest.text24,
@@ -369,7 +369,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                         style: TextStyle(
                           color:
                               isSelected ? Colors.black : context.forest.text,
-                          fontSize: 9.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -384,7 +384,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                 color: isSelected
                     ? context.forest.accentText
                     : context.forest.text70,
-                fontSize: 10.5,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),

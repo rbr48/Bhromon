@@ -147,7 +147,7 @@ void main() {
                           : 'এই অংশটি লোড করা সম্ভব হয়নি',
                       style: const TextStyle(
                           color: Colors.white70,
-                          fontSize: 11,
+                          fontSize: 12,
                           decoration: TextDecoration.none),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -228,7 +228,7 @@ void main() {
                               style: const TextStyle(
                                 color: Colors.redAccent,
                                 fontFamily: 'monospace',
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                               maxLines: 4,
                               overflow: TextOverflow.ellipsis,

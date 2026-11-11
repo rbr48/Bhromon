@@ -239,7 +239,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
             child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(context.l10n.translate('ig_story_delete_confirm')),
           ),
@@ -343,7 +343,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
         SnackBar(
           content: Text(
               context.l10n.translate('ig_reaction_failed', args: {'error': e})),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ),
       );
       return;
@@ -1073,7 +1073,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                   sticker.subtitle!,
                   style: const TextStyle(
                     color: Colors.white70,
-                    fontSize: 10,
+                    fontSize: 11,
                   ),
                 ),
             ],

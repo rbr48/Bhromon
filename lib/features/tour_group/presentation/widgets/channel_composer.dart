@@ -125,7 +125,7 @@ class _ChannelComposerState extends State<ChannelComposer> {
                       children: [
                         Text(widget.uploadLabel!,
                             style: TextStyle(
-                                color: context.forest.text54, fontSize: 11)),
+                                color: context.forest.text54, fontSize: 12)),
                         const SizedBox(height: 3),
                         LinearProgressIndicator(
                           value: widget.uploadProgress,
@@ -192,7 +192,7 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                 onSubmitted: (_) => widget.onSend(),
                                 style: TextStyle(
                                   color: context.forest.text,
-                                  fontSize: 15.5,
+                                  fontSize: 16,
                                   height: 1.38,
                                   letterSpacing: 0.05,
                                   fontFamily: 'NotoSansBengali',
@@ -207,7 +207,7 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                   hintText: widget.hint,
                                   hintStyle: TextStyle(
                                     color: context.forest.text54,
-                                    fontSize: 15.0,
+                                    fontSize: 15,
                                     fontFamily: 'NotoSansBengali',
                                     fontFamilyFallback: const [
                                       'HindSiliguri',
@@ -255,7 +255,7 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                           ? AppColors.mintGreen
                                           : context.forest.text70,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 12.0,
+                                      fontSize: 12,
                                       letterSpacing: -0.5,
                                     ),
                                   ),
@@ -424,7 +424,7 @@ class _MentionList extends StatelessWidget {
       constraints: const BoxConstraints(maxHeight: 200),
       child: Material(
         color: context.forest.surfaceFor(const Color(0xFF1E3326)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: ListView(
           shrinkWrap: true,

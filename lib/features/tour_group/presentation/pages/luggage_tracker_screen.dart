@@ -223,7 +223,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF142428)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: item.isLoaded
               ? AppColors.mintGreen.withValues(alpha: 0.3)
@@ -231,7 +231,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -300,7 +300,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                                       color: item.isLoaded
                                           ? context.forest.accentText
                                           : context.forest.text70,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -398,14 +398,14 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: context.forest.text.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(text, style: TextStyle(color: color, fontSize: 11)),
+          Text(text, style: TextStyle(color: color, fontSize: 12)),
         ],
       ),
     );
@@ -434,7 +434,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
             child: Text(l10n.translate('hub_no')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.translate('hub_yes')),
           ),

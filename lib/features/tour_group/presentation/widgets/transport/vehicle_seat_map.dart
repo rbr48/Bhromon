@@ -83,7 +83,7 @@ class VehicleSeatMap extends StatelessWidget {
             Text(l10n.translate('veh_front').toUpperCase(),
                 style: TextStyle(
                     color: context.forest.text54,
-                    fontSize: 11,
+                    fontSize: 12,
                     letterSpacing: 2,
                     fontWeight: FontWeight.w700)),
           ],
@@ -146,7 +146,7 @@ class VehicleSeatMap extends StatelessWidget {
           child: Text(l10n.translate('veh_back').toUpperCase(),
               style: TextStyle(
                   color: context.forest.text24,
-                  fontSize: 10,
+                  fontSize: 11,
                   letterSpacing: 2)),
         ),
       ],
@@ -194,7 +194,7 @@ class VehicleSeatMap extends StatelessWidget {
                     : Text(label,
                         style: TextStyle(
                             color: context.forest.text38,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700)),
               ),
               ...blocks,
@@ -220,7 +220,7 @@ class VehicleSeatMap extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.forest.divider12),
       ),
       child: Column(
@@ -228,7 +228,7 @@ class VehicleSeatMap extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(title,
-              style: TextStyle(color: context.forest.text54, fontSize: 10)),
+              style: TextStyle(color: context.forest.text54, fontSize: 11)),
           const SizedBox(height: 4),
           row,
         ],
@@ -247,7 +247,7 @@ class VehicleSeatMap extends StatelessWidget {
           height: 50,
           decoration: BoxDecoration(
             color: Colors.black26,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
               driver ? Icons.sports_motorsports_rounded : Icons.sensor_door,
@@ -277,7 +277,7 @@ class VehicleSeatMap extends StatelessWidget {
         name ?? l10n.translate('tour_seat_free'),
       ].join(', '),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: () => onSeatTap(id),
         child: Container(
           width: berth ? 72 : 62,
@@ -310,7 +310,7 @@ class VehicleSeatMap extends StatelessWidget {
                         style: TextStyle(
                             color: mine ? AppColors.darkGreen : Colors.white,
                             fontWeight: FontWeight.w800,
-                            fontSize: 11)),
+                            fontSize: 12)),
                   ),
                   if (cell.isWindow) ...[
                     const SizedBox(width: 2),
@@ -330,7 +330,7 @@ class VehicleSeatMap extends StatelessWidget {
                       : occupied
                           ? Colors.white
                           : Colors.white38,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: occupied ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),

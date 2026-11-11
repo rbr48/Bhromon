@@ -98,7 +98,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: palette.accentText.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.apartment_rounded,
@@ -334,13 +334,13 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                               color: palette.accentText
                                                   .withValues(alpha: 0.2),
                                               borderRadius:
-                                                  BorderRadius.circular(6),
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               'YOU',
                                               style: TextStyle(
                                                 color: palette.accentText,
-                                                fontSize: 10,
+                                                fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -355,7 +355,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                         color: palette.isDark
                                             ? Colors.white70
                                             : AppColors.grayText,
-                                        fontSize: 11.5,
+                                        fontSize: 12,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -371,14 +371,14 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                             color: Colors.orange
                                                 .withValues(alpha: 0.15),
                                             borderRadius:
-                                                BorderRadius.circular(6),
+                                                BorderRadius.circular(8),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               const Text('🔥',
                                                   style:
-                                                      TextStyle(fontSize: 11)),
+                                                      TextStyle(fontSize: 12)),
                                               const SizedBox(width: 3),
                                               Text(
                                                 l10n.translate(
@@ -389,7 +389,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                                     }),
                                                 style: const TextStyle(
                                                   color: Colors.orange,
-                                                  fontSize: 11,
+                                                  fontSize: 12,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -405,7 +405,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                               })}',
                                           style: TextStyle(
                                             color: palette.text70,
-                                            fontSize: 11,
+                                            fontSize: 12,
                                           ),
                                         ),
                                         const SizedBox(width: 8),
@@ -418,7 +418,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                               })}',
                                           style: TextStyle(
                                             color: palette.text70,
-                                            fontSize: 11,
+                                            fontSize: 12,
                                           ),
                                         ),
                                       ],
@@ -477,7 +477,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
                                             : l10n.translate(
                                                 'study_nudge_button'),
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           color: isCheered
                                               ? palette.accentText
                                               : palette.text,
@@ -572,7 +572,7 @@ class _BranchStudyHallSheetState extends State<BranchStudyHallSheet> {
           label,
           style: TextStyle(
             color: palette.isDark ? Colors.white70 : AppColors.grayText,
-            fontSize: 10,
+            fontSize: 11,
           ),
         ),
       ],

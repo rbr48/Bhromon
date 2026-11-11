@@ -873,7 +873,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Widget _encryptionBadge(String otherName, String? otherUid) {
     final encrypted = _chatIsEncrypted;
     return InkWell(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(8),
       onTap: otherUid == null || otherUid.isEmpty
           ? null
           : () => Navigator.of(context).push(
@@ -899,7 +899,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 encrypted ? 'e2ee_badge_encrypted' : 'e2ee_badge_not_encrypted',
               ),
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.chat.text70, fontSize: 11),
+              style: TextStyle(color: context.chat.text70, fontSize: 12),
             ),
           ),
         ],
@@ -1108,7 +1108,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: context.chat.bar,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1122,8 +1122,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 Flexible(
                   child: Text(
                     text,
-                    style:
-                        TextStyle(color: context.chat.text70, fontSize: 12.5),
+                    style: TextStyle(color: context.chat.text70, fontSize: 13),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1187,7 +1186,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   text: pending.text,
                   baseStyle: TextStyle(
                     color: context.chat.text,
-                    fontSize: 15.5,
+                    fontSize: 16,
                     height: 1.4,
                     letterSpacing: 0.05,
                     fontFamily: 'NotoSansBengali',
@@ -1207,7 +1206,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       timeStr,
                       style: TextStyle(
                         color: context.chat.text54,
-                        fontSize: 10.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1270,7 +1269,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(context.l10n.translate('chat_edit_failed')),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.amber,
             ),
           );
         }
@@ -1613,7 +1612,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -1840,7 +1839,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -1967,7 +1966,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             content: Text(l10n.translate('chat_send_voice_failed', args: {
               'error': e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()
             })),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -1999,7 +1998,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.translate('chat_file_read_failed')),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.amber,
             ),
           );
         }
@@ -2098,7 +2097,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(l10n
                 .translate('chat_send_document_failed', args: {'error': '$e'})),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -2194,7 +2193,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(l10n.translate('chat_share_location_failed',
                 args: {'error': '$e'})),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -2284,7 +2283,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(l10n
                 .translate('chat_send_expense_failed', args: {'error': '$e'})),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -3651,7 +3650,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 style: TextStyle(
                                                     color: context.chat.text,
                                                     fontWeight: FontWeight.bold,
-                                                    fontSize: 11))
+                                                    fontSize: 12))
                                             : null,
                                       ),
                                     ),
@@ -3668,7 +3667,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         Flexible(
                                           child: InkWell(
                                             borderRadius:
-                                                BorderRadius.circular(6),
+                                                BorderRadius.circular(8),
                                             onTap: openOtherProfile,
                                             child: Padding(
                                               padding:
@@ -3719,7 +3718,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 'chat_status_typing'),
                                             style: TextStyle(
                                               color: context.chat.accentText,
-                                              fontSize: 11,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.bold,
                                               fontFamily: 'NotoSansBengali',
                                               fontFamilyFallback: const [
@@ -3737,7 +3736,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 'chat_status_online'),
                                             style: TextStyle(
                                               color: context.chat.text54,
-                                              fontSize: 11,
+                                              fontSize: 12,
                                               fontFamily: 'NotoSansBengali',
                                               fontFamilyFallback: const [
                                                 'HindSiliguri',
@@ -3798,7 +3797,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                           statusText,
                                           style: TextStyle(
                                             color: context.chat.text54,
-                                            fontSize: 11,
+                                            fontSize: 12,
                                             fontFamily: 'NotoSansBengali',
                                             fontFamilyFallback: const [
                                               'HindSiliguri',
@@ -4042,7 +4041,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: context.chat.recessedDeep,
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                           color: context.chat.divider12,
                                           width: 0.5),
@@ -4063,7 +4062,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 }),
                                             style: TextStyle(
                                                 color: context.chat.text70,
-                                                fontSize: 11),
+                                                fontSize: 12),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
@@ -4325,14 +4324,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 .translate('chat_edited'),
                                             style: TextStyle(
                                                 color: context.chat.text38,
-                                                fontSize: 10)),
+                                                fontSize: 11)),
                                         const SizedBox(width: 3),
                                       ],
                                       Text(
                                         timeStr,
                                         style: TextStyle(
                                           color: context.chat.text54,
-                                          fontSize: 10.5,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -4392,7 +4391,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                           timeStr,
                                           style: TextStyle(
                                             color: context.chat.text30,
-                                            fontSize: 9.5,
+                                            fontSize: 11,
                                           ),
                                         ),
                                       ],
@@ -4527,7 +4526,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               ? context.chat.outgoing
                                               : context.chat.panel,
                                           borderRadius:
-                                              BorderRadius.circular(14),
+                                              BorderRadius.circular(16),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -4547,7 +4546,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             Text(timeStr,
                                                 style: TextStyle(
                                                     color: context.chat.text38,
-                                                    fontSize: 10)),
+                                                    fontSize: 11)),
                                             if (isMe) ...[
                                               const SizedBox(width: 4),
                                               deliveryIcon(),
@@ -4623,7 +4622,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             });
                                           });
                                         },
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(16),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 12, vertical: 8),
@@ -4632,7 +4631,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 ? context.chat.outgoing
                                                 : context.chat.panel,
                                             borderRadius:
-                                                BorderRadius.circular(14),
+                                                BorderRadius.circular(16),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
@@ -4654,7 +4653,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                               .chat.accentText,
                                                           fontWeight:
                                                               FontWeight.bold,
-                                                          fontSize: 11)),
+                                                          fontSize: 12)),
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
@@ -4674,7 +4673,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                   style: TextStyle(
                                                       color:
                                                           context.chat.text54,
-                                                      fontSize: 10)),
+                                                      fontSize: 11)),
                                               if (isMe) ...[
                                                 const SizedBox(width: 4),
                                                 deliveryIcon(),
@@ -4720,7 +4719,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                               FontStyle.italic,
                                                           color: context
                                                               .chat.text54,
-                                                          fontSize: 10)),
+                                                          fontSize: 11)),
                                                 ],
                                               ),
                                             ),
@@ -4746,7 +4745,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                 text,
                                                 style: TextStyle(
                                                   color: context.chat.text,
-                                                  fontSize: 15.5,
+                                                  fontSize: 16,
                                                   height: 1.4,
                                                   letterSpacing: 0.15,
                                                 ),
@@ -4851,7 +4850,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                               FontStyle.italic,
                                                           color: context
                                                               .chat.text54,
-                                                          fontSize: 10)),
+                                                          fontSize: 11)),
                                                 ],
                                               ),
                                             ),
@@ -4874,7 +4873,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             }),
                                             baseStyle: TextStyle(
                                               color: context.chat.text,
-                                              fontSize: 15.5,
+                                              fontSize: 16,
                                               height: 1.4,
                                               letterSpacing: 0.05,
                                               fontFamily: 'NotoSansBengali',
@@ -5004,14 +5003,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                     horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
                                   color: context.chat.panel,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   context.l10n.translate('chat_is_typing',
                                       args: {'name': otherName}),
                                   style: TextStyle(
                                     color: context.chat.accentText,
-                                    fontSize: 10.5,
+                                    fontSize: 11,
                                     fontStyle: FontStyle.italic,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -5045,7 +5044,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                           .translate('chat_blocked_banner'),
                                       style: const TextStyle(
                                           color: Colors.redAccent,
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.bold),
                                       textAlign: TextAlign.center,
                                     ),
@@ -5202,7 +5201,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                             style: TextStyle(
                                                               color: context
                                                                   .chat.text,
-                                                              fontSize: 15.5,
+                                                              fontSize: 16,
                                                               height: 1.38,
                                                               letterSpacing:
                                                                   0.05,
@@ -5224,7 +5223,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                                   TextStyle(
                                                                 color: context
                                                                     .chat.grey,
-                                                                fontSize: 15.5,
+                                                                fontSize: 16,
                                                                 fontFamily:
                                                                     'NotoSansBengali',
                                                                 fontFamilyFallback: const [

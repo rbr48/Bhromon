@@ -14,6 +14,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_thread_rules.dart';
 
 import '../widgets/study/study_chat_composer.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// One thread on a book: its question, the replies in time order, and the actions each viewer
 /// may take. The asker or an admin accepts an answer. A member marks a reply helpful once and
@@ -136,7 +137,7 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
       logWarning('A study thread change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -162,7 +163,7 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
         final messenger = ScaffoldMessenger.of(context);
         messenger.showSnackBar(SnackBar(
           content: Text(context.l10n.translate('study_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
     } finally {
@@ -189,7 +190,7 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
       logWarning('A study reply vote failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -638,7 +639,7 @@ class _StudyThreadScreenState extends State<StudyThreadScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: palette.accentText.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(text,
           style: TextStyle(

@@ -15,6 +15,7 @@ import '../../domain/services/study_assignment_rules.dart';
 import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_assignment_editor.dart';
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The assignments of one subject. Any member the module's post policy allows adds one, and a
 /// member marks the ones they have finished. An admin shows an assignment that waited for them,
@@ -150,7 +151,7 @@ class _StudyAssignmentsScreenState extends State<StudyAssignmentsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(context.l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -166,7 +167,7 @@ class _StudyAssignmentsScreenState extends State<StudyAssignmentsScreen> {
       if (!opened && mounted) {
         messenger.showSnackBar(SnackBar(
           content: Text(l10n.translate('study_assignment_open_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
     } catch (error, stackTrace) {
@@ -174,7 +175,7 @@ class _StudyAssignmentsScreenState extends State<StudyAssignmentsScreen> {
       if (mounted) {
         messenger.showSnackBar(SnackBar(
           content: Text(l10n.translate('study_assignment_open_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
     }
@@ -193,7 +194,7 @@ class _StudyAssignmentsScreenState extends State<StudyAssignmentsScreen> {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

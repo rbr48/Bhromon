@@ -159,7 +159,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                             context.l10n.number(post.effectiveViewCount),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -208,7 +208,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                           horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.black54,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -220,7 +220,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                             '${post.likes.length}',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

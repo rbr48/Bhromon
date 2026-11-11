@@ -229,7 +229,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         filled: true,
         fillColor: const Color(0xFF1E1E1E),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),
       ),
       onChanged: (_) => _saveCurrentDraft(),
@@ -820,14 +820,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           _shareToStory = false;
                         });
                       },
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: _shareToFeed && !_shareToStory
                               ? AppColors.mintGreen
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -863,14 +863,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           _shareToFeed = false;
                         });
                       },
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: _shareToStory && !_shareToFeed
                               ? AppColors.mintGreen
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1072,7 +1072,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               filled: true,
                               fillColor: const Color(0xFF1E1E1E),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none),
                             ),
                             items: [
@@ -1108,7 +1108,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               filled: true,
                               fillColor: const Color(0xFF1E1E1E),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none),
                             ),
                             items: (widget.group?.allSpots ?? _kTourLandmarks)
@@ -1138,7 +1138,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none),
                       ),
                       onChanged: (_) => _saveCurrentDraft(),
@@ -1356,7 +1356,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           filled: true,
                           fillColor: const Color(0xFF222222),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
                         ),
@@ -1373,7 +1373,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               filled: true,
                               fillColor: const Color(0xFF222222),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
                               ),
                             ),
@@ -1389,7 +1389,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               filled: true,
                               fillColor: const Color(0xFF222222),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
                               ),
                             ),
@@ -1480,7 +1480,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               children: [
                 Text(
                   _formatMs(_videoPosition),
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 Expanded(
                   child: SliderTheme(
@@ -1507,7 +1507,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 ),
                 Text(
                   _formatMs(_videoDuration),
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
@@ -1519,7 +1519,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   onPressed: () => _pickVideo(ImageSource.gallery),
                   icon: const Icon(Icons.sync, size: 14),
                   label: Text(context.l10n.translate('ig_change_video'),
-                      style: const TextStyle(fontSize: 11)),
+                      style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -1644,7 +1644,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _coverImage != null
               ? AppColors.mintGreen.withValues(alpha: 0.5)
@@ -1678,7 +1678,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.mintGreen.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     _isFirstFrameCover
@@ -1686,7 +1686,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         : context.l10n.translate('ig_custom_photo'),
                     style: const TextStyle(
                       color: AppColors.mintGreen,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1698,7 +1698,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             _isFirstFrameCover
                 ? context.l10n.translate('ig_first_frame_set')
                 : context.l10n.translate('ig_pick_feed_frame'),
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
           const SizedBox(height: 10),
           if (_coverImage != null && _coverBytes != null) ...[
@@ -1744,7 +1744,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             onPressed: _pickCoverImage,
                             icon: const Icon(Icons.edit, size: 14),
                             label: Text(context.l10n.translate('ig_change'),
-                                style: const TextStyle(fontSize: 11)),
+                                style: const TextStyle(fontSize: 12)),
                           ),
                           const SizedBox(width: 8),
                           TextButton.icon(
@@ -1757,7 +1757,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             onPressed: _clearCoverImage,
                             icon: const Icon(Icons.delete_outline, size: 14),
                             label: Text(context.l10n.translate('ig_delete'),
-                                style: const TextStyle(fontSize: 11)),
+                                style: const TextStyle(fontSize: 12)),
                           ),
                         ],
                       ),
@@ -1775,7 +1775,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       foregroundColor: AppColors.mintGreen,
                       side: const BorderSide(color: AppColors.mintGreen),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
@@ -1806,7 +1806,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       backgroundColor: const Color(0xFF222222),
       labelStyle: TextStyle(
         color: isSelected ? Colors.black : Colors.white,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.bold,
       ),
       onSelected: (_) => setState(() => _selectedAspectRatio = ratio),

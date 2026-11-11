@@ -142,7 +142,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: kHolidayCard,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border:
                 Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
           ),
@@ -340,7 +340,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
           ),
           Text(
             label,
-            style: const TextStyle(color: Colors.white60, fontSize: 11),
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
           ),
         ],
       ),
@@ -359,7 +359,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: kHolidayCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
       ),
       child: Column(
@@ -426,7 +426,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
             ),
             const SizedBox(width: 6),
             Text(label,
-                style: TextStyle(color: context.forest.text60, fontSize: 11)),
+                style: TextStyle(color: context.forest.text60, fontSize: 12)),
           ],
         );
     return Wrap(

@@ -332,7 +332,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style:
-            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -427,7 +427,7 @@ class _RequestSheetState extends State<_RequestSheet> {
           fit: StackFit.expand,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: image,
             ),
             Positioned(
@@ -623,7 +623,7 @@ class _RequestSheetState extends State<_RequestSheet> {
                         side: BorderSide(color: context.forest.text24),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
@@ -799,7 +799,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
             child: Text(l10n.translate('fd_cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.translate('fd_delete')),
           ),
@@ -878,14 +878,14 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
               style: TextStyle(
                 color: active ? context.forest.text : context.forest.text54,
                 fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                fontSize: 11,
+                fontSize: 12,
               ),
             ),
             if (time.isNotEmpty)
               Text(
                 time,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.forest.text54, fontSize: 10),
+                style: TextStyle(color: context.forest.text54, fontSize: 11),
               ),
           ],
         ),
@@ -905,7 +905,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF162B20)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
@@ -962,7 +962,7 @@ class _RequestDetailSheetState extends State<_RequestDetailSheet> {
                 'সমাধানকারী: ${request.resolvedByName}',
                 style: TextStyle(
                   color: context.forest.readable(AppColors.gold),
-                  fontSize: 11,
+                  fontSize: 12,
                   fontStyle: FontStyle.italic,
                 ),
               ),

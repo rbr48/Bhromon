@@ -186,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     'Powered by Bhromon $_appVersion',
                                     style: const TextStyle(
                                       color: _kWhite30,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ),
@@ -307,22 +307,19 @@ class _BrandHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        // Bangla brand name
-        const Text(
-          'ভ্রমণ',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 46,
-            fontWeight: FontWeight.w700,
-            color: _kWhite,
-            letterSpacing: 2,
-            shadows: [
-              Shadow(
-                color: Colors.black45,
-                offset: Offset(0, 3),
-                blurRadius: 10,
-              ),
-            ],
+        // The brand wordmark. The name is a group app's, so it does not say "travel".
+        Image.asset(
+          'assets/Bhromon.png',
+          height: 64,
+          semanticLabel: 'Bhromon',
+          errorBuilder: (_, __, ___) => const Text(
+            'Bhromon',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w700,
+              color: _kWhite,
+            ),
           ),
         ),
         const SizedBox(height: 6),
@@ -336,7 +333,7 @@ class _BrandHeader extends StatelessWidget {
               'BHROMON',
               style: TextStyle(
                 color: _kGreen,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 5,
               ),
@@ -634,7 +631,7 @@ class _GoogleButton extends StatelessWidget {
         height: 54,
         decoration: BoxDecoration(
           color: const Color(0xFF111D15),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _kBorder, width: 1.5),
         ),
         child: Row(

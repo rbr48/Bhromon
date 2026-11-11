@@ -13,6 +13,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
 import 'study_quiz_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The quizzes of one book, in chapter order. An admin writes a quiz on a chapter. Every member can open a quiz,
 /// propose questions for it, and take it. The list shows how many members have taken each quiz, and nothing about
@@ -96,7 +97,7 @@ class _StudyQuizzesScreenState extends State<StudyQuizzesScreen> {
       logWarning('A study quiz change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

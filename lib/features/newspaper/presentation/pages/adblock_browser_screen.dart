@@ -324,7 +324,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                               color: _isAdBlockEnabled
                                   ? context.forest.accentText
                                   : context.forest.text54,
-                              fontSize: 12.5,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -416,7 +416,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
               const SizedBox(height: 2),
               Text(
                 description,
-                style: TextStyle(color: context.forest.text60, fontSize: 11.5),
+                style: TextStyle(color: context.forest.text60, fontSize: 12),
               ),
             ],
           ),
@@ -855,7 +855,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: context.forest.surfaceFor(const Color(0xFF14181E)),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.forest.divider12),
         ),
         child: Column(

@@ -68,7 +68,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                 fillColor: context.chat.field,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -177,7 +177,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00A884),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.send, size: 16, color: Colors.white),
                   label: Text(context.l10n.translate('chat_forward_action'),

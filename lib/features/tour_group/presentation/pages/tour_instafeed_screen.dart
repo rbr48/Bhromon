@@ -465,7 +465,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     args: {'count': list.length}),
                                 style: TextStyle(
                                     color: context.forest.text54,
-                                    fontSize: 11)),
+                                    fontSize: 12)),
                             value: isIncluded,
                             activeColor: AppColors.mintGreen,
                             onChanged: (bool? val) {
@@ -505,7 +505,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 10),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
                             ),
                           ),
@@ -634,7 +634,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         : context.forest.feedSurface,
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
                         color: isSelected
                             ? AppColors.mintGreen
@@ -644,7 +644,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(10),
                       leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         child: SizedBox(
                           width: 54,
                           height: 54,
@@ -1108,13 +1108,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     gradient: const LinearGradient(
                       colors: [Color(0xFFF59E0B), Color(0xFFEC4899)],
                     ),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
                     'LIVE',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -1475,7 +1475,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                           ? Colors.black
                                                           : context
                                                               .forest.text70,
-                                                  fontSize: 11,
+                                                  fontSize: 12,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                                 onSelected: (_) => setState(() =>
@@ -1501,7 +1501,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                     color: isSel
                                                         ? Colors.black
                                                         : context.forest.text70,
-                                                    fontSize: 11,
+                                                    fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                   onSelected: (_) => setState(() =>
@@ -1838,7 +1838,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             : 'M',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1871,7 +1871,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       shadows: [
                         Shadow(
@@ -1936,7 +1936,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           maxLines: 2,
                           style: TextStyle(
                             color: context.forest.text,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -2066,7 +2066,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 : 'M',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           )
@@ -2083,7 +2083,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.black54,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2096,7 +2096,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             '$storyCount',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2114,7 +2114,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(
@@ -2191,7 +2191,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),

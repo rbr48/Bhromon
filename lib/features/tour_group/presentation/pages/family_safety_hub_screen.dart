@@ -539,7 +539,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(context.l10n.translate('fsh_location_unavailable')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
       return;
@@ -789,7 +789,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF3B1F1F)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.redAccent),
       ),
       child: Column(
@@ -809,7 +809,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 ),
               ),
               Text(when,
-                  style: TextStyle(color: context.forest.text54, fontSize: 11)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 10),
@@ -865,7 +865,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 ),
                 Text(
                   l10n.translate('fsh_im_safe_sub'),
-                  style: TextStyle(color: context.forest.text54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
               ],
             ),
@@ -929,7 +929,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           if (contacts.isEmpty)
             Text(
               l10n.translate('fsh_family_numbers_empty'),
-              style: TextStyle(color: context.forest.text54, fontSize: 11),
+              style: TextStyle(color: context.forest.text54, fontSize: 12),
             )
           else
             for (final contact in contacts)
@@ -969,7 +969,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         fontSize: 13)),
                 Text(contact.phone,
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11)),
+                        TextStyle(color: context.forest.text54, fontSize: 12)),
               ],
             ),
           ),
@@ -1161,7 +1161,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     Text(
                       l10n.translate('fsh_share_my_location_sub'),
                       style:
-                          TextStyle(color: context.forest.text54, fontSize: 11),
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1186,7 +1186,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 l10n.translate('fsh_sharing_now_banner'),
                 style: TextStyle(
                   color: context.forest.accentText,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1260,7 +1260,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                               l10n.translate('fsh_family_status_sub'),
                               style: TextStyle(
                                 color: context.forest.text54,
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -1291,7 +1291,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                               style: TextStyle(
                                 color:
                                     context.forest.readable(Colors.redAccent),
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1362,7 +1362,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         color: low
             ? Colors.redAccent.withValues(alpha: 0.08)
             : context.forest.text.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: low
               ? Colors.redAccent.withValues(alpha: 0.3)
@@ -1407,7 +1407,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     color: status == LocationStatus.live
                         ? context.forest.accentText
                         : context.forest.text54,
-                    fontSize: 11,
+                    fontSize: 12,
                   ),
                 ),
                 if (updated != null)
@@ -1416,7 +1416,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       'time': localizedDateFormat('h:mm a').format(updated),
                     }),
                     style:
-                        TextStyle(color: context.forest.text38, fontSize: 10),
+                        TextStyle(color: context.forest.text38, fontSize: 11),
                   ),
                 if (safeAt != null)
                   Text(
@@ -1425,7 +1425,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     }),
                     style: TextStyle(
                         color: context.forest.accentText,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
               ],
@@ -1524,13 +1524,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     required Color color,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => _callNumber(number),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: context.forest.surfaceFor(const Color(0xFF142428)),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
@@ -1549,7 +1549,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               alignment: Alignment.centerLeft,
               child: Text(displayNumber,
                   style: TextStyle(
-                      color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                      color: color, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1565,13 +1565,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     required Color color,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => _callNumber(number),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: context.forest.surfaceFor(const Color(0xFF142428)),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
@@ -1590,7 +1590,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   Text(displayNumber,
                       style: TextStyle(
                           color: color,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -1656,7 +1656,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 const SizedBox(height: 2),
                 Text(
                   landmark.subtitle,
-                  style: TextStyle(color: context.forest.text60, fontSize: 11),
+                  style: TextStyle(color: context.forest.text60, fontSize: 12),
                 ),
                 if (distanceMeters != null) ...[
                   const SizedBox(height: 4),
@@ -1676,7 +1676,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         style: TextStyle(
                           color: context.forest.readable(Colors.greenAccent),
                           fontWeight: FontWeight.bold,
-                          fontSize: 11,
+                          fontSize: 12,
                         ),
                       ),
                       if (bearing != null) ...[
@@ -1711,7 +1711,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF102024)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
@@ -1735,7 +1735,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           Text(
             context.l10n.translate('fsh_sea_guide_body'),
             style: TextStyle(
-                color: context.forest.text70, fontSize: 11, height: 1.5),
+                color: context.forest.text70, fontSize: 12, height: 1.5),
           ),
         ],
       ),
