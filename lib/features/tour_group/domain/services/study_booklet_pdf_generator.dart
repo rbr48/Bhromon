@@ -9,20 +9,49 @@ import 'package:pdf/pdf.dart';
 import '../models/study_material_models.dart';
 import '../models/study_models.dart';
 import '../models/study_syllabus_models.dart';
+import 'ppc_curve.dart';
+import 'ppc_pdf_figure.dart';
+
+/// One part of a question's model solution: prose, or a figure in its place.
+sealed class StudyBookletPiece {
+  const StudyBookletPiece();
+}
+
+/// Prose from the solution, cleaned for the page.
+final class StudyBookletText extends StudyBookletPiece {
+  final String text;
+
+  const StudyBookletText(this.text);
+}
+
+/// A chart from a `chart:ppc` fence, drawn as vector art where the fence was.
+final class StudyBookletFigure extends StudyBookletPiece {
+  final PpcSpec spec;
+
+  const StudyBookletFigure(this.spec);
+}
 
 /// Question data for inclusion in the printable examination booklet.
 class StudyBookletQuestionItem {
   final String questionNumber;
   final String title;
   final String? moduleCode;
-  final String solutionText;
+
+  /// The model solution in order: prose, with any figures between it.
+  final List<StudyBookletPiece> pieces;
 
   const StudyBookletQuestionItem({
     required this.questionNumber,
     required this.title,
     this.moduleCode,
-    required this.solutionText,
+    required this.pieces,
   });
+
+  /// The prose of the solution, without its figures.
+  String get solutionText => pieces
+      .whereType<StudyBookletText>()
+      .map((piece) => piece.text)
+      .join('\n\n');
 }
 
 /// Chapter/exam session data for the printable booklet.
@@ -171,7 +200,7 @@ class StudyBookletPdfGenerator {
         StudyBookletQuestionItem(
           questionNumber: '1',
           title: 'Examination Solution',
-          solutionText: _sanitizeMarkdownForPdf(text),
+          pieces: solutionPieces(text),
         ),
       ];
     }
@@ -207,7 +236,7 @@ class StudyBookletPdfGenerator {
           questionNumber: '${i + 1}',
           title: clean,
           moduleCode: mod?.code,
-          solutionText: _sanitizeMarkdownForPdf(solutionBody),
+          pieces: solutionPieces(solutionBody),
         ),
       );
     }
@@ -224,6 +253,37 @@ class StudyBookletPdfGenerator {
         .replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '')
         .replaceAll(RegExp(r'\n{3,}'), '\n\n')
         .trim();
+  }
+
+  /// Splits a solution into prose and figures, in order. A `chart:ppc` fence
+  /// that parses becomes a [StudyBookletFigure]; anything else stays in the prose
+  /// and is cleaned as before. A solution with no figure is one prose piece,
+  /// exactly as it was before figures existed.
+  static List<StudyBookletPiece> solutionPieces(String raw) {
+    final text = raw.replaceAll('\r\n', '\n');
+    final fence = RegExp(
+      r'^```[ \t]*chart:ppc[ \t]*\n([\s\S]*?)^```[ \t]*$',
+      multiLine: true,
+    );
+    final pieces = <StudyBookletPiece>[];
+    var cursor = 0;
+    for (final match in fence.allMatches(text)) {
+      final spec = PpcSpec.parse(match.group(1) ?? '');
+      if (spec == null) continue;
+      pieces
+        ..add(StudyBookletText(
+          _sanitizeMarkdownForPdf(text.substring(cursor, match.start)),
+        ))
+        ..add(StudyBookletFigure(spec));
+      cursor = match.end;
+    }
+    pieces.add(
+      StudyBookletText(_sanitizeMarkdownForPdf(text.substring(cursor))),
+    );
+    return [
+      for (final piece in pieces)
+        if (piece is! StudyBookletText || piece.text.isNotEmpty) piece,
+    ];
   }
 
   /// Loads fonts and configures [BanglaPdf] for typography.
@@ -608,16 +668,29 @@ class StudyBookletPdfGenerator {
                       ),
                       pw.SizedBox(height: 6),
 
-                      // Solution Body
+                      // Solution Body: prose, with each figure in its place
                       pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-                        child: pw.Text(
-                          q.solutionText,
-                          style: const pw.TextStyle(
-                            fontSize: 9.5,
-                            lineSpacing: 2,
-                            color: PdfColors.grey900,
-                          ),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            for (final (index, piece) in q.pieces.indexed) ...[
+                              if (index > 0) pw.SizedBox(height: 6),
+                              switch (piece) {
+                                StudyBookletText(:final text) => pw.Text(
+                                    text,
+                                    style: const pw.TextStyle(
+                                      fontSize: 9.5,
+                                      lineSpacing: 2,
+                                      color: PdfColors.grey900,
+                                    ),
+                                  ),
+                                StudyBookletFigure(:final spec) => pw.Center(
+                                    child: ppcPdfFigure(spec, width: 440),
+                                  ),
+                              },
+                            ],
+                          ],
                         ),
                       ),
                       pw.SizedBox(height: 8),
