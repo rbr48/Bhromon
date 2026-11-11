@@ -260,7 +260,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
             ),
           ),
           IconButton.filledTonal(
-            icon: const Icon(Icons.remove, size: 18),
+            icon: const Icon(Icons.remove_rounded, size: 18),
             onPressed:
                 _passengers > 1 ? () => setState(() => _passengers--) : null,
             style: IconButton.styleFrom(
@@ -279,7 +279,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
             ),
           ),
           IconButton.filledTonal(
-            icon: const Icon(Icons.add, size: 18),
+            icon: const Icon(Icons.add_rounded, size: 18),
             onPressed: () => setState(() => _passengers++),
             style: IconButton.styleFrom(
               visualDensity: VisualDensity.compact,
@@ -302,7 +302,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
             Icon(Icons.search_rounded, color: context.forest.text54, size: 20),
         suffixIcon: _searchQuery.isNotEmpty
             ? IconButton(
-                icon: const Icon(Icons.clear, size: 18),
+                icon: const Icon(Icons.clear_rounded, size: 18),
                 onPressed: () {
                   _searchCtrl.clear();
                   setState(() => _searchQuery = '');

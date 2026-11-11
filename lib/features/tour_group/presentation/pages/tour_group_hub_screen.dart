@@ -506,7 +506,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
-              Icon(Icons.person_add_alt_1,
+              Icon(Icons.person_add_alt_1_rounded,
                   color: context.forest.accentText, size: 22),
               const SizedBox(width: 8),
               Text(
@@ -896,7 +896,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   /// delete or leave. Shown in the banner and on the group page.
   Widget _groupMenuButton(BuildContext context, TourGroup group) {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: context.forest.text70, size: 20),
+      icon:
+          Icon(Icons.more_vert_rounded, color: context.forest.text70, size: 20),
       color: context.forest.dialog,
       onSelected: (v) => _onGroupMenu(context, group, v),
       itemBuilder: (_) => [
@@ -940,7 +941,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (group.ownerEmail == _repository.currentEmail) ...[
           PopupMenuItem(
             value: 'add_member',
-            child: _menuRow(context, Icons.person_add_alt_1,
+            child: _menuRow(context, Icons.person_add_alt_1_rounded,
                 context.l10n.translate('hub_add_member_by_email')),
           ),
           PopupMenuItem(
@@ -1542,7 +1543,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     'assets/bhromon_emblem.png',
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => Icon(
-                      Icons.explore,
+                      Icons.explore_rounded,
                       color: context.forest.accentText,
                       size: 20,
                     ),
@@ -1600,7 +1601,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ),
               PopupMenuButton<String>(
                 tooltip: context.l10n.translate('hub_add_menu'),
-                icon: const Icon(Icons.add_circle_outline,
+                icon: const Icon(Icons.add_circle_outline_rounded,
                     color: AppColors.midGreen),
                 color: context.forest.dialog,
                 onSelected: (choice) {
@@ -1895,7 +1896,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               children: [
                 ElevatedButton.icon(
                   onPressed: () => _showCreateGroupDialog(context),
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.add_rounded),
                   label: Text(context.l10n.translate('hub_create_tour')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.midGreen,
@@ -1909,7 +1910,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: () => _showJoinGroupDialog(context),
-                  icon: const Icon(Icons.key),
+                  icon: const Icon(Icons.key_rounded),
                   label: Text(context.l10n.translate('hub_enter_code')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.mintGreen,
@@ -2013,7 +2014,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             if (!_repository.isSignedIn)
               TextButton.icon(
                 onPressed: () => context.push('/login'),
-                icon: Icon(Icons.login,
+                icon: Icon(Icons.login_rounded,
                     color: context.forest.accentText, size: 18),
                 label: Text(
                   context.l10n.translate('hub_login_or_signup'),
@@ -2929,7 +2930,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           horizontal: 8, vertical: 4),
                       visualDensity: VisualDensity.compact,
                     ),
-                    icon: Icon(Icons.person_add_alt_1,
+                    icon: Icon(Icons.person_add_alt_1_rounded,
                         size: 16, color: context.forest.accentText),
                     label: Text(
                       context.l10n.translate('hub_add_member_title'),
@@ -4531,8 +4532,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   context.l10n.translate('prof_posts'),
                   style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
-                trailing:
-                    Icon(Icons.chevron_right, color: context.forest.text38),
+                trailing: Icon(Icons.chevron_right_rounded,
+                    color: context.forest.text38),
                 onTap: () {
                   Navigator.pop(ctx);
                   TourMemberProfileModal.show(
@@ -4552,7 +4553,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ListTile(
                     leading: Icon(
                       member.role == TourRole.admin
-                          ? Icons.person_outline
+                          ? Icons.person_outline_rounded
                           : Icons.admin_panel_settings_rounded,
                       color: context.forest.accentText,
                     ),

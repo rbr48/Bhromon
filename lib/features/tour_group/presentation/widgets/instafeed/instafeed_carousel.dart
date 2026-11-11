@@ -258,7 +258,7 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                       border: Border.all(color: Colors.white24, width: 0.5),
                     ),
                     child: const Icon(
-                      Icons.fullscreen,
+                      Icons.fullscreen_rounded,
                       size: 18,
                       color: Colors.white,
                     ),

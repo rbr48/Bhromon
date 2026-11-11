@@ -120,7 +120,7 @@ Future<void> showMembersSheet(
                           foregroundColor: AppColors.darkGreen,
                         ),
                         onPressed: onAddMember,
-                        icon: const Icon(Icons.person_add_alt_1),
+                        icon: const Icon(Icons.person_add_alt_1_rounded),
                         label: Text(l10n.translate('hub_add_member_title')),
                       ),
                     ),

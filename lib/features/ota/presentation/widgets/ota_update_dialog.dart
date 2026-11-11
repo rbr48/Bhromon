@@ -108,7 +108,7 @@ class OtaUpdateDialog extends StatelessWidget {
                   ] else if (state.downloadProgress >= 1.0) ...[
                     Row(
                       children: [
-                        Icon(Icons.check_circle_outline,
+                        Icon(Icons.check_circle_outline_rounded,
                             color: context.forest.readable(Colors.greenAccent),
                             size: 16),
                         const SizedBox(width: 8),

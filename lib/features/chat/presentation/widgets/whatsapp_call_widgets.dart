@@ -370,7 +370,7 @@ class _WhatsAppDraggablePipState extends State<WhatsAppDraggablePip> {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.cameraswitch,
+                    Icons.cameraswitch_rounded,
                     color: Colors.white,
                     size: 14,
                   ),
@@ -426,7 +426,7 @@ void showWhatsAppCallDetailsSheet({
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close,
+                      icon: const Icon(Icons.close_rounded,
                           color: WhatsAppCallTheme.textMuted, size: 20),
                       onPressed: () => Navigator.of(ctx).pop(),
                     ),

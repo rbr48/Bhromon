@@ -454,7 +454,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               ListTile(
                 leading: Icon(
                     c.visitedAt == null
-                        ? Icons.check_circle_outline
+                        ? Icons.check_circle_outline_rounded
                         : Icons.undo_rounded,
                     color: context.forest.readable(AppColors.gold)),
                 title: Text(
@@ -479,7 +479,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.delete_outline,
+                leading: Icon(Icons.delete_outline_rounded,
                     color: context.forest.readable(Colors.redAccent)),
                 title: Text(l10n.translate('route_cp_delete'),
                     style: TextStyle(color: context.forest.text)),
@@ -573,7 +573,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             ),
             IconButton(
               tooltip: l10n.translate('route_refresh_gps'),
-              icon: const Icon(Icons.my_location),
+              icon: const Icon(Icons.my_location_rounded),
               onPressed: _fetchGps,
             ),
           ],
@@ -1363,7 +1363,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             ),
             if (passed) ...[
               const SizedBox(width: 4),
-              Icon(Icons.check_circle,
+              Icon(Icons.check_circle_rounded,
                   color: context.forest.accentText, size: 16),
             ],
           ],
@@ -1489,7 +1489,8 @@ class _LegSheetState extends State<_LegSheet> {
                     ? null
                     : IconButton(
                         tooltip: l10n.translate('route_time_clear'),
-                        icon: Icon(Icons.close, color: context.forest.text54),
+                        icon: Icon(Icons.close_rounded,
+                            color: context.forest.text54),
                         onPressed: () => setState(() => set(null)),
                       ),
                 onTap: () async {

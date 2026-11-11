@@ -192,7 +192,7 @@ class _OfficialPostCreateSheetState extends State<OfficialPostCreateSheet> {
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -350,7 +350,7 @@ class _OfficialPostCreateSheetState extends State<OfficialPostCreateSheet> {
                               backgroundColor: Colors.black87,
                               child: IconButton(
                                 padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.edit,
+                                icon: const Icon(Icons.edit_rounded,
                                     size: 16, color: Colors.white),
                                 onPressed: _pickMedia,
                               ),
@@ -388,7 +388,7 @@ class _OfficialPostCreateSheetState extends State<OfficialPostCreateSheet> {
                 onPressed: _isUploading ? null : _pickCover,
                 icon: Icon(
                   _coverBytes != null
-                      ? Icons.check_circle
+                      ? Icons.check_circle_rounded
                       : Icons.add_photo_alternate_outlined,
                   color: AppColors.mintGreen,
                 ),

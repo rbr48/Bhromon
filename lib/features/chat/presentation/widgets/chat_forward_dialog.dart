@@ -51,7 +51,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(Icons.close, color: context.chat.text70),
+                  icon: Icon(Icons.close_rounded, color: context.chat.text70),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -63,8 +63,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
               decoration: InputDecoration(
                 hintText: context.l10n.translate('chat_search_chats_hint'),
                 hintStyle: TextStyle(color: context.chat.text38, fontSize: 13),
-                prefixIcon:
-                    Icon(Icons.search, color: context.chat.text38, size: 18),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: context.chat.text38, size: 18),
                 filled: true,
                 fillColor: context.chat.field,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -151,8 +151,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                         ),
                         trailing: Icon(
                           _selectedChatId == doc.id
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
                           color: _selectedChatId == doc.id
                               ? context.chat.accentText
                               : Colors.grey,
@@ -180,7 +180,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(Icons.send, size: 16, color: Colors.white),
+                  icon: const Icon(Icons.send_rounded,
+                      size: 16, color: Colors.white),
                   label: Text(context.l10n.translate('chat_forward_action'),
                       style: const TextStyle(color: Colors.white)),
                   onPressed: _selectedChatId == null

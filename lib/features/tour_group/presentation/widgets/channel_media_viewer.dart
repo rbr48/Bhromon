@@ -39,7 +39,7 @@ class _ChannelMediaPage extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.black,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             onPressed: () => Navigator.of(context).pop(),
           ),
           iconTheme: const IconThemeData(color: Colors.white),
@@ -136,7 +136,7 @@ class _VideoPaneState extends State<_VideoPane> {
             children: [
               VideoPlayer(controller),
               if (!controller.value.isPlaying)
-                const Icon(Icons.play_circle_fill,
+                const Icon(Icons.play_circle_fill_rounded,
                     color: Colors.white70, size: 64),
             ],
           ),

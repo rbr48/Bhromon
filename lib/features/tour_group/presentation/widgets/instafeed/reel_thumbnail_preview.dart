@@ -122,7 +122,7 @@ class _ReelThumbnailPreviewState extends State<ReelThumbnailPreview> {
           ),
         ),
         child: const Center(
-          child: Icon(Icons.slow_motion_video,
+          child: Icon(Icons.slow_motion_video_rounded,
               color: AppColors.mintGreen, size: 28),
         ),
       );

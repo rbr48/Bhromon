@@ -42,7 +42,7 @@ class _NotificationSettingsScreenState
         backgroundColor: context.forest.surfaceFor(Colors.black),
         appBar: AppBar(
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.forest.text),
+            icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -150,7 +150,7 @@ class _NotificationSettingsScreenState
                         children: [
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            leading: Icon(Icons.lock_outline,
+                            leading: Icon(Icons.lock_outline_rounded,
                                 color: context.forest.accentText),
                             title: Text('Change / Set Password',
                                 style: TextStyle(
@@ -162,14 +162,14 @@ class _NotificationSettingsScreenState
                                 style: TextStyle(
                                     color: context.forest.text54,
                                     fontSize: 12)),
-                            trailing: Icon(Icons.chevron_right,
+                            trailing: Icon(Icons.chevron_right_rounded,
                                 color: context.forest.text54),
                             onTap: () => _showChangePasswordDialog(context),
                           ),
                           Divider(color: context.forest.divider10),
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            leading: Icon(Icons.delete_forever,
+                            leading: Icon(Icons.delete_forever_rounded,
                                 color:
                                     context.forest.readable(Colors.redAccent)),
                             title: Text('Delete Profile & Account',
@@ -183,7 +183,7 @@ class _NotificationSettingsScreenState
                                 style: TextStyle(
                                     color: context.forest.text54,
                                     fontSize: 12)),
-                            trailing: Icon(Icons.chevron_right,
+                            trailing: Icon(Icons.chevron_right_rounded,
                                 color:
                                     context.forest.readable(Colors.redAccent)),
                             onTap: () => context.push('/delete-account'),

@@ -19,7 +19,7 @@ class RouteNotFoundScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => context.go('/group-hub'),
           ),
           title: Text(context.l10n.translate('route_not_found_title')),

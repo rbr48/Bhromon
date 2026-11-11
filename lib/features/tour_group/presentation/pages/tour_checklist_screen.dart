@@ -314,7 +314,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       secondary: deletable
           ? IconButton(
               tooltip: context.l10n.translate('check_delete_item'),
-              icon: Icon(Icons.delete_outline, color: context.forest.text54),
+              icon: Icon(Icons.delete_outline_rounded,
+                  color: context.forest.text54),
               onPressed: () => _confirmDelete(id, title),
             )
           : null,

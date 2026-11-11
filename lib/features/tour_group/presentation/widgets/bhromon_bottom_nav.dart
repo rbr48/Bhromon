@@ -32,27 +32,27 @@ class BhromonBottomNav extends StatelessWidget {
     return [
       NavigationDestination(
         icon: Icon(Icons.hub_outlined, color: context.forest.accentText),
-        selectedIcon: Icon(Icons.hub, color: context.forest.accentText),
+        selectedIcon: Icon(Icons.hub_rounded, color: context.forest.accentText),
         label: context.l10n.translate('hub_nav_tours'),
       ),
       NavigationDestination(
         icon: const Icon(Icons.forum_outlined),
-        selectedIcon: const Icon(Icons.forum),
+        selectedIcon: const Icon(Icons.forum_rounded),
         label: context.l10n.translate('hub_nav_channels'),
       ),
       NavigationDestination(
         icon: const Icon(Icons.photo_library_outlined),
-        selectedIcon: const Icon(Icons.photo_library),
+        selectedIcon: const Icon(Icons.photo_library_rounded),
         label: context.l10n.translate('hub_nav_moments'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.chat_bubble_outline),
-        selectedIcon: const Icon(Icons.chat_bubble),
+        icon: const Icon(Icons.chat_bubble_outline_rounded),
+        selectedIcon: const Icon(Icons.chat_bubble_rounded),
         label: context.l10n.translate('shell_chat'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.person_outline),
-        selectedIcon: const Icon(Icons.person),
+        icon: const Icon(Icons.person_outline_rounded),
+        selectedIcon: const Icon(Icons.person_rounded),
         label: context.l10n.translate('hub_nav_profile'),
       ),
     ];

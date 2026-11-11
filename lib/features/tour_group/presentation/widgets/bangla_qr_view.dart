@@ -442,7 +442,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.person,
+                      Icons.person_rounded,
                       size: 15,
                       color: _accountType == MfsAccountType.personal
                           ? f.accentText
@@ -483,7 +483,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.storefront,
+                      Icons.storefront_rounded,
                       size: 15,
                       color: _accountType == MfsAccountType.merchant
                           ? f.accentText
@@ -526,7 +526,8 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
         children: [
           const Row(
             children: [
-              Icon(Icons.info_outline, color: Color(0xFFB78103), size: 18),
+              Icon(Icons.info_outline_rounded,
+                  color: Color(0xFFB78103), size: 18),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -562,7 +563,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  icon: const Icon(Icons.copy, size: 14),
+                  icon: const Icon(Icons.copy_rounded, size: 14),
                   label: const Text(
                     'নম্বর কপি করুন (সেন্ড মানি)',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -616,7 +617,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.verified, color: Color(0xFF2E7D32), size: 18),
+          Icon(Icons.verified_rounded, color: Color(0xFF2E7D32), size: 18),
           SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -760,7 +761,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.info_outline,
+                      Icon(Icons.info_outline_rounded,
                           color: Color(0xFF856404), size: 18),
                       SizedBox(width: 8),
                       Expanded(
@@ -818,12 +819,12 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             hintStyle: TextStyle(color: f.text24, fontSize: 12),
                             prefixIcon: Icon(
                                 isBankOrMerchant
-                                    ? Icons.account_balance
-                                    : Icons.phone_android,
+                                    ? Icons.account_balance_rounded
+                                    : Icons.phone_android_rounded,
                                 size: 18,
                                 color: f.accentText),
                             suffixIcon: _payload.isPhoneAccount
-                                ? const Icon(Icons.check_circle,
+                                ? const Icon(Icons.check_circle_rounded,
                                     color: Colors.green, size: 18)
                                 : null,
                             filled: true,
@@ -927,7 +928,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.qr_code_scanner,
+                      Icon(Icons.qr_code_scanner_rounded,
                           size: 52, color: f.accentText),
                       const SizedBox(height: 12),
                       Text(
@@ -960,7 +961,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 12),
                         ),
-                        icon: const Icon(Icons.photo_library, size: 18),
+                        icon: const Icon(Icons.photo_library_rounded, size: 18),
                         label: const Text(
                           'গ্যালারি থেকে ছবি বাছাই করুন',
                           style: TextStyle(
@@ -1005,7 +1006,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                                 errorBuilder: (_, __, ___) => const SizedBox(
                                   height: 160,
                                   child: Center(
-                                    child: Icon(Icons.broken_image,
+                                    child: Icon(Icons.broken_image_rounded,
                                         size: 40, color: Colors.grey),
                                   ),
                                 ),
@@ -1140,7 +1141,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.refresh, size: 16),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
                       label: const Text(
                         'ছবি পরিবর্তন',
                         style: TextStyle(fontFamily: 'NotoSansBengali'),
@@ -1151,7 +1152,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                     TextButton.icon(
                       style: TextButton.styleFrom(
                           foregroundColor: Colors.redAccent),
-                      icon: const Icon(Icons.delete_outline, size: 16),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
                       label: const Text(
                         'মুছে ফেলুন',
                         style: TextStyle(fontFamily: 'NotoSansBengali'),
@@ -1252,8 +1253,8 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                                 ),
                               );
                             },
-                            child:
-                                Icon(Icons.copy, size: 15, color: f.accentText),
+                            child: Icon(Icons.copy_rounded,
+                                size: 15, color: f.accentText),
                           ),
                         ],
                       ),
@@ -1290,7 +1291,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.share, size: 16),
+                icon: const Icon(Icons.share_rounded, size: 16),
                 label: const Text('Share Payment Details'),
                 onPressed: () {
                   final details = StringBuffer()

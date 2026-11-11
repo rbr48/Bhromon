@@ -671,7 +671,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                             _pickedReceiptBytes = null;
                             _receiptUrl = null;
                           }),
-                          icon: const Icon(Icons.delete_outline, size: 14),
+                          icon: const Icon(Icons.delete_outline_rounded,
+                              size: 14),
                           label: Text(l10n.translate('fund_receipt_remove'),
                               style: const TextStyle(fontSize: 12)),
                         ),
@@ -686,7 +687,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(Icons.broken_image,
+                        errorBuilder: (_, __, ___) => Icon(
+                            Icons.broken_image_rounded,
                             color: context.forest.text24),
                       ),
                     )
@@ -698,7 +700,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(Icons.broken_image,
+                        errorBuilder: (_, __, ___) => Icon(
+                            Icons.broken_image_rounded,
                             color: context.forest.text24),
                       ),
                     )

@@ -179,21 +179,21 @@ class ChatAttachmentSheet extends StatelessWidget {
         children: [
           _buildItem(
             context,
-            icon: Icons.insert_drive_file,
+            icon: Icons.insert_drive_file_rounded,
             color: const Color(0xFF7F66FF),
             label: context.l10n.translate('chat_attach_document'),
             onTap: () => _pickDocument(context),
           ),
           _buildItem(
             context,
-            icon: Icons.camera_alt,
+            icon: Icons.camera_alt_rounded,
             color: const Color(0xFFD3396D),
             label: context.l10n.translate('chat_open_camera'),
             onTap: () => _pickFromCamera(context),
           ),
           _buildItem(
             context,
-            icon: Icons.photo,
+            icon: Icons.photo_rounded,
             color: const Color(0xFFAC44CF),
             label: context.l10n.translate('chat_attach_gallery'),
             onTap: () => _pickFromGallery(context),
@@ -207,14 +207,14 @@ class ChatAttachmentSheet extends StatelessWidget {
           ),
           _buildItem(
             context,
-            icon: Icons.headphones,
+            icon: Icons.headphones_rounded,
             color: const Color(0xFFE36D38),
             label: context.l10n.translate('chat_attach_audio'),
             onTap: () => _pickAudio(context),
           ),
           _buildItem(
             context,
-            icon: Icons.location_on,
+            icon: Icons.location_on_rounded,
             color: const Color(0xFF1FA855),
             label: context.l10n.translate('chat_attach_location'),
             onTap: () => _shareLocation(context),

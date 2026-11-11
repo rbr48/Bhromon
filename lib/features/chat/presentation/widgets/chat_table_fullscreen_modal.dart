@@ -328,7 +328,7 @@ class _ChatTableFullscreenModalState extends State<ChatTableFullscreenModal> {
                       style: TextButton.styleFrom(
                         foregroundColor: context.forest.accentText,
                       ),
-                      icon: const Icon(Icons.copy, size: 16),
+                      icon: const Icon(Icons.copy_rounded, size: 16),
                       label: const Text(
                         'সেল কপি করুন',
                         style: TextStyle(

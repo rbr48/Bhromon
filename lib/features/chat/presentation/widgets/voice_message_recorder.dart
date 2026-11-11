@@ -227,7 +227,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.lock_outline,
+                    Icon(Icons.lock_outline_rounded,
                         color: context.chat.text70, size: 14),
                     const SizedBox(width: 4),
                     Text(context.l10n.translate('chat_record_lock'),
@@ -239,7 +239,8 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: Icon(Icons.close, color: context.chat.text60, size: 20),
+              icon: Icon(Icons.close_rounded,
+                  color: context.chat.text60, size: 20),
               tooltip: context.l10n.translate('cancel'),
               onPressed: _cancelRecording,
             ),
@@ -248,13 +249,13 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
               child: const CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.chatGreen,
-                child: Icon(Icons.send, color: Colors.white, size: 16),
+                child: Icon(Icons.send_rounded, color: Colors.white, size: 16),
               ),
             ),
           ] else ...[
             // Locked hands-free mode: delete trash or send
             IconButton(
-              icon: const Icon(Icons.delete_outline,
+              icon: const Icon(Icons.delete_outline_rounded,
                   color: Colors.redAccent, size: 22),
               tooltip: context.l10n.translate('chat_record_delete'),
               onPressed: _cancelRecording,
@@ -265,7 +266,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
               child: const CircleAvatar(
                 radius: 20,
                 backgroundColor: AppColors.chatGreen,
-                child: Icon(Icons.send, color: Colors.white, size: 18),
+                child: Icon(Icons.send_rounded, color: Colors.white, size: 18),
               ),
             ),
           ],

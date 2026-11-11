@@ -214,7 +214,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
                   ),
                   trailing: IconButton(
                     tooltip: l10n.translate('itin_remove'),
-                    icon: Icon(Icons.delete_outline,
+                    icon: Icon(Icons.delete_outline_rounded,
                         color: context.forest.readable(Colors.redAccent)),
                     onPressed: _stops.length == 1
                         ? null
@@ -537,7 +537,8 @@ class _DestinationPickerState extends State<_DestinationPicker> {
                 onChanged: (v) => setState(() => _query = v),
                 style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search, color: context.forest.text54),
+                  prefixIcon:
+                      Icon(Icons.search_rounded, color: context.forest.text54),
                   hintText: l10n.translate('itin_search'),
                   hintStyle: TextStyle(color: context.forest.text38),
                 ),

@@ -763,7 +763,8 @@ class _CycleSheetState extends State<_CycleSheet> {
                                   ),
                                   if (widget.isAdmin)
                                     IconButton(
-                                      icon: const Icon(Icons.delete_outline,
+                                      icon: const Icon(
+                                          Icons.delete_outline_rounded,
                                           size: 20),
                                       color: context.forest
                                           .readable(Colors.redAccent),
@@ -809,7 +810,8 @@ class _CycleSheetState extends State<_CycleSheet> {
                                         visualDensity: VisualDensity.compact,
                                       ),
                                       onPressed: () => _verifyPayout(cycle),
-                                      icon: const Icon(Icons.check, size: 14),
+                                      icon: const Icon(Icons.check_rounded,
+                                          size: 14),
                                       label: const Text('নিশ্চিত করুন',
                                           style: TextStyle(fontSize: 12)),
                                     ),

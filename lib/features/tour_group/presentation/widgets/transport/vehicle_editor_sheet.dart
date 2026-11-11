@@ -124,7 +124,8 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
         IconButton(
           tooltip: l10n.translate('veh_less'),
           onPressed: value > min ? () => onChanged(value - 1) : null,
-          icon: Icon(Icons.remove_circle_outline, color: context.forest.text70),
+          icon: Icon(Icons.remove_circle_outline_rounded,
+              color: context.forest.text70),
         ),
         SizedBox(
           width: 32,
@@ -136,7 +137,8 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
         IconButton(
           tooltip: l10n.translate('veh_more'),
           onPressed: value < max ? () => onChanged(value + 1) : null,
-          icon: Icon(Icons.add_circle_outline, color: context.forest.text70),
+          icon: Icon(Icons.add_circle_outline_rounded,
+              color: context.forest.text70),
         ),
       ],
     );
@@ -242,7 +244,8 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
                   ? null
                   : IconButton(
                       tooltip: l10n.translate('veh_departure_clear'),
-                      icon: Icon(Icons.close, color: context.forest.text54),
+                      icon: Icon(Icons.close_rounded,
+                          color: context.forest.text54),
                       onPressed: () =>
                           setState(() => _v = _v.copyWith(departure: null)),
                     ),

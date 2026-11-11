@@ -103,7 +103,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_main_cottage_sub'),
           lat: 23.3828,
           lng: 92.2938,
-          icon: Icons.hotel,
+          icon: Icons.hotel_rounded,
           color: Colors.amber,
         ),
         TourLandmark(
@@ -112,7 +112,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_tour_transport_sub'),
           lat: 23.3840,
           lng: 92.2945,
-          icon: Icons.directions_bus,
+          icon: Icons.directions_bus_rounded,
           color: Colors.teal,
         ),
         TourLandmark(
@@ -142,7 +142,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 24.8949,
           lng: 91.8687,
-          icon: Icons.hotel,
+          icon: Icons.hotel_rounded,
           color: Colors.amber,
         ),
         TourLandmark(
@@ -151,7 +151,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_main_transport_sub'),
           lat: 24.8960,
           lng: 91.8700,
-          icon: Icons.directions_bus,
+          icon: Icons.directions_bus_rounded,
           color: Colors.teal,
         ),
         TourLandmark(
@@ -181,7 +181,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 22.1953,
           lng: 92.2184,
-          icon: Icons.hotel,
+          icon: Icons.hotel_rounded,
           color: Colors.amber,
         ),
         TourLandmark(
@@ -190,7 +190,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_hill_transport_sub'),
           lat: 22.1970,
           lng: 92.2190,
-          icon: Icons.directions_bus,
+          icon: Icons.directions_bus_rounded,
           color: Colors.teal,
         ),
         TourLandmark(
@@ -221,7 +221,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 21.4326,
           lng: 91.9774,
-          icon: Icons.hotel,
+          icon: Icons.hotel_rounded,
           color: Colors.amber,
         ),
         TourLandmark(
@@ -234,7 +234,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           subtitle: context.l10n.translate('fsh_main_bus_sub'),
           lat: 21.4385,
           lng: 91.9740,
-          icon: Icons.directions_bus,
+          icon: Icons.directions_bus_rounded,
           color: Colors.teal,
         ),
         TourLandmark(
@@ -669,8 +669,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     ),
                     child: Icon(
                       _isSirenActive
-                          ? Icons.notifications_active
-                          : Icons.shield,
+                          ? Icons.notifications_active_rounded
+                          : Icons.shield_rounded,
                       color: _isSirenActive ? Colors.red : Colors.white,
                       size: 28,
                     ),
@@ -712,8 +712,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon:
-                      Icon(_isSirenActive ? Icons.volume_off : Icons.volume_up),
+                  icon: Icon(_isSirenActive
+                      ? Icons.volume_off_rounded
+                      : Icons.volume_up_rounded),
                   label: Text(
                     _isSirenActive
                         ? context.l10n.translate('fsh_alert_turn_off')
@@ -825,7 +826,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 ),
               if (canResolve)
                 OutlinedButton.icon(
-                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                  icon:
+                      const Icon(Icons.check_circle_outline_rounded, size: 16),
                   label: Text(context.l10n.translate('fsh_mark_safe')),
                   onPressed: () => _resolveFromCard(alert),
                 ),
@@ -1493,7 +1495,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 title: context.l10n.translate('fsh_national_emergency'),
                 number: '999',
                 displayNumber: context.l10n.translate('fsh_999_free'),
-                icon: Icons.emergency,
+                icon: Icons.emergency_rounded,
                 color: Colors.redAccent,
               ),
             ),
@@ -1507,7 +1509,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               title: h.title,
               number: h.number,
               displayNumber: h.display,
-              icon: Icons.local_hospital,
+              icon: Icons.local_hospital_rounded,
               color: Colors.teal,
             );
           },
@@ -1595,7 +1597,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 ],
               ),
             ),
-            Icon(Icons.phone_in_talk,
+            Icon(Icons.phone_in_talk_rounded,
                 color: context.forest.readable(Colors.greenAccent), size: 20),
           ],
         ),
@@ -1662,7 +1664,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.near_me,
+                      Icon(Icons.near_me_rounded,
                           size: 12,
                           color: context.forest.readable(Colors.greenAccent)),
                       const SizedBox(width: 4),
@@ -1683,7 +1685,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         const SizedBox(width: 8),
                         Transform.rotate(
                           angle: ((bearing - _headingDegrees) * math.pi / 180),
-                          child: Icon(Icons.arrow_upward,
+                          child: Icon(Icons.arrow_upward_rounded,
                               size: 12,
                               color:
                                   context.forest.readable(Colors.amberAccent)),
@@ -1696,7 +1698,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             ),
           ),
           IconButton(
-            icon: Icon(Icons.directions,
+            icon: Icon(Icons.directions_rounded,
                 color: context.forest.readable(Colors.tealAccent)),
             tooltip: context.l10n.translate('fsh_google_directions'),
             onPressed: () => _openMapNavigation(landmark.lat, landmark.lng),
@@ -1719,7 +1721,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline,
+              Icon(Icons.info_outline_rounded,
                   color: context.forest.readable(Colors.amber), size: 18),
               const SizedBox(width: 8),
               Text(

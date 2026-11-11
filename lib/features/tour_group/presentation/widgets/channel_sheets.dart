@@ -69,7 +69,7 @@ Future<ChannelActionChoice?> showChannelMessageActions(
           ),
           Divider(color: context.forest.divider10, height: 1),
           const _ActionTile(
-            icon: Icons.reply,
+            icon: Icons.reply_rounded,
             label: 'chan_action_reply',
             action: ChannelAction.reply,
           ),
@@ -83,7 +83,7 @@ Future<ChannelActionChoice?> showChannelMessageActions(
             ),
           if (message.text.isNotEmpty)
             const _ActionTile(
-              icon: Icons.copy,
+              icon: Icons.copy_rounded,
               label: 'chan_action_copy',
               action: ChannelAction.copy,
             ),
@@ -96,7 +96,7 @@ Future<ChannelActionChoice?> showChannelMessageActions(
             ),
           if (isMine || isAdmin)
             const _ActionTile(
-              icon: Icons.delete_outline,
+              icon: Icons.delete_outline_rounded,
               label: 'chan_action_delete',
               action: ChannelAction.delete,
               danger: true,
@@ -305,12 +305,12 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                     ButtonSegment<ChannelKind>(
                       value: ChannelKind.text,
                       label: Text(l10n.translate('chan_kind_text')),
-                      icon: const Icon(Icons.tag, size: 16),
+                      icon: const Icon(Icons.tag_rounded, size: 16),
                     ),
                     ButtonSegment<ChannelKind>(
                       value: ChannelKind.voice,
                       label: Text(l10n.translate('chan_kind_voice')),
-                      icon: const Icon(Icons.volume_up, size: 16),
+                      icon: const Icon(Icons.volume_up_rounded, size: 16),
                     ),
                   ],
                   selected: {_kind},
@@ -421,7 +421,7 @@ Future<void> showChannelMembersSheet(
                     if (m.email != myEmail) ...[
                       if (onStartChat != null)
                         IconButton(
-                          icon: Icon(Icons.chat_bubble_outline,
+                          icon: Icon(Icons.chat_bubble_outline_rounded,
                               size: 19, color: context.forest.accentText),
                           tooltip: l10n.translate('chan_direct_message'),
                           onPressed: () {
@@ -431,7 +431,7 @@ Future<void> showChannelMembersSheet(
                         ),
                       if (onStartCall != null) ...[
                         IconButton(
-                          icon: Icon(Icons.call,
+                          icon: Icon(Icons.call_rounded,
                               size: 19, color: context.forest.accentText),
                           tooltip: l10n.translate('chan_call_audio'),
                           onPressed: () {
@@ -440,7 +440,7 @@ Future<void> showChannelMembersSheet(
                           },
                         ),
                         IconButton(
-                          icon: Icon(Icons.videocam,
+                          icon: Icon(Icons.videocam_rounded,
                               size: 21, color: context.forest.accentText),
                           tooltip: l10n.translate('chan_call_video'),
                           onPressed: () {

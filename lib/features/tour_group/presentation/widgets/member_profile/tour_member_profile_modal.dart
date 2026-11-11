@@ -847,7 +847,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_isMe && _note == null)
-                      Icon(Icons.add,
+                      Icon(Icons.add_rounded,
                           size: 11, color: context.forest.accentText),
                     Text(
                       _note ?? l10n.translate('prof_note_add'),
@@ -1538,7 +1538,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   placeholder: Container(color: Colors.black26),
                   errorWidget: Container(
                     color: context.forest.card,
-                    child: const Icon(Icons.photo, color: Colors.white24),
+                    child:
+                        const Icon(Icons.photo_rounded, color: Colors.white24),
                   ),
                 )
               else if (isVideo)
@@ -1546,7 +1547,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               else
                 Container(
                   color: context.forest.card,
-                  child: Icon(Icons.photo, color: context.forest.text24),
+                  child:
+                      Icon(Icons.photo_rounded, color: context.forest.text24),
                 ),
 
               // Badges
@@ -1573,7 +1575,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.favorite,
+                      const Icon(Icons.favorite_rounded,
                           size: 10, color: Colors.redAccent),
                       const SizedBox(width: 2),
                       Text(

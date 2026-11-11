@@ -252,7 +252,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           backgroundColor: context.chat.bar, // WhatsApp secondary bar
           elevation: 1,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.chat.text),
+            icon: Icon(Icons.arrow_back_rounded, color: context.chat.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -274,7 +274,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: context.chat.text),
+              icon: Icon(Icons.more_vert_rounded, color: context.chat.text),
               color: context.chat.bar,
               onSelected: (val) {
                 if (val == 'new_chat') {
@@ -360,11 +360,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   context.l10n.translate('chats_search_hint'),
                               hintStyle: TextStyle(
                                   color: context.chat.text54, fontSize: 13),
-                              prefixIcon: Icon(Icons.search,
+                              prefixIcon: Icon(Icons.search_rounded,
                                   color: context.chat.text54, size: 18),
                               suffixIcon: _searchQuery.isNotEmpty
                                   ? IconButton(
-                                      icon: Icon(Icons.clear,
+                                      icon: Icon(Icons.clear_rounded,
                                           color: context.chat.text54, size: 16),
                                       onPressed: () =>
                                           setState(() => _searchQuery = ''),
@@ -532,7 +532,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.chat_bubble_outline,
+                                        Icon(Icons.chat_bubble_outline_rounded,
                                             size: 64,
                                             color: context.chat.text
                                                 .withValues(alpha: 0.08)),
@@ -664,8 +664,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child:
-              Icon(_bottomNavIndex == 0 ? Icons.chat_bubble : Icons.add_call),
+          child: Icon(_bottomNavIndex == 0
+              ? Icons.chat_bubble_rounded
+              : Icons.add_call),
           onPressed: () => _showSelectTravelerSheet(context, currentUid),
         ),
       ),
@@ -863,8 +864,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         children: [
           Icon(
             isMissed
-                ? Icons.call_missed
-                : (isCaller ? Icons.call_made : Icons.call_received),
+                ? Icons.call_missed_rounded
+                : (isCaller
+                    ? Icons.call_made_rounded
+                    : Icons.call_received_rounded),
             size: 15,
             color: isMissed ? Colors.redAccent : context.chat.accentText,
           ),
@@ -883,7 +886,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       ),
       trailing: IconButton(
         icon: Icon(
-          isVideo ? Icons.videocam : Icons.call,
+          isVideo ? Icons.videocam_rounded : Icons.call_rounded,
           color: onTap != null ? context.chat.accentText : context.chat.text24,
           size: 22,
         ),
@@ -1257,7 +1260,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               context.l10n.translate('chats_start_search_hint'),
                           hintStyle: TextStyle(
                               color: context.chat.text54, fontSize: 12),
-                          prefixIcon: Icon(Icons.search,
+                          prefixIcon: Icon(Icons.search_rounded,
                               color: context.chat.text54, size: 18),
                           border: InputBorder.none,
                           contentPadding:
@@ -1358,7 +1361,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: Icon(Icons.call,
+                                    icon: Icon(Icons.call_rounded,
                                         color: context.chat.accentText,
                                         size: 20),
                                     tooltip: context.l10n
@@ -1377,7 +1380,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     },
                                   ),
                                   IconButton(
-                                    icon: Icon(Icons.videocam,
+                                    icon: Icon(Icons.videocam_rounded,
                                         color: context.chat.accentText,
                                         size: 22),
                                     tooltip: context.l10n
@@ -1484,7 +1487,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.lock, color: context.chat.accentText, size: 20),
+                  Icon(Icons.lock_rounded,
+                      color: context.chat.accentText, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.translate('chats_locked_title'),
@@ -1569,7 +1573,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           children: [
             ListTile(
               leading: Icon(
-                isLocked ? Icons.lock_open : Icons.lock_outline,
+                isLocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
                 color: context.chat.accentText,
               ),
               title: Text(
@@ -1605,8 +1609,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               },
             ),
             ListTile(
-              leading:
-                  const Icon(Icons.delete_outline, color: Colors.redAccent),
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.redAccent),
               title: Text(
                 context.l10n.translate('chat_menu_delete_chat'),
                 style: const TextStyle(color: Colors.redAccent),
@@ -1738,7 +1742,7 @@ class _LockedChatTile extends StatelessWidget {
       ),
       title: Text(name, style: TextStyle(color: context.chat.text)),
       trailing: IconButton(
-        icon: Icon(Icons.lock_open, color: context.chat.text54),
+        icon: Icon(Icons.lock_open_rounded, color: context.chat.text54),
         tooltip: context.l10n.translate('chats_unlock'),
         onPressed: onUnlock,
       ),
@@ -1937,7 +1941,7 @@ class ChatTile extends StatelessWidget {
           if (isEncrypted) ...[
             const SizedBox(width: 4),
             Icon(
-              Icons.lock_outline,
+              Icons.lock_outline_rounded,
               size: 13,
               color: context.chat.text54,
             ),
@@ -1948,7 +1952,7 @@ class ChatTile extends StatelessWidget {
         children: [
           if (isMe && lastMessage.isNotEmpty && !isCallMsg) ...[
             Icon(
-              Icons.done_all,
+              Icons.done_all_rounded,
               size: 16,
               color: context.chat.text30,
             ),

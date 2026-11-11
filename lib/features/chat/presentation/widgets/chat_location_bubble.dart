@@ -92,7 +92,7 @@ class ChatLocationBubble extends StatelessWidget {
                           ],
                         ),
                         child: const Icon(
-                          Icons.location_on,
+                          Icons.location_on_rounded,
                           color: Colors.white,
                           size: 20,
                         ),
@@ -156,7 +156,7 @@ class ChatLocationBubble extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.directions,
+                      Icon(Icons.directions_rounded,
                           color: isMe
                               ? context.chat.text
                               : context.chat.accentText,

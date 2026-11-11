@@ -223,7 +223,7 @@ class _MfsSettlementSheetState extends State<MfsSettlementSheet> {
                   ),
                   TextButton.icon(
                     onPressed: _pasteAndParseSms,
-                    icon: const Icon(Icons.content_paste_go, size: 18),
+                    icon: const Icon(Icons.content_paste_go_rounded, size: 18),
                     label: const Text('SMS পেস্ট করুন'),
                   ),
                 ],

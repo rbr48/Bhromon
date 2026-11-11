@@ -23,7 +23,7 @@ void main() {
       expect(find.byType(RouteNotFoundScreen), findsOneWidget);
       expect(find.byWidgetPredicate((w) => w is PopScope),
           findsAtLeastNWidgets(1));
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
     });
 
     testWidgets(
@@ -42,7 +42,7 @@ void main() {
       expect(find.byType(NotificationCenterScreen), findsOneWidget);
       expect(find.byWidgetPredicate((w) => w is PopScope),
           findsAtLeastNWidgets(1));
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
     });
 
     testWidgets('Channel media viewer shows top back button and pops cleanly',
@@ -77,10 +77,10 @@ void main() {
       // Check PopScope and back button exist
       expect(find.byWidgetPredicate((w) => w is PopScope),
           findsAtLeastNWidgets(1));
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
 
       // Tap back button
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
 
       // Verifies viewer is popped and base page restored

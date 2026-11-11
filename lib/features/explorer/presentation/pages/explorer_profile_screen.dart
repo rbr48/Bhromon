@@ -495,7 +495,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           backgroundColor: context.forest.background,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.forest.text70),
+            icon: Icon(Icons.arrow_back_rounded, color: context.forest.text70),
             tooltip: _isBn ? 'ফিরে যান' : 'Back',
             onPressed: () {
               if (context.canPop()) {
@@ -573,7 +573,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline,
+                const Icon(Icons.error_outline_rounded,
                     color: Colors.redAccent, size: 48),
                 const SizedBox(height: 16),
                 Text(
@@ -761,7 +761,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.camera_alt,
+                          const Icon(Icons.camera_alt_rounded,
                               color: Colors.white, size: 14),
                           const SizedBox(width: 6),
                           Text(
@@ -871,7 +871,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         border: Border.all(
                             color: context.forest.background, width: 2),
                       ),
-                      child: const Icon(Icons.camera_alt,
+                      child: const Icon(Icons.camera_alt_rounded,
                           color: Colors.black, size: 14),
                     ),
                   ),
@@ -929,7 +929,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   children: [
                     if (isOwnProfile &&
                         (_statusNote == null || _statusNote!.isEmpty)) ...[
-                      Icon(Icons.add,
+                      Icon(Icons.add_rounded,
                           size: 12, color: context.forest.accentText),
                       const SizedBox(width: 4),
                     ],
@@ -1173,7 +1173,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(Icons.add_circle, size: 18),
+              icon: const Icon(Icons.add_circle_rounded, size: 18),
               label: Text(
                 _isBn ? 'নতুন গ্রুপ' : 'Create Group',
                 style:
@@ -1637,7 +1637,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               children: [
                 ElevatedButton.icon(
                   onPressed: () => _showCreateGroupDialog(context),
-                  icon: const Icon(Icons.add, size: 16),
+                  icon: const Icon(Icons.add_rounded, size: 16),
                   label: Text(_isBn ? 'গ্রুপ তৈরি' : 'Create'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.midGreen,
@@ -1650,7 +1650,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 const SizedBox(width: 10),
                 OutlinedButton.icon(
                   onPressed: () => _showJoinGroupDialog(context),
-                  icon: const Icon(Icons.key, size: 16),
+                  icon: const Icon(Icons.key_rounded, size: 16),
                   label: Text(_isBn ? 'যোগ দিন' : 'Join'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: context.forest.accentText,
@@ -1716,8 +1716,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             if (isOwnProfile)
               TextButton.icon(
                 onPressed: () => _showJoinGroupDialog(context),
-                icon:
-                    Icon(Icons.add, size: 15, color: context.forest.accentText),
+                icon: Icon(Icons.add_rounded,
+                    size: 15, color: context.forest.accentText),
                 label: Text(
                   _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
                   style: TextStyle(
@@ -2166,7 +2166,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: const Icon(Icons.logout, size: 16),
+                  icon: const Icon(Icons.logout_rounded, size: 16),
                   label: Text(_isBn ? 'অ্যাকাউন্ট থেকে লগআউট' : 'Sign Out'),
                 ),
               ),
@@ -2274,7 +2274,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               if (hasQr)
                 TextButton.icon(
-                  icon: const Icon(Icons.edit, size: 14),
+                  icon: const Icon(Icons.edit_rounded, size: 14),
                   label: Text(_isBn ? 'পরিবর্তন' : 'Edit'),
                   onPressed: () => _openPaymentQrSheet(profile),
                 ),
@@ -2313,7 +2313,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         qrUrl,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Icon(
-                          Icons.qr_code,
+                          Icons.qr_code_rounded,
                           size: 32,
                           color: Colors.black45,
                         ),
@@ -2934,7 +2934,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close,
+                          icon: Icon(Icons.close_rounded,
                               color: context.forest.text54, size: 20),
                           onPressed: isSaving
                               ? null
@@ -3096,8 +3096,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                         fit: BoxFit.cover,
                                                         errorBuilder: (_, __,
                                                                 ___) =>
-                                                            const Icon(
-                                                                Icons.person),
+                                                            const Icon(Icons
+                                                                .person_rounded),
                                                       )
                                                     : Image.file(
                                                         File(dialogAvatarFile!
@@ -3105,8 +3105,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                         fit: BoxFit.cover,
                                                         errorBuilder: (_, __,
                                                                 ___) =>
-                                                            const Icon(
-                                                                Icons.person),
+                                                            const Icon(Icons
+                                                                .person_rounded),
                                                       ))
                                                 : (profile.avatarUrl != null &&
                                                         profile.avatarUrl!
@@ -3159,7 +3159,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                       const CircleAvatar(
                                         radius: 12,
                                         backgroundColor: AppColors.mintGreen,
-                                        child: Icon(Icons.camera_alt,
+                                        child: Icon(Icons.camera_alt_rounded,
                                             size: 12, color: Colors.black),
                                       ),
                                     ],
@@ -3612,7 +3612,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () => context.go('/login'),
-                icon: const Icon(Icons.login),
+                icon: const Icon(Icons.login_rounded),
                 label: Text(_isBn ? 'লগইন বা সাইন-আপ' : 'Sign In / Register'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.mintGreen,

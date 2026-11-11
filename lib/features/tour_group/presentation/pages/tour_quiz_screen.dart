@@ -223,7 +223,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
           actions: [
             IconButton(
               tooltip: 'নতুন প্রশ্ন আনুন',
-              icon: Icon(Icons.refresh,
+              icon: Icon(Icons.refresh_rounded,
                   color: context.forest.readable(Colors.tealAccent)),
               onPressed: _restartQuiz,
             ),
@@ -260,7 +260,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.info_outline,
+              Icon(Icons.info_outline_rounded,
                   color: context.forest.readable(Colors.amber), size: 48),
               const SizedBox(height: 12),
               Text(
@@ -270,7 +270,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(Icons.refresh_rounded),
                 label: const Text('পুনরায় চেষ্টা করুন'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.tealAccent.shade700,
@@ -435,7 +435,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.lightbulb,
+                      Icon(Icons.lightbulb_rounded,
                           color: context.forest.readable(Colors.amber),
                           size: 16),
                       const SizedBox(width: 6),
@@ -549,8 +549,10 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               if (_isAnswered)
                 Icon(
                   index == q.correctIndex
-                      ? Icons.check_circle
-                      : (index == _selectedOption ? Icons.cancel : null),
+                      ? Icons.check_circle_rounded
+                      : (index == _selectedOption
+                          ? Icons.cancel_rounded
+                          : null),
                   color: index == q.correctIndex
                       ? Colors.greenAccent
                       : Colors.redAccent,
@@ -589,7 +591,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 color: Colors.amber.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.emoji_events,
+              child: Icon(Icons.emoji_events_rounded,
                   color: context.forest.readable(Colors.amber), size: 72),
             ),
             const SizedBox(height: 20),
@@ -617,7 +619,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              icon: const Icon(Icons.replay),
+              icon: const Icon(Icons.replay_rounded),
               label: const Text(
                 'নতুন ১০টি প্রশ্ন খেলুন',
                 style: TextStyle(fontWeight: FontWeight.bold),

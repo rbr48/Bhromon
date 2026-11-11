@@ -123,7 +123,8 @@ class _LoginScreenState extends State<LoginScreen>
                 SnackBar(
                   content: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.white),
+                      const Icon(Icons.error_outline_rounded,
+                          color: Colors.white),
                       const SizedBox(width: 8),
                       Expanded(child: Text(_authErrorText(ctx, state.reason))),
                     ],
@@ -295,7 +296,7 @@ class _BrandHeader extends StatelessWidget {
               'assets/bhromon_emblem.png',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.explore, color: _kGreen, size: 54),
+                  const Icon(Icons.explore_rounded, color: _kGreen, size: 54),
             ),
           ),
         ),

@@ -404,7 +404,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.remove_red_eye,
+                    const Icon(Icons.remove_red_eye_rounded,
                         color: AppColors.mintGreen),
                     const SizedBox(width: 8),
                     Text(
@@ -783,7 +783,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         if (_canDelete)
                           IconButton(
                             tooltip: context.l10n.translate('ig_delete'),
-                            icon: const Icon(Icons.delete_outline,
+                            icon: const Icon(Icons.delete_outline_rounded,
                                 color: Colors.white),
                             onPressed: _deleteCurrentStory,
                           ),
@@ -809,7 +809,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         // Close button
                         IconButton(
                           tooltip: context.l10n.translate('ig_close'),
-                          icon: const Icon(Icons.close, color: Colors.white),
+                          icon: const Icon(Icons.close_rounded,
+                              color: Colors.white),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -1037,10 +1038,10 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
   }
 
   Widget _buildStickerWidget(TourStorySticker sticker) {
-    IconData icon = Icons.location_on;
+    IconData icon = Icons.location_on_rounded;
     Color color = Colors.redAccent;
     if (sticker.type == 'tide') {
-      icon = Icons.waves;
+      icon = Icons.waves_rounded;
       color = Colors.lightBlueAccent;
     }
 

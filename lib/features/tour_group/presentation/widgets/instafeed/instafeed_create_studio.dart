@@ -749,7 +749,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 children: [
                   IconButton(
                     tooltip: context.l10n.translate('ig_close'),
-                    icon: const Icon(Icons.close, color: Colors.white70),
+                    icon:
+                        const Icon(Icons.close_rounded, color: Colors.white70),
                     onPressed: () {
                       _saveCurrentDraft();
                       Navigator.pop(context);
@@ -910,7 +911,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 color: Colors.amber.withValues(alpha: 0.15),
                 child: Row(
                   children: [
-                    const Icon(Icons.history, color: Colors.amber, size: 20),
+                    const Icon(Icons.history_rounded,
+                        color: Colors.amber, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -928,7 +930,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     ),
                     IconButton(
                       tooltip: context.l10n.translate('ig_close'),
-                      icon: const Icon(Icons.close,
+                      icon: const Icon(Icons.close_rounded,
                           size: 16, color: Colors.white54),
                       onPressed: _discardDraft,
                     ),
@@ -964,7 +966,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           IconButton(
                             tooltip: context.l10n.translate('ig_cancel'),
                             visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.close,
+                            icon: const Icon(Icons.close_rounded,
                                 color: Colors.white70, size: 18),
                             onPressed: () => TourVideoCompressor.cancel(),
                           ),
@@ -995,7 +997,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const Icon(Icons.aspect_ratio,
+                        const Icon(Icons.aspect_ratio_rounded,
                             size: 16, color: Colors.white70),
                         const SizedBox(width: 8),
                         Text(context.l10n.translate('ig_frame_label'),
@@ -1196,7 +1198,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.brightness_6,
+                                  const Icon(Icons.brightness_6_rounded,
                                       size: 16, color: Colors.white70),
                                   const SizedBox(width: 8),
                                   SizedBox(
@@ -1223,7 +1225,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.contrast,
+                                  const Icon(Icons.contrast_rounded,
                                       size: 16, color: Colors.white70),
                                   const SizedBox(width: 8),
                                   SizedBox(
@@ -1277,7 +1279,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.vignette,
+                                  const Icon(Icons.vignette_rounded,
                                       size: 16, color: Colors.white70),
                                   const SizedBox(width: 8),
                                   SizedBox(
@@ -1315,7 +1317,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     controller: _audioTitleCtrl,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.music_note,
+                      prefixIcon: const Icon(Icons.music_note_rounded,
                           color: AppColors.mintGreen),
                       hintText: context.l10n.translate('ig_music_name_hint'),
                       hintStyle: const TextStyle(color: Colors.white54),
@@ -1455,8 +1457,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         : context.l10n.translate('ig_play'),
                     icon: Icon(
                       _videoCtrl!.value.isPlaying
-                          ? Icons.pause_circle
-                          : Icons.play_circle,
+                          ? Icons.pause_circle_rounded
+                          : Icons.play_circle_rounded,
                       color: Colors.white70,
                       size: 48,
                     ),
@@ -1517,7 +1519,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                   ),
                   onPressed: () => _pickVideo(ImageSource.gallery),
-                  icon: const Icon(Icons.sync, size: 14),
+                  icon: const Icon(Icons.sync_rounded, size: 14),
                   label: Text(context.l10n.translate('ig_change_video'),
                       style: const TextStyle(fontSize: 12)),
                 ),
@@ -1546,7 +1548,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               return Center(
                 child: IconButton.filledTonal(
                   onPressed: _pickPhotos,
-                  icon: const Icon(Icons.add_photo_alternate,
+                  icon: const Icon(Icons.add_photo_alternate_rounded,
                       color: AppColors.mintGreen),
                 ),
               );
@@ -1598,7 +1600,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close,
+                        child: const Icon(Icons.close_rounded,
                             size: 14, color: Colors.white),
                       ),
                     ),
@@ -1742,7 +1744,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               visualDensity: VisualDensity.compact,
                             ),
                             onPressed: _pickCoverImage,
-                            icon: const Icon(Icons.edit, size: 14),
+                            icon: const Icon(Icons.edit_rounded, size: 14),
                             label: Text(context.l10n.translate('ig_change'),
                                 style: const TextStyle(fontSize: 12)),
                           ),
@@ -1755,7 +1757,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               visualDensity: VisualDensity.compact,
                             ),
                             onPressed: _clearCoverImage,
-                            icon: const Icon(Icons.delete_outline, size: 14),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 14),
                             label: Text(context.l10n.translate('ig_delete'),
                                 style: const TextStyle(fontSize: 12)),
                           ),

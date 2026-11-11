@@ -77,7 +77,7 @@ void main() {
     // The action bar has one labelled menu for creating and joining.
     expect(find.byIcon(Icons.backup_rounded), findsNothing);
     expect(find.byIcon(Icons.group_add_outlined), findsNothing);
-    expect(find.byIcon(Icons.add_circle_outline), findsOneWidget);
+    expect(find.byIcon(Icons.add_circle_outline_rounded), findsOneWidget);
 
     // Verify Tour OS Bottom Navigation Bar with 5 tabs
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -93,7 +93,7 @@ void main() {
     expect(find.text('Enter code'), findsOneWidget);
 
     // The menu lists each way to start, with its label.
-    await tester.tap(find.byIcon(Icons.add_circle_outline));
+    await tester.tap(find.byIcon(Icons.add_circle_outline_rounded));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(PopupMenuItem<String>, 'Create a family circle'),
         findsOneWidget);

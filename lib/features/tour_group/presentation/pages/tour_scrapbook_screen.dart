@@ -141,7 +141,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
           elevation: 0,
           actions: [
             IconButton(
-              icon: const Icon(Icons.share),
+              icon: const Icon(Icons.share_rounded),
               tooltip: l10n.translate('scrap_share'),
               onPressed: _shareScrapbookSummary,
             ),

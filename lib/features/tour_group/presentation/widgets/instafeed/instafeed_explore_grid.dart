@@ -84,7 +84,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                         ),
                       ),
                       child: const Center(
-                        child: Icon(Icons.slow_motion_video,
+                        child: Icon(Icons.slow_motion_video_rounded,
                             color: AppColors.mintGreen, size: 28),
                       ),
                     ),
@@ -103,7 +103,9 @@ class InstafeedExploreGrid extends StatelessWidget {
                     ),
                     child: Center(
                       child: Icon(
-                        post.isReel ? Icons.slow_motion_video : Icons.image,
+                        post.isReel
+                            ? Icons.slow_motion_video_rounded
+                            : Icons.image_rounded,
                         color:
                             post.isReel ? AppColors.mintGreen : Colors.white24,
                         size: 28,
@@ -130,7 +132,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                     top: 6,
                     right: 6,
                     child: Icon(
-                      Icons.collections,
+                      Icons.collections_rounded,
                       color: Colors.white,
                       size: 16,
                       shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
@@ -174,7 +176,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                     top: 6,
                     left: post.isArchived ? 26 : 6,
                     child: const Icon(
-                      Icons.push_pin,
+                      Icons.push_pin_rounded,
                       color: Colors.amber,
                       size: 14,
                       shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
@@ -213,7 +215,7 @@ class InstafeedExploreGrid extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.favorite,
+                          const Icon(Icons.favorite_rounded,
                               color: Colors.redAccent, size: 10),
                           const SizedBox(width: 3),
                           Text(

@@ -439,7 +439,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           backgroundColor: const Color(0xFFF9FAFB),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.ink, size: 24),
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: AppColors.ink, size: 24),
             tooltip: 'Go back',
             onPressed: _handleBackPress,
           ),

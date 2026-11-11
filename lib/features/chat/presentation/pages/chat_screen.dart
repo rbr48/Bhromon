@@ -888,7 +888,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            encrypted ? Icons.lock_outline : Icons.lock_open_outlined,
+            encrypted ? Icons.lock_outline_rounded : Icons.lock_open_outlined,
             size: 12,
             color: context.chat.text70,
           ),
@@ -1224,11 +1224,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           _retryPendingTextMessage(
                               pending, currentUid, currentName);
                         },
-                        child: const Icon(Icons.error_outline,
+                        child: const Icon(Icons.error_outline_rounded,
                             size: 14, color: Colors.redAccent),
                       )
                     else
-                      Icon(Icons.access_time,
+                      Icon(Icons.access_time_rounded,
                           size: 11, color: context.chat.text54),
                   ],
                 ),
@@ -2550,8 +2550,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       ),
                       trailing: Icon(
                         isSelected
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_unchecked_rounded,
                         color: isSelected
                             ? context.chat.accentText
                             : context.chat.text38,
@@ -2798,7 +2798,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: context.chat.text70),
+                      icon:
+                          Icon(Icons.close_rounded, color: context.chat.text70),
                       onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
@@ -3435,7 +3436,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         ? AppBar(
                             backgroundColor: context.chat.bar,
                             leading: IconButton(
-                              icon: Icon(Icons.arrow_back,
+                              icon: Icon(Icons.arrow_back_rounded,
                                   color: context.chat.text),
                               onPressed: () => setState(() {
                                 _selectedMessageIds.clear();
@@ -3455,7 +3456,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 if (chatActionAllowed(ChatAction.reply,
                                     encrypted: _chatIsEncrypted))
                                   IconButton(
-                                    icon: Icon(Icons.reply,
+                                    icon: Icon(Icons.reply_rounded,
                                         color: context.chat.text),
                                     tooltip: context.l10n
                                         .translate('chat_action_reply'),
@@ -3488,7 +3489,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       chatActionAllowed(ChatAction.edit,
                                           encrypted: _chatIsEncrypted)) {
                                     return IconButton(
-                                      icon: Icon(Icons.edit,
+                                      icon: Icon(Icons.edit_rounded,
                                           color: context.chat.text),
                                       tooltip: context.l10n
                                           .translate('chat_action_edit'),
@@ -3511,7 +3512,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                               if (chatActionAllowed(ChatAction.star,
                                   encrypted: _chatIsEncrypted))
                                 IconButton(
-                                  icon: Icon(Icons.star_outline,
+                                  icon: Icon(Icons.star_outline_rounded,
                                       color: context.chat.text),
                                   tooltip: context.l10n
                                       .translate('chat_action_star'),
@@ -3519,7 +3520,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       _toggleStarSelectedMessages(currentUid),
                                 ),
                               IconButton(
-                                icon: Icon(Icons.delete_outline,
+                                icon: Icon(Icons.delete_outline_rounded,
                                     color: context.chat.text),
                                 tooltip: context.l10n
                                     .translate('chat_action_delete'),
@@ -3529,7 +3530,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                               if (chatActionAllowed(ChatAction.forward,
                                   encrypted: _chatIsEncrypted))
                                 IconButton(
-                                  icon: Icon(Icons.forward,
+                                  icon: Icon(Icons.forward_rounded,
                                       color: context.chat.text),
                                   tooltip: context.l10n
                                       .translate('chat_action_forward'),
@@ -3537,8 +3538,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       _openForwardDialog(currentUid),
                                 ),
                               IconButton(
-                                icon:
-                                    Icon(Icons.copy, color: context.chat.text),
+                                icon: Icon(Icons.copy_rounded,
+                                    color: context.chat.text),
                                 tooltip:
                                     context.l10n.translate('chat_action_copy'),
                                 onPressed: _copySelectedMessages,
@@ -3549,7 +3550,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             ? AppBar(
                                 backgroundColor: context.chat.bar,
                                 leading: IconButton(
-                                  icon: Icon(Icons.arrow_back,
+                                  icon: Icon(Icons.arrow_back_rounded,
                                       color: context.chat.text),
                                   onPressed: () => setState(() {
                                     _isSearchingInChat = false;
@@ -3583,20 +3584,22 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       ),
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.keyboard_arrow_up,
+                                      icon: Icon(
+                                          Icons.keyboard_arrow_up_rounded,
                                           color: context.chat.text),
                                       onPressed: () =>
                                           _navigateSearchMatch(false),
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.keyboard_arrow_down,
+                                      icon: Icon(
+                                          Icons.keyboard_arrow_down_rounded,
                                           color: context.chat.text),
                                       onPressed: () =>
                                           _navigateSearchMatch(true),
                                     ),
                                   ],
                                   IconButton(
-                                    icon: Icon(Icons.close,
+                                    icon: Icon(Icons.close_rounded,
                                         color: context.chat.text),
                                     onPressed: () => setState(() {
                                       _isSearchingInChat = false;
@@ -3616,7 +3619,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                     const SizedBox(width: 4),
                                     IconButton(
                                       padding: EdgeInsets.zero,
-                                      icon: Icon(Icons.arrow_back,
+                                      icon: Icon(Icons.arrow_back_rounded,
                                           color: context.chat.text),
                                       onPressed: () {
                                         if (context.canPop()) {
@@ -3812,7 +3815,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 ),
                                 actions: [
                                   IconButton(
-                                    icon: Icon(Icons.call,
+                                    icon: Icon(Icons.call_rounded,
                                         color: context.chat.text, size: 21),
                                     tooltip: context.l10n
                                         .translate('chat_call_audio'),
@@ -3827,7 +3830,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: Icon(Icons.videocam,
+                                    icon: Icon(Icons.videocam_rounded,
                                         color: context.chat.text, size: 23),
                                     tooltip: context.l10n
                                         .translate('chat_call_video'),
@@ -3842,7 +3845,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: Icon(Icons.search,
+                                    icon: Icon(Icons.search_rounded,
                                         color: context.chat.text, size: 21),
                                     tooltip: context.l10n
                                         .translate('chat_search_tooltip'),
@@ -3850,7 +3853,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         () => _isSearchingInChat = true),
                                   ),
                                   PopupMenuButton<String>(
-                                    icon: Icon(Icons.more_vert,
+                                    icon: Icon(Icons.more_vert_rounded,
                                         color: context.chat.text, size: 20),
                                     color: context.chat.bar,
                                     onSelected: (val) {
@@ -3974,7 +3977,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         horizontal: 16, vertical: 8),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.push_pin,
+                                        Icon(Icons.push_pin_rounded,
                                             color: context.chat.accentText,
                                             size: 16),
                                         const SizedBox(width: 8),
@@ -4010,7 +4013,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                         IconButton(
                                           tooltip: context.l10n
                                               .translate('chat_pinned_unpin'),
-                                          icon: Icon(Icons.close,
+                                          icon: Icon(Icons.close_rounded,
                                               color: context.chat.text54,
                                               size: 16),
                                           padding: EdgeInsets.zero,
@@ -4281,16 +4284,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   switch (receiptStateFor(
                                       status: status, seen: seen)) {
                                     case ReceiptState.pending:
-                                      return Icon(Icons.access_time,
+                                      return Icon(Icons.access_time_rounded,
                                           size: 11, color: context.chat.text54);
                                     case ReceiptState.read:
-                                      return const Icon(Icons.done_all,
+                                      return const Icon(Icons.done_all_rounded,
                                           size: 13, color: Color(0xFF53BDEB));
                                     case ReceiptState.delivered:
-                                      return Icon(Icons.done_all,
+                                      return Icon(Icons.done_all_rounded,
                                           size: 13, color: context.chat.text54);
                                     case ReceiptState.sent:
-                                      return Icon(Icons.done,
+                                      return Icon(Icons.done_rounded,
                                           size: 13, color: context.chat.text54);
                                   }
                                 }
@@ -4337,7 +4340,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       ),
                                       if (isStarred) ...[
                                         const SizedBox(width: 3),
-                                        Icon(Icons.star,
+                                        Icon(Icons.star_rounded,
                                             size: 10,
                                             color: context.chat.text60),
                                       ],
@@ -4706,7 +4709,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.forward,
+                                                  Icon(Icons.forward_rounded,
                                                       size: 11,
                                                       color:
                                                           context.chat.text54),
@@ -4837,7 +4840,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.forward,
+                                                  Icon(Icons.forward_rounded,
                                                       size: 11,
                                                       color:
                                                           context.chat.text54),
@@ -5100,7 +5103,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             ),
                                             child: Row(
                                               children: [
-                                                Icon(Icons.edit,
+                                                Icon(Icons.edit_rounded,
                                                     color:
                                                         context.chat.accentText,
                                                     size: 16),
@@ -5119,7 +5122,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                   ),
                                                 ),
                                                 IconButton(
-                                                  icon: Icon(Icons.close,
+                                                  icon: Icon(
+                                                      Icons.close_rounded,
                                                       color:
                                                           context.chat.text60,
                                                       size: 18),
@@ -5382,10 +5386,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                               0xFF00A884),
                                                       child: Icon(
                                                         isEditing
-                                                            ? Icons.check
+                                                            ? Icons
+                                                                .check_rounded
                                                             : (hasText
-                                                                ? Icons.send
-                                                                : Icons.mic),
+                                                                ? Icons
+                                                                    .send_rounded
+                                                                : Icons
+                                                                    .mic_rounded),
                                                         color:
                                                             context.chat.text,
                                                         size: 19,

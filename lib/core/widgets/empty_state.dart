@@ -1,3 +1,4 @@
+import 'package:bhromon/core/theme/app_motion.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +14,8 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.forest;
-    return Center(
+    return FadeIn(
+        child: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -40,6 +42,6 @@ class EmptyState extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }

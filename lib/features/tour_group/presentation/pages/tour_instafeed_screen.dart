@@ -655,11 +655,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                   fit: BoxFit.cover,
                                   placeholder:
                                       Container(color: Colors.grey.shade900),
-                                  errorWidget: Icon(Icons.location_on,
+                                  errorWidget: Icon(Icons.location_on_rounded,
                                       color: context.forest.accentText),
                                 )
                               : Center(
-                                  child: Icon(Icons.location_on,
+                                  child: Icon(Icons.location_on_rounded,
                                       color: context.forest.accentText)),
                         ),
                       ),
@@ -963,7 +963,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         backgroundColor: context.forest.feedSurface,
         title: Row(
           children: [
-            Icon(Icons.receipt_long, color: context.forest.accentText),
+            Icon(Icons.receipt_long_rounded, color: context.forest.accentText),
             const SizedBox(width: 8),
             Text(context.l10n.translate('ig_add_to_ledger'),
                 style: TextStyle(color: context.forest.text)),
@@ -1152,7 +1152,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             // Sort Toggle (Newest vs Popular)
             IconButton(
               icon: Icon(
-                _sortByPopular ? Icons.trending_up : Icons.access_time_rounded,
+                _sortByPopular
+                    ? Icons.trending_up_rounded
+                    : Icons.access_time_rounded,
                 color: _sortByPopular
                     ? context.forest.accentText
                     : context.forest.text70,
@@ -1349,7 +1351,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                               backgroundColor: AppColors
                                                   .mintGreen
                                                   .withValues(alpha: 0.2),
-                                              avatar: Icon(Icons.tag,
+                                              avatar: Icon(Icons.tag_rounded,
                                                   size: 16,
                                                   color: context
                                                       .forest.accentText),
@@ -1361,7 +1363,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
-                                              deleteIcon: Icon(Icons.close,
+                                              deleteIcon: Icon(
+                                                  Icons.close_rounded,
                                                   size: 16,
                                                   color: context.forest.text70),
                                               onDeleted: () => setState(() =>
@@ -1390,7 +1393,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                               backgroundColor: AppColors
                                                   .mintGreen
                                                   .withValues(alpha: 0.2),
-                                              avatar: Icon(Icons.location_on,
+                                              avatar: Icon(
+                                                  Icons.location_on_rounded,
                                                   size: 16,
                                                   color: context
                                                       .forest.accentText),
@@ -1402,7 +1406,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
-                                              deleteIcon: Icon(Icons.close,
+                                              deleteIcon: Icon(
+                                                  Icons.close_rounded,
                                                   size: 16,
                                                   color: context.forest.text70),
                                               onDeleted: () => setState(() =>
@@ -1798,7 +1803,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     placeholder: Container(color: context.forest.feedSurface),
                     errorWidget: Container(
                       color: context.forest.feedSurface,
-                      child: Icon(Icons.person, color: context.forest.text38),
+                      child: Icon(Icons.person_rounded,
+                          color: context.forest.text38),
                     ),
                   ),
                 Container(
@@ -1856,7 +1862,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         shape: BoxShape.circle,
                         color: AppColors.mintGreen,
                       ),
-                      child: const Icon(Icons.add,
+                      child: const Icon(Icons.add_rounded,
                           size: 14, color: AppColors.darkGreen),
                     ),
                   ),
@@ -1916,7 +1922,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         color: context.forest.feedPlaceholder,
                         child: Center(
                           child: Icon(
-                            Icons.person,
+                            Icons.person_rounded,
                             size: 40,
                             color: context.forest.text.withValues(alpha: 0.5),
                           ),
@@ -1964,7 +1970,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       ],
                     ),
                     child: const Icon(
-                      Icons.add,
+                      Icons.add_rounded,
                       color: AppColors.darkGreen,
                       size: 22,
                     ),
@@ -2152,13 +2158,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 placeholder: Container(color: context.forest.feedSurface),
                 errorWidget: Container(
                   color: context.forest.feedSurface,
-                  child: const Icon(Icons.star, color: Colors.amber),
+                  child: const Icon(Icons.star_rounded, color: Colors.amber),
                 ),
               )
             else
               Container(
                 color: context.forest.feedSurface,
-                child: const Icon(Icons.star, color: Colors.amber, size: 32),
+                child: const Icon(Icons.star_rounded,
+                    color: Colors.amber, size: 32),
               ),
             Container(
               decoration: BoxDecoration(
@@ -2179,7 +2186,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const Positioned(
               top: 8,
               left: 8,
-              child: Icon(Icons.star, color: Colors.amber, size: 18),
+              child: Icon(Icons.star_rounded, color: Colors.amber, size: 18),
             ),
             Positioned(
               bottom: 8,
@@ -2337,7 +2344,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             FilledButton.icon(
               style:
                   FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
-              icon: const Icon(Icons.add_a_photo, color: Colors.black),
+              icon: const Icon(Icons.add_a_photo_rounded, color: Colors.black),
               label: Text(context.l10n.translate('ig_create_post'),
                   style: const TextStyle(
                       color: Colors.black, fontWeight: FontWeight.bold)),

@@ -140,7 +140,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => _showRoomDialog(const []),
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: Text(l10n.translate('room_add_first')),
               style:
                   ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
@@ -405,7 +405,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                     child: PopupMenuButton<String>(
                       padding: EdgeInsets.zero,
                       tooltip: l10n.translate('room_options'),
-                      icon: Icon(Icons.more_vert,
+                      icon: Icon(Icons.more_vert_rounded,
                           color: context.forest.text54, size: 18),
                       color: AppColors.darkGreen,
                       onSelected: (v) {
@@ -570,8 +570,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   ),
                 ),
                 IconButton(
-                  icon:
-                      Icon(Icons.close, color: context.forest.text54, size: 20),
+                  icon: Icon(Icons.close_rounded,
+                      color: context.forest.text54, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -982,7 +982,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       ),
       trailing: IconButton(
         tooltip: l10n.translate(here ? 'room_remove_guest' : 'room_add_guest'),
-        icon: Icon(here ? Icons.remove_circle : Icons.add_circle,
+        icon: Icon(
+            here ? Icons.remove_circle_rounded : Icons.add_circle_rounded,
             color: here
                 ? context.forest.readable(Colors.redAccent)
                 : (fits ? AppColors.mintGreen : context.forest.text24)),

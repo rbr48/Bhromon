@@ -26,7 +26,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
 
       await tester.tap(find.byType(GroupBackButton));
       await tester.pump();

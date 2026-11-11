@@ -53,7 +53,7 @@ class ChatExpenseBubble extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.receipt_long,
+                  Icons.receipt_long_rounded,
                   color: context.chat.accentText,
                   size: 20,
                 ),
@@ -133,7 +133,8 @@ class ChatExpenseBubble extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle, color: accentOnBubble, size: 12),
+                  Icon(Icons.check_circle_rounded,
+                      color: accentOnBubble, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     context.l10n.translate('chat_expense_settled'),
