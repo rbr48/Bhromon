@@ -273,6 +273,8 @@ class TourTranslationKeys {
       'study_filter_by_module': 'Filter by Syllabus Module',
       'study_solution_english': 'English Solution',
       'study_solution_bangla': 'বাংলা সমাধান',
+      'study_solution_english_short': 'English',
+      'study_solution_bangla_short': 'বাংলা',
       'hub_section_family': 'Family circles',
       'hub_section_groups': 'Groups',
       'hub_section_trips': 'Trips',
@@ -2617,6 +2619,7 @@ class TourTranslationKeys {
       'study_chapter_guide_add': 'Add a question',
       'study_chapter_guide_remove': 'Remove question',
       'study_chapter_guide_section': 'Guide questions',
+      'study_chapter_guide_count': 'Guide questions ({count})',
       'study_chapter_title_line': 'Chapter {number} · {title}',
       'study_chapter_pages_range': 'pp. {from}–{to}',
       'study_chapter_page_single': 'p. {page}',
@@ -2732,16 +2735,16 @@ class TourTranslationKeys {
       'study_subject_no_modules_admin':
           'Turn on a module to start, such as exam tips.',
       'study_subject_no_modules': 'No modules are turned on yet. Ask an admin.',
-      'study_master_materials_title': 'JAIBB Master Exam Pack',
+      'study_master_materials_title': 'IBB Master Exam Pack',
       'study_master_materials_desc':
           '1-tap load examiner tips, worked problems with solutions, past exam index & glossary terms.',
       'study_master_materials_btn': 'Load Master Materials',
-      'study_master_materials_confirm_title': 'Load JAIBB Master Materials?',
+      'study_master_materials_confirm_title': 'Load IBB Master Materials?',
       'study_master_materials_confirm_body':
           'This will populate high-yield examiner tips, worked problems with model solutions, past papers index, and glossary terms directly into this subject.',
-      'study_master_materials_loading': 'Loading JAIBB Master Materials...',
+      'study_master_materials_loading': 'Loading IBB Master Materials...',
       'study_master_materials_loaded':
-          'JAIBB Master Materials loaded successfully! Modules enabled.',
+          'IBB Master Materials loaded successfully! Modules enabled.',
       'study_module_saved': 'Modules saved.',
       'study_module_off': 'Off',
       'study_paper_add': 'Add a past paper',
@@ -3982,6 +3985,8 @@ class TourTranslationKeys {
       'study_filter_by_module': 'সিলেবাস মডিউল ফিল্টার',
       'study_solution_english': 'English Solution',
       'study_solution_bangla': 'বাংলা সমাধান',
+      'study_solution_english_short': 'English',
+      'study_solution_bangla_short': 'বাংলা',
       'hub_section_family': 'পরিবারের গ্রুপ',
       'hub_section_groups': 'গ্রুপ',
       'hub_section_trips': 'ট্যুর',
@@ -6313,6 +6318,7 @@ class TourTranslationKeys {
       'study_chapter_guide_add': 'একটি প্রশ্ন যোগ করুন',
       'study_chapter_guide_remove': 'প্রশ্নটি সরান',
       'study_chapter_guide_section': 'পথনির্দেশক প্রশ্ন',
+      'study_chapter_guide_count': 'পথনির্দেশক প্রশ্ন ({count})',
       'study_chapter_title_line': 'অধ্যায় {number} · {title}',
       'study_chapter_pages_range': 'পৃ. {from}–{to}',
       'study_chapter_page_single': 'পৃ. {page}',
@@ -6431,7 +6437,7 @@ class TourTranslationKeys {
           'শুরু করতে একটি মডিউল চালু করুন, যেমন পরীক্ষার টিপস।',
       'study_subject_no_modules':
           'এখনও কোনো মডিউল চালু হয়নি। অ্যাডমিনকে বলুন।',
-      'study_master_materials_title': 'জেএআইবিবি অফিসিয়াল প্রস্তুতি প্যাক',
+      'study_master_materials_title': 'আইবিবি অফিসিয়াল প্রস্তুতি প্যাক',
       'study_master_materials_desc':
           '১-ট্যাপে পরীক্ষক টিপস, সমাধানকৃত সমস্যা, বিগত পরীক্ষার প্রশ্ন ইনডেক্স ও পরিভাষা লোড করুন।',
       'study_master_materials_btn': 'উপকরণ লোড করুন',

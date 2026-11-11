@@ -1425,74 +1425,29 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           if (englishNote != null || banglaNote != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 8,
+              child: Row(
                 children: [
                   if (englishNote != null)
-                    ElevatedButton.icon(
-                      onPressed: () => _openSolution(englishNote!, banglaNote,
-                          chapter: chapter),
-                      icon: const Text('🇬🇧', style: TextStyle(fontSize: 16)),
-                      label: Text(
-                        englishNote.sizeBytes != null &&
-                                englishNote.sizeBytes! > 0
-                            ? '${l10n.translate('study_solution_english')} (${_formatFileSize(englishNote.sizeBytes)})'
-                            : l10n.translate('study_solution_english'),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: palette.isDark
-                            ? const Color(0xFF1E3A2B)
-                            : const Color(0xFFE8F5E9),
-                        foregroundColor: palette.isDark
-                            ? AppColors.mintGreen
-                            : const Color(0xFF1B5E20),
-                        elevation: 0,
-                        side: BorderSide(
-                          color: (palette.isDark
-                                  ? AppColors.mintGreen
-                                  : const Color(0xFF2E7D32))
-                              .withValues(alpha: 0.4),
-                        ),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                    Expanded(
+                      child: _solutionButton(
+                        language:
+                            l10n.translate('study_solution_english_short'),
+                        fullLabel: l10n.translate('study_solution_english'),
+                        material: englishNote,
+                        onTap: () => _openSolution(englishNote!, banglaNote,
+                            chapter: chapter),
                       ),
                     ),
+                  if (englishNote != null && banglaNote != null)
+                    const SizedBox(width: 8),
                   if (banglaNote != null)
-                    ElevatedButton.icon(
-                      onPressed: () => _openSolution(banglaNote!, englishNote,
-                          chapter: chapter),
-                      icon: const Text('🇧🇩', style: TextStyle(fontSize: 16)),
-                      label: Text(
-                        banglaNote.sizeBytes != null &&
-                                banglaNote.sizeBytes! > 0
-                            ? '${l10n.translate('study_solution_bangla')} (${_formatFileSize(banglaNote.sizeBytes)})'
-                            : l10n.translate('study_solution_bangla'),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: palette.isDark
-                            ? const Color(0xFF193B28)
-                            : const Color(0xFFE8F5E9),
-                        foregroundColor: palette.isDark
-                            ? const Color(0xFF81C784)
-                            : const Color(0xFF2E7D32),
-                        elevation: 0,
-                        side: BorderSide(
-                          color: (palette.isDark
-                                  ? const Color(0xFF81C784)
-                                  : const Color(0xFF388E3C))
-                              .withValues(alpha: 0.4),
-                        ),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                    Expanded(
+                      child: _solutionButton(
+                        language: l10n.translate('study_solution_bangla_short'),
+                        fullLabel: l10n.translate('study_solution_bangla'),
+                        material: banglaNote,
+                        onTap: () => _openSolution(banglaNote!, englishNote,
+                            chapter: chapter),
                       ),
                     ),
                 ],
@@ -1500,8 +1455,22 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             ),
           if (chapter.guide.isNotEmpty)
             ExpansionTile(
-              title: Text(l10n.translate('study_chapter_guide_section'),
-                  style: TextStyle(color: palette.accentText)),
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              shape: const Border(),
+              collapsedShape: const Border(),
+              iconColor: palette.accentText,
+              collapsedIconColor: palette.text54,
+              title: Text(
+                l10n.translate('study_chapter_guide_count', args: {
+                  'count': l10n.number(chapter.guide.length),
+                }),
+                style: TextStyle(
+                  color: palette.accentText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               expandedCrossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1527,6 +1496,64 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
               ],
             ),
         ],
+      ),
+    );
+  }
+
+  /// One solution of a chapter: the language, and the file's size beside it
+  /// when it is known. Two of them share the card's width.
+  Widget _solutionButton({
+    required String language,
+    required String fullLabel,
+    required StudyMaterial material,
+    required VoidCallback onTap,
+  }) {
+    final palette = context.forest;
+    final size = material.sizeBytes;
+    final hasSize = size != null && size > 0;
+    return Semantics(
+      button: true,
+      label: hasSize ? '$fullLabel (${_formatFileSize(size)})' : fullLabel,
+      excludeSemantics: true,
+      child: Material(
+        color: palette.accentText.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.description_outlined,
+                      size: 18, color: palette.accentText),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      language,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.accentText,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  if (hasSize) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      _formatFileSize(size),
+                      style: TextStyle(color: palette.text54, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
