@@ -454,7 +454,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.translate('cancel')),
+            child: Text(l10n.translate('study_cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
