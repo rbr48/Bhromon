@@ -9,6 +9,7 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../tour_group/domain/services/chat_markdown.dart';
 import 'chat_code_block_widget.dart';
 import 'chat_table_widget.dart';
+import 'ppc_chart_widget.dart';
 
 /// A rich markdown renderer for both 1-on-1 direct chats and group channels.
 ///
@@ -313,6 +314,8 @@ class _ChatRichTextState extends State<ChatRichText> {
         code: block.code,
         language: block.language,
       );
+    } else if (block is ChatChartBlock) {
+      return PpcChartWidget(spec: block.spec);
     } else if (block is ChatMathBlock) {
       if (RegExp(r'[\u0980-\u09FF]').hasMatch(block.latex)) {
         return Padding(

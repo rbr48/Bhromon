@@ -11,6 +11,8 @@
 // - Quotes: lines starting with >
 // - Horizontal rules / dividers: ---, ***, ___
 
+import 'ppc_curve.dart';
+
 /// A run of text that shares one set of styles.
 class ChatSpan {
   final String text;
@@ -153,6 +155,13 @@ class ChatMathBlock extends ChatBlock {
   final String latex;
 
   const ChatMathBlock(this.latex);
+}
+
+/// An interactive chart, from a ```chart:ppc fence (see [PpcSpec]).
+class ChatChartBlock extends ChatBlock {
+  final PpcSpec spec;
+
+  const ChatChartBlock(this.spec);
 }
 
 /// Cleans raw LaTeX math commands for Bengali script text, avoiding broken font
@@ -409,10 +418,13 @@ List<ChatBlock> parseChatBlocks(String text) {
         codeLines.add(rawLines[i]);
         i++;
       }
-      blocks.add(ChatCodeBlock(
-        code: codeLines.join('\n'),
-        language: lang.isEmpty ? null : lang,
-      ));
+      final code = codeLines.join('\n');
+      // A chart fence that does not parse stays a plain code block, so the
+      // mistake is seen in the text rather than dropped.
+      final chart = lang == 'chart:ppc' ? PpcSpec.parse(code) : null;
+      blocks.add(chart != null
+          ? ChatChartBlock(chart)
+          : ChatCodeBlock(code: code, language: lang.isEmpty ? null : lang));
       if (i < rawLines.length) i++; // skip closing ```
       continue;
     }

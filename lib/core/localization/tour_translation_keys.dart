@@ -3716,6 +3716,18 @@ class TourTranslationKeys {
       'desktop_sidebar_search': 'Search & Navigate',
       'desktop_sidebar_badge_beach': 'Beach',
       'desktop_sidebar_badge_quiz': 'Quiz',
+      // ── Production possibility curve (chart:ppc) ───────────────────────────
+      'ppc_hint': 'Drag or tap the chart to move your point',
+      'ppc_point_readout': 'Your point: {x} {xv}, {y} {yv}',
+      'ppc_status_efficient': 'Efficient: on the frontier, no resource is idle',
+      'ppc_status_inside':
+          'Inefficient: inside the frontier, some resource is idle',
+      'ppc_status_outside':
+          'Unattainable: beyond the frontier with current resources',
+      'ppc_max_at_x': 'The most {y} with this much {x}: {value}',
+      'ppc_opportunity_cost': 'One more unit of {x} costs {value} units of {y}',
+      'ppc_legend_frontier': 'Frontier',
+      'ppc_legend_growth': 'After growth',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -7430,6 +7442,17 @@ class TourTranslationKeys {
       'desktop_sidebar_search': 'অনুসন্ধান ও নেভিগেশন',
       'desktop_sidebar_badge_beach': 'সৈকত',
       'desktop_sidebar_badge_quiz': 'কুইজ',
+      // ── উৎপাদন সম্ভাবনা সীমা (chart:ppc) ─────────────────────────────────
+      'ppc_hint': 'চার্টে টেনে বা ট্যাপ করে আপনার বিন্দু সরান',
+      'ppc_point_readout': 'আপনার বিন্দু: {x} {xv}, {y} {yv}',
+      'ppc_status_efficient': 'দক্ষ: সীমার উপরে, কোনো সম্পদ অব্যবহৃত নেই',
+      'ppc_status_inside': 'অদক্ষ: সীমার ভিতরে, কিছু সম্পদ অব্যবহৃত',
+      'ppc_status_outside': 'অসম্ভব: বর্তমান সম্পদে সীমার বাইরে',
+      'ppc_max_at_x': '{x} এতটা হলে সর্বোচ্চ {y}: {value}',
+      'ppc_opportunity_cost':
+          '{x}-এর এক একক বাড়াতে {y} ছাড়তে হয়: {value} একক',
+      'ppc_legend_frontier': 'সম্ভাবনা সীমা',
+      'ppc_legend_growth': 'প্রবৃদ্ধির পর',
     },
   };
 }

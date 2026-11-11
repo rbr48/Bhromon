@@ -94,8 +94,11 @@ The relationship is primarily that of debtor and creditor.
         questionNumber: '1',
         title: 'প্রশ্ন ১ [মান: ১০ + ১০ = ২০]',
         moduleCode: 'A',
-        solutionText:
+        pieces: [
+          StudyBookletText(
             'ব্যাংক কোম্পানি আইন ১৯৯১ এবং বাংলাদেশ ব্যাংকের নির্দেশনাবলী অনুসারে তফসিলি ব্যাংকের লাইসেন্সিং প্রক্রিয়া সম্পন্ন হয়।',
+          ),
+        ],
       );
 
       const content = StudyBookletContent(
