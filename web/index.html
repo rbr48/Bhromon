@@ -106,6 +106,13 @@
           }
         });
       }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
 
       // Download main.dart.js without service worker with cache-busting timestamp
       _flutter.loader.loadEntrypoint({

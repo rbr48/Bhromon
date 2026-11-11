@@ -297,11 +297,14 @@ class _BrandHeader extends StatelessWidget {
                   Border.all(color: _kGreen.withValues(alpha: .35), width: 2),
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.explore, color: _kGreen, size: 54),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  'assets/bhromon_emblem.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.explore, color: _kGreen, size: 54),
+                ),
               ),
             ),
           ),
