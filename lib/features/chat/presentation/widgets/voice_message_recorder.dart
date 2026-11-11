@@ -231,7 +231,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
                     const SizedBox(width: 4),
                     Text(context.l10n.translate('chat_record_lock'),
                         style: TextStyle(
-                            color: context.chat.text70, fontSize: 11)),
+                            color: context.chat.text70, fontSize: 12)),
                   ],
                 ),
               ),

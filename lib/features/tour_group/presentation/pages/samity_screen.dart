@@ -495,7 +495,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style:
-            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -740,7 +740,7 @@ class _CycleSheetState extends State<_CycleSheet> {
                           decoration: BoxDecoration(
                             color: context.forest
                                 .surfaceFor(const Color(0xFF142C23)),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: payout.isVerified
                                   ? AppColors.mintGreen.withValues(alpha: 0.4)

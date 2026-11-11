@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -15,6 +16,7 @@ import '../widgets/study/study_problem_composer.dart';
 import '../widgets/study/study_problem_set_sheets.dart';
 import '../widgets/study/study_reported_work_sheet.dart';
 import 'study_problem_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The problems of one subject. Members open a problem to submit their own working; an admin posts
 /// problems, shows the ones that wait for approval, and pins the ones to read first.
@@ -142,7 +144,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
       logWarning('A study problem could not be added', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -210,7 +212,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final shown = sortStudyProblems(visibleStudyProblems(
               problems: snap.data!,

@@ -415,7 +415,7 @@ Future<void> showChannelMembersSheet(
                         child: Text(
                           badgeFor(m.email),
                           style: TextStyle(
-                              color: context.forest.accentText, fontSize: 11),
+                              color: context.forest.accentText, fontSize: 12),
                         ),
                       ),
                     if (m.email != myEmail) ...[

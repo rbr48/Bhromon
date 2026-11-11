@@ -212,7 +212,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                   '• Ad-Free',
                   style: TextStyle(
                     color: AppColors.mintGreen,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

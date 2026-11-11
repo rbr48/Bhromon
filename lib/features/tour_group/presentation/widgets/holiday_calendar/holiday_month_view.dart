@@ -79,7 +79,7 @@ class HolidayMonthView extends StatelessWidget {
                     color: key == 'hol_wd_fri' || key == 'hol_wd_sat'
                         ? kHolidayRed.withValues(alpha: 0.8)
                         : context.forest.text60,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -286,7 +286,7 @@ class _MiniMonth extends StatelessWidget {
             ),
             Text(
               '${context.l10n.number(stats.netWorkdays)} / ${context.l10n.number(stats.totalDays)}',
-              style: const TextStyle(color: Colors.white54, fontSize: 10),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
             ),
             const SizedBox(height: 4),
             Expanded(
@@ -327,7 +327,7 @@ class _MiniMonth extends StatelessWidget {
               : HolidayCalendar.isWeekend(date)
                   ? context.forest.text38
                   : context.forest.text70,
-          fontSize: 8.5,
+          fontSize: 11,
           fontWeight: isHoliday ? FontWeight.bold : FontWeight.normal,
         ),
       ),

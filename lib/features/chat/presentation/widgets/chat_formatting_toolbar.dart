@@ -210,7 +210,7 @@ class ChatFormattingToolbar extends StatelessWidget {
                           style: TextStyle(
                               color: Color(0xFF713F12),
                               fontWeight: FontWeight.bold,
-                              fontSize: 11)),
+                              fontSize: 12)),
                     ),
                     onTap: () => _wrapSelection('=='),
                     color: AppColors.gold,
@@ -304,7 +304,7 @@ class ChatFormattingToolbar extends StatelessWidget {
                         child: Text('✓',
                             style: TextStyle(
                                 color: AppColors.mintGreen,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 height: 1)),
                       ),
@@ -425,7 +425,7 @@ class ChatFormattingToolbar extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Container(
           width: 32,

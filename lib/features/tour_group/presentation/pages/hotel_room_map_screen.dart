@@ -265,7 +265,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               ),
               const SizedBox(height: 8),
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: capacity == 0 ? 0 : (placed / capacity).clamp(0, 1),
                   minHeight: 6,
@@ -326,7 +326,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                             'n': l10n.number(m.familyCount),
                           })
                         : m.displayName,
-                    style: TextStyle(color: context.forest.text, fontSize: 11),
+                    style: TextStyle(color: context.forest.text, fontSize: 12),
                   ),
                 ),
             ],
@@ -467,7 +467,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 'people': l10n.number(people),
                 'capacity': l10n.number(room.capacity),
               }),
-              style: TextStyle(color: color, fontSize: 11),
+              style: TextStyle(color: color, fontSize: 12),
             ),
             if (room.assignedMemberNames.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -475,7 +475,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 room.assignedMemberNames.where((n) => n.isNotEmpty).join(', '),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: context.forest.text, fontSize: 11),
+                style: TextStyle(color: context.forest.text, fontSize: 12),
               ),
             ],
           ],
@@ -583,7 +583,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.forest.divider10),
               ),
               child: SingleChildScrollView(
@@ -608,7 +608,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                       side: BorderSide(color: context.forest.text24),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: manifestText));
@@ -632,7 +632,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                       foregroundColor: AppColors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -978,7 +978,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
             : fits
                 ? l10n.translate('room_move_note')
                 : l10n.translate('room_no_space'),
-        style: TextStyle(color: context.forest.text54, fontSize: 11),
+        style: TextStyle(color: context.forest.text54, fontSize: 12),
       ),
       trailing: IconButton(
         tooltip: l10n.translate(here ? 'room_remove_guest' : 'room_add_guest'),

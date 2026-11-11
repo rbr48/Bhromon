@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,7 @@ import '../../domain/services/study_subject_rules.dart';
 import '../widgets/study/study_decline_dialog.dart';
 import '../widgets/study/study_subject_editor.dart';
 import 'study_subject_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// A study group's subjects: what the group studies. An admin adds a subject, and a member
 /// proposes one for an admin to decide. Each subject holds its own modules.
@@ -62,7 +64,7 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(context.l10n.translate('study_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
       return null;
@@ -167,7 +169,7 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
       logWarning('A study subject change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -228,7 +230,7 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final subjects = snap.data!;
             // A member sees only the subjects the group studies. An admin also sees the archive.

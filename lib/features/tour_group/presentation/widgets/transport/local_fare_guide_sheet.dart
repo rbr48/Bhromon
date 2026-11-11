@@ -187,7 +187,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: AppColors.mintGreen.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.calculate_outlined,
@@ -232,7 +232,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF1B3024)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),
       child: Row(
@@ -254,7 +254,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                 ),
                 Text(
                   'মাথাপিছু ও মোট খরচ হিসাব করতে ব্যবহার করুন',
-                  style: TextStyle(color: context.forest.text54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
               ],
             ),
@@ -368,7 +368,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF162B20)),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.35)),
       ),
       child: Column(
@@ -393,13 +393,13 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.mintGreen.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   calc.route.divisionBn,
                   style: TextStyle(
                     color: context.forest.accentText,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -428,7 +428,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                       Text(
                         'মোট আনুমানিক ভাড়া',
                         style: TextStyle(
-                            color: context.forest.text54, fontSize: 11),
+                            color: context.forest.text54, fontSize: 12),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -442,7 +442,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                       Text(
                         '${calc.vehiclesNeeded}টি ${calc.route.vehicleTitle}',
                         style: TextStyle(
-                            color: context.forest.text70, fontSize: 11),
+                            color: context.forest.text70, fontSize: 12),
                       ),
                     ],
                   ),
@@ -460,7 +460,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                       Text(
                         'মাথাপিছু খরচ (${calc.passengerCount} জন)',
                         style: TextStyle(
-                            color: context.forest.text54, fontSize: 11),
+                            color: context.forest.text54, fontSize: 12),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -474,7 +474,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                       Text(
                         calc.route.fareTypeBn,
                         style: TextStyle(
-                            color: context.forest.text70, fontSize: 11),
+                            color: context.forest.text70, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -495,7 +495,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                   'উৎস: ${calc.route.source} (হালনাগাদ: ${calc.route.asOf})',
                   style: TextStyle(
                     color: context.forest.text54,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -536,7 +536,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                     side: BorderSide(color: context.forest.text24),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -552,7 +552,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
                     foregroundColor: AppColors.darkGreen,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -575,7 +575,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
         color: isSelected
             ? AppColors.mintGreen.withValues(alpha: 0.12)
             : context.forest.surfaceFor(const Color(0xFF1B3024)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSelected ? AppColors.mintGreen : context.forest.divider10,
           width: isSelected ? 1.5 : 1.0,
@@ -592,7 +592,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
               color: isSelected
                   ? AppColors.mintGreen
                   : context.forest.surfaceFor(const Color(0xFF14241B)),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               _iconForVehicle(route.vehicleType),
@@ -614,14 +614,14 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
             children: [
               Text(
                 '${route.vehicleTitle} · ${route.fareTypeBn}',
-                style: TextStyle(color: context.forest.text54, fontSize: 11),
+                style: TextStyle(color: context.forest.text54, fontSize: 12),
               ),
               const SizedBox(height: 2),
               Text(
                 'উৎস: ${route.source} (${route.asOf})',
                 style: TextStyle(
                   color: context.forest.text54.withValues(alpha: 0.7),
-                  fontSize: 10,
+                  fontSize: 11,
                 ),
               ),
             ],
@@ -640,7 +640,7 @@ class _LocalFareGuideSheetState extends State<LocalFareGuideSheet> {
               ),
               Text(
                 'ধারণক্ষমতা: ${route.capacity} জন',
-                style: TextStyle(color: context.forest.text54, fontSize: 10),
+                style: TextStyle(color: context.forest.text54, fontSize: 11),
               ),
             ],
           ),

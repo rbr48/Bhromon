@@ -321,7 +321,7 @@ class _PageHeading extends StatelessWidget {
         Text(kicker.toUpperCase(),
             style: TextStyle(
                 color: mag.gold,
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 2.4,
                 fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
@@ -561,7 +561,7 @@ class _CoverPage extends StatelessWidget {
                 }).toUpperCase(),
                 style: const TextStyle(
                     color: Color(0xFFE8B04B),
-                    fontSize: 11,
+                    fontSize: 12,
                     letterSpacing: 2,
                     fontWeight: FontWeight.w700),
               ),
@@ -707,7 +707,7 @@ class _NumbersPage extends StatelessWidget {
                 colors: isDark
                     ? const [Color(0xFF3E2A10), Color(0xFF1E160C)]
                     : const [Color(0xFFFFF6E5), Color(0xFFF5E6CC)]),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: mag.gold.withValues(alpha: isDark ? 0.3 : 0.4)),
           ),
@@ -1101,7 +1101,7 @@ class _AwardsPage extends StatelessWidget {
                     Text(l10n.translate(_awardTitleKey(a.kind)).toUpperCase(),
                         style: TextStyle(
                             color: mag.gold,
-                            fontSize: 11,
+                            fontSize: 12,
                             letterSpacing: 1.6,
                             fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),

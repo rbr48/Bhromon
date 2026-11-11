@@ -390,7 +390,7 @@ class _ChatRichTextState extends State<ChatRichText> {
     _disposeRecognizers();
     final defaultStyle = TextStyle(
       color: context.forest.text,
-      fontSize: 15.5,
+      fontSize: 16,
       height: 1.4,
       letterSpacing: 0.05,
       fontFamily: 'NotoSansBengali',

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,7 @@ import 'study_quizzes_screen.dart';
 import 'study_reading_screen.dart';
 
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// One subject: its modules. Members see the modules an admin has turned on. An admin sees
 /// every module, and customises them.
@@ -111,7 +113,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
       logWarning('A study module change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -267,7 +269,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final settings = snap.data!;
             return StreamBuilder<List<StudyBook>>(
@@ -603,7 +605,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(l10n.translate('study_failed')),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }

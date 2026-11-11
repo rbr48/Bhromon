@@ -137,7 +137,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
             child: Text(l10n.translate('fd_cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.translate('fd_delete')),
           ),
@@ -526,7 +526,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: AppColors.mintGreen.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.checklist_rtl_rounded,
                           color: AppColors.midGreen, size: 24),
@@ -647,7 +647,7 @@ class _FamilyTasksScreenState extends State<FamilyTasksScreen> {
                   desc,
                   style: TextStyle(
                     color: context.forest.text70,
-                    fontSize: 12.5,
+                    fontSize: 13,
                     height: 1.35,
                   ),
                 ),

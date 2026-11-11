@@ -518,7 +518,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                   l10n.translate(_fromFund
                       ? 'fund_paid_fund_note'
                       : 'fund_paid_member_note'),
-                  style: TextStyle(color: context.forest.text54, fontSize: 11)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
               value: _fromFund,
               activeThumbColor: AppColors.mintGreen,
               onChanged: (v) => setState(() => _fromFund = v),
@@ -559,7 +559,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
             ),
             const SizedBox(height: 6),
             Text(l10n.translate('fund_split_${_mode.name}_help'),
-                style: TextStyle(color: context.forest.text54, fontSize: 11)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
             const SizedBox(height: 8),
             if (_mode == SplitMode.family || _mode == SplitMode.equal)
               Wrap(
@@ -675,7 +675,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                           }),
                           icon: const Icon(Icons.delete_outline, size: 14),
                           label: Text(l10n.translate('fund_receipt_remove'),
-                              style: const TextStyle(fontSize: 11)),
+                              style: const TextStyle(fontSize: 12)),
                         ),
                     ],
                   ),

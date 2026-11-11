@@ -22,6 +22,7 @@ import '../widgets/packet_loss_meter.dart';
 import '../widgets/whatsapp_call_widgets.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Full-screen audio & video calling screen with WhatsApp styling.
 class CallScreen extends StatefulWidget {
@@ -450,7 +451,7 @@ class _CallScreenState extends State<CallScreen> {
                 ? e.message
                 : l10n.translate('call_connect_failed'),
           ),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ),
       );
       _safeExit();
@@ -510,7 +511,7 @@ class _CallScreenState extends State<CallScreen> {
       );
     }
     messenger?.showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+      SnackBar(content: Text(message), backgroundColor: AppColors.amber),
     );
     _safeExit();
   }
@@ -874,7 +875,7 @@ class _CallScreenState extends State<CallScreen> {
                                             .translate('call_encrypted'),
                                         style: const TextStyle(
                                           color: WhatsAppCallTheme.textMuted,
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w400,
                                         ),
                                       ),

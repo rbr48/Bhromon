@@ -168,7 +168,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
           SnackBar(
             content:
                 Text(l10n.translate('ig_share_failed', args: {'error': e})),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -217,7 +217,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
           SnackBar(
             content:
                 Text(l10n.translate('ig_share_failed', args: {'error': e})),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -396,7 +396,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
                   Text(
                     l10n.translate(groupTypeKey(targetGroup)),
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
                 ],
               ),
@@ -469,7 +469,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: context.forest.feedRaised,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: context.forest.divider10),
             ),
             child: Column(
@@ -500,7 +500,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
                           Text(
                             l10n.translate('ig_share_mode_feed_desc'),
                             style: TextStyle(
-                                color: context.forest.text54, fontSize: 11),
+                                color: context.forest.text54, fontSize: 12),
                           ),
                         ],
                       ),
@@ -521,11 +521,11 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: context.forest.divider10),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: context.forest.divider10),
                     ),
                   ),
@@ -539,7 +539,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
                       foregroundColor: AppColors.darkGreen,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                     ),
@@ -590,13 +590,13 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
 
         // Option 2: Send to Group Channels
         InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => setState(() => _showChannels = !_showChannels),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: context.forest.feedRaised,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: context.forest.divider10),
             ),
             child: Row(
@@ -623,7 +623,7 @@ class _CrossGroupShareSheetState extends State<CrossGroupShareSheet> {
                       Text(
                         l10n.translate('ig_share_mode_channel_desc'),
                         style: TextStyle(
-                            color: context.forest.text54, fontSize: 11),
+                            color: context.forest.text54, fontSize: 12),
                       ),
                     ],
                   ),

@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
 import '../../../../../core/utils/app_logger.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 // The progress card: a picture of a member's streak, chapters read and cards reviewed, which the member chooses and
 // shares. It is drawn on the device, the same way the scrapbook's pages are shared. It never shows a score, a private
@@ -106,7 +107,7 @@ class _ProgressCardSheetState extends State<_ProgressCardSheet> {
       logWarning('The progress card could not be shared', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     } finally {
       if (mounted) setState(() => _sharing = false);

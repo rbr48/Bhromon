@@ -112,7 +112,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           SnackBar(
             content: Text(context.l10n
                 .translate('ig_comment_failed', args: {'error': e})),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -336,7 +336,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.amber),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(context.l10n.translate('ig_delete')),
           ),
@@ -886,7 +886,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                           context.l10n.translate('ig_watch_reel'),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1008,7 +1008,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             dayBadge,
             style: const TextStyle(
               color: Colors.amberAccent,
-              fontSize: 9.5,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1031,7 +1031,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             '🎬 ${context.l10n.translate('ig_reels_title')}',
             style: const TextStyle(
               color: Colors.pinkAccent,
-              fontSize: 9.5,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1197,7 +1197,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                                 widget.seatNumber!,
                                 style: TextStyle(
                                   color: context.forest.accentText,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1211,7 +1211,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                           widget.post.location,
                           style: TextStyle(
                             color: context.forest.text54,
-                            fontSize: 11,
+                            fontSize: 12,
                           ),
                         ),
                       if (widget.post.tags.isNotEmpty)
@@ -1229,7 +1229,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                                   }),
                                   style: TextStyle(
                                     color: context.forest.accentText,
-                                    fontSize: 10.5,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
@@ -1277,7 +1277,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                               color: _isPlayingAudio
                                   ? context.forest.accentText
                                   : context.forest.text70,
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -1485,7 +1485,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                                 effectiveLikeCount > 0)
                             ? FontWeight.normal
                             : FontWeight.bold,
-                        fontSize: 12.5,
+                        fontSize: 13,
                       ),
                     ),
                 ],
@@ -1498,7 +1498,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               padding: const EdgeInsets.fromLTRB(14, 4, 14, 2),
               child: RichText(
                 text: TextSpan(
-                  style: TextStyle(color: context.forest.text, fontSize: 13.5),
+                  style: TextStyle(color: context.forest.text, fontSize: 14),
                   children: [
                     TextSpan(
                       text: '${widget.post.authorName} ',
@@ -1531,7 +1531,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               children: [
                 Text(
                   timeStr,
-                  style: TextStyle(color: context.forest.text54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
@@ -1539,7 +1539,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     context.l10n.translate('ig_edited_marker'),
                     style: TextStyle(
                         color: context.forest.text54,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontStyle: FontStyle.italic),
                   ),
                 ],
@@ -1558,7 +1558,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       context.l10n.translate('ig_archived_badge'),
                       style: const TextStyle(
                           color: Colors.purpleAccent,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -1590,7 +1590,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                                 : 'M',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           )
@@ -1602,12 +1602,12 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       height: 36,
                       child: TextField(
                         controller: _inlineCommentCtrl,
-                        style: TextStyle(
-                            color: context.forest.text, fontSize: 12.5),
+                        style:
+                            TextStyle(color: context.forest.text, fontSize: 13),
                         decoration: InputDecoration(
                           hintText: context.l10n.translate('ig_write_comment'),
                           hintStyle: TextStyle(
-                              color: context.forest.text38, fontSize: 11.5),
+                              color: context.forest.text38, fontSize: 12),
                           filled: true,
                           fillColor:
                               context.forest.text.withValues(alpha: 0.06),

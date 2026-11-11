@@ -68,7 +68,7 @@ class StudyCommuteAudioBar extends StatelessWidget {
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: palette.accentText.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -86,7 +86,7 @@ class StudyCommuteAudioBar extends StatelessWidget {
                                 counter,
                                 style: TextStyle(
                                   color: palette.accentText,
-                                  fontSize: 10.5,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -100,7 +100,7 @@ class StudyCommuteAudioBar extends StatelessWidget {
                           track?.title ?? l10n.translate('study_audio_player'),
                           style: TextStyle(
                             color: palette.text,
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -242,7 +242,7 @@ class StudyCommuteAudioBar extends StatelessWidget {
           '${speed}x',
           style: TextStyle(
             color: palette.text,
-            fontSize: 11.5,
+            fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -305,7 +305,7 @@ class StudyCommuteAudioBar extends StatelessWidget {
               isActive ? '${remaining}m' : 'Timer',
               style: TextStyle(
                 color: isActive ? palette.accentText : palette.text54,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),

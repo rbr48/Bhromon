@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
+import '../localization/app_localizations.dart';
 import '../theme/theme_context.dart';
 
 /// Shimmer skeleton placeholders shown while content loads.
@@ -222,6 +223,62 @@ class PanelSkeleton extends StatelessWidget {
             const SizedBox(height: 12),
             SkeletonBox(height: height - 60, radius: 10),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder for a page that loads a list of rows (books, subjects,
+/// assignments, notifications): a leading tile, a title line and a shorter
+/// second line per row. It never scrolls and clips to the space it is given,
+/// so it is safe wherever a centred spinner was.
+class ListRowsSkeleton extends StatelessWidget {
+  final int count;
+  const ListRowsSkeleton({super.key, this.count = 6});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: context.l10n.translate('group_loading'),
+      child: ExcludeSemantics(
+        child: Shimmer(
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              children: List.generate(count, (int i) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.surfacePanel,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.borderFaint),
+                  ),
+                  child: Row(
+                    children: [
+                      const SkeletonBox(width: 40, height: 40, radius: 12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SkeletonBox(height: 12, radius: 8),
+                            const SizedBox(height: 8),
+                            FractionallySizedBox(
+                              widthFactor: i.isEven ? 0.6 : 0.4,
+                              child: const SkeletonBox(height: 10, radius: 8),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
         ),
       ),
     );

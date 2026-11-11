@@ -381,7 +381,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   Text(
                     'Ad-Free Live Headlines & Directory',
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
                 ],
               ),
@@ -452,7 +452,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           Container(
             decoration: BoxDecoration(
               color: context.forest.surfaceFor(const Color(0xFF1B1F24)),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                   color: context.forest.text.withValues(alpha: 0.08)),
             ),
@@ -694,7 +694,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     '${_clusters.length} stories',
                     style: TextStyle(
                         color: context.forest.accentText,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -718,7 +718,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: context.forest.text.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
@@ -772,13 +772,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: context.forest.text.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         item.paperName,
                         style: TextStyle(
                           color: context.forest.accentText,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -787,7 +787,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     Text(
                       item.relativeTime,
                       style:
-                          TextStyle(color: context.forest.text38, fontSize: 11),
+                          TextStyle(color: context.forest.text38, fontSize: 12),
                     ),
                     const Spacer(),
                     // TTS Audio Speaker Button
@@ -872,7 +872,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: context.forest.text60,
-                                fontSize: 12.5,
+                                fontSize: 13,
                                 height: 1.4,
                               ),
                             ),
@@ -883,7 +883,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     if (item.imageUrl != null && item.imageUrl!.isNotEmpty) ...[
                       const SizedBox(width: 12),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         child: CachedNetworkImage(
                           imageUrl: item.imageUrl!,
                           width: 84,
@@ -998,7 +998,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
         Container(
           decoration: BoxDecoration(
             color: context.forest.surfaceFor(const Color(0xFF1B1F24)),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border:
                 Border.all(color: context.forest.text.withValues(alpha: 0.08)),
           ),
@@ -1083,13 +1083,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF14181E)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.text.withValues(alpha: 0.06)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           onTap: () {
             _openAdBlockBrowser(
               url: paper.websiteUrl,
@@ -1135,7 +1135,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                               paper.name,
                               style: TextStyle(
                                 color: context.forest.text,
-                                fontSize: 14.5,
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -1148,7 +1148,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                             decoration: BoxDecoration(
                               color:
                                   AppColors.mintGreen.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1160,7 +1160,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                                   'AD-FREE',
                                   style: TextStyle(
                                     color: context.forest.accentText,
-                                    fontSize: 9,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1205,7 +1205,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                           'খবর',
                           style: TextStyle(
                               color: context.forest.text70,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500),
                         ),
                       ],

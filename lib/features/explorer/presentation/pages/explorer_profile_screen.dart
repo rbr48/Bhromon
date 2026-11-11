@@ -436,7 +436,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -448,7 +448,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             text,
             style: TextStyle(
               color: context.forest.readable(color),
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -768,7 +768,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             _isBn ? 'কভার পরিবর্তন' : 'Edit Cover',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -920,7 +920,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: context.forest.text.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                       color: AppColors.mintGreen.withValues(alpha: 0.35)),
                 ),
@@ -941,7 +941,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               : (_isBn ? 'সদস্য নোট' : 'Member note')),
                       style: TextStyle(
                         color: context.forest.accentText,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1334,7 +1334,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       color: isSelected
                           ? context.forest.readable(cat.color)
                           : context.forest.text60,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -1406,7 +1406,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: context.forest.card,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: a.color.withValues(alpha: 0.3)),
                   ),
                   child: Row(
@@ -1419,7 +1419,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         a.title,
                         style: TextStyle(
                           color: context.forest.readable(a.color),
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1455,7 +1455,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: context.forest.card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.text.withValues(alpha: 0.06)),
       ),
       padding: const EdgeInsets.all(4),
@@ -1491,7 +1491,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isActive ? AppColors.mintGreen : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1606,7 +1606,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: context.forest.card,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border:
               Border.all(color: context.forest.text.withValues(alpha: 0.08)),
         ),
@@ -1643,7 +1643,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     backgroundColor: AppColors.midGreen,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -1656,7 +1656,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     foregroundColor: context.forest.accentText,
                     side: BorderSide(color: context.forest.accentText),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -1824,7 +1824,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                     ? AppColors.gold
                                     : const Color(0xFFB78103))
                                 : context.forest.text70,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1849,7 +1849,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         '⏱️ ${group.durationText}',
                         style: TextStyle(
                           color: context.forest.accentText,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1903,7 +1903,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 group.inviteCode,
                                 style: TextStyle(
                                   color: context.forest.accentText,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1,
                                 ),
@@ -1925,7 +1925,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 8),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         icon: const Icon(Icons.arrow_forward_rounded, size: 14),
@@ -2163,7 +2163,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     side: const BorderSide(color: Colors.redAccent),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   icon: const Icon(Icons.logout, size: 16),
@@ -2184,7 +2184,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         alignment: Alignment.center,
@@ -2192,7 +2192,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           color: selected
               ? AppColors.mintGreen.withValues(alpha: 0.18)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? AppColors.mintGreen : context.forest.text24,
             width: selected ? 1.4 : 0.8,
@@ -2267,7 +2267,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   style: TextStyle(
                     fontFamily: 'NotoSansBengali',
                     color: context.forest.text,
-                    fontSize: 14.5,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -2339,7 +2339,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 provider.toUpperCase(),
                                 style: const TextStyle(
                                   color: AppColors.mintGreen,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -2356,7 +2356,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               style: TextStyle(
                                 fontFamily: 'NotoSansBengali',
                                 color: context.forest.text60,
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2370,7 +2370,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             style: TextStyle(
                               fontFamily: 'NotoSansBengali',
                               color: context.forest.text,
-                              fontSize: 13.5,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2387,7 +2387,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 backgroundColor: AppColors.mintGreen,
                 foregroundColor: AppColors.darkGreen,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 padding:
                     const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -2475,7 +2475,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(
                 _isBn ? 'নতুন গ্রুপ তৈরি করুন' : 'Create New Group',
                 style: TextStyle(
@@ -2515,7 +2515,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             : 'Popular Destinations:',
                         style: TextStyle(
                           color: context.forest.text70,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -2548,7 +2548,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   color: isSelected
                                       ? Colors.black
                                       : context.forest.text,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,
@@ -2682,7 +2682,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Error: $e'),
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -2722,7 +2722,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             return AlertDialog(
               backgroundColor: context.forest.card,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(
                 _isBn ? 'গ্রুপে যোগ দিন' : 'Join a Group',
                 style: TextStyle(
@@ -2814,7 +2814,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   content: Text(e is FormatException
                                       ? e.message
                                       : e.toString()),
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: AppColors.amber,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -3048,7 +3048,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                 : 'TAP TO CHANGE COVER PHOTO',
                                             style: const TextStyle(
                                               color: Colors.white70,
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
                                               letterSpacing: 1.0,
                                             ),
@@ -3174,7 +3174,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(_isBn ? 'প্রদর্শন নাম' : 'DISPLAY NAME',
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),
@@ -3200,7 +3200,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(_isBn ? 'বায়ো (বাংলা)' : 'BIO (BANGLA)',
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),
@@ -3227,7 +3227,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(_isBn ? 'বায়ো (ইংরেজি)' : 'BIO (ENGLISH)',
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),
@@ -3254,7 +3254,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(_isBn ? 'বিভাগ' : 'DIVISION',
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),
@@ -3294,7 +3294,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(_isBn ? 'রক্তের গ্রুপ' : 'BLOOD GROUP',
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),
@@ -3337,7 +3337,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(_isBn ? 'স্ট্যাটাস নোট' : 'STATUS NOTE',
                               style: TextStyle(
                                   color: context.forest.text54,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),

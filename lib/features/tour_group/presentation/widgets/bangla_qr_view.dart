@@ -94,7 +94,7 @@ class BanglaQrView extends StatelessWidget {
                       payload.provider.displayName,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -106,7 +106,7 @@ class BanglaQrView extends StatelessWidget {
                       color: isPersonal
                           ? const Color(0xFFB78103)
                           : const Color(0xFF1B4332),
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
                     ),
@@ -119,7 +119,7 @@ class BanglaQrView extends StatelessWidget {
                   '* অ্যাপ স্ক্যানারে সমস্যা হলে নম্বর কপি করে সেন্ড মানি করুন',
                   style: TextStyle(
                     color: Color(0xFF856404),
-                    fontSize: 9.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
@@ -355,7 +355,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
     return Container(
       decoration: BoxDecoration(
         color: f.card,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: f.divider12),
       ),
       padding: const EdgeInsets.all(3),
@@ -419,7 +419,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: f.card,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: f.divider12),
       ),
       padding: const EdgeInsets.all(3),
@@ -534,7 +534,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   style: TextStyle(
                     color: Color(0xFF7F5400),
                     fontWeight: FontWeight.bold,
-                    fontSize: 12.5,
+                    fontSize: 13,
                   ),
                 ),
               ),
@@ -545,7 +545,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
             'বিকাশ ও নগদ অ্যাপের ইন-অ্যাপ কিউআর স্ক্যানার শুধুমাত্র রেজিস্টার্ড মার্চেন্টদের জন্য কাজ করে। ব্যক্তিগত অ্যাকাউন্টে টাকা পাঠাতে নম্বরটি কপি করে আপনার বিকাশ বা নগদ অ্যাপে "সেন্ড মানি" করুন।',
             style: TextStyle(
               color: Color(0xFF5D4037),
-              fontSize: 11.5,
+              fontSize: 12,
               height: 1.4,
             ),
           ),
@@ -565,8 +565,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   icon: const Icon(Icons.copy, size: 14),
                   label: const Text(
                     'নম্বর কপি করুন (সেন্ড মানি)',
-                    style:
-                        TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
                     Clipboard.setData(
@@ -594,7 +593,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                 icon: const Icon(Icons.photo_library_outlined, size: 14),
                 label: const Text(
                   'কিউআর ছবি',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () => setState(() => _activeTab = 1),
               ),
@@ -624,7 +623,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
               'মার্চেন্ট বাংলা কিউআর: বিকাশ, নগদ বা যেকোনো ব্যাংক অ্যাপ (CellFin, CityTouch, EBL ইত্যাদি) দিয়ে সরাসরি স্ক্যান করে পেমেন্ট সম্পন্ন করুন।',
               style: TextStyle(
                 color: Color(0xFF1B5E20),
-                fontSize: 11.5,
+                fontSize: 12,
                 height: 1.4,
               ),
             ),
@@ -769,7 +768,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                           'bKash/Nagad অ্যাপে সরাসরি স্ক্যানের জন্য প্রাপকের ১১ ডিজিটের মোবাইল নম্বর দিন।',
                           style: TextStyle(
                             color: Color(0xFF856404),
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -812,7 +811,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                                 ? 'প্রাপকের অ্যাকাউন্ট / আইডি'
                                 : 'প্রাপকের মোবাইল নম্বর (১১ ডিজিট)',
                             labelStyle:
-                                TextStyle(color: f.text70, fontSize: 11.5),
+                                TextStyle(color: f.text70, fontSize: 12),
                             hintText: isBankOrMerchant
                                 ? 'অ্যাকাউন্ট বা মার্চেন্ট আইডি'
                                 : '01XXXXXXXXX',
@@ -833,11 +832,11 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 10),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: f.divider12),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
                                 color: _payload.isPhoneAccount
                                     ? Colors.green.withValues(alpha: 0.6)
@@ -845,7 +844,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide:
                                   BorderSide(color: f.accentText, width: 1.5),
                             ),
@@ -882,7 +881,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                           fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         labelText: 'টাকার পরিমাণ (৳)',
-                        labelStyle: TextStyle(color: f.text70, fontSize: 11.5),
+                        labelStyle: TextStyle(color: f.text70, fontSize: 12),
                         hintText: 'ঐচ্ছিক',
                         hintStyle: TextStyle(color: f.text24, fontSize: 12),
                         prefixIcon: Icon(Icons.payments_outlined,
@@ -893,11 +892,11 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 10),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: f.divider12),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           borderSide:
                               BorderSide(color: f.accentText, width: 1.5),
                         ),
@@ -936,7 +935,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                         style: TextStyle(
                           fontFamily: 'NotoSansBengali',
                           color: f.text,
-                          fontSize: 14.5,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
@@ -956,7 +955,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                           backgroundColor: AppColors.mintGreen,
                           foregroundColor: AppColors.darkGreen,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 12),
@@ -990,7 +989,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                   child: Column(
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         child: _customQrBytes != null
                             ? Image.memory(
                                 _customQrBytes!,
@@ -1019,7 +1018,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColors.mintGreen.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1032,7 +1031,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                                 style: TextStyle(
                                   fontFamily: 'NotoSansBengali',
                                   color: AppColors.mintGreen,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1055,7 +1054,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                               'OFFICIAL QR',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1066,7 +1065,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             style: const TextStyle(
                               fontFamily: 'NotoSansBengali',
                               color: Color(0xFF111827),
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1099,7 +1098,7 @@ class _BanglaQrSheetModalState extends State<BanglaQrSheetModal> {
                             style: TextStyle(
                               fontFamily: 'NotoSansBengali',
                               color: AppColors.mintGreen,
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

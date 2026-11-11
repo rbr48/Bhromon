@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
 
@@ -16,6 +17,7 @@ import '../../domain/services/study_progress_rules.dart';
 
 import '../widgets/study/study_text_field.dart';
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The shared summary of one chapter. The group reads the revision an admin pinned, or the newest when none is
 /// pinned. A member adds a revision, or restores an earlier one as a new revision: nothing is overwritten, so every
@@ -113,7 +115,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
       logWarning('A chapter summary change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -343,7 +345,7 @@ class _StudySummaryScreenState extends State<StudySummaryScreen> {
             style: TextStyle(color: palette.text70)),
       );
     }
-    if (!_loaded) return const Center(child: CircularProgressIndicator());
+    if (!_loaded) return const ListRowsSkeleton();
     final shown = summaryShownToGroup(_revisions, pinnedId: _pinnedId);
     // A member does not see a hidden revision. An admin sees every revision, with the hidden ones marked.
     final ordered = newestFirst(_revisions);

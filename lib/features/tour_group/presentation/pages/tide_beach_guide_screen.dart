@@ -115,7 +115,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: _isBeachView ? AppColors.mintGreen : null,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
                           child: Text(
@@ -139,7 +139,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                         decoration: BoxDecoration(
                           color:
                               !_isBeachView ? Colors.tealAccent.shade700 : null,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
                           child: Text(
@@ -167,7 +167,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 context.l10n.translate('tide_schedule_disclaimer'),
                 style: TextStyle(
                     color: context.forest.readable(Colors.amberAccent),
-                    fontSize: 11),
+                    fontSize: 12),
               ),
               const SizedBox(height: 20),
 
@@ -317,7 +317,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 const SizedBox(height: 4),
                 Text(desc,
                     style:
-                        TextStyle(color: context.forest.text70, fontSize: 11)),
+                        TextStyle(color: context.forest.text70, fontSize: 12)),
               ],
             ),
           ),
@@ -510,14 +510,14 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: color,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           context.l10n.translate('tide_running'),
                           style: const TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
-                              fontSize: 10),
+                              fontSize: 11),
                         ),
                       ),
                     ],
@@ -540,7 +540,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
               color: isHigh
                   ? context.forest.accentText
                   : context.forest.readable(Colors.orangeAccent),
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
           ),

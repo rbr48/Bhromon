@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:async';
 
@@ -17,6 +18,7 @@ import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_flashcard_rules.dart';
 import '../../domain/services/study_glossary_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The glossary of one book. A member proposes a term and an admin approves it. An approved term can be made into
 /// a flashcard on this device, once: the card keeps its own copy of the words and remembers the term it came from.
@@ -106,7 +108,7 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
       logWarning('A glossary change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -179,7 +181,7 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
           'A flashcard could not be made from a term', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -232,7 +234,7 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
             style: TextStyle(color: palette.text70)),
       );
     }
-    if (!_loaded) return const Center(child: CircularProgressIndicator());
+    if (!_loaded) return const ListRowsSkeleton();
     final approved = approvedTerms(_terms);
     final proposals = [
       for (final term in _terms)

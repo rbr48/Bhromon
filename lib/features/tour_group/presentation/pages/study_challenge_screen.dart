@@ -15,6 +15,7 @@ import '../../domain/services/study_challenge_rules.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_challenge_editor.dart';
 import '../widgets/study/study_labels.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// One subject's weekly challenge: this week's task, how many members have joined it, and the member's own
 /// progress. Members join and leave while the week runs. An admin sets the week's challenge. Only counts are shown,
@@ -162,7 +163,7 @@ class _StudyChallengeScreenState extends State<StudyChallengeScreen> {
       logWarning('A challenge join could not be saved', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -188,7 +189,7 @@ class _StudyChallengeScreenState extends State<StudyChallengeScreen> {
       logWarning('A challenge could not be saved', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

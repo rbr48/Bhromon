@@ -245,7 +245,7 @@ class WhatsAppCallActionBtn extends StatelessWidget {
               style: TextStyle(
                 color:
                     isEndCall ? Colors.redAccent : WhatsAppCallTheme.textMuted,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,

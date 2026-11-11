@@ -12,6 +12,7 @@ import '../data/tour_export_pdf.dart' show TourPdfLabels;
 import '../domain/models/samity_models.dart';
 import '../domain/models/tour_group.dart';
 import 'tour_pdf_download.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Exports a samity's schedule, collection records and member standings as a
 /// formatted PDF statement.
@@ -80,7 +81,7 @@ Future<void> exportSamityPdf(
       SnackBar(
         content: Text(l10n
             .translate('samity_save_failed', args: {'error': err.toString()})),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ),
     );
   }

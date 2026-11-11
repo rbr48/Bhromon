@@ -305,7 +305,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
               l10n.translate('study_exam_simulator_title'),
               style: TextStyle(
                 color: palette.text54,
-                fontSize: 11,
+                fontSize: 12,
               ),
             ),
           ],
@@ -368,7 +368,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: palette.accentText.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: palette.accentText.withValues(alpha: 0.4),
                         width: 0.8,
@@ -379,7 +379,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                           args: {'marks': '${currentQ.marks}'}),
                       style: TextStyle(
                         color: palette.accentText,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -471,7 +471,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                                         'Mod ${currentQ.moduleCode}',
                                         style: TextStyle(
                                           color: palette.accentText,
-                                          fontSize: 10,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -484,7 +484,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                                 text: currentQ.prompt,
                                 baseStyle: TextStyle(
                                   color: palette.text,
-                                  fontSize: 14.5,
+                                  fontSize: 15,
                                   height: 1.5,
                                 ),
                               ),
@@ -503,7 +503,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                               l10n.translate('study_exam_candidate_draft'),
                               style: TextStyle(
                                 color: palette.text,
-                                fontSize: 13.5,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -512,7 +512,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                               '${_scratchpadController.text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length} words',
                               style: TextStyle(
                                 color: palette.text54,
-                                fontSize: 11.5,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -680,7 +680,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen> {
                         style: TextStyle(
                           color:
                               isAnswered ? AppColors.mintGreen : palette.text54,
-                          fontSize: 11.5,
+                          fontSize: 12,
                         ),
                       ),
                       trailing: Text(

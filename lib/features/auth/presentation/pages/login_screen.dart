@@ -186,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     'Powered by Bhromon $_appVersion',
                                     style: const TextStyle(
                                       color: _kWhite30,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ),
@@ -328,7 +328,7 @@ class _BrandHeader extends StatelessWidget {
               'BHROMON',
               style: TextStyle(
                 color: _kGreen,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 5,
               ),
@@ -626,7 +626,7 @@ class _GoogleButton extends StatelessWidget {
         height: 54,
         decoration: BoxDecoration(
           color: const Color(0xFF111D15),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _kBorder, width: 1.5),
         ),
         child: Row(

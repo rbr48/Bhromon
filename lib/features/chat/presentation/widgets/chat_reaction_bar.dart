@@ -137,7 +137,7 @@ class ChatReactionBadge extends StatelessWidget {
                 '$total',
                 style: TextStyle(
                   color: context.chat.text70,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -219,7 +219,7 @@ void showReactionDetailsSheet(
                               context.l10n
                                   .translate('chat_reaction_tap_remove'),
                               style: TextStyle(
-                                  color: context.chat.text38, fontSize: 11),
+                                  color: context.chat.text38, fontSize: 12),
                             )
                           : null,
                     );

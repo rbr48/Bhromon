@@ -165,7 +165,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final place = departed ? s.leg.from.name : s.leg.to.name;
     return Material(
       color: f.card,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -778,7 +778,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF142428)),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
@@ -819,7 +819,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       }),
                       style: TextStyle(
                         color: context.forest.accentText,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -891,7 +891,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                               color: isNext
                                   ? context.forest.accentText
                                   : context.forest.text70,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight:
                                   isNext ? FontWeight.bold : FontWeight.normal,
                             ),
@@ -987,7 +987,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           ),
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: plan.progress,
               minHeight: 8,
@@ -1016,7 +1016,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final tile = _pointTileBody(l10n, p, isStart);
     if (!kLiveJourney || p.stop == null) return tile;
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => unawaited(_showStopSheet(p)),
       child: tile,
     );
@@ -1040,7 +1040,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: context.forest.surfaceFor(const Color(0xFF142428)),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: context.forest.divider12),
             ),
             child: Column(
@@ -1143,7 +1143,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: context.forest.surfaceFor(const Color(0xFF10201A)),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: statusColor.withValues(alpha: 0.5)),
               ),
               child: Column(
@@ -1171,7 +1171,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(l10n.translate('route_leg_${status.name}'),
-                            style: TextStyle(color: statusColor, fontSize: 11)),
+                            style: TextStyle(color: statusColor, fontSize: 12)),
                       ),
                     ],
                   ),
@@ -1322,12 +1322,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       if (c.highlight.isNotEmpty) c.highlight,
                     ].join(' · '),
                     style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
+                        TextStyle(color: context.forest.text54, fontSize: 12),
                   ),
                   if (c.notes.isNotEmpty)
                     Text(c.notes,
                         style: TextStyle(
-                            color: context.forest.text38, fontSize: 11)),
+                            color: context.forest.text38, fontSize: 12)),
                 ],
               ),
             ),

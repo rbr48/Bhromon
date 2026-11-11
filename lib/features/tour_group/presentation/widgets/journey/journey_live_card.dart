@@ -48,7 +48,7 @@ class JourneyLiveCard extends StatelessWidget {
     // their ink on the nearest Material, and a box in between would hide it.
     return Material(
       color: f.card,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -227,7 +227,7 @@ class JourneyLiveCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: f.chip,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

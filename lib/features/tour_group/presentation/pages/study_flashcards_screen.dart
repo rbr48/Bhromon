@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -21,6 +22,7 @@ import '../../domain/services/study_flashcard_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
 import 'study_flashcard_review_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The flashcards of one book, kept on this device. Cards never go to the server; they leave the phone only when
 /// the member exports them to a file. A member reviews the cards that are due, adds a card by hand, or imports a
@@ -241,7 +243,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
       if (mounted) {
         messenger.showSnackBar(SnackBar(
           content: Text(l10n.translate('study_failed')),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.amber,
         ));
       }
     } finally {
@@ -396,7 +398,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
             style: TextStyle(color: palette.text70)),
       );
     }
-    if (!_loaded) return const Center(child: CircularProgressIndicator());
+    if (!_loaded) return const ListRowsSkeleton();
     final due = dueCards(_cards, _now);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -504,7 +506,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
                   'Mod ${card.moduleCode}',
                   style: TextStyle(
                     color: palette.accentText,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

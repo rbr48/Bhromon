@@ -237,7 +237,7 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
                 style: TextStyle(color: context.forest.text),
               ),
               subtitle: Text(l10n.translate('veh_departure'),
-                  style: TextStyle(color: context.forest.text54, fontSize: 11)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
               trailing: _v.departure == null
                   ? null
                   : IconButton(

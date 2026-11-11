@@ -65,7 +65,7 @@ class _CallQualityHudState extends State<CallQualityHud> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                     onTap: () {
                       if (widget.onTapDetails != null) {
                         widget.onTapDetails!();
@@ -80,7 +80,7 @@ class _CallQualityHudState extends State<CallQualityHud> {
                       ),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: color.withValues(alpha: 0.4),
                           width: 1,
@@ -109,7 +109,7 @@ class _CallQualityHudState extends State<CallQualityHud> {
                             label,
                             style: TextStyle(
                               color: color,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -119,7 +119,7 @@ class _CallQualityHudState extends State<CallQualityHud> {
                               '· ${(lossRatio * 100).toStringAsFixed(0)}% loss',
                               style: TextStyle(
                                 color: color.withValues(alpha: 0.9),
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -146,7 +146,7 @@ class _CallQualityHudState extends State<CallQualityHud> {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.75),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.15),
                         width: 0.8,
@@ -212,7 +212,7 @@ class _HudItem extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -220,7 +220,7 @@ class _HudItem extends StatelessWidget {
           value,
           style: TextStyle(
             color: color,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
         ),

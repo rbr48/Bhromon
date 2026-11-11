@@ -179,7 +179,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 'PDF',
                 style: TextStyle(
                   color: Colors.redAccent,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
@@ -256,7 +256,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 context.l10n.translate('viewer_load_failed',
                     args: {'error': _errorMessage ?? ''}),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.forest.text70, fontSize: 13.5),
+                style: TextStyle(color: context.forest.text70, fontSize: 14),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -341,7 +341,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       }),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

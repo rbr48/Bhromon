@@ -81,13 +81,13 @@ class MembersStrip extends StatelessWidget {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: context.forest.text.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             l10n.number(members.length),
                             style: TextStyle(
                               color: context.forest.accentText,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -274,7 +274,7 @@ class MembersStrip extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.forest.text70,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -333,7 +333,7 @@ class MembersStrip extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.forest.text54,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

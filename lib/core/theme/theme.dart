@@ -17,8 +17,8 @@ class AppTheme {
   static const _fontFamilyFallback = ['HindSiliguri', 'Roboto', 'sans-serif'];
 
   // Shared shape language
-  static const double radiusSmall = 10;
-  static const double radiusMedium = 14;
+  static const double radiusSmall = 12;
+  static const double radiusMedium = 16;
   static const double radiusLarge = 20;
   static const double radiusSheet = 24;
 
@@ -115,7 +115,7 @@ class AppTheme {
           height: 1.4,
           color: textColor),
       bodyLarge: TextStyle(fontSize: 15, height: 1.45, color: textColor),
-      bodyMedium: TextStyle(fontSize: 13.5, height: 1.45, color: mutedColor),
+      bodyMedium: TextStyle(fontSize: 14, height: 1.45, color: mutedColor),
       bodySmall: TextStyle(fontSize: 12, height: 1.4, color: mutedColor),
       labelLarge: TextStyle(
           fontSize: 14,
@@ -128,7 +128,7 @@ class AppTheme {
           letterSpacing: 0.4,
           color: mutedColor),
       labelSmall: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
           color: mutedColor),

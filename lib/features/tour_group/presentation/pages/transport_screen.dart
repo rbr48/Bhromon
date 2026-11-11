@@ -330,7 +330,7 @@ class _TransportScreenState extends State<TransportScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.forest.divider10),
               ),
               child: SingleChildScrollView(
@@ -355,7 +355,7 @@ class _TransportScreenState extends State<TransportScreen> {
                       side: BorderSide(color: context.forest.text24),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: manifestText));
@@ -380,7 +380,7 @@ class _TransportScreenState extends State<TransportScreen> {
                       foregroundColor: AppColors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -727,7 +727,7 @@ class _TransportScreenState extends State<TransportScreen> {
           ],
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: total == 0 ? 0 : booked / total,
               minHeight: 6,
@@ -983,7 +983,7 @@ class _SeatSheetState extends State<_SeatSheet> {
                                     })
                                   : l10n.translate('veh_seat_moves'),
                           style: TextStyle(
-                              color: context.forest.text54, fontSize: 11),
+                              color: context.forest.text54, fontSize: 12),
                         ),
                         trailing: isHere
                             ? Icon(Icons.check_circle,

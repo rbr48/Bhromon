@@ -571,7 +571,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                         l10n.translate('chan_online_count',
                             args: {'count': l10n.number(_onlineCount())}),
                         style: TextStyle(
-                            color: context.forest.text54, fontSize: 11),
+                            color: context.forest.text54, fontSize: 12),
                       ),
                     ],
                   ),
@@ -773,7 +773,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                               color: context.forest.text, fontSize: 13)),
                       subtitle: Text('${s.kmFromStart} km',
                           style: TextStyle(
-                              color: context.forest.text54, fontSize: 11)),
+                              color: context.forest.text54, fontSize: 12)),
                       onTap: _isAdmin ? () => _setStop(s.id) : null,
                     ),
                   if (_isAdmin && _liveStopId != null)
@@ -1416,7 +1416,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: context.forest.text,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           shadows: const [
                             Shadow(color: Colors.black87, blurRadius: 4),
@@ -1554,7 +1554,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       l10n.translate('chan_voice_connected'),
                       style: TextStyle(
                           color: context.forest.accentText,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold),
                     ),
                     Text(
@@ -1617,7 +1617,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                             ? p.displayName[0].toUpperCase()
                                             : '?',
                                         style: const TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 11,
                                             fontWeight: FontWeight.bold),
                                       )
                                     : null,
@@ -2151,7 +2151,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: context.forest.readable(AppColors.gold),
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2163,14 +2163,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                   horizontal: 6, vertical: 1),
                               decoration: BoxDecoration(
                                 color: AppColors.gold.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '$pinCount',
                                 style: TextStyle(
                                   color:
                                       context.forest.readable(AppColors.gold),
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -2271,7 +2271,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       subtitle: Text(p.senderName,
                           style: TextStyle(
                               color: context.forest.readable(AppColors.gold),
-                              fontSize: 11)),
+                              fontSize: 12)),
                       onTap: () {
                         Navigator.of(sheetContext).pop();
                         _jumpToChannelMessage(p.id);
@@ -2898,7 +2898,7 @@ class _NewMessagesDivider extends StatelessWidget {
           Text(label,
               style: TextStyle(
                   color: context.forest.readable(AppColors.gold),
-                  fontSize: 11)),
+                  fontSize: 12)),
           const SizedBox(width: 8),
           const Expanded(child: Divider(color: AppColors.gold, height: 1)),
         ],
@@ -2966,14 +2966,14 @@ class _ChannelChip extends StatelessWidget {
           final count = snap.data?.length ?? 0;
           return InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.midGreen
                     : context.forest.text.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -3004,7 +3004,7 @@ class _ChannelChip extends StatelessWidget {
                         '$count',
                         style: const TextStyle(
                             color: AppColors.darkGreen,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -3031,7 +3031,7 @@ class _ChannelChip extends StatelessWidget {
                 : countUnread(mentionSnap.data ?? const [], lastRead, myEmail);
             return InkWell(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -3039,7 +3039,7 @@ class _ChannelChip extends StatelessWidget {
                   color: selected
                       ? AppColors.midGreen
                       : context.forest.text.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -3092,7 +3092,7 @@ class _ChannelChip extends StatelessWidget {
                           '$mentionCount',
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -3162,7 +3162,7 @@ class _TypingLineState extends State<_TypingLine> {
               text,
               style: TextStyle(
                   color: context.forest.text54,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontStyle: FontStyle.italic),
             ),
           ),

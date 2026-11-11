@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,6 +17,7 @@ import '../widgets/study/study_post_editor.dart';
 import '../widgets/study/study_rich_text.dart';
 import 'markdown_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The posts in one module of a subject: exam tips, or suggestions with a link. Members add
 /// posts where the module lets them, mark posts helpful, and see the most helpful first. An
@@ -214,7 +216,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       logWarning('A study post vote failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -245,7 +247,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       logWarning('A study post change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -293,7 +295,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final posts = sortStudyPosts(visibleStudyPosts(
               posts: snap.data!,

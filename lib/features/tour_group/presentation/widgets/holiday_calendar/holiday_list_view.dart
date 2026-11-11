@@ -52,7 +52,7 @@ class _HolidayCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: kHolidayCard,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
       ),
       child: Row(
@@ -63,7 +63,7 @@ class _HolidayCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [
@@ -77,7 +77,7 @@ class _HolidayCard extends StatelessWidget {
                 ),
                 Text(
                   localizedDateFormat('MMM').format(date),
-                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                  style: const TextStyle(color: Colors.white60, fontSize: 11),
                 ),
               ],
             ),
@@ -120,16 +120,16 @@ class _HolidayCard extends StatelessWidget {
                 if (bangla != null)
                   Text(
                     '${l10n.translate('hol_bangla_date')}: ${banglaDateLabel(context, bangla)}',
-                    style: const TextStyle(color: Colors.white60, fontSize: 11),
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 Text(
                   '${l10n.translate('hol_hijri_date')}: ${hijriDateLabel(context, hijri)}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 11),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   holiday.description(bengali: bengali),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),

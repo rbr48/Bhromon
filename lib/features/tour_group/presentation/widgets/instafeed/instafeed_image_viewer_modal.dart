@@ -363,7 +363,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                             widget.post.location,
                             style: const TextStyle(
                               color: Colors.white70,
-                              fontSize: 11,
+                              fontSize: 12,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -441,7 +441,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                   // Date
                   Text(
                     dateStr,
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                   const SizedBox(height: 10),
 

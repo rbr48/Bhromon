@@ -229,7 +229,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                           hintText:
                               'কমান্ড খুঁজুন (যেমন: হিসাব, ইন্সটাফিড, সিট প্ল্যান...)',
                           hintStyle: TextStyle(
-                              color: context.forest.text38, fontSize: 13.5),
+                              color: context.forest.text38, fontSize: 14),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -252,7 +252,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                         'ESC',
                         style: TextStyle(
                             color: Colors.white54,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -325,14 +325,14 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                           style: TextStyle(
                                             color: context.forest.text,
                                             fontWeight: FontWeight.w600,
-                                            fontSize: 13.5,
+                                            fontSize: 14,
                                           ),
                                         ),
                                         Text(
                                           item.subtitle,
                                           style: TextStyle(
                                             color: context.forest.text54,
-                                            fontSize: 11.5,
+                                            fontSize: 12,
                                           ),
                                         ),
                                       ],
@@ -350,7 +350,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                       item.category,
                                       style: TextStyle(
                                         color: context.forest.text54,
-                                        fontSize: 10,
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ),
@@ -378,11 +378,11 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                     const SizedBox(width: 4),
                     Text('নির্বাচন করতে ক্লিক করুন',
                         style: TextStyle(
-                            color: context.forest.text38, fontSize: 11)),
+                            color: context.forest.text38, fontSize: 12)),
                     const Spacer(),
                     Text('ভ্রমণ • Bhromon',
                         style: TextStyle(
-                            color: context.forest.accentText, fontSize: 10.5)),
+                            color: context.forest.accentText, fontSize: 11)),
                   ],
                 ),
               ),

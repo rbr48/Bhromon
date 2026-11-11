@@ -165,13 +165,13 @@ Answer to question 2.
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+      expect(find.text('বাংলা'), findsOneWidget);
       expect(find.textContaining('English answer here.'), findsOneWidget);
 
-      await tester.tap(find.text('🇧🇩 বাংলা'));
+      await tester.tap(find.text('বাংলা'));
       await tester.pumpAndSettle();
 
-      expect(find.text('🇬🇧 English'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
       expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
     });
 
@@ -198,8 +198,8 @@ Answer to question 2.
       await tester.pumpAndSettle();
 
       // In split view, both pane headers and content are visible concurrently
-      expect(find.text('🇬🇧 English Solution'), findsOneWidget);
-      expect(find.text('🇧🇩 বাংলা সমাধান'), findsOneWidget);
+      expect(find.text('English Solution'), findsOneWidget);
+      expect(find.text('বাংলা সমাধান'), findsOneWidget);
       expect(find.textContaining('English answer here.'), findsOneWidget);
       expect(find.textContaining('বাংলা সমাধান এখানে।'), findsOneWidget);
       expect(find.byIcon(Icons.view_agenda_outlined), findsOneWidget);
@@ -209,14 +209,14 @@ Answer to question 2.
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.vertical_split_rounded), findsOneWidget);
-      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+      expect(find.text('বাংলা'), findsOneWidget);
 
       // Toggle back to split view
       await tester.tap(find.byIcon(Icons.vertical_split_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.text('🇬🇧 English Solution'), findsOneWidget);
-      expect(find.text('🇧🇩 বাংলা সমাধান'), findsOneWidget);
+      expect(find.text('English Solution'), findsOneWidget);
+      expect(find.text('বাংলা সমাধান'), findsOneWidget);
     });
 
     testWidgets(
@@ -476,24 +476,24 @@ Explain special crossing of a cheque under NI Act.
       await tester.pumpAndSettle();
 
       // Initially showing Bangla, so the button should offer to switch to English
-      expect(find.text('🇬🇧 English'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
       expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'),
           findsOneWidget);
 
       // Tap to switch to English
-      await tester.tap(find.text('🇬🇧 English'));
+      await tester.tap(find.text('English'));
       await tester.pumpAndSettle();
 
       // Now showing English, button should offer to switch to Bangla
-      expect(find.text('🇧🇩 বাংলা'), findsOneWidget);
+      expect(find.text('বাংলা'), findsOneWidget);
       expect(find.text('7th Banking Exam (English Solution)'), findsOneWidget);
 
       // Tap to switch back to Bangla
-      await tester.tap(find.text('🇧🇩 বাংলা'));
+      await tester.tap(find.text('বাংলা'));
       await tester.pumpAndSettle();
 
       // Back to offering English
-      expect(find.text('🇬🇧 English'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
       expect(find.text('৭ম ব্যাংকিং প্রফেশনাল পরীক্ষা (বাংলা সমাধান)'),
           findsOneWidget);
     });

@@ -8,6 +8,7 @@ import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_problem_models.dart';
 import '../../../domain/models/tour_group.dart';
 import 'study_modal.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Opens an admin's list of a problem set's members, with the date each one has for the set: a date of their own when an
 /// admin set one, or the set's date. An admin sets a member's own date here, or takes it away.
@@ -106,7 +107,7 @@ class _StudyMemberDeadlinesSheetState
       logWarning('A member due date change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

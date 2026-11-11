@@ -210,7 +210,7 @@ class StarredMessagesScreen extends StatelessWidget {
                                     height: 40,
                                     decoration: BoxDecoration(
                                       color: context.chat.bar,
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(
                                       _typeIcon(type),
@@ -244,7 +244,7 @@ class StarredMessagesScreen extends StatelessWidget {
                                               timeStr,
                                               style: TextStyle(
                                                 color: context.chat.text38,
-                                                fontSize: 11,
+                                                fontSize: 12,
                                               ),
                                             ),
                                           ],

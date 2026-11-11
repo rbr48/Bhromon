@@ -11,6 +11,7 @@ import '../../../../core/media/media_access.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../tour_group/presentation/pages/markdown_viewer_screen.dart';
 import '../../../tour_group/presentation/pages/pdf_viewer_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// WhatsApp-style document attachment card.
 class ChatDocumentBubble extends StatefulWidget {
@@ -190,7 +191,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
               context.l10n
                   .translate('chat_open_file_failed', args: {'error': '$e'}),
             ),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.amber,
           ),
         );
       }
@@ -241,7 +242,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                       ext,
                       style: TextStyle(
                         color: context.chat.text,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -268,7 +269,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                           '${_formatFileSize(widget.fileSizeBytes)} • $ext',
                           style: TextStyle(
                             color: context.chat.text70,
-                            fontSize: 10.5,
+                            fontSize: 11,
                           ),
                         ),
                         if (sending) ...[
@@ -277,7 +278,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                             '${context.l10n.number(((widget.uploadProgress ?? 0) * 100).round())}%',
                             style: TextStyle(
                               color: context.chat.text70,
-                              fontSize: 10.5,
+                              fontSize: 11,
                             ),
                           ),
                         ],
@@ -332,7 +333,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
                     Text(
                       widget.timeStr,
                       style:
-                          TextStyle(color: context.chat.text54, fontSize: 9.5),
+                          TextStyle(color: context.chat.text54, fontSize: 11),
                     ),
                   if (widget.isMe && widget.deliveryIcon != null) ...[
                     const SizedBox(width: 4),

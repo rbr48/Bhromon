@@ -167,7 +167,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                         : (context.forest.isDark
                             ? Colors.white
                             : context.forest.text),
-                    fontSize: 15.5,
+                    fontSize: 16,
                     height: 1.4,
                     letterSpacing: 0.05,
                     fontFamily: 'NotoSansBengali',
@@ -225,7 +225,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
                 color: context.forest.readable(AppColors.gold),
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.bold),
           ),
         ),
@@ -239,7 +239,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
             ),
             child: Text(
               widget.badge,
-              style: TextStyle(color: context.forest.accentText, fontSize: 10),
+              style: TextStyle(color: context.forest.accentText, fontSize: 11),
             ),
           ),
         ],
@@ -267,7 +267,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
         if (m.editedAt != null) ...[
           Text(
             l10n.translate('chan_edited'),
-            style: TextStyle(color: meta, fontSize: 10.5),
+            style: TextStyle(color: meta, fontSize: 11),
           ),
           const SizedBox(width: 4),
         ],
@@ -275,7 +275,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
           localizedDateFormat('hh:mm a').format(m.timestamp),
           style: TextStyle(
             color: meta,
-            fontSize: 10.5,
+            fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -307,7 +307,7 @@ class _ReplyQuote extends StatelessWidget {
             reply.senderName,
             style: TextStyle(
                 color: context.forest.readable(AppColors.gold),
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.bold),
           ),
           Text(
@@ -341,7 +341,7 @@ class _AttachmentGrid extends StatelessWidget {
           GestureDetector(
             onTap: () => onTap(i),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: SizedBox(
                 width: width,
                 height: height,
@@ -364,7 +364,7 @@ class _AttachmentGrid extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               context.l10n.translate('chan_attachment_video_label'),
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         ),
@@ -396,7 +396,7 @@ class _ExpenseCard extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.black26,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,7 +413,7 @@ class _ExpenseCard extends StatelessWidget {
                     Text(
                       l10n.translate('chan_expense_card'),
                       style: TextStyle(
-                          color: context.forest.accentText, fontSize: 10),
+                          color: context.forest.accentText, fontSize: 11),
                     ),
                     Text(
                       message.expenseTitle,
@@ -527,7 +527,7 @@ class _PollBlock extends StatelessWidget {
           ),
         Text(
           context.l10n.translate('chan_poll_votes', args: {'count': total}),
-          style: TextStyle(color: context.forest.text54, fontSize: 11),
+          style: TextStyle(color: context.forest.text54, fontSize: 12),
         ),
       ],
     );
@@ -686,7 +686,7 @@ class _LocationCard extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.black26,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -719,7 +719,7 @@ class _LocationCard extends StatelessWidget {
                   l10n.translate('chan_location_open_maps'),
                   style: TextStyle(
                       color: context.forest.accentText,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500),
                 ),
               ],

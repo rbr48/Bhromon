@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -158,7 +159,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           return Center(child: Text(l10n.translate('notif_load_failed')));
         }
         if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const ListRowsSkeleton();
         }
         _latest = snap.data!;
         final items = _unreadOnly ? _latest.where(_isUnread).toList() : _latest;
@@ -210,7 +211,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             const SizedBox(height: 2),
             Text(
               _timeLabel(n.timestamp),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

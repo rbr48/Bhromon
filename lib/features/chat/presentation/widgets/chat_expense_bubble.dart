@@ -99,7 +99,7 @@ class ChatExpenseBubble extends StatelessWidget {
                   }),
             style: TextStyle(
               color: isPaidByMe ? context.chat.owedToYou : context.chat.youOwe,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -136,7 +136,7 @@ class ChatExpenseBubble extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     context.l10n.translate('chat_expense_settled'),
-                    style: TextStyle(color: accentOnBubble, fontSize: 10),
+                    style: TextStyle(color: accentOnBubble, fontSize: 11),
                   ),
                 ],
               ),
@@ -149,7 +149,7 @@ class ChatExpenseBubble extends StatelessWidget {
               children: [
                 Text(
                   timeStr,
-                  style: TextStyle(color: context.chat.text54, fontSize: 9.5),
+                  style: TextStyle(color: context.chat.text54, fontSize: 11),
                 ),
                 if (isPaidByMe && deliveryIcon != null) ...[
                   const SizedBox(width: 4),

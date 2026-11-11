@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
@@ -16,6 +17,7 @@ import '../widgets/study/study_finding_checks_sheet.dart';
 import '../widgets/study/study_finding_composer.dart';
 
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// The shared findings of one subject: a result a member reached, and how it was checked.
 /// Members post findings where the module lets them, and confirm or challenge the findings of
@@ -237,7 +239,7 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
       logWarning('A study finding check failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -265,7 +267,7 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
           'A study finding check could not be withdrawn', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -282,7 +284,7 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
       logWarning('A study finding change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -333,7 +335,7 @@ class _StudyFindingsScreenState extends State<StudyFindingsScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final shown = sortStudyFindings(visibleStudyFindings(
               findings: snap.data!,

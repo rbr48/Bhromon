@@ -1,3 +1,4 @@
+import 'package:bhromon/core/widgets/skeleton.dart';
 import '../widgets/group_back_button.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,7 @@ import '../widgets/study/study_decline_dialog.dart';
 import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_vote_row.dart';
 import 'study_book_chapters_screen.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// A study or book club's shared book list. A member proposes a book, and an admin lists it
 /// or declines it. Anyone moves a listed book along its statuses. A book's creator or an
@@ -184,7 +186,7 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
       logWarning('A study book change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -225,7 +227,7 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
               );
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const ListRowsSkeleton();
             }
             final books = snap.data!;
             if (books.isEmpty) {

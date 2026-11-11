@@ -76,7 +76,7 @@ class InstafeedTideBanner extends StatelessWidget {
                   Text(
                     subtitle,
                     style:
-                        TextStyle(color: context.forest.text70, fontSize: 11),
+                        TextStyle(color: context.forest.text70, fontSize: 12),
                   ),
                 ],
               ),
@@ -137,7 +137,7 @@ class InstafeedSosBanner extends StatelessWidget {
                 ),
                 Text(
                   context.l10n.translate('ig_sos_help'),
-                  style: TextStyle(color: context.forest.text70, fontSize: 11),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12),
                 ),
               ],
             ),

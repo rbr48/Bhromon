@@ -181,7 +181,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: context.forest.inset26,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: context.forest.divider10),
             ),
             child: Row(
@@ -272,7 +272,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
                       color: context.forest.readable(const Color(0xFF52B788))),
                   label: Text(
                     action1Label,
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -293,7 +293,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
                       color: context.forest.readable(const Color(0xFF52B788))),
                   label: Text(
                     action2Label,
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -315,7 +315,7 @@ class _CommunityHomeCardState extends State<CommunityHomeCard> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),

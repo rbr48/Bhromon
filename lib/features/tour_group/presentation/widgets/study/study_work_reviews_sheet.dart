@@ -6,6 +6,7 @@ import '../../../../../core/utils/app_logger.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_problem_models.dart';
 import 'study_modal.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Opens the reviews of a working for an admin, who sees who reviewed and what they said, and may take any review back.
 Future<void> showStudyWorkReviewsSheet(
@@ -110,7 +111,7 @@ class _StudyWorkReviewsSheetState extends State<StudyWorkReviewsSheet> {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

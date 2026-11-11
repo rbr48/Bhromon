@@ -56,7 +56,7 @@ class StudyOfflineVaultCard extends StatelessWidget {
                             ? const Color(0xFF1E3A2B)
                             : const Color(0xFFE8F5E9))
                         : palette.divider10,
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isCached
                           ? palette.accentText.withValues(alpha: 0.5)
@@ -85,7 +85,7 @@ class StudyOfflineVaultCard extends StatelessWidget {
                               l10n.translate('study_offline_vault_title'),
                               style: TextStyle(
                                 color: palette.text,
-                                fontSize: 13.5,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                               maxLines: 1,
@@ -100,7 +100,7 @@ class StudyOfflineVaultCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color:
                                     palette.accentText.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color:
                                       palette.accentText.withValues(alpha: 0.4),
@@ -123,7 +123,7 @@ class StudyOfflineVaultCard extends StatelessWidget {
                                     l10n.translate('study_offline_saved_badge'),
                                     style: TextStyle(
                                       color: palette.accentText,
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -145,7 +145,7 @@ class StudyOfflineVaultCard extends StatelessWidget {
                                 .translate('study_offline_vault_uncached_desc'),
                         style: TextStyle(
                           color: palette.text70,
-                          fontSize: 11.5,
+                          fontSize: 12,
                           height: 1.35,
                         ),
                       ),

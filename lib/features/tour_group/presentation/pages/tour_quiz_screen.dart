@@ -351,7 +351,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                   _formatCategoryLabel(q.category),
                   style: TextStyle(
                     color: context.forest.readable(Colors.tealAccent),
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -373,7 +373,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                         : (q.difficulty == 'hard'
                             ? Colors.orangeAccent
                             : context.forest.text70),
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -425,7 +425,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: context.forest.surfaceFor(const Color(0xFF183038)),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border:
                     Border.all(color: Colors.tealAccent.withValues(alpha: 0.3)),
               ),
@@ -467,7 +467,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               onPressed: _nextQuestion,
@@ -505,13 +505,13 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => _onOptionSelected(index),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: border, width: 1.5),
           ),
           child: Row(
@@ -627,7 +627,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               onPressed: _restartQuiz,

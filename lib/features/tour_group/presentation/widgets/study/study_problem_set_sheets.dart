@@ -9,6 +9,7 @@ import '../../../../../core/utils/app_logger.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/study_problem_models.dart';
 import '../../../domain/services/study_problem_rules.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// What an admin entered for a problem set: its name, and the day it is due, or none.
 class StudyProblemSetDraft {
@@ -326,7 +327,7 @@ class _StudyProblemSetsManagerState extends State<_StudyProblemSetsManager> {
       logWarning('A study problem set change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

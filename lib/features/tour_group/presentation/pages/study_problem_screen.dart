@@ -17,6 +17,7 @@ import '../widgets/study/study_work_reviews_sheet.dart';
 import '../widgets/study/study_problem_set_sheets.dart';
 
 import '../widgets/study/study_rich_text.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// One problem: its statement, its reference solution once it has opened, the member's own working,
 /// and the working of the other members. A member sees and reviews the others' working only after
@@ -173,7 +174,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('A study working change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -244,7 +245,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('A study work review failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -284,7 +285,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
           'A study work review could not be withdrawn', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -313,7 +314,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
           'Saving the study reference solution failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -333,7 +334,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
           'Removing the study reference solution failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -355,7 +356,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('A study problem change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -517,7 +518,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('Reporting a study problem failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -539,7 +540,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('Reporting a study working failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -587,7 +588,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('A study working change failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }
@@ -606,7 +607,7 @@ class _StudyProblemScreenState extends State<StudyProblemScreen> {
       logWarning('Removing a study problem failed', error, stackTrace);
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.translate('study_failed')),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ));
     }
   }

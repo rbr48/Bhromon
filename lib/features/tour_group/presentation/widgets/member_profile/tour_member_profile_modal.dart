@@ -853,7 +853,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                       _note ?? l10n.translate('prof_note_add'),
                       style: TextStyle(
                         color: context.forest.accentText,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -956,7 +956,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               maxLines: 1,
               style: TextStyle(
                 color: context.forest.text54,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1010,7 +1010,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                 roleText,
                 style: TextStyle(
                   color: context.forest.accentText,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1079,7 +1079,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             text,
             style: TextStyle(
               color: context.forest.readable(color),
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1245,7 +1245,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                     color: isSelected
                         ? context.forest.readable(cat.color)
                         : context.forest.text60,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -1297,7 +1297,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: context.forest.card,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: a.color.withValues(alpha: 0.3)),
                 ),
                 child: Row(
@@ -1310,7 +1310,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                       a.title,
                       style: TextStyle(
                         color: context.forest.text,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1401,7 +1401,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                           color: _activeTab == t.id
                               ? context.forest.text
                               : context.forest.text54,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: _activeTab == t.id
                               ? FontWeight.bold
                               : FontWeight.normal,
@@ -1580,7 +1580,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                         '${post.likes.length}',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

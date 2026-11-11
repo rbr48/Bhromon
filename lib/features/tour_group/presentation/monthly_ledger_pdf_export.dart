@@ -11,6 +11,7 @@ import '../domain/models/expense_models.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/services/trip_ledger_engine.dart';
 import 'tour_pdf_download.dart';
+import 'package:bhromon/core/theme/colors.dart';
 
 /// Exports a circle's monthly financial statement and MFS audit log as a
 /// formatted Bangla PDF using [MonthlyLedgerPdfGenerator].
@@ -91,7 +92,7 @@ Future<void> exportMonthlyLedgerPdf(
       SnackBar(
         content: Text(l10n.translate('fund_export_pdf_error',
             args: {'error': err.toString()})),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.amber,
       ),
     );
   }

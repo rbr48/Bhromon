@@ -366,7 +366,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                         'sans-serif'
                       ],
                       color: context.forest.text,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -402,7 +402,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                         'sans-serif'
                       ],
                       color: context.forest.text,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -438,7 +438,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                         'sans-serif'
                       ],
                       color: context.forest.text,
-                      fontSize: 14.5,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -498,13 +498,13 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
       fontFamily: 'NotoSansBengali',
       fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
       fontWeight: FontWeight.bold,
-      fontSize: 14.0,
+      fontSize: 14,
       height: 1.35,
     );
     final cellStyle = widget.baseStyle.copyWith(
       fontFamily: 'NotoSansBengali',
       fontFamilyFallback: const ['HindSiliguri', 'Roboto', 'sans-serif'],
-      fontSize: 13.5,
+      fontSize: 14,
       height: 1.35,
     );
 
@@ -583,7 +583,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.white24, width: 0.8),
                         boxShadow: const [
                           BoxShadow(
@@ -738,7 +738,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                                 'Roboto',
                                 'sans-serif'
                               ],
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: AppColors.mintGreen,
                             ),
@@ -775,7 +775,7 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                                 'Roboto',
                                 'sans-serif'
                               ],
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: AppColors.mintGreen,
                             ),

@@ -518,7 +518,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
               ),
               Text(
                 '${widget.region.division} · ~${widget.region.estimatedMb} MB · ${isBn ? "অফলাইন ম্যাপ" : "Offline Map"}',
-                style: TextStyle(fontSize: 11, color: context.forest.text54),
+                style: TextStyle(fontSize: 12, color: context.forest.text54),
               ),
             ],
           ),
@@ -588,7 +588,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                       isBn ? 'অফলাইন প্যাক সক্রিয়' : 'Offline Pack Active',
                       style: TextStyle(
                         color: context.forest.text,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -648,7 +648,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                                 isBn
                                     ? 'আগ্রহের স্থান (${widget.region.waypoints.length})'
                                     : 'Waypoints (${widget.region.waypoints.length})',
-                                style: const TextStyle(fontSize: 11),
+                                style: const TextStyle(fontSize: 12),
                               ),
                               selected: !_showCheckpointsList,
                               onSelected: (val) {
@@ -663,7 +663,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                                 isBn
                                     ? 'চেকপয়েন্ট (${widget.checkpoints.length})'
                                     : 'Checkpoints (${widget.checkpoints.length})',
-                                style: const TextStyle(fontSize: 11),
+                                style: const TextStyle(fontSize: 12),
                               ),
                               selected: _showCheckpointsList,
                               onSelected: (val) {
@@ -947,7 +947,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                       wp.categoryName(isBn),
                       style: const TextStyle(
                         color: AppColors.mintGreen,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -970,13 +970,13 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: context.forest.text24.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${wp.lat.toStringAsFixed(4)}° N, ${wp.lng.toStringAsFixed(4)}° E',
                   style: TextStyle(
                     color: context.forest.text70,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -1065,7 +1065,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                         color: isVisited
                             ? AppColors.mintGreen
                             : const Color(0xFFFFB703),
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1105,13 +1105,13 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: context.forest.text24.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '${cp.lat!.toStringAsFixed(4)}° N, ${cp.lng!.toStringAsFixed(4)}° E',
                     style: TextStyle(
                       color: context.forest.text70,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontFamily: 'monospace',
                     ),
                   ),
@@ -1205,7 +1205,7 @@ class _OfflineWaypointPainter extends CustomPainter {
         text: text,
         style: TextStyle(
           color: palette.text54,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
       );
