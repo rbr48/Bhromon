@@ -8,13 +8,12 @@ import 'member_avatar.dart';
 
 /// Opens the members sheet: every active member, owners and admins first. Admins see
 /// each member's email and can open that member's manage sheet; other members see
-/// roles only (decision D-4). [onAddMember] is shown to admins only.
+/// roles only (decision D-4). Nobody adds a member from here: people join with the invite code.
 Future<void> showMembersSheet(
   BuildContext context, {
   required Stream<List<TourMember>> members,
   required bool viewerIsAdmin,
   required void Function(TourMember member) onMemberTap,
-  VoidCallback? onAddMember,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -109,22 +108,6 @@ Future<void> showMembersSheet(
                               },
                             ),
                 ),
-                if (viewerIsAdmin && onAddMember != null)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.mintGreen,
-                          foregroundColor: AppColors.darkGreen,
-                        ),
-                        onPressed: onAddMember,
-                        icon: const Icon(Icons.person_add_alt_1_rounded),
-                        label: Text(l10n.translate('hub_add_member_title')),
-                      ),
-                    ),
-                  ),
               ],
             );
           },

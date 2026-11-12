@@ -145,6 +145,12 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(setDoc(doc(db('outsider'), 'memberships', `${TOUR}__${people.member.email}`), membershipFor(people.outsider.email)));
     });
 
+    test('an owner or admin cannot add someone else by email, so nobody joins without joining themselves', async () => {
+      const row = { tourId: TOUR, email: people.outsider.email, role: 'member', status: 'active', displayName: 'Eve' };
+      await assertFails(setDoc(doc(db('owner'), 'memberships', `${TOUR}__${people.outsider.email}`), row));
+      await assertFails(setDoc(doc(db('admin'), 'memberships', `${TOUR}__${people.outsider.email}`), row));
+    });
+
     test('outsider cannot read the roster; members can', async () => {
       const rosterQuery = query(collection(db('outsider'), 'memberships'), where('tourId', '==', TOUR));
       await assertFails(getDocs(rosterQuery));

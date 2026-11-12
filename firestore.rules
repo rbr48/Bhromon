@@ -3261,8 +3261,9 @@ service cloud.firestore {
                     (resource == null || resource.data.uid == request.auth.uid || resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
       allow list: if isAuth() &&
                      (resource.data.uid == request.auth.uid || resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
-      // Owners are created with the tour; members join with a valid invite code,
-      // or are added directly by an owner or admin.
+      // Owners are created with the tour. A member joins only by themselves, with a valid invite
+      // code. Nobody writes a row for someone else, owner and admins included, so nobody is added
+      // to a group without joining it.
       allow create: if isAuth() &&
                        membershipId == request.resource.data.tourId + '__' + request.resource.data.email &&
                        request.resource.data.status == 'active' &&
@@ -3273,10 +3274,7 @@ service cloud.firestore {
                          (request.resource.data.email == tourUserEmail() &&
                           request.resource.data.role == 'member' &&
                           get(/databases/$(database)/documents/tours/$(request.resource.data.tourId)).data.inviteCode == request.resource.data.joinCode &&
-                          !isBanned(request.resource.data.tourId)) ||
-                         ((isOwnerOfTour(request.resource.data.tourId) || isTourAdmin(request.resource.data.tourId)) &&
-                          request.resource.data.role == 'member' &&
-                          !isTargetBanned(request.resource.data.tourId, request.resource.data.email))
+                          !isBanned(request.resource.data.tourId))
                        );
       allow update: if isAuth() &&
                        request.resource.data.tourId == resource.data.tourId &&

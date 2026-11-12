@@ -494,152 +494,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  Future<void> _showAddMemberDialog(BuildContext context, String tourId) async {
-    final emailCtrl = TextEditingController();
-    final nameCtrl = TextEditingController();
-    var isAdding = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: context.forest.dialog,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.person_add_alt_1_rounded,
-                  color: context.forest.accentText, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.translate('hub_add_member_title'),
-                style: TextStyle(color: context.forest.text, fontSize: 18),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.translate('hub_add_member_help'),
-                  style: TextStyle(
-                      color: context.forest.text70, fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(color: context.forest.text),
-                  decoration: InputDecoration(
-                    labelText: context.l10n.translate('hub_member_email_label'),
-                    hintText: 'example@gmail.com',
-                    labelStyle: TextStyle(color: context.forest.text70),
-                    hintStyle: TextStyle(color: context.forest.text38),
-                    prefixIcon: Icon(Icons.email_outlined,
-                        color: context.forest.accentText),
-                    filled: true,
-                    fillColor: context.forest.inset26,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.forest.text24),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.mintGreen),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  style: TextStyle(color: context.forest.text),
-                  decoration: InputDecoration(
-                    labelText: context.l10n.translate('hub_member_name_label'),
-                    labelStyle: TextStyle(color: context.forest.text70),
-                    prefixIcon: Icon(Icons.badge_outlined,
-                        color: context.forest.text60),
-                    filled: true,
-                    fillColor: context.forest.inset26,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.forest.text24),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.mintGreen),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isAdding ? null : () => Navigator.pop(ctx),
-              child: Text(context.l10n.translate('tour_cancel'),
-                  style: TextStyle(color: context.forest.text70)),
-            ),
-            FilledButton(
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
-              onPressed: isAdding
-                  ? null
-                  : () async {
-                      final email = emailCtrl.text.trim().toLowerCase();
-                      final l10n = context.l10n;
-                      if (email.isEmpty || !email.contains('@')) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(context.l10n
-                                  .translate('hub_enter_valid_email'))),
-                        );
-                        return;
-                      }
-                      setDialogState(() => isAdding = true);
-                      try {
-                        await _repository.addMemberByEmail(
-                          tourId: tourId,
-                          email: email,
-                          displayName: nameCtrl.text.trim().isNotEmpty
-                              ? nameCtrl.text.trim()
-                              : null,
-                        );
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _snack(l10n.translate('hub_member_added',
-                            args: {'email': email}));
-                      } catch (e) {
-                        setDialogState(() => isAdding = false);
-                        _snack(
-                            l10n.translate('hub_member_add_failed',
-                                args: {'error': e}),
-                            error: true);
-                      }
-                    },
-              child: isAdding
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.darkGreen),
-                      ),
-                    )
-                  : Text(
-                      context.l10n.translate('hub_add'),
-                      style: const TextStyle(
-                          color: AppColors.darkGreen,
-                          fontWeight: FontWeight.bold),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _reportFailure(Object e) {
     _snack(
         e is FormatException || e is TourAccessException
@@ -757,8 +611,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'photo':
         await showGroupPhotoSheet(context,
             group: group, repository: _repository);
-      case 'add_member':
-        _showAddMemberDialog(context, group.id);
       case 'edit_name':
         final role = await _repository.myRole(group.id);
         if (role == null || !role.isAdminOrOwner) {
@@ -988,11 +840,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         : 'hub_moments_turn_on')),
               ),
             if (group.ownerEmail == _repository.currentEmail) ...[
-              PopupMenuItem(
-                value: 'add_member',
-                child: _menuRow(context, Icons.person_add_alt_1_rounded,
-                    context.l10n.translate('hub_add_member_by_email')),
-              ),
               PopupMenuItem(
                 value: 'code',
                 child: _menuRow(context, Icons.key_rounded,
@@ -1484,8 +1331,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         viewerIsOwner: isOwner,
         viewerIsAdmin: isAdmin,
       ),
-      onAddMember:
-          isAdmin ? () => _showAddMemberDialog(context, group.id) : null,
     ));
   }
 
@@ -2959,7 +2804,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       stream: _membersOf(tourId),
       builder: (context, snapshot) {
         final members = snapshot.data ?? [];
-        final canAddMember = _viewerIsAdmin(members);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2975,25 +2819,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     fontSize: 16,
                   ),
                 ),
-                if (canAddMember)
-                  TextButton.icon(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    icon: Icon(Icons.person_add_alt_1_rounded,
-                        size: 16, color: context.forest.accentText),
-                    label: Text(
-                      context.l10n.translate('hub_add_member_title'),
-                      style: TextStyle(
-                        color: context.forest.accentText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: () => _showAddMemberDialog(context, tourId),
-                  ),
               ],
             ),
             const SizedBox(height: 12),
