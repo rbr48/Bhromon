@@ -64,3 +64,38 @@ PastedRoute? pastedRouteOf(SharedFile file) {
     null => null,
   };
 }
+
+/// The files of a paste that the app can send, and how many it had to leave out.
+class PastedPlan {
+  const PastedPlan({required this.sendable, required this.refused});
+
+  /// The files the app can send, each named with an extension its type takes.
+  final List<SharedFile> sendable;
+
+  /// How many files were left out: a type the app does not take, a file too large, an empty
+  /// file, or one that could not be copied.
+  final int refused;
+}
+
+/// Names and checks the files of a paste. A file the app cannot send is counted in
+/// [PastedPlan.refused], and the others still go.
+PastedPlan pastedFilesPlan(List<SharedFile> pasted) {
+  final named = [for (final file in pasted) withPastedName(file)];
+  final sendable = [
+    for (final file in named)
+      if (sharedFileIssue(file) == null) file,
+  ];
+  return PastedPlan(
+    sendable: sendable,
+    refused: named.length - sendable.length,
+  );
+}
+
+/// A file size as a review shows it: bytes, kilobytes or megabytes. Empty when the size is not
+/// known.
+String pastedFileSizeLabel(int bytes) {
+  if (bytes < 0) return '';
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}

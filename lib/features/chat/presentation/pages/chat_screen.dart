@@ -61,8 +61,9 @@ import '../../domain/call_log_entry.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/media_upload_service.dart';
-import '../../data/clipboard_files.dart';
 import '../../data/web_paste_listener.dart';
+import '../widgets/composer_paste.dart';
+import 'pasted_files_review_screen.dart';
 import '../../domain/pasted_files.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -284,6 +285,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   StreamSubscription<DocumentSnapshot>? _chatDocSub;
   bool _sharedFilesSent = false;
   void Function()? _stopWebPasteListener;
+  late final ComposerPaste _composerPaste = ComposerPaste(
+    onFiles: (files) => unawaited(_sendPastedFiles(files)),
+    onFailed: _showReadFailed,
+  );
 
   @override
   void initState() {
@@ -2345,55 +2350,66 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   /// Files pasted into the chat box, or inserted from the keyboard. Images and videos open the
-  /// caption screen, as a picked image does. Documents and voice notes are sent as the attach
-  /// sheet sends them. A file the chat cannot send is left out, and the rest are sent.
+  /// caption screen, as a picked image does. Documents are shown for review first, as a messaging
+  /// app shows a document before it is sent, and then sent as the attach sheet sends them. A file
+  /// the chat cannot send is left out, and the rest go on. The pasted object URLs are released at
+  /// the end, whether the files were sent or set aside.
   Future<void> _sendPastedFiles(List<SharedFile> pasted) async {
-    if (!mounted || pasted.isEmpty || _refusedInEncryptedChat()) return;
-    final authState = context.read<AuthCubit>().state;
-    if (authState is! Authenticated) return;
-    final uid = authState.profile.uid;
-    final name = authState.profile.displayName;
+    try {
+      if (!mounted || pasted.isEmpty || _refusedInEncryptedChat()) return;
+      final authState = context.read<AuthCubit>().state;
+      if (authState is! Authenticated) return;
+      final uid = authState.profile.uid;
+      final name = authState.profile.displayName;
 
-    final files = [for (final file in pasted) withPastedName(file)];
-    final sendable = [
-      for (final file in files)
-        if (sharedFileIssue(file) == null) file,
-    ];
-    final refused = files.length - sendable.length;
-    if (refused > 0) {
-      final l10n = context.l10n;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.translate(
-            'share_skipped_heading',
-            args: {'count': l10n.number(refused)},
-          )),
+      final plan = pastedFilesPlan(pasted);
+      if (plan.refused > 0) {
+        final l10n = context.l10n;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.translate(
+              'share_skipped_heading',
+              args: {'count': l10n.number(plan.refused)},
+            )),
+          ),
+        );
+      }
+
+      final images = <XFile>[];
+      final videos = <XFile>[];
+      final documents = <SharedFile>[];
+      for (final file in plan.sendable) {
+        switch (pastedRouteOf(file)) {
+          case PastedRoute.image:
+            images.add(_xFileOf(file));
+          case PastedRoute.video:
+            videos.add(_xFileOf(file));
+          case PastedRoute.document || null:
+            documents.add(file);
+        }
+      }
+      if (images.isNotEmpty) {
+        await _runMediaCaptionFlow(images, false, uid, name);
+      }
+      if (videos.isNotEmpty) {
+        await _runMediaCaptionFlow(videos, true, uid, name);
+      }
+      if (documents.isEmpty || !mounted) return;
+      final review = await Navigator.of(context).push<PastedReview>(
+        MaterialPageRoute(
+          builder: (_) => PastedFilesReviewScreen(
+            files: documents,
+            allowCaption: false,
+          ),
         ),
       );
-    }
-
-    final images = <XFile>[];
-    final videos = <XFile>[];
-    final documents = <SharedFile>[];
-    for (final file in sendable) {
-      switch (pastedRouteOf(file)) {
-        case PastedRoute.image:
-          images.add(_xFileOf(file));
-        case PastedRoute.video:
-          videos.add(_xFileOf(file));
-        case PastedRoute.document || null:
-          documents.add(file);
+      if (review == null) return;
+      for (final document in review.files) {
+        if (!mounted) return;
+        await _sendDocumentMessage(await _platformFileOf(document), uid, name);
       }
-    }
-    if (images.isNotEmpty) {
-      await _runMediaCaptionFlow(images, false, uid, name);
-    }
-    if (videos.isNotEmpty) {
-      await _runMediaCaptionFlow(videos, true, uid, name);
-    }
-    for (final document in documents) {
-      if (!mounted) return;
-      await _sendDocumentMessage(await _platformFileOf(document), uid, name);
+    } finally {
+      releasePastedFiles(pasted);
     }
   }
 
@@ -2420,68 +2436,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return PlatformFile(name: file.name, size: bytes.length, bytes: bytes);
   }
 
-  /// Content the keyboard inserted, such as a sticker, a GIF or an image. It is copied into the
-  /// cache and then sent like a pasted file.
-  void _onKeyboardContentInserted(KeyboardInsertedContent content) {
-    unawaited(_receiveKeyboardContent(content));
-  }
-
-  Future<void> _receiveKeyboardContent(KeyboardInsertedContent content) async {
-    final file = await ClipboardFiles.copyContentUri(content.uri);
+  /// Tells the user that keyboard content could not be copied into the app.
+  void _showReadFailed() {
     if (!mounted) return;
-    if (file == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.translate('chat_file_read_failed')),
-          backgroundColor: AppColors.amber,
-        ),
-      );
-      return;
-    }
-    await _sendPastedFiles([file]);
-  }
-
-  /// The text field's menu. Its Paste also takes files from the clipboard, so a copied image or
-  /// file is attached in the chat box where text would have been pasted.
-  Widget _buildComposerContextMenu(
-    BuildContext context,
-    EditableTextState editableTextState,
-  ) {
-    final items = <ContextMenuButtonItem>[];
-    var hasPaste = false;
-    for (final item in editableTextState.contextMenuButtonItems) {
-      if (item.kind == ContextMenuButtonKind.paste) {
-        hasPaste = true;
-        items.add(_pasteButton(editableTextState));
-      } else {
-        items.add(item);
-      }
-    }
-    // The standard Paste is hidden when the clipboard holds no text, so an image or file
-    // copied from another app would have no Paste at all.
-    if (!hasPaste) items.add(_pasteButton(editableTextState));
-    return AdaptiveTextSelectionToolbar.buttonItems(
-      anchors: editableTextState.contextMenuAnchors,
-      buttonItems: items,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.translate('chat_file_read_failed')),
+        backgroundColor: AppColors.amber,
+      ),
     );
-  }
-
-  ContextMenuButtonItem _pasteButton(EditableTextState editableTextState) {
-    return ContextMenuButtonItem(
-      kind: ContextMenuButtonKind.paste,
-      onPressed: () => unawaited(_pasteIntoComposer(editableTextState)),
-    );
-  }
-
-  /// Attaches the files on the clipboard when there are any, and pastes the text otherwise.
-  Future<void> _pasteIntoComposer(EditableTextState editableTextState) async {
-    editableTextState.hideToolbar();
-    final files = await ClipboardFiles.readClipboard();
-    if (files.isNotEmpty) {
-      await _sendPastedFiles(files);
-      return;
-    }
-    await editableTextState.pasteText(SelectionChangedCause.toolbar);
   }
 
   void _openAttachmentSheet(String currentUid, String currentName) {
@@ -5358,12 +5321,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                             minLines: 1,
                                                             maxLines: 6,
                                                             contentInsertionConfiguration:
-                                                                ContentInsertionConfiguration(
-                                                              onContentInserted:
-                                                                  _onKeyboardContentInserted,
-                                                            ),
+                                                                _composerPaste
+                                                                    .insertion,
                                                             contextMenuBuilder:
-                                                                _buildComposerContextMenu,
+                                                                _composerPaste
+                                                                    .contextMenu,
                                                             keyboardType:
                                                                 TextInputType
                                                                     .multiline,
@@ -5439,57 +5401,29 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                                     'format_toolbar_toggle'),
                                                             padding:
                                                                 EdgeInsets.zero,
-                                                            icon: Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          4,
-                                                                      vertical:
-                                                                          2),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                border:
-                                                                    Border.all(
-                                                                  color: _showFormatting
-                                                                      ? AppColors
-                                                                          .mintGreen
-                                                                      : context
-                                                                          .chat
-                                                                          .grey,
-                                                                  width: 1.5,
-                                                                ),
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            4),
+                                                            icon: Text(
+                                                              'Aa',
+                                                              style: TextStyle(
                                                                 color: _showFormatting
                                                                     ? AppColors
                                                                         .mintGreen
-                                                                        .withValues(
-                                                                            alpha:
-                                                                                0.15)
-                                                                    : Colors
-                                                                        .transparent,
-                                                              ),
-                                                              child: Text(
-                                                                'Aa',
-                                                                style:
-                                                                    TextStyle(
-                                                                  color: _showFormatting
-                                                                      ? AppColors
-                                                                          .mintGreen
-                                                                      : context
-                                                                          .chat
-                                                                          .grey,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  fontSize:
-                                                                      12.0,
-                                                                  letterSpacing:
-                                                                      -0.5,
-                                                                ),
+                                                                    : context
+                                                                        .chat
+                                                                        .grey,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 14,
+                                                                letterSpacing:
+                                                                    -0.5,
+                                                                decoration: _showFormatting
+                                                                    ? TextDecoration
+                                                                        .underline
+                                                                    : TextDecoration
+                                                                        .none,
+                                                                decorationColor:
+                                                                    AppColors
+                                                                        .mintGreen,
                                                               ),
                                                             ),
                                                             onPressed: () =>
