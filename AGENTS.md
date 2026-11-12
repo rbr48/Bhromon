@@ -467,6 +467,16 @@ static session while the user visits other screens, and asks before discarding a
   - Antigravity and Claude must conduct mutual peer review on every PR before squash-merging to `main`.
   - Never push directly to `main` on GitHub. Always use feature branches and open PRs (`gh pr create --base main`).
 
+### U. Launch and frame-rate invariants
+- The first frame does not wait for the network. `MediaAccess.startUp()` reads the saved media key before `runApp` (secure storage only), and `MediaAccess.refreshInBackground()` asks the server after the first frame. Do not add a network call before `runApp`.
+- A message's markdown is parsed once per text. A widget that draws a message calls `chatBlocksOf(text)` (`chat_markdown.dart`, `ChatBlockCache`), not `parseChatBlocks`. The cache is bounded by entries and characters, and the blocks it returns are unmodifiable.
+- The one-to-one chat does not rebuild its screen on each keystroke: `_onTextChanged` in `chat_screen.dart` has no `setState`, and the send or mic button listens to the controller. The chat screen's build reads only `MediaQuery.paddingOf`, so a keyboard animation does not rebuild the messages.
+- The channel screen rebuilds on typing only when the mention suggestions change (`_onDraftChanged` in `group_channels_screen.dart`).
+- Pinned messages and voice seats are shared streams per channel (`SharedStreamRegistry`), made once and cleared in `dispose`. They are never opened while a widget builds.
+- Thumbnails decode at the size they are shown: channel attachment tiles, the channel photo strip and reply previews pass `cacheWidth` or `memCacheWidth` from `context.decodeWidth(...)`, so a full-size photo is not decoded for a 40 to 220 px tile.
+- Not yet measured on a device. Check cold start and scrolling in a long group channel on a mid-range Android phone before calling this round smooth.
+- Tests: `test/features/tour_group/chat_block_cache_test.dart`, `chat_markdown_test.dart`, `channel_widgets_test.dart`, `stream_build_guard_test.dart`, and the chat tests in `test/features/chat/`.
+
 ## 5. Testing & Quality Verification Checklist
 Before shipping or pushing changes:
 1. `dart format .` -> Code must be formatted (enforced by `dart format --output=none --set-exit-if-changed .` in GitHub CI).

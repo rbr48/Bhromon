@@ -14,6 +14,7 @@ import '../../../chat/presentation/widgets/chat_document_bubble.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
+import 'package:bhromon/core/utils/image_sizing.dart';
 
 /// The own bubble in light theme: the same pale green as the 1:1 chat's own bubbles.
 const Color kOwnBubbleLight = Color(0xFFD9FDD3);
@@ -374,6 +375,8 @@ class _AttachmentGrid extends StatelessWidget {
     return Image.network(
       signedMediaUrl(attachment.url),
       fit: BoxFit.cover,
+      // A tile is a thumbnail: decode it at its size, not at the photo's full size.
+      cacheWidth: context.decodeWidth(attachments.length == 1 ? 220 : 108),
       errorBuilder: (_, __, ___) => const ColoredBox(
         color: Colors.black38,
         child: Center(

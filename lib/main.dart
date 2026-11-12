@@ -360,8 +360,10 @@ void main() {
       }
     }
 
+    // Reads the saved media key only. The server is asked after the first frame.
     await MediaAccess.instance.startUp();
     runApp(const MyApp());
+    unawaited(MediaAccess.instance.refreshInBackground());
     if (kLiveJourney && !kIsWeb) unawaited(startLiveJourney());
 
     // Background job registration and call listener isn't needed to draw the first frame.

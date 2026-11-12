@@ -62,12 +62,17 @@ class MediaAccess {
     _signedMemo.clear();
   }
 
-  /// Loads the saved key, and when someone is signed in, refreshes it. The refresh waits at
-  /// most a few seconds, so the first screens can already show private media.
-  Future<void> startUp() async {
-    await restore().timeout(const Duration(seconds: 3), onTimeout: () {});
+  /// Reads the key saved on this device, before the first frame, so private media can be
+  /// signed from the first screen. The server is not asked here: [refreshInBackground] does
+  /// that once the app is on screen, so a slow network never holds up the first frame.
+  Future<void> startUp() =>
+      restore().timeout(const Duration(seconds: 3), onTimeout: () {});
+
+  /// Asks the server for the signed-in person's key, when someone is signed in. Called after
+  /// the first frame. [refresh] keeps the saved key when the server cannot be reached.
+  Future<void> refreshInBackground() async {
     if (_currentUser() == null) return;
-    await refresh().timeout(const Duration(seconds: 4), onTimeout: () {});
+    await refresh();
   }
 
   /// Loads the key saved on this device. Nothing is sent over the network.

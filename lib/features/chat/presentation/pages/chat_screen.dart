@@ -518,8 +518,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
     if (currentUid.isEmpty) return;
 
-    // Trigger UI updates for mic/send icon transition
-    setState(() {});
+    // No setState here. The send and mic button listens to the text itself, so a
+    // keystroke rebuilds that button and not the whole screen with its messages.
 
     if (_messageController.text.isNotEmpty) {
       if (!_isTyping) {
@@ -5164,9 +5164,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                       16,
                                       16,
                                       16 +
-                                          MediaQuery.of(context)
-                                              .padding
-                                              .bottom),
+                                          MediaQuery.paddingOf(context).bottom),
                                   color:
                                       Colors.redAccent.withValues(alpha: 0.08),
                                   child: Center(
@@ -5188,8 +5186,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                           6,
                                           8,
                                           8 +
-                                              MediaQuery.of(context)
-                                                  .padding
+                                              MediaQuery.paddingOf(context)
                                                   .bottom),
                                       child: VoiceMessageRecorder(
                                         onVoiceSent: (path, dur) {
@@ -5280,8 +5277,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                               6,
                                               8,
                                               8 +
-                                                  MediaQuery.of(context)
-                                                      .padding
+                                                  MediaQuery.paddingOf(context)
                                                       .bottom),
                                           color: Colors
                                               .transparent, // Floating look

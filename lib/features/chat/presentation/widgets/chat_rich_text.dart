@@ -406,7 +406,8 @@ class _ChatRichTextState extends State<ChatRichText> {
         ? defaultStyle.merge(widget.baseStyle)
         : defaultStyle;
 
-    final blocks = parseChatBlocks(widget.text);
+    // Parsed once per text: a bubble rebuilds far more often than its text changes.
+    final blocks = chatBlocksOf(widget.text);
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,

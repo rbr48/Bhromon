@@ -23,6 +23,7 @@ import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../../core/utils/shared_stream_registry.dart';
 import '../../../../core/widgets/swipe_pager.dart';
 import '../../data/channel_read_store.dart';
 import '../../data/channel_message_cache.dart';
@@ -52,6 +53,7 @@ import '../widgets/channel_message_bubble.dart';
 import '../widgets/cached_channel_messages.dart';
 import '../widgets/channel_message_listener.dart';
 import '../widgets/channel_sheets.dart';
+import 'package:bhromon/core/utils/image_sizing.dart';
 
 enum _ChannelMenu {
   newChannel,
@@ -131,6 +133,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   final Map<String, Stream<List<ChannelMessage>>> _latestStreams = {};
   final Map<String, Stream<List<ChannelMessage>>> _mentionStreams = {};
   final Map<String, Stream<List<TypingMember>>> _typingStreams = {};
+  // The pins and the voice seats of a channel are shown in more than one place. Each is
+  // one listener per channel, shared, and the latest value reaches a new listener at
+  // once. A stream made while building would open a new listener on every rebuild.
+  final SharedStreamRegistry<String, List<ChannelMessage>> _pinnedStreams =
+      SharedStreamRegistry<String, List<ChannelMessage>>();
+  final SharedStreamRegistry<String, List<VoiceParticipant>> _seatStreams =
+      SharedStreamRegistry<String, List<VoiceParticipant>>();
   final Map<String, TextEditingController> _drafts = {};
   final ChatDraftStore _draftStore = ChatDraftStore();
   final FocusNode _focus = FocusNode();
@@ -261,6 +270,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     for (final c in _drafts.values) {
       c.dispose();
     }
+    unawaited(_pinnedStreams.clear());
+    unawaited(_seatStreams.clear());
     super.dispose();
   }
 
@@ -404,6 +415,12 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   Stream<List<TypingMember>> _typingOf(String id) => _typingStreams.putIfAbsent(
       id, () => _repo.watchTyping(widget.tourId, id));
+
+  Stream<List<ChannelMessage>> _pinnedOf(String id) =>
+      _pinnedStreams.stream(id, () => _repo.watchPinned(widget.tourId, id));
+
+  Stream<List<VoiceParticipant>> _participantsOf(String id) => _seatStreams
+      .stream(id, () => _voiceService.watchParticipants(widget.tourId, id));
 
   TextEditingController _draftFor(String channelId) =>
       _drafts.putIfAbsent(channelId, () {
@@ -766,9 +783,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             muted: _muted.contains(c.id),
             adminOnly: c.adminOnly,
             isVoice: c.isVoice,
-            voiceParticipants: c.isVoice
-                ? _voiceService.watchParticipants(widget.tourId, c.id)
-                : null,
+            voiceParticipants: c.isVoice ? _participantsOf(c.id) : null,
             lastRead: _lastRead[c.id],
             myEmail: _me,
             latest: _latestOf(c.id),
@@ -1115,7 +1130,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         _voiceService.currentChannelId == channel.id;
 
     return StreamBuilder<List<VoiceParticipant>>(
-      stream: _voiceService.watchParticipants(widget.tourId, channel.id),
+      stream: _participantsOf(channel.id),
       builder: (context, snapshot) {
         final participants = snapshot.data ?? const <VoiceParticipant>[];
 
@@ -1525,8 +1540,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ),
               ),
               StreamBuilder<List<VoiceParticipant>>(
-                stream:
-                    _voiceService.watchParticipants(widget.tourId, activeId),
+                stream: _participantsOf(activeId),
                 builder: (context, snap) {
                   final participants = snap.data ?? const <VoiceParticipant>[];
                   if (participants.isEmpty) return const SizedBox.shrink();
@@ -1981,6 +1995,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                       height: 140,
                                       width: 140,
                                       fit: BoxFit.cover,
+                                      cacheWidth: context.decodeWidth(140),
                                       errorBuilder: (_, __, ___) => Container(
                                         height: 140,
                                         width: 140,
@@ -2074,7 +2089,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   Widget _buildPinnedHeaderBanner(TourChannel channel) {
     final l10n = context.l10n;
     return StreamBuilder<List<ChannelMessage>>(
-      stream: _repo.watchPinned(widget.tourId, channel.id),
+      stream: _pinnedOf(channel.id),
       builder: (context, pinSnap) {
         final pins = pinSnap.data ?? const <ChannelMessage>[];
         if (pins.isEmpty) return const SizedBox.shrink();
@@ -2177,7 +2192,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   Future<void> _showPins(TourChannel channel) {
     final l10n = context.l10n;
-    final stream = _repo.watchPinned(widget.tourId, channel.id);
+    final stream = _pinnedOf(channel.id);
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -2324,12 +2339,16 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         ? value.length
         : draft.selection.baseOffset;
     final query = activeMentionQuery(value, cursor);
-    _update(() {
-      _mentionQuery = query;
-      _mentionCursor = cursor;
-      _mentionLabels =
-          query == null ? const [] : mentionSuggestions(query, _members);
-    });
+    final labels =
+        query == null ? const <String>[] : mentionSuggestions(query, _members);
+    // The query and the cursor are read when a name is picked, not while building. Only
+    // the names offered are drawn, so only a change in them rebuilds the screen: most
+    // keystrokes change none, and the send button listens to the text itself.
+    _mentionQuery = query;
+    _mentionCursor = cursor;
+    if (!listEquals(labels, _mentionLabels)) {
+      _update(() => _mentionLabels = labels);
+    }
 
     if (value.trim().isEmpty) {
       _stopTyping();
