@@ -143,6 +143,73 @@ class ChatSvgWidget extends StatefulWidget {
 
   const ChatSvgWidget({super.key, required this.svg});
 
+  /// Sanitizes raw SVG XML to guarantee valid XML tag and attribute casing
+  /// (e.g. converting lowercased 'viewbox' to 'viewBox', 'lineargradient' to
+  /// 'linearGradient', etc.) which strict SVG XML parsers require to render properly.
+  static String sanitizeSvgXml(String raw) {
+    var s = raw.trim();
+    // Normalize viewBox attribute
+    s = s.replaceAll(RegExp(r'\bviewbox=', caseSensitive: false), 'viewBox=');
+    // Normalize gradient elements
+    s = s.replaceAll(
+      RegExp(r'<\s*lineargradient\b', caseSensitive: false),
+      '<linearGradient',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\/\s*lineargradient>', caseSensitive: false),
+      '</linearGradient>',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\s*radialgradient\b', caseSensitive: false),
+      '<radialGradient',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\/\s*radialgradient>', caseSensitive: false),
+      '</radialGradient>',
+    );
+    // Normalize clipPath elements
+    s = s.replaceAll(
+      RegExp(r'<\s*clippath\b', caseSensitive: false),
+      '<clipPath',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\/\s*clippath>', caseSensitive: false),
+      '</clipPath>',
+    );
+    // Normalize marker & pattern attributes
+    s = s.replaceAll(
+      RegExp(r'\bmarkerheight=', caseSensitive: false),
+      'markerHeight=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bmarkerwidth=', caseSensitive: false),
+      'markerWidth=',
+    );
+    s = s.replaceAll(RegExp(r'\brefx=', caseSensitive: false), 'refX=');
+    s = s.replaceAll(RegExp(r'\brefy=', caseSensitive: false), 'refY=');
+    s = s.replaceAll(
+      RegExp(r'\bgradientunits=', caseSensitive: false),
+      'gradientUnits=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bgradienttransform=', caseSensitive: false),
+      'gradientTransform=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bpatternunits=', caseSensitive: false),
+      'patternUnits=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bpatterncontentunits=', caseSensitive: false),
+      'patternContentUnits=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bpreserveaspectratio=', caseSensitive: false),
+      'preserveAspectRatio=',
+    );
+    return s;
+  }
+
   @override
   State<ChatSvgWidget> createState() => _ChatSvgWidgetState();
 }
@@ -150,10 +217,11 @@ class ChatSvgWidget extends StatefulWidget {
 class _ChatSvgWidgetState extends State<ChatSvgWidget> {
   bool _showCode = false;
 
-  /// The diagram itself, in the app's font. A diagram that cannot be drawn is shown as its code.
+  /// The diagram itself, in the app's font and sanitized. A diagram that cannot be drawn is shown as its code.
   Widget _picture() {
+    final sanitized = ChatSvgWidget.sanitizeSvgXml(widget.svg);
     return SvgPicture.string(
-      svgWithDiagramFont(widget.svg),
+      svgWithDiagramFont(sanitized),
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) => ChatCodeBlockWidget(
         code: widget.svg,
@@ -250,7 +318,8 @@ class _ChatSvgWidgetState extends State<ChatSvgWidget> {
   @override
   Widget build(BuildContext context) {
     final forest = context.forest;
-    final title = svgDiagramTitle(widget.svg) ?? 'Vector Graphic';
+    final sanitized = ChatSvgWidget.sanitizeSvgXml(widget.svg);
+    final title = svgDiagramTitle(sanitized) ?? 'Vector Graphic';
 
     if (_showCode) {
       return Column(
