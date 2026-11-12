@@ -22,6 +22,7 @@ import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/localization/locale_controller.dart';
+import '../../../notifications/presentation/widgets/notification_bell.dart';
 import '../widgets/bhromon_bottom_nav.dart';
 import '../widgets/groups/group_card.dart';
 import '../widgets/groups/members_sheet.dart';
@@ -1497,6 +1498,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ],
             ),
             actions: [
+              // The bell opens the notification list. It is hidden when no one is signed in.
+              const NotificationBell(),
               // Before the Play Store link on the web and before the language button on phones.
               IconButton(
                 tooltip: context.l10n.translate('hub_scan_qr'),

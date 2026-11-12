@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-/// One entry in a member's notification list, as the server writes it.
+/// One entry in a member's notification list, as the server or the app writes it.
 class AppNotification {
   final String id;
   final String title;
@@ -44,20 +44,40 @@ class AppNotification {
       timestamp: stamp is Timestamp
           ? stamp.toDate()
           : DateTime.fromMillisecondsSinceEpoch(0),
-      read: data['read'] == true,
+      read: readFlagMeansRead(data['read']),
     );
   }
 }
 
-/// Whether [n] needs the member's attention: it is not marked read, and it is
-/// newer than [seenAt], the last time the member opened the list.
+/// Whether a stored read flag says the entry has been read. Only an explicit `false` means
+/// unread. Entries written before the flag existed have none, and they read as read.
+bool readFlagMeansRead(Object? flag) => flag != false;
+
+/// Whether [n] needs the member's attention: it is not marked read, and it is newer than
+/// [seenAt], the last time the member opened the list. The bell counts these.
 bool notificationIsUnread(AppNotification n, DateTime seenAt) =>
     !n.read && n.timestamp.isAfter(seenAt);
+
+/// How many of [items] the bell counts as new, since the list was last opened.
+int unseenCount(Iterable<AppNotification> items, DateTime seenAt) =>
+    items.where((n) => notificationIsUnread(n, seenAt)).length;
+
+/// The ids of the entries that are still unread, in list order.
+List<String> unreadIds(Iterable<AppNotification> items) => [
+      for (final n in items)
+        if (!n.read) n.id
+    ];
+
+/// The ids of the entries that have been read, in list order.
+List<String> readIds(Iterable<AppNotification> items) => [
+      for (final n in items)
+        if (n.read) n.id
+    ];
 
 /// Reads and changes a member's notifications in `users/{uid}/notifications`.
 class NotificationCenterRepository {
   NotificationCenterRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _injected = firestore;
 
   /// The newest notifications the list shows. Older ones stay in Firestore.
   static const int pageSize = 100;
@@ -66,7 +86,9 @@ class NotificationCenterRepository {
   /// Firestore batches hold at most 500 writes.
   static const int _batchSize = 400;
 
-  final FirebaseFirestore _firestore;
+  /// Resolved on first use, so that building the repository never needs Firebase.
+  final FirebaseFirestore? _injected;
+  FirebaseFirestore get _firestore => _injected ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> _col(String uid) =>
       _firestore.collection('users').doc(uid).collection('notifications');
@@ -80,18 +102,17 @@ class NotificationCenterRepository {
         .map((s) => [for (final d in s.docs) AppNotification.fromDoc(d)]);
   }
 
-  /// When the member last opened the list on this device. The first time, the
-  /// existing history counts as seen, so only later notifications are unread.
-  Future<DateTime> seenAtOrSeed(String uid) async {
+  /// When the member last opened the list on this device. Before the first time, every
+  /// unread entry counts as new.
+  Future<DateTime> seenAt(String uid) async {
     final box = await _box();
     final raw = box.get('seen_at_$uid');
-    if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
-    final now = DateTime.now();
-    await box.put('seen_at_$uid', now.millisecondsSinceEpoch);
-    return now;
+    return raw is int
+        ? DateTime.fromMillisecondsSinceEpoch(raw)
+        : DateTime.fromMillisecondsSinceEpoch(0);
   }
 
-  /// Records that the list was opened now, so the badge clears.
+  /// Records that the list was opened now, so the bell's count clears.
   Future<void> markSeen(String uid) async {
     final box = await _box();
     await box.put('seen_at_$uid', DateTime.now().millisecondsSinceEpoch);
@@ -100,18 +121,21 @@ class NotificationCenterRepository {
   Future<void> markRead(String uid, String id) =>
       _col(uid).doc(id).update({'read': true});
 
-  /// Marks every listed notification read, and clears the badge.
+  Future<void> markUnread(String uid, String id) =>
+      _col(uid).doc(id).update({'read': false});
+
+  /// Marks every listed notification read, and clears the bell's count.
   Future<void> markAllRead(String uid, Iterable<AppNotification> items) async {
     await markSeen(uid);
-    final unread = [
-      for (final n in items)
-        if (!n.read) n.id
-    ];
-    await _batchWrite(
-        uid, unread, (batch, ref) => batch.update(ref, {'read': true}));
+    await _batchWrite(uid, unreadIds(items),
+        (batch, ref) => batch.update(ref, {'read': true}));
   }
 
-  Future<void> deleteAll(String uid, Iterable<String> ids) =>
+  /// Removes the read notifications from the list. The unread ones stay.
+  Future<void> clearRead(String uid, Iterable<AppNotification> items) =>
+      _batchWrite(uid, readIds(items), (batch, ref) => batch.delete(ref));
+
+  Future<void> deleteMany(String uid, Iterable<String> ids) =>
       _batchWrite(uid, ids, (batch, ref) => batch.delete(ref));
 
   Future<void> _batchWrite(

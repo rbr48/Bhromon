@@ -1049,6 +1049,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'body': body,
         'action': 'chat',
         'uid': currentUid,
+        'read': false,
         'itemId': widget.chatId,
         'chatId': widget.chatId,
         'timestamp': FieldValue.serverTimestamp(),
