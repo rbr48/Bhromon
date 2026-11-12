@@ -25,6 +25,73 @@ class ChatSvgWidget extends StatefulWidget {
 class _ChatSvgWidgetState extends State<ChatSvgWidget> {
   bool _showCode = false;
 
+  /// Sanitizes raw SVG XML to guarantee valid XML tag and attribute casing
+  /// (e.g. converting lowercased 'viewbox' to 'viewBox', 'lineargradient' to
+  /// 'linearGradient', etc.) which strict SVG XML parsers require to render properly.
+  static String sanitizeSvgXml(String raw) {
+    var s = raw.trim();
+    // Normalize viewBox attribute
+    s = s.replaceAll(RegExp(r'\bviewbox=', caseSensitive: false), 'viewBox=');
+    // Normalize gradient elements
+    s = s.replaceAll(
+      RegExp(r'<\s*lineargradient\b', caseSensitive: false),
+      '<linearGradient',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\/\s*lineargradient>', caseSensitive: false),
+      '</linearGradient>',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\s*radialgradient\b', caseSensitive: false),
+      '<radialGradient',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\/\s*radialgradient>', caseSensitive: false),
+      '</radialGradient>',
+    );
+    // Normalize clipPath elements
+    s = s.replaceAll(
+      RegExp(r'<\s*clippath\b', caseSensitive: false),
+      '<clipPath',
+    );
+    s = s.replaceAll(
+      RegExp(r'<\/\s*clippath>', caseSensitive: false),
+      '</clipPath>',
+    );
+    // Normalize marker & pattern attributes
+    s = s.replaceAll(
+      RegExp(r'\bmarkerheight=', caseSensitive: false),
+      'markerHeight=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bmarkerwidth=', caseSensitive: false),
+      'markerWidth=',
+    );
+    s = s.replaceAll(RegExp(r'\brefx=', caseSensitive: false), 'refX=');
+    s = s.replaceAll(RegExp(r'\brefy=', caseSensitive: false), 'refY=');
+    s = s.replaceAll(
+      RegExp(r'\bgradientunits=', caseSensitive: false),
+      'gradientUnits=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bgradienttransform=', caseSensitive: false),
+      'gradientTransform=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bpatternunits=', caseSensitive: false),
+      'patternUnits=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bpatterncontentunits=', caseSensitive: false),
+      'patternContentUnits=',
+    );
+    s = s.replaceAll(
+      RegExp(r'\bpreserveaspectratio=', caseSensitive: false),
+      'preserveAspectRatio=',
+    );
+    return s;
+  }
+
   String? _extractTitle(String svg) {
     final match =
         RegExp(r'<title>(.*?)</title>', caseSensitive: false).firstMatch(svg);
@@ -46,6 +113,7 @@ class _ChatSvgWidgetState extends State<ChatSvgWidget> {
   }
 
   void _openFullscreen(BuildContext context, String title) {
+    final cleanSvg = sanitizeSvgXml(widget.svg);
     HapticFeedback.selectionClick();
     showDialog<void>(
       context: context,
@@ -100,7 +168,7 @@ class _ChatSvgWidgetState extends State<ChatSvgWidget> {
                     minScale: 0.5,
                     child: Center(
                       child: SvgPicture.string(
-                        widget.svg,
+                        cleanSvg,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) =>
                             ChatCodeBlockWidget(
@@ -122,7 +190,8 @@ class _ChatSvgWidgetState extends State<ChatSvgWidget> {
   @override
   Widget build(BuildContext context) {
     final forest = context.forest;
-    final title = _extractTitle(widget.svg) ?? 'Vector Graphic';
+    final cleanSvg = sanitizeSvgXml(widget.svg);
+    final title = _extractTitle(cleanSvg) ?? 'Vector Graphic';
 
     if (_showCode) {
       return Column(
@@ -229,7 +298,7 @@ class _ChatSvgWidgetState extends State<ChatSvgWidget> {
                 ),
                 child: Center(
                   child: SvgPicture.string(
-                    widget.svg,
+                    cleanSvg,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) =>
                         ChatCodeBlockWidget(
