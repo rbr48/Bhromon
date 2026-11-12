@@ -8,20 +8,21 @@ import 'package:bhromon/features/tour_group/domain/models/study_offline_vault_mo
 /// Card displayed at the top of study book chapters screen, providing one-tap
 /// zero-network offline caching of the full subject book, all chapters, and examiner-grade solutions.
 class StudyOfflineVaultCard extends StatelessWidget {
-  final StudyOfflinePackage? package;
+  /// The book's saved package as the index keeps it, or null when the book is not saved.
+  final StudyOfflineSummary? summary;
   final bool isDownloading;
   final VoidCallback onDownload;
   final VoidCallback onRemove;
 
   const StudyOfflineVaultCard({
     super.key,
-    required this.package,
+    required this.summary,
     this.isDownloading = false,
     required this.onDownload,
     required this.onRemove,
   });
 
-  bool get isCached => package != null;
+  bool get isCached => summary != null;
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +139,8 @@ class StudyOfflineVaultCard extends StatelessWidget {
                         isCached
                             ? l10n.translate('study_offline_vault_cached_desc',
                                 args: {
-                                    'count': '${package!.materialCount}',
-                                    'size': package!.formattedSize,
+                                    'count': '${summary!.materialCount}',
+                                    'size': summary!.formattedSize,
                                   })
                             : l10n
                                 .translate('study_offline_vault_uncached_desc'),
