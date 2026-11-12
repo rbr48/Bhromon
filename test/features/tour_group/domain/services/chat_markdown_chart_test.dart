@@ -66,4 +66,20 @@ void main() {
     final svgBlock = blocks[1] as ChatSvgBlock;
     expect(svgBlock.svg, rawSvg);
   });
+
+  test('a div-wrapped svg element in markdown becomes a ChatSvgBlock', () {
+    const rawSvg =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 370"><rect width="100" height="100"/></svg>';
+    const divWrapped =
+        '<div class="svg-diagram" style="margin:14px 0; text-align:center;">$rawSvg</div>';
+    final blocks = parseChatBlocks('শুরু。\n\n$divWrapped\n\nশেষ।');
+
+    expect(blocks.map((b) => b.runtimeType), [
+      ChatParagraphBlock,
+      ChatSvgBlock,
+      ChatParagraphBlock,
+    ]);
+    final svgBlock = blocks[1] as ChatSvgBlock;
+    expect(svgBlock.svg, rawSvg);
+  });
 }

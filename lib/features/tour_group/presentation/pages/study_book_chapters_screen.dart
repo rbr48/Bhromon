@@ -41,6 +41,7 @@ import 'study_discussion_screen.dart';
 import 'study_exam_simulator_screen.dart';
 import 'study_flashcards_screen.dart';
 import 'study_glossary_screen.dart';
+import 'study_graph_atlas_screen.dart';
 import 'study_materials_screen.dart';
 import 'study_pack_share.dart';
 import 'study_progress_screen.dart';
@@ -1139,6 +1140,12 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           iconTheme: IconThemeData(color: palette.text),
           elevation: 0,
           actions: [
+            if (_isPoeBook)
+              IconButton(
+                tooltip: 'Dynamic SVG Graph Atlas (ডাইনামিক গ্রাফ)',
+                icon: const Icon(Icons.auto_graph_rounded),
+                onPressed: _openGraphAtlas,
+              ),
             IconButton(
               tooltip: l10n.translate('study_material_title'),
               icon: const Icon(Icons.folder_open_rounded),
@@ -1193,11 +1200,35 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     }
     final next = nextUnreadChapter(_chapters, _marks.keys.toSet());
     final today = DateTime.now();
+    final leadingCount = _leadingItems + (_isPoeBook ? 1 : 0);
     // Built as the list scrolls, so a huge book does not build every chapter card when it opens.
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      itemCount: _leadingItems + _chapters.length,
+      itemCount: leadingCount + _chapters.length,
       itemBuilder: (context, index) {
+        if (_isPoeBook) {
+          switch (index) {
+            case 0:
+              return _summary(next);
+            case 1:
+              return _graphAtlasCard();
+            case 2:
+              return StudyDailyStreakCard(
+                streak: _dailyStreak,
+                standings: _standings,
+                onOpenBranchHall: () => BranchStudyHallSheet.show(
+                  context,
+                  standings: _standings,
+                ),
+              );
+            case 3:
+              return _offlineVaultSection();
+            case 4:
+              return _syllabusBlueprintCard();
+            default:
+              return _chapterCard(_chapters[index - leadingCount], today);
+          }
+        }
         switch (index) {
           case 0:
             return _summary(next);
@@ -1218,6 +1249,125 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             return _chapterCard(_chapters[index - _leadingItems], today);
         }
       },
+    );
+  }
+
+  bool get _isPoeBook {
+    final title = widget.book.title.toLowerCase();
+    return widget.book.id == 'ah9qgOp1e7uA2qcV6a7B' ||
+        title.contains('economics') ||
+        title.contains('poe') ||
+        widget.book.title.contains('অর্থনীতি');
+  }
+
+  void _openGraphAtlas() {
+    StudyGraphAtlasScreen.open(context, tourId: widget.tourId);
+  }
+
+  Widget _graphAtlasCard() {
+    final palette = context.forest;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            palette.accentText.withValues(alpha: 0.12),
+            palette.card,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: palette.accentText.withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _openGraphAtlas,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: palette.accentText.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_graph_rounded,
+                    color: palette.accentText,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Dynamic SVG Graph Atlas',
+                              style: TextStyle(
+                                color: palette.text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.accentText,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              '95 Graphs',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'সকল ৮টি পরীক্ষার ডাইনামিক অর্থনীতি ভেক্টর গ্রাফ (PPC, IC, AC/MC)',
+                        style: TextStyle(
+                          color: palette.text70,
+                          fontSize: 11.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: palette.accentText,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
