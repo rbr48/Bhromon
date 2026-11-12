@@ -34,6 +34,7 @@ import '../../domain/models/tour_group.dart';
 import '../../../chat/data/chat_draft_store.dart';
 import '../../../chat/presentation/widgets/chat_rich_text.dart';
 import '../../domain/services/channel_draft_rules.dart';
+import '../../domain/services/channel_titles.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
 import '../../domain/services/fund_analytics.dart';
@@ -100,6 +101,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   bool _isCommittee = false;
   bool _isFriends = false;
   bool _hasFund = false;
+  // The group itself, which names its built-in channels (see channelTitleText).
+  TourGroup? _group;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -194,6 +197,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
     _subs.add(_groups.watchGroup(widget.tourId).listen(
         (TourGroup? group) => _update(() {
+              _group = group;
               _isFamily = group?.isFamily ?? false;
               _isOffice = group?.isOffice ?? false;
               _isCampus = group?.isCampus ?? false;
@@ -346,77 +350,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   String _titleOf(TourChannel channel) {
     final l10n = context.l10n;
-    if (channel.id == kBuiltInVoiceChannelId) {
-      return l10n.translate('chan_voice_lounge');
-    }
-    // An admin's title for a built-in channel replaces the standard one for everyone.
-    final override = channel.titleOverride;
-    if (override.isNotEmpty) return override;
-    if (channel.kind == ChannelKind.voice) {
-      return channel.name.isEmpty ? '🔊 Voice' : '🔊 ${channel.name}';
-    }
-    switch (channel.id) {
-      case 'general':
-        return l10n.translate('tour_channel_general');
-      case 'food':
-        return l10n.translate(_isFriends
-            ? 'friends_channel_food'
-            : _isOffice
-                ? 'office_channel_food'
-                : _isCampus
-                    ? 'campus_channel_food'
-                    : _isMess
-                        ? 'mess_channel_food'
-                        : _isSociety
-                            ? 'society_channel_food'
-                            : _isSamity
-                                ? 'samity_channel_food'
-                                : _isSchool
-                                    ? 'school_channel_food'
-                                    : _isSports
-                                        ? 'sports_channel_food'
-                                        : _isStudy
-                                            ? 'study_channel_food'
-                                            : _isCommittee
-                                                ? 'committee_channel_food'
-                                                : _isFamily
-                                                    ? 'family_channel_food'
-                                                    : 'tour_channel_food');
-      case 'sightseeing':
-        return l10n.translate(_isFriends
-            ? 'friends_channel_events'
-            : _isOffice
-                ? 'office_channel_events'
-                : _isCampus
-                    ? 'campus_channel_events'
-                    : _isMess
-                        ? 'mess_channel_bills'
-                        : _isSociety
-                            ? 'society_channel_events'
-                            : _isSamity
-                                ? 'samity_channel_events'
-                                : _isSchool
-                                    ? 'school_channel_events'
-                                    : _isSports
-                                        ? 'sports_channel_events'
-                                        : _isStudy
-                                            ? 'study_channel_events'
-                                            : _isCommittee
-                                                ? 'committee_channel_events'
-                                                : _isFamily
-                                                    ? 'family_channel_sightseeing'
-                                                    : 'tour_channel_places');
-      case 'home':
-        return l10n.translate('family_channel_home');
-      case 'kids':
-        return l10n.translate('family_channel_kids');
-      case 'shopping':
-        return l10n.translate('family_channel_shopping');
-      case 'emergency':
-        return l10n.translate('tour_channel_safety');
-      default:
-        return channel.name.isEmpty ? '#${channel.id}' : '# ${channel.name}';
-    }
+    return channelTitleText(
+      channel: channel,
+      group: _group,
+      translate: (key) => l10n.translate(key),
+    );
   }
 
   /// The sender's photo link, from the members list this screen already has.

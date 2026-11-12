@@ -2,6 +2,7 @@ import 'package:bhromon/features/chat/data/chat_deletion_service.dart';
 import 'package:bhromon/features/chat/domain/chat_deletion.dart';
 import 'package:bhromon/features/share_intake/domain/shared_file.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/services/group_contacts.dart';
 
 /// The most photos one channel message can hold.
@@ -31,8 +32,9 @@ List<List<SharedFile>> planChannelMessages(List<SharedFile> files) {
 class ChatDestination {
   const ChatDestination({
     required this.chatId,
-    required this.title,
     required this.otherUid,
+    this.title,
+    this.tourName,
     this.sharedTourId,
     this.otherEmail,
     this.lastMessageAt,
@@ -40,9 +42,15 @@ class ChatDestination {
 
   final String chatId;
 
-  /// The other person's name as the chat stores it.
-  final String title;
+  /// The other person's name, or null when no name is known. A row with no name shows a
+  /// neutral label instead. It never shows the sender's own name.
+  final String? title;
+
   final String otherUid;
+
+  /// The group the chat belongs to, or null for a chat from before groups.
+  final String? tourName;
+
   final String? sharedTourId;
   final String? otherEmail;
   final DateTime? lastMessageAt;
@@ -51,14 +59,16 @@ class ChatDestination {
 /// The chats the user can send files to, newest first. It applies the same rules as the
 /// chats list: no chat with a blocked person, no locked chat, no chat deleted since its
 /// last message, and only chats in tours the user is in. [chats] holds the chat id and
-/// the chat document's data.
+/// the chat document's data. [namesByUid] holds the names from each person's profile, the
+/// same source the chats list reads. [tourNames] names each group by its id.
 List<ChatDestination> chatDestinationsFor({
   required Iterable<MapEntry<String, Map<String, dynamic>>> chats,
   required String currentUid,
   required Set<String> myTourIds,
   required Set<String> blockedUids,
   required Set<String> lockedChatIds,
-  required String fallbackName,
+  Map<String, String> namesByUid = const {},
+  Map<String, String> tourNames = const {},
 }) {
   final out = <ChatDestination>[];
   for (final entry in chats) {
@@ -82,14 +92,13 @@ List<ChatDestination> chatDestinationsFor({
     final profiles = data['participantProfiles'];
     final profile = profiles is Map ? profiles[otherUid] : null;
     final storedName = profile is Map ? profile['displayName'] : null;
-    final title = storedName is String && storedName.trim().isNotEmpty
-        ? storedName
-        : fallbackName;
+    final sharedTourId = data['sharedTourId'] as String?;
     out.add(ChatDestination(
       chatId: chatId,
-      title: title,
+      title: _nameOf(namesByUid[otherUid]) ?? _nameOf(storedName),
       otherUid: otherUid,
-      sharedTourId: data['sharedTourId'] as String?,
+      tourName: sharedTourId == null ? null : tourNames[sharedTourId],
+      sharedTourId: sharedTourId,
       otherEmail: (data['memberEmails'] as Map?)?[otherUid] as String?,
       lastMessageAt: lastMessageAt,
     ));
@@ -97,7 +106,9 @@ List<ChatDestination> chatDestinationsFor({
   out.sort((a, b) {
     final at = a.lastMessageAt;
     final bt = b.lastMessageAt;
-    if (at == null && bt == null) return a.title.compareTo(b.title);
+    if (at == null && bt == null) {
+      return (a.title ?? '').compareTo(b.title ?? '');
+    }
     if (at == null) return 1;
     if (bt == null) return -1;
     return bt.compareTo(at);
@@ -105,39 +116,57 @@ List<ChatDestination> chatDestinationsFor({
   return out;
 }
 
-/// A text channel the user can post files to.
-class ChannelDestination {
-  const ChannelDestination({
-    required this.tourId,
-    required this.channelId,
-    required this.channelName,
-    required this.tourName,
-  });
-
-  final String tourId;
-  final String channelId;
-  final String channelName;
-  final String tourName;
+/// A name as typed, or null when it is missing or blank.
+String? _nameOf(Object? raw) {
+  if (raw is! String) return null;
+  final trimmed = raw.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
-/// The channels in one tour the user can post files to: text channels that are not
-/// hidden, and admin-only channels only for admins and owners.
+/// A text channel the user can post files to, with the group it belongs to.
+class ChannelDestination {
+  const ChannelDestination({required this.group, required this.channel});
+
+  final TourGroup group;
+  final TourChannel channel;
+
+  String get tourId => group.id;
+  String get tourName => group.name;
+  String get channelId => channel.id;
+}
+
+/// The text channels in [group] the user can post files to. These are the built-in
+/// channels the group starts with, even before anyone has edited them, and the channels
+/// admins added, in the same order the channels screen shows them. Hidden and voice
+/// channels are left out, and admin-only channels are left out for everyone but admins
+/// and owners.
 List<ChannelDestination> channelDestinationsFor({
-  required String tourId,
-  required String tourName,
+  required TourGroup group,
   required bool isAdmin,
-  required List<TourChannel> channels,
+  required List<TourChannel> docs,
 }) {
+  final channels = channelsForList(
+    builtInIds: builtInChannelIdsFor(
+      family: group.isFamily,
+      office: group.isOffice,
+      campus: group.isCampus,
+      mess: group.isMess,
+      society: group.isSociety,
+      samity: group.isSamity,
+      school: group.isSchool,
+      sports: group.isSports,
+      study: group.isStudy,
+      committee: group.isCommittee,
+      friends: group.isFriends,
+    ),
+    docs: docs,
+  );
   return [
     for (final channel in channels)
-      if (channel.kind == ChannelKind.text &&
+      if (!channel.isVoice &&
+          channel.kind == ChannelKind.text &&
           !channel.hidden &&
           (!channel.adminOnly || isAdmin))
-        ChannelDestination(
-          tourId: tourId,
-          channelId: channel.id,
-          channelName: channel.name,
-          tourName: tourName,
-        ),
+        ChannelDestination(group: group, channel: channel),
   ];
 }

@@ -268,6 +268,8 @@ class TranslationKeys {
       'share_none_destinations':
           'You have no chats or group channels to send to yet.',
       'share_load_failed': 'Could not load your chats and channels.',
+      'share_some_missing':
+          'Some groups could not be loaded, so they are not listed. Try again.',
       'share_try_again': 'Try again',
       'share_skipped_heading': '{count} cannot be sent',
       'share_reason_unsupported': 'This file type is not supported',
@@ -768,6 +770,8 @@ class TranslationKeys {
       'share_none_destinations':
           'পাঠানোর মতো এখনও কোনো কথোপকথন বা গ্রুপ চ্যানেল নেই।',
       'share_load_failed': 'আপনার কথোপকথন ও চ্যানেল লোড করা যায়নি।',
+      'share_some_missing':
+          'কয়েকটি গ্রুপ লোড করা যায়নি, তাই সেগুলো তালিকায় নেই। আবার চেষ্টা করুন।',
       'share_try_again': 'আবার চেষ্টা করুন',
       'share_skipped_heading': '{count}টি পাঠানো যাবে না',
       'share_reason_unsupported': 'এই ধরনের ফাইল সমর্থিত নয়',

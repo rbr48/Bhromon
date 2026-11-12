@@ -7,6 +7,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/logger.dart';
 import '../../tour_group/data/tour_channel_repository.dart';
 import '../../tour_group/data/tour_group_repository.dart';
+import '../../tour_group/domain/services/channel_titles.dart';
 import '../data/channel_share_sender.dart';
 import '../data/share_destinations_loader.dart';
 import '../domain/share_plan.dart';
@@ -15,12 +16,13 @@ import '../domain/shared_file.dart';
 /// Opens the sheet that picks where shared files go: a one-to-one chat or a group
 /// channel. [rootContext] sits under the app's root navigator. The sheet closes before
 /// anything is sent, so the send and its messages use [rootContext], not the sheet.
+/// [loadDestinations] replaces the real reads, for tests.
 Future<void> showShareDestinationSheet(
   BuildContext rootContext, {
   required List<SharedFile> files,
   required String currentUid,
-  required String fallbackName,
   bool textSkipped = false,
+  Future<ShareDestinations> Function()? loadDestinations,
 }) {
   return showModalBottomSheet<void>(
     context: rootContext,
@@ -31,8 +33,8 @@ Future<void> showShareDestinationSheet(
       rootContext: rootContext,
       files: files,
       currentUid: currentUid,
-      fallbackName: fallbackName,
       textSkipped: textSkipped,
+      loadDestinations: loadDestinations,
     ),
   );
 }
@@ -42,15 +44,15 @@ class _ShareDestinationSheet extends StatefulWidget {
     required this.rootContext,
     required this.files,
     required this.currentUid,
-    required this.fallbackName,
     required this.textSkipped,
+    this.loadDestinations,
   });
 
   final BuildContext rootContext;
   final List<SharedFile> files;
   final String currentUid;
-  final String fallbackName;
   final bool textSkipped;
+  final Future<ShareDestinations> Function()? loadDestinations;
 
   @override
   State<_ShareDestinationSheet> createState() => _ShareDestinationSheetState();
@@ -68,9 +70,11 @@ class _ShareDestinationSheetState extends State<_ShareDestinationSheet> {
   late Future<ShareDestinations> _destinations = _load();
 
   Future<ShareDestinations> _load() {
-    return ShareDestinationsLoader()
-        .load(currentUid: widget.currentUid, fallbackName: widget.fallbackName)
-        .catchError((Object error, StackTrace stack) {
+    final override = widget.loadDestinations;
+    final load = override != null
+        ? override()
+        : ShareDestinationsLoader().load(currentUid: widget.currentUid);
+    return load.catchError((Object error, StackTrace stack) {
       logWarning('[ShareIntake] could not load the destinations', error, stack);
       throw error;
     });
@@ -190,50 +194,93 @@ class _ShareDestinationSheetState extends State<_ShareDestinationSheet> {
         if (snapshot.hasError || destinations == null) {
           return _errorView(theme, l10n);
         }
-        if (destinations.chats.isEmpty && destinations.channels.isEmpty) {
+        if (destinations.chats.isEmpty &&
+            destinations.channels.isEmpty &&
+            !destinations.incomplete) {
           return _message(theme, l10n.translate('share_none_destinations'));
         }
         return ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.only(bottom: 16),
           children: [
+            if (destinations.incomplete) _incompleteNotice(theme, l10n),
             if (destinations.chats.isNotEmpty) ...[
               _heading(theme, l10n.translate('share_chats_heading')),
               for (final chat in destinations.chats)
-                ListTile(
-                  leading: CircleAvatar(child: Text(_initial(chat.title))),
-                  title: Text(
-                    chat.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => _sendToChat(chat),
-                ),
+                _chatRow(theme, l10n, chat),
             ],
             if (destinations.channels.isNotEmpty) ...[
               _heading(theme, l10n.translate('share_channels_heading')),
-              for (final channel in destinations.channels)
-                ListTile(
-                  leading:
-                      const CircleAvatar(child: Icon(Icons.forum_outlined)),
-                  title: Text(
-                    channel.channelName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    channel.tourName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => _sendToChannel(channel),
-                ),
+              ..._channelRows(theme, l10n, destinations.channels),
             ],
           ],
         );
       },
     );
   }
+
+  Widget _chatRow(
+      ThemeData theme, AppLocalizations l10n, ChatDestination chat) {
+    final title = chat.title ?? l10n.translate('chats_member');
+    final tour = chat.tourName;
+    return ListTile(
+      leading: CircleAvatar(child: Text(_initial(title))),
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: tour == null
+          ? null
+          : Text(tour, maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: () => _sendToChat(chat),
+    );
+  }
+
+  /// The channels, under a heading for each group, so two groups with a channel of the same
+  /// name can be told apart.
+  List<Widget> _channelRows(
+    ThemeData theme,
+    AppLocalizations l10n,
+    List<ChannelDestination> channels,
+  ) {
+    final rows = <Widget>[];
+    String? currentTour;
+    for (final channel in channels) {
+      if (channel.tourId != currentTour) {
+        currentTour = channel.tourId;
+        rows.add(_heading(theme, channel.tourName));
+      }
+      rows.add(ListTile(
+        leading: const CircleAvatar(child: Icon(Icons.forum_outlined)),
+        title: Text(
+          _channelTitle(l10n, channel),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: () => _sendToChannel(channel),
+      ));
+    }
+    return rows;
+  }
+
+  Widget _incompleteNotice(ThemeData theme, AppLocalizations l10n) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.translate('share_some_missing'),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _destinations = _load()),
+              child: Text(l10n.translate('share_try_again')),
+            ),
+          ],
+        ),
+      );
 
   Widget _message(ThemeData theme, String text) => Padding(
         padding: const EdgeInsets.all(24),
@@ -297,6 +344,15 @@ class _ShareDestinationSheetState extends State<_ShareDestinationSheet> {
   }
 }
 
+/// The name a channel row shows, the same as in the channels screen.
+String _channelTitle(AppLocalizations l10n, ChannelDestination channel) {
+  return channelTitleText(
+    channel: channel.channel,
+    group: channel.group,
+    translate: (key) => l10n.translate(key),
+  );
+}
+
 /// Sends [files] to [channel] once the sheet has closed. Progress and the outcome show
 /// as snack bars on the root messenger, so they stay visible wherever the user is.
 Future<void> _sendToGroupChannel(
@@ -306,7 +362,7 @@ Future<void> _sendToGroupChannel(
 ) async {
   final l10n = rootContext.l10n;
   final messenger = ScaffoldMessenger.maybeOf(rootContext);
-  final name = channel.channelName;
+  final name = _channelTitle(l10n, channel);
   const sending = Duration(minutes: 5);
   const outcome = Duration(seconds: 4);
 
