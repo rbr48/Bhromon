@@ -1377,6 +1377,105 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('which groups have the shared fund', () => {
+    // A trip, a household, a mess, a housing society, a campus and the school, sports, committee and
+    // friends circles keep a fund. An office, a samity, a study circle and a preset the rules do not
+    // name keep none. TourGroup.hasFund and fund_policy.py apply the same rule.
+    const withFund = {
+      'fund-trip': { kind: 'tour' },
+      'fund-household': { kind: 'family' },
+      'fund-household-null': { kind: 'family', preset: null },
+      'fund-mess': { kind: 'family', preset: 'mess' },
+      'fund-society': { kind: 'family', preset: 'society' },
+      'fund-campus': { kind: 'family', preset: 'campus' },
+      'fund-school': { kind: 'family', preset: 'school' },
+      'fund-sports': { kind: 'family', preset: 'sports' },
+      'fund-committee': { kind: 'family', preset: 'committee' },
+      'fund-friends': { kind: 'family', preset: 'friends' },
+    };
+    const withoutFund = {
+      'fund-office': { kind: 'family', preset: 'office' },
+      'fund-samity': { kind: 'family', preset: 'samity' },
+      'fund-study': { kind: 'family', preset: 'study' },
+      'fund-unknown': { kind: 'family', preset: 'something-new' },
+    };
+    const expense = (email) => ({ addedByEmail: email, title: 'Lunch', amountPaisa: 50000 });
+    const deposit = (email) => ({ addedByEmail: email, amountPaisa: 100000 });
+    const payment = (email) => ({ addedByEmail: email, amountPaisa: 20000, fromId: email, toId: people.other.email });
+    const settlement = (id, email) => ({
+      tourId: id,
+      addedByEmail: email,
+      amountPaisa: 20000,
+      fromMemberId: email,
+      toMemberId: people.other.email,
+      mfsInfo: { provider: 'bkash', trxId: 'BKL890XYZ1', feePaisa: 0, feeAbsorbedByGroup: false, status: 'unverified' },
+    });
+    const trxEntry = (email) => ({
+      trxId: 'BKL890XYZ1', provider: 'bkash', recordType: 'expense', recordId: 'old', amountPaisa: 50000,
+      addedByEmail: email, createdAt: serverTimestamp(),
+    });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        for (const [id, fields] of Object.entries({ ...withFund, ...withoutFund })) {
+          await setDoc(doc(f, 'tours', id), { name: id, ownerEmail: people.owner.email, ownerUid: people.owner.uid, ...fields });
+          await setDoc(doc(f, 'memberships', `${id}__${people.member.email}`), { tourId: id, email: people.member.email, role: 'member', status: 'active', displayName: 'Ben' });
+          await setDoc(doc(f, 'memberships', `${id}__${people.owner.email}`), { tourId: id, email: people.owner.email, role: 'owner', status: 'active', displayName: 'Owner' });
+          // Money recorded before the switch: kept in the database, and read by members.
+          await setDoc(doc(f, 'tours', id, 'expenses', 'old'), expense(people.member.email));
+        }
+      });
+    });
+
+    test('a member records an expense, a deposit or a payment in every group that keeps a fund', async () => {
+      for (const id of Object.keys(withFund)) {
+        await assertSucceeds(setDoc(doc(db('member'), 'tours', id, 'expenses', `new-${id}`), expense(people.member.email)));
+        await assertSucceeds(setDoc(doc(db('member'), 'tours', id, 'deposits', `dep-${id}`), deposit(people.member.email)));
+        await assertSucceeds(setDoc(doc(db('member'), 'tours', id, 'transfers', `pay-${id}`), payment(people.member.email)));
+      }
+    });
+
+    test('nobody records money in a group without a fund, not even an owner', async () => {
+      for (const id of Object.keys(withoutFund)) {
+        await assertFails(setDoc(doc(db('member'), 'tours', id, 'expenses', `new-${id}`), expense(people.member.email)));
+        await assertFails(setDoc(doc(db('owner'), 'tours', id, 'expenses', `new-${id}`), expense(people.owner.email)));
+        await assertFails(setDoc(doc(db('member'), 'tours', id, 'deposits', `dep-${id}`), deposit(people.member.email)));
+        await assertFails(setDoc(doc(db('member'), 'tours', id, 'transfers', `pay-${id}`), payment(people.member.email)));
+        await assertFails(setDoc(doc(db('member'), 'tours', id, 'settlements', `set-${id}`), settlement(id, people.member.email)));
+        await assertFails(setDoc(doc(db('member'), 'tours', id, 'mfs_trx_registry', 'BKL890XYZ1'), trxEntry(people.member.email)));
+      }
+    });
+
+    test('settlements and TrxID registry entries are written only where a fund is kept', async () => {
+      for (const id of Object.keys(withFund)) {
+        await assertSucceeds(setDoc(doc(db('member'), 'tours', id, 'settlements', `set-${id}`), settlement(id, people.member.email)));
+        await assertSucceeds(setDoc(doc(db('member'), 'tours', id, 'mfs_trx_registry', 'BKL890XYZ1'), trxEntry(people.member.email)));
+      }
+    });
+
+    test('money recorded before the switch stays readable in a group without a fund', async () => {
+      for (const id of Object.keys(withoutFund)) {
+        await assertSucceeds(getDoc(doc(db('member'), 'tours', id, 'expenses', 'old')));
+        await assertSucceeds(getDocs(collection(db('owner'), 'tours', id, 'expenses')));
+        await assertFails(getDocs(collection(db('outsider'), 'tours', id, 'expenses')));
+      }
+    });
+
+    test('nobody edits or deletes money in a group without a fund, not even its author', async () => {
+      for (const id of Object.keys(withoutFund)) {
+        await assertFails(updateDoc(doc(db('member'), 'tours', id, 'expenses', 'old'), { title: 'Edited' }));
+        await assertFails(deleteDoc(doc(db('member'), 'tours', id, 'expenses', 'old')));
+        await assertFails(deleteDoc(doc(db('owner'), 'tours', id, 'expenses', 'old')));
+      }
+    });
+
+    test('the author and an admin still edit and delete money in a group with a fund', async () => {
+      await assertSucceeds(updateDoc(doc(db('member'), 'tours', 'fund-mess', 'expenses', 'old'), { title: 'Edited' }));
+      await assertSucceeds(deleteDoc(doc(db('owner'), 'tours', 'fund-mess', 'expenses', 'old')));
+    });
+  });
+
   describe('which groups have SOS', () => {
     // A trip, a household, a mess, a housing society have SOS. Every other preset has none, and
     // so does a preset the rules do not name. TourGroup.supportsSafetyAlerts applies the same rule.

@@ -252,7 +252,9 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
             onToggleAutoAdvance: _toggleAutoAdvance,
             onOpenComments: () => widget.onOpenComments?.call(post),
             onShare: () => widget.onShare?.call(post),
-            onAddToLedger: () => widget.onAddToLedger?.call(post),
+            onAddToLedger: widget.onAddToLedger == null
+                ? null
+                : () => widget.onAddToLedger?.call(post),
             onSetLiked: (liked) => _saveLike(post, liked),
             currentEmail: widget.repository.currentEmail,
           );
@@ -272,7 +274,7 @@ class _ReelPageItem extends StatefulWidget {
   final VoidCallback onToggleAutoAdvance;
   final VoidCallback onOpenComments;
   final VoidCallback onShare;
-  final VoidCallback onAddToLedger;
+  final VoidCallback? onAddToLedger;
   final Future<void> Function(bool liked) onSetLiked;
   final String currentEmail;
 
@@ -286,7 +288,7 @@ class _ReelPageItem extends StatefulWidget {
     required this.onToggleAutoAdvance,
     required this.onOpenComments,
     required this.onShare,
-    required this.onAddToLedger,
+    this.onAddToLedger,
     required this.onSetLiked,
     required this.currentEmail,
   });
@@ -563,22 +565,25 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     ),
                     const SizedBox(height: 16),
 
-                    // Unique Travel Superpower: Add to Trip Ledger
-                    IconButton(
-                      icon: const Icon(Icons.receipt_long_rounded,
-                          color: AppColors.mintGreen, size: 28),
-                      tooltip: context.l10n.translate('ig_add_to_ledger'),
-                      onPressed: widget.onAddToLedger,
-                    ),
-                    Text(
-                      context.l10n.translate('ig_ledger_short'),
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    // Unique Travel Superpower: Add to Trip Ledger, with the shared fund only
+                    if (widget.onAddToLedger != null)
+                      IconButton(
+                        icon: const Icon(Icons.receipt_long_rounded,
+                            color: AppColors.mintGreen, size: 28),
+                        tooltip: context.l10n.translate('ig_add_to_ledger'),
+                        onPressed: widget.onAddToLedger,
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                    if (widget.onAddToLedger != null)
+                      Text(
+                        context.l10n.translate('ig_ledger_short'),
+                        style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    if (widget.onAddToLedger != null)
+                      const SizedBox(height: 20),
 
                     // Rotating Vinyl Sound Disc
                     RotationTransition(

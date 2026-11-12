@@ -145,17 +145,32 @@ void main() {
       }
     });
 
-    test('an office or campus has no shared list, SOS or household parts', () {
+    test('an office has no money, shared list, SOS or household parts', () {
       final sections = recordSectionsFor(
         _group(kind: GroupKind.family, preset: TourGroup.officePreset),
       );
 
       expect(sections, contains(TourRecordSection.notices));
-      expect(sections, contains(TourRecordSection.money));
+      expect(sections, isNot(contains(TourRecordSection.money)));
       expect(sections, isNot(contains(TourRecordSection.sharedList)));
       expect(sections, isNot(contains(TourRecordSection.safety)));
       expect(sections, isNot(contains(TourRecordSection.familyDates)));
       expect(sections, isNot(contains(TourRecordSection.dependents)));
+    });
+
+    test('a campus keeps the shared fund, and a samity keeps none', () {
+      expect(
+        recordSectionsFor(
+          _group(kind: GroupKind.family, preset: TourGroup.campusPreset),
+        ),
+        contains(TourRecordSection.money),
+      );
+      expect(
+        recordSectionsFor(
+          _group(kind: GroupKind.family, preset: TourGroup.samityPreset),
+        ),
+        isNot(contains(TourRecordSection.money)),
+      );
     });
 
     test('a society keeps its requests, its shared list and its SOS', () {

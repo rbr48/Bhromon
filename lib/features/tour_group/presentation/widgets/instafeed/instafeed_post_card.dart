@@ -648,16 +648,17 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       },
                     ),
                   ],
-                  ListTile(
-                    leading: Icon(Icons.receipt_long_rounded,
-                        color: context.forest.accentText),
-                    title: Text(context.l10n.translate('ig_add_as_expense'),
-                        style: TextStyle(color: context.forest.text)),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      widget.onAddToLedger?.call(widget.post);
-                    },
-                  ),
+                  if (widget.onAddToLedger != null)
+                    ListTile(
+                      leading: Icon(Icons.receipt_long_rounded,
+                          color: context.forest.accentText),
+                      title: Text(context.l10n.translate('ig_add_as_expense'),
+                          style: TextStyle(color: context.forest.text)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        widget.onAddToLedger?.call(widget.post);
+                      },
+                    ),
                   ListTile(
                     leading: Icon(Icons.bookmark_border_rounded,
                         color: context.forest.text70),
@@ -1428,13 +1429,14 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
                 const Spacer(),
 
-                // Add to Trip Ledger 1-tap button
-                IconButton(
-                  icon: Icon(Icons.receipt_long_rounded,
-                      color: context.forest.accentText, size: 24),
-                  tooltip: context.l10n.translate('ig_add_to_ledger'),
-                  onPressed: () => widget.onAddToLedger?.call(widget.post),
-                ),
+                // Add to Trip Ledger 1-tap button, when the group has the shared fund
+                if (widget.onAddToLedger != null)
+                  IconButton(
+                    icon: Icon(Icons.receipt_long_rounded,
+                        color: context.forest.accentText, size: 24),
+                    tooltip: context.l10n.translate('ig_add_to_ledger'),
+                    onPressed: () => widget.onAddToLedger?.call(widget.post),
+                  ),
 
                 // Bookmark / Save (tap toggles, long-press opens collections)
                 GestureDetector(

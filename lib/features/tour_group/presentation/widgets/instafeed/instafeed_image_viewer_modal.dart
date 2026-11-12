@@ -489,14 +489,15 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                         onPressed: () => widget.onShare?.call(widget.post),
                       ),
                       const Spacer(),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.receipt_long_rounded,
-                            color: AppColors.mintGreen),
-                        tooltip: context.l10n.translate('ig_add_to_ledger'),
-                        onPressed: () =>
-                            widget.onAddToLedger?.call(widget.post),
-                      ),
+                      if (widget.onAddToLedger != null)
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.receipt_long_rounded,
+                              color: AppColors.mintGreen),
+                          tooltip: context.l10n.translate('ig_add_to_ledger'),
+                          onPressed: () =>
+                              widget.onAddToLedger?.call(widget.post),
+                        ),
                     ],
                   ),
                 ],

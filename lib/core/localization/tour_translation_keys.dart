@@ -454,6 +454,8 @@ class TourTranslationKeys {
           'Swipe the messages to move to the next or previous channel. Turn off if you swipe by accident.',
       'chan_search_tooltip': 'Search',
       'chan_split_done': 'Expense added: {title} · {amount}',
+      'chan_split_not_here':
+          'This group has no shared fund, so /split is not available here.',
       'chan_stop_clear': 'Clear the stop',
       'chan_stop_last': 'last stop',
       'chan_stop_next': 'next: {name}',
@@ -1121,6 +1123,9 @@ class TourTranslationKeys {
 
       // ── Tour fund ─────────────────────────────────────────────────────────
       'fund_title': 'Group Fund',
+      'fund_not_in_group_title': 'No shared fund in this group',
+      'fund_not_in_group_body':
+          'This kind of group does not keep a shared fund, so there are no expenses, deposits or settle-ups to show.',
       'fund_add': 'Add',
       'fund_tab_overview': 'Overview',
       'fund_tab_expenses': 'Expenses',
@@ -4314,6 +4319,8 @@ class TourTranslationKeys {
           'বার্তার উপর সোয়াইপ করে পরের বা আগের চ্যানেলে যান। ভুল করে সোয়াইপ হলে বন্ধ করুন।',
       'chan_search_tooltip': 'খুঁজুন',
       'chan_split_done': 'খরচ যোগ হয়েছে: {title} · {amount}',
+      'chan_split_not_here':
+          'এই গ্রুপে শেয়ার্ড ফান্ড নেই, তাই এখানে /split ব্যবহার করা যাবে না।',
       'chan_stop_clear': 'স্টপ মুছুন',
       'chan_stop_last': 'শেষ স্টপ',
       'chan_stop_next': 'এরপর: {name}',
@@ -4981,6 +4988,9 @@ class TourTranslationKeys {
 
       // ── Tour fund ─────────────────────────────────────────────────────────
       'fund_title': 'গ্রুপ ফান্ড',
+      'fund_not_in_group_title': 'এই গ্রুপে শেয়ার্ড ফান্ড নেই',
+      'fund_not_in_group_body':
+          'এই ধরনের গ্রুপে শেয়ার্ড ফান্ড রাখা হয় না, তাই খরচ, জমা বা লেনদেন দেখানোর কিছু নেই।',
       'fund_add': 'যোগ করুন',
       'fund_tab_overview': 'সারসংক্ষেপ',
       'fund_tab_expenses': 'খরচ',

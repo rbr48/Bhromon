@@ -99,6 +99,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   bool _isStudy = false;
   bool _isCommittee = false;
   bool _isFriends = false;
+  bool _hasFund = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -204,6 +205,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               _isStudy = group?.isStudy ?? false;
               _isCommittee = group?.isCommittee ?? false;
               _isFriends = group?.isFriends ?? false;
+              _hasFund = group?.hasFund ?? false;
             }),
         onError: (_) {}));
     unawaited(_markHere());
@@ -2609,6 +2611,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     switch (command) {
       case ChatCommandError(:final messageKey):
         _snack(l10n.translate(messageKey), error: true);
+      case SplitCommand() when !_hasFund:
+        // The ledger is the shared fund; a group without one keeps no expenses to split.
+        _snack(l10n.translate('chan_split_not_here'), error: true);
       case SplitCommand(:final amountPaisa, :final title):
         _update(() => _sending = true);
         try {

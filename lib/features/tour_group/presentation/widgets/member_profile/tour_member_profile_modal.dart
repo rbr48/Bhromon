@@ -118,6 +118,14 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
 
   StreamSubscription<dynamic>? _profileSub;
 
+  /// The group's own subscription. It sets [_hasFund]: a group without the shared fund
+  /// shows no balance, and its money is not read.
+  StreamSubscription<TourGroup?>? _groupSub;
+
+  /// Whether the group has the shared fund ([TourGroup.hasFund]). It is false until the
+  /// group has loaded, so no balance shows before the answer is known.
+  bool _hasFund = false;
+
   /// The tour's members, read once in [initState] when the modal loads them itself (no
   /// list was passed in), so a rebuild never reads the repository.
   Stream<List<TourMember>>? _membersStream;
@@ -130,14 +138,28 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     if (widget.members == null) {
       _membersStream = _repo.watchMembers(widget.tourId);
     }
+    _groupSub = _repo.watchGroup(widget.tourId).listen(
+      (group) => _setHasFund(group?.hasFund ?? false),
+      onError: (Object error, StackTrace stack) {
+        // The group could not be read, so its fund is not shown.
+        logWarning('Group read failed in the member profile', error, stack);
+        _setHasFund(false);
+      },
+    );
     _loadExtraProfileData();
   }
 
   @override
   void dispose() {
     _profileSub?.cancel();
+    _groupSub?.cancel();
     _audioPlayer?.dispose();
     super.dispose();
+  }
+
+  void _setHasFund(bool value) {
+    if (!mounted || value == _hasFund) return;
+    setState(() => _hasFund = value);
   }
 
   Future<void> _loadExtraProfileData() async {
@@ -473,12 +495,16 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                                           : '');
 
                                   return StreamBuilder<List<ExpenseItem>>(
-                                    stream: _repo.watchExpenses(widget.tourId),
+                                    stream: _hasFund
+                                        ? _repo.watchExpenses(widget.tourId)
+                                        : null,
                                     builder: (context, expSnap) {
                                       final expenses = expSnap.data ?? [];
                                       return StreamBuilder<List<TransferItem>>(
-                                        stream:
-                                            _repo.watchTransfers(widget.tourId),
+                                        stream: _hasFund
+                                            ? _repo
+                                                .watchTransfers(widget.tourId)
+                                            : null,
                                         builder: (context, xferSnap) {
                                           final transfers = xferSnap.data ?? [];
                                           final ledger =
@@ -517,7 +543,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                                             member: member,
                                             seat: seat,
                                             room: room,
-                                            balancePaisa: memberRow.netPaisa,
+                                            balancePaisa: _hasFund
+                                                ? memberRow.netPaisa
+                                                : null,
                                             posts: authorPosts,
                                             reels: authorReels,
                                             tagged: taggedPosts,
@@ -618,7 +646,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       member: member,
       seat: seat,
       room: room,
-      balancePaisa: memberRow.netPaisa,
+      balancePaisa: _hasFund ? memberRow.netPaisa : null,
       posts: authorPosts,
       reels: authorReels,
       tagged: taggedPosts,
@@ -631,7 +659,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     required TourMember member,
     required String seat,
     required String room,
-    required int balancePaisa,
+    required int? balancePaisa,
     required List<TourPostItem> posts,
     required List<TourPostItem> reels,
     required List<TourPostItem> tagged,
@@ -670,7 +698,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
           icon: Icons.hotel_rounded,
           color: AppColors.mintGreen,
         ),
-      if (balancePaisa > 0)
+      if ((balancePaisa ?? 0) > 0)
         (
           title: l10n.translate('prof_achieve_top_spender'),
           icon: Icons.account_balance_wallet_rounded,
@@ -808,16 +836,17 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     required int postsCount,
     required int likesCount,
     required int taggedCount,
-    required int balancePaisa,
+    required int? balancePaisa,
   }) {
     // Format balance properly: +150৳, -50৳, or 0৳ (No NaN)
+    final balance = balancePaisa ?? 0;
     final String balanceText;
     final Color balanceColor;
-    if (balancePaisa > 0) {
-      balanceText = '+${TripLedgerEngine.formatTaka(balancePaisa)}';
+    if (balance > 0) {
+      balanceText = '+${TripLedgerEngine.formatTaka(balance)}';
       balanceColor = context.forest.accentText;
-    } else if (balancePaisa < 0) {
-      balanceText = '-${TripLedgerEngine.formatTaka(balancePaisa.abs())}';
+    } else if (balance < 0) {
+      balanceText = '-${TripLedgerEngine.formatTaka(balance.abs())}';
       balanceColor = context.forest.readable(Colors.orangeAccent);
     } else {
       balanceText = '০৳';
@@ -912,7 +941,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
         ),
         const SizedBox(width: 18),
 
-        // 4 Quick Stats (Posts, Likes, Tagged, Balance)
+        // Quick stats: Posts, Likes, Tagged, and Balance when the group has the shared fund
         Expanded(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -923,8 +952,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   l10n.translate('prof_likes'), const Color(0xFFFF5252)),
               _buildStatColumn(l10n.number(taggedCount),
                   l10n.translate('prof_tagged'), context.forest.text70),
-              _buildStatColumn(
-                  balanceText, l10n.translate('prof_balance'), balanceColor),
+              if (balancePaisa != null)
+                _buildStatColumn(
+                    balanceText, l10n.translate('prof_balance'), balanceColor),
             ],
           ),
         ),

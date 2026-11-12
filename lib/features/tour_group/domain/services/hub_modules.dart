@@ -51,7 +51,8 @@ List<String> hubModulesFor(TourGroup group, {bool? momentsOpen}) {
   final isTrip = !group.isFamily;
   final applicable = <String>[
     if (moments) 'feed',
-    'ledger',
+    // The shared fund is opt-in per group type (TourGroup.hasFund).
+    if (group.hasFund) 'ledger',
     if (isTrip && group.modules.seatsRooms) 'seats',
     'calendar',
     if (group.isFamily && !group.isManaged && !group.isStudy) 'family_tasks',

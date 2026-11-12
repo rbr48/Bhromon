@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from push_strings import DEFAULT_LANGUAGE, normalize_language, push_text
+from fund_policy import fund_allowed
 from sos_policy import sos_allowed
 
 logger = logging.getLogger("bhromon.notifications")
@@ -400,6 +401,11 @@ class NotificationEngine:
         """Whether the tour has SOS (sos_policy.py). A tour that is not there has none."""
         snapshot = self._get_db().collection("tours").document(tour_id).get()
         return bool(snapshot.exists) and sos_allowed(snapshot.to_dict() or {})
+
+    def tour_allows_fund(self, tour_id: str) -> bool:
+        """Whether the tour keeps the shared fund (fund_policy.py). A tour that is not there keeps none."""
+        snapshot = self._get_db().collection("tours").document(tour_id).get()
+        return bool(snapshot.exists) and fund_allowed(snapshot.to_dict() or {})
 
     def member_display_name(self, tour_id: str, email: str) -> str:
         """The name a member has in the group, from the membership row. The name an alert was written
@@ -1268,6 +1274,8 @@ class NotificationEngine:
         if self.is_seen(f"ledger_{tour_id}_{expense_id}"):
             return {"status": "already_sent"}
         try:
+            if not self.tour_allows_fund(tour_id):
+                return {"status": "no_fund"}
             members = self.get_active_tour_members(tour_id, except_email=added_by_email)
             if not members:
                 return {"status": "no_recipients"}
