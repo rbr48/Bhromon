@@ -11,6 +11,7 @@ import '../models/study_models.dart';
 import '../models/study_syllabus_models.dart';
 import 'ppc_curve.dart';
 import 'ppc_pdf_figure.dart';
+import 'study_booklet_markdown.dart';
 
 /// One part of a question's model solution: prose, or a figure in its place.
 sealed class StudyBookletPiece {
@@ -251,22 +252,11 @@ class StudyBookletPdfGenerator {
     return questions;
   }
 
-  static String _sanitizeMarkdownForPdf(String raw) {
-    return raw
-        .replaceAll(r'\[', '[')
-        .replaceAll(r'\]', ']')
-        .replaceAll(RegExp(r'\*\*|__'), '')
-        .replaceAll(RegExp(r'`{1,3}'), '')
-        .replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
-  }
-
   /// Splits a solution into prose and figures, in order. A `chart:ppc` fence
   /// that parses becomes a [StudyBookletFigure]; an `svg` fence or `<svg>`
   /// block becomes a [StudyBookletSvgFigure]; anything else stays in the prose
-  /// and is cleaned as before. A solution with no figure is one prose piece,
-  /// exactly as it was before figures existed.
+  /// as Markdown, which [studyBookletMarkdownWidgets] draws. A solution with no
+  /// figure is one prose piece.
   static List<StudyBookletPiece> solutionPieces(String raw) {
     final text = raw.replaceAll('\r\n', '\n');
     final fence = RegExp(
@@ -283,7 +273,7 @@ class StudyBookletPdfGenerator {
         final spec = PpcSpec.parse(body);
         if (spec != null) {
           final before =
-              _sanitizeMarkdownForPdf(text.substring(cursor, match.start));
+              studyBookletCleanSolution(text.substring(cursor, match.start));
           if (before.isNotEmpty) pieces.add(StudyBookletText(before));
           pieces.add(StudyBookletFigure(spec));
           cursor = match.end;
@@ -293,14 +283,14 @@ class StudyBookletPdfGenerator {
           body.startsWith('<svg') &&
           body.endsWith('</svg>')) {
         final before =
-            _sanitizeMarkdownForPdf(text.substring(cursor, match.start));
+            studyBookletCleanSolution(text.substring(cursor, match.start));
         if (before.isNotEmpty) pieces.add(StudyBookletText(before));
         pieces.add(StudyBookletSvgFigure(body));
         cursor = match.end;
         continue;
       }
     }
-    final after = _sanitizeMarkdownForPdf(text.substring(cursor));
+    final after = studyBookletCleanSolution(text.substring(cursor));
     if (after.isNotEmpty) {
       pieces.add(StudyBookletText(after));
     }
@@ -310,89 +300,8 @@ class StudyBookletPdfGenerator {
     ];
   }
 
-  static pw.Widget _svgPdfFigure(
-    String svg, {
-    double width = 440,
-    double height = 230,
-  }) {
-    try {
-      return pw.Container(
-        margin: const pw.EdgeInsets.symmetric(vertical: 8),
-        alignment: pw.Alignment.center,
-        child: pw.SvgImage(
-          svg: svg,
-          width: width,
-          height: height,
-          fit: pw.BoxFit.contain,
-        ),
-      );
-    } catch (_) {
-      return pw.Container(
-        padding: const pw.EdgeInsets.all(8),
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey400),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-        ),
-        child: pw.Text(
-          '[Vector Diagram / চিত্র]',
-          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
-        ),
-      );
-    }
-  }
-
-  /// Most visual lines one block of solution text may take. A block has to fit on a page below the
-  /// header and the footer. A block that does not fit is retried on each new page, and the layout
-  /// gives up after 20 pages with a [PdfTooBigPageException], so a long solution used to stall the
-  /// booklet and then fail. Twenty-four lines of the booklet's 9.5 pt text is well under a page.
-  static const int _blockLines = 24;
-
-  /// Characters that take one visual line at the booklet's size. It is kept low, so a block that
-  /// is estimated as short is never taller than a page.
-  static const int _charsPerLine = 80;
-
-  /// Cuts solution prose into blocks that each fit on one page. Lines keep their order and their
-  /// words, and a block joins its lines with newlines, so the blocks read as the text does. Only a
-  /// line longer than a block is cut, at a space, and then its two halves start on separate lines.
-  static List<String> proseBlocks(String text) {
-    final blocks = <String>[];
-    final current = <String>[];
-    var used = 0;
-
-    void close() {
-      if (current.isEmpty) return;
-      blocks.add(current.join('\n'));
-      current.clear();
-      used = 0;
-    }
-
-    for (final line in text.split('\n')) {
-      for (final piece in _linePieces(line)) {
-        final cost = piece.isEmpty ? 1 : (piece.length / _charsPerLine).ceil();
-        if (used + cost > _blockLines) close();
-        current.add(piece);
-        used += cost;
-      }
-    }
-    close();
-    return blocks;
-  }
-
-  /// Cuts one line that is longer than a block into pieces, at spaces where it can be.
-  static List<String> _linePieces(String line) {
-    const limit = _blockLines * _charsPerLine;
-    if (line.length <= limit) return [line];
-    final pieces = <String>[];
-    var rest = line;
-    while (rest.length > limit) {
-      var cut = rest.lastIndexOf(' ', limit);
-      if (cut <= 0) cut = limit;
-      pieces.add(rest.substring(0, cut).trimRight());
-      rest = rest.substring(cut).trimLeft();
-    }
-    pieces.add(rest);
-    return pieces;
-  }
+  /// Cuts solution prose into blocks that each fit on one page. See [studyBookletProseBlocks].
+  static List<String> proseBlocks(String text) => studyBookletProseBlocks(text);
 
   /// The widgets of one question: its heading, its solution, then a rule. Each widget is one block
   /// of the page, so a long solution flows across pages instead of failing to fit on one.
@@ -443,22 +352,12 @@ class StudyBookletPdfGenerator {
 
     for (var p = 0; p < q.pieces.length; p++) {
       final List<pw.Widget> parts = switch (q.pieces[p]) {
-        StudyBookletText(:final text) => <pw.Widget>[
-            for (final block in proseBlocks(text))
-              pw.Text(
-                block,
-                style: const pw.TextStyle(
-                  fontSize: 9.5,
-                  lineSpacing: 2,
-                  color: PdfColors.grey900,
-                ),
-              ),
-          ],
+        StudyBookletText(:final text) => studyBookletMarkdownWidgets(text),
         StudyBookletFigure(:final spec) => <pw.Widget>[
             pw.Center(child: ppcPdfFigure(spec, width: 440)),
           ],
         StudyBookletSvgFigure(:final svg) => <pw.Widget>[
-            pw.Center(child: _svgPdfFigure(svg, width: 440)),
+            pw.Center(child: studyBookletSvgFigure(svg, width: 440)),
           ],
       };
       for (var k = 0; k < parts.length; k++) {

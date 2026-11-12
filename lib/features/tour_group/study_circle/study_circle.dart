@@ -37,6 +37,7 @@ export '../domain/models/study_today_models.dart';
 // Domain services & pure rule engines
 export '../domain/services/study_assignment_rules.dart';
 export '../domain/services/study_banking_master_catalog.dart';
+export '../domain/services/study_booklet_markdown.dart';
 export '../domain/services/study_booklet_pdf_generator.dart';
 export '../domain/services/study_challenge_rules.dart';
 export '../domain/services/study_chapter_rules.dart';

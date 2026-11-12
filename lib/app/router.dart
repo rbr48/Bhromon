@@ -19,6 +19,7 @@ import '../features/chat/presentation/pages/chat_screen.dart';
 import '../features/chat/presentation/pages/call_screen.dart';
 import '../features/chat/presentation/pages/starred_messages_screen.dart';
 
+import '../features/tour_group/presentation/pages/join_by_qr_screen.dart';
 import '../features/tour_group/presentation/pages/join_group_screen.dart';
 import '../features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
@@ -129,6 +130,11 @@ class AppRouter {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/join-by-qr',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const JoinByQrScreen()),
       ),
       GoRoute(
         path: '/login',
