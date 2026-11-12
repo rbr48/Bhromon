@@ -238,6 +238,29 @@ async function seed() {
   await set(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other/helpful/${LEAVER}`, {
     createdAt: new Date('2026-11-02T09:30:00Z'),
   });
+  // Charts in the same subject: a chart the leaver drew, and another member's chart that the leaver found helpful.
+  // The leaver's words stay under the stand-in, and their helpful mark comes out with the count falling by one.
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/charts/chart_leaver`, {
+    text: '```svg\n<svg viewBox="0 0 10 10"></svg>\n```',
+    title: 'Demand shift',
+    url: null,
+    createdByEmail: LEAVER,
+    helpfulCount: 0,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/charts/chart_other`, {
+    text: '```svg\n<svg viewBox="0 0 10 10"></svg>\n```',
+    title: 'Supply curve',
+    url: null,
+    createdByEmail: OTHER,
+    helpfulCount: 1,
+    shown: true,
+    pinned: false,
+  });
+  await set(`tours/${TOUR}/study_subjects/subj_leaver/charts/chart_other/helpful/${LEAVER}`, {
+    createdAt: new Date('2026-11-02T09:45:00Z'),
+  });
   // Assignments in the same subject: one the leaver added, and another member's that the leaver finished, and
   // a third member finished too. Each member's finished ids are one document of their own.
   await set(`tours/${TOUR}/study_subjects/subj_leaver/assignments/as_leaver`, {
@@ -927,6 +950,17 @@ describe('tour content purge', () => {
     });
     expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other/helpful/${LEAVER}`)).toBe(false);
     expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/papers/paper_other`)).toMatchObject({
+      createdByEmail: OTHER,
+      helpfulCount: 0,
+    });
+    // Charts keep their words under the stand-in. The leaver's helpful mark on another member's chart comes out,
+    // and that chart's count falls by one.
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/charts/chart_leaver`)).toMatchObject({
+      title: 'Demand shift',
+      createdByEmail: STAND_IN,
+    });
+    expect(await exists(`tours/${TOUR}/study_subjects/subj_leaver/charts/chart_other/helpful/${LEAVER}`)).toBe(false);
+    expect(await read(`tours/${TOUR}/study_subjects/subj_leaver/charts/chart_other`)).toMatchObject({
       createdByEmail: OTHER,
       helpfulCount: 0,
     });

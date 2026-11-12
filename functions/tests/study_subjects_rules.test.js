@@ -326,7 +326,7 @@ describe('study subjects, modules and posts', () => {
     });
 
     test('every module the app shows can be turned on', async () => {
-      for (const key of ['papers', 'assignments', 'discussion', 'plan', 'glossary', 'flashcards', 'quizzes']) {
+      for (const key of ['papers', 'charts', 'assignments', 'discussion', 'plan', 'glossary', 'flashcards', 'quizzes']) {
         await assertSucceeds(setDoc(moduleRef(db('admin'), key), moduleSettings({ name: key, enabled: false })));
       }
     });
@@ -352,6 +352,31 @@ describe('study subjects, modules and posts', () => {
 
     test('a past paper is refused while past papers are off', async () => {
       await assertFails(setDoc(postRef(db('member'), 'papers', 'paper3'), newPost(people.member.email, { title: 'Final 2025' })));
+    });
+
+    test('an admin turns on charts, and a member posts a chart with a title and no link', async () => {
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'charts'), moduleSettings({ name: 'Charts & graphs' })));
+      await assertSucceeds(
+        setDoc(
+          postRef(db('member'), 'charts', 'chart1'),
+          newPost(people.member.email, { title: 'Demand shift', text: '```svg\n<svg viewBox="0 0 10 10"></svg>\n```' })
+        )
+      );
+      await assertFails(
+        setDoc(postRef(db('member'), 'charts', 'chart2'), newPost(people.member.email, { title: 'Demand', url: 'http://x.org/chart.png' }))
+      );
+    });
+
+    test('a chart is refused while charts are off', async () => {
+      await assertFails(setDoc(postRef(db('member'), 'charts', 'chart3'), newPost(people.member.email, { title: 'Demand shift' })));
+    });
+
+    test('a member marks another member\'s chart helpful once, and never their own', async () => {
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'charts'), moduleSettings({ name: 'Charts & graphs' })));
+      await assertSucceeds(setDoc(postRef(db('admin'), 'charts', 'chart4'), newPost(people.admin.email, { title: 'Supply curve' })));
+      await assertSucceeds(mark('member', 'charts', 'chart4'));
+      await assertFails(mark('member', 'charts', 'chart4'));
+      await assertFails(mark('admin', 'charts', 'chart4'));
     });
 
     test('a post policy is one of the three', async () => {

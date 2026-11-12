@@ -63,6 +63,9 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
 
   bool get _paper => widget.moduleKey == StudyModuleKey.papers;
 
+  /// A chart carries a title, and its text draws the chart.
+  bool get _chart => widget.moduleKey == StudyModuleKey.charts;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +79,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       context,
       withLink: _withLink,
       paper: _paper,
+      chart: _chart,
       tourId: widget.tourId,
     );
     if (draft == null || !mounted) return;
@@ -154,6 +158,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       withLink: _withLink,
       existing: post,
       paper: _paper,
+      chart: _chart,
       tourId: widget.tourId,
     );
     if (draft == null || !mounted) return;
@@ -281,9 +286,11 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
                 icon: const Icon(Icons.add_rounded),
                 label: Text(l10n.translate(_paper
                     ? 'study_paper_add'
-                    : _withLink
-                        ? 'study_post_add_suggestion'
-                        : 'study_post_add_tip')),
+                    : _chart
+                        ? 'study_chart_add'
+                        : _withLink
+                            ? 'study_post_add_suggestion'
+                            : 'study_post_add_tip')),
               )
             : null,
         body: StreamBuilder<List<StudyPost>>(

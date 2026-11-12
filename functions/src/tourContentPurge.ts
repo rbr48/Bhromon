@@ -52,7 +52,7 @@ import {
  *   and a seat in play passes to a bot. Their safety alerts stay as resolved
  *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops, the packing
- *   list, and the study book list, reading plan, subjects, tips, suggestions, past papers, assignments, findings, problems, problem sets and weekly
+ *   list, and the study book list, reading plan, subjects, tips, suggestions, past papers, charts, assignments, findings, problems, problem sets and weekly
  *   challenges) keeps its amounts and dates. A challenge loses the person's join only.
  *   The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
@@ -521,11 +521,11 @@ export async function purgeMemberContent(
     if ((await answer.get()).exists) await answer.delete();
   }
   await applyToQuery(db, tour.collection('study_subjects'), anonymize(STUDY_SUBJECT, email, standIn));
-  // Each subject's tips and suggestions keep their text under the stand-in. The person's
+  // Each subject's tips, suggestions, past papers and charts keep their text under the stand-in. The person's
   // helpful marks come out, and each post's count drops by the mark removed.
   const subjects = await tour.collection('study_subjects').get();
   for (const subject of subjects.docs) {
-    for (const kind of ['tips', 'suggestions', 'papers']) {
+    for (const kind of ['tips', 'suggestions', 'papers', 'charts']) {
       const posts = subject.ref.collection(kind);
       await applyToQuery(db, posts, anonymize(STUDY_POST, email, standIn));
       const docs = await posts.get();

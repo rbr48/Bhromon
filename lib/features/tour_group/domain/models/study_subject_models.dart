@@ -1,6 +1,7 @@
 // A study group's subjects: what the group studies. An admin adds a subject and turns on its
 // modules, and members use them. A subject is stored under tours/{id}/study_subjects, its
-// modules under .../modules, and its posts under .../tips, .../suggestions, .../findings and .../problems
+// modules under .../modules, and its posts under .../tips, .../suggestions, .../papers, .../charts, .../findings
+// and .../problems
 // (the findings and the problems have their own models in study_finding_models.dart and
 // study_problem_models.dart). A subject
 // reuses the approval of a book: a member proposes it, and an admin lists or declines it.
@@ -16,6 +17,7 @@ enum StudyModuleKey {
   findings,
   problems,
   papers,
+  charts,
   plan,
   glossary,
   assignments,
