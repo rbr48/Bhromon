@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bhromon/core/widgets/skeleton.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -35,17 +37,69 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   Stream<List<AppNotification>>? _stream;
   List<AppNotification> _latest = const [];
   bool _unreadOnly = false;
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<AuthState>? _cubitSubscription;
 
   @override
   void initState() {
     super.initState();
     _repo = widget.repository ?? NotificationCenterRepository();
     _connectStream();
+    try {
+      _authSubscription =
+          FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (!mounted) return;
+        final newUid = widget.uid ?? user?.uid;
+        if (newUid != null && newUid.isNotEmpty && newUid != _uid) {
+          _connectStream();
+        }
+      });
+    } catch (_) {
+      // Firebase not initialized in headless tests.
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_cubitSubscription == null) {
+      try {
+        final cubit = context.read<AuthCubit>();
+        _cubitSubscription = cubit.stream.listen((state) {
+          if (!mounted) return;
+          if (state is Authenticated) {
+            final newUid = widget.uid ?? state.profile.uid;
+            if (newUid.isNotEmpty && newUid != _uid) {
+              _connectStream();
+            }
+          }
+        });
+      } catch (_) {
+        // No auth cubit above this screen.
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant NotificationCenterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.uid != oldWidget.uid ||
+        widget.repository != oldWidget.repository) {
+      _repo = widget.repository ?? NotificationCenterRepository();
+      _connectStream();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cubitSubscription?.cancel();
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   void _connectStream() {
     final uid = widget.uid ?? _signedInUid();
-    if (uid != null && uid != _uid) {
+    if (uid != null && uid.isNotEmpty && uid != _uid) {
       try {
         _stream = _repo!.watch(uid);
         _uid = uid;
@@ -85,9 +139,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_stream == null) {
-      _connectStream();
-    }
     final l10n = context.l10n;
     return PopScope(
       canPop: false,

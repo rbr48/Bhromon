@@ -1,10 +1,25 @@
+import 'package:bhromon/core/entities/explorer_profile.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/value_objects/explorer_score.dart';
+import 'package:bhromon/core/value_objects/trust_tier.dart';
+import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
+import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/features/notifications/data/notification_center_repository.dart';
 import 'package:bhromon/features/notifications/presentation/pages/notification_center_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+class _TestAuthCubit extends Cubit<AuthState> implements AuthCubit {
+  _TestAuthCubit(super.initialState);
+
+  void emitState(AuthState state) => emit(state);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 // The list answers from a fixed set of entries and records each change. The routes it opens are
 // stand-in pages, so a test can see where a tap went.
@@ -249,5 +264,61 @@ void main() {
     await _pump(tester, repo);
 
     expect(find.text('No notifications yet'), findsOneWidget);
+  });
+
+  testWidgets(
+      'signing in while notification center is open connects stream and displays entries',
+      (tester) async {
+    final repo = _FakeRepository([_entry('n1', 'Welcome to Bhromon')]);
+    final authCubit = _TestAuthCubit(const Unauthenticated());
+
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: [
+        GoRoute(
+          path: '/notifications',
+          builder: (_, __) => NotificationCenterScreen(repository: repo),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      BlocProvider<AuthCubit>.value(
+        value: authCubit,
+        child: MaterialApp.router(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en'), Locale('bn')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Initially unauthenticated: empty signed-out state is shown.
+    expect(find.text('Sign in to see your notifications'), findsOneWidget);
+    expect(find.text('Welcome to Bhromon'), findsNothing);
+
+    // Auth resolves while center is open.
+    final profile = ExplorerProfile(
+      uid: 'u1',
+      displayName: 'Traveler',
+      explorerScore: const ExplorerScore(value: 250, tier: TrustTier.verified),
+      tier: TrustTier.verified,
+      badges: const [],
+      division: 'Dhaka',
+      createdAt: DateTime(2026, 1, 1),
+    );
+    authCubit.emitState(Authenticated(profile));
+    await tester.pumpAndSettle();
+
+    // Stream connected dynamically and entries are displayed.
+    expect(find.text('Welcome to Bhromon'), findsOneWidget);
+    expect(find.text('Sign in to see your notifications'), findsNothing);
   });
 }
