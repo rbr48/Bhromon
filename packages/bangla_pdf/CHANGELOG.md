@@ -1,3 +1,14 @@
+## Unreleased
+
+### Performance
+
+- **Shaping no longer re-reads the font's lookup tables for every glyph.** The
+  Coverage and ClassDef tables that GSUB and GPOS check are read once per font
+  and kept on its `OtData`. Shaping Bengali text was about twice as fast on the
+  same text; the output is unchanged (the shaping tests pass, apart from the
+  three `lookup_coverage_test.dart` cases that need fixture fonts this copy
+  does not have).
+
 ## 1.9.2
 
 ### Fixed

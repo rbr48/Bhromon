@@ -117,6 +117,22 @@ class StudyBookletCancelled implements Exception {
 
 /// Service generating duplex-printable A4 booklets and branch notice board posters.
 /// 100% deterministic native PDF layout using [bangla_pdf] with zero external AI calls.
+/// What a booklet's layout needs, as plain data: the content and the two font files. A background
+/// isolate is sent one of these, so it holds nothing that cannot be copied across.
+class StudyBookletJob {
+  const StudyBookletJob({
+    required this.content,
+    required this.isBengali,
+    required this.regularFont,
+    required this.boldFont,
+  });
+
+  final StudyBookletContent content;
+  final bool isBengali;
+  final Uint8List regularFont;
+  final Uint8List boldFont;
+}
+
 class StudyBookletPdfGenerator {
   const StudyBookletPdfGenerator();
 
@@ -406,19 +422,39 @@ class StudyBookletPdfGenerator {
     return widgets;
   }
 
-  /// Loads the booklet's fonts and configures [BanglaPdf] for typography.
+  /// The booklet's two Bengali faces, Regular and Bold, read from the app's bundle as bytes. The
+  /// bytes are what a background isolate is given, since a parsed font cannot be sent to one.
   ///
-  /// The booklet is set in Noto Sans Bengali, Regular and Bold: the face the app uses for Bengali
-  /// text. Its glyphs cover the Latin letters, the Bengali script and the punctuation the booklet
-  /// prints, so Hind Siliguri is not loaded here. The bangla_pdf face is the last fallback for any
-  /// character that neither face has.
+  /// The booklet is set in Noto Sans Bengali, the face the app uses for Bengali text. Its glyphs
+  /// cover the Latin letters, the Bengali script and the punctuation the booklet prints, so Hind
+  /// Siliguri is not loaded here. The bangla_pdf face is the last fallback for any character that
+  /// neither face has.
+  static Future<({Uint8List regular, Uint8List bold})> loadFonts() async {
+    final regular = await rootBundle.load('assets/fonts/NotoSansBengali.ttf');
+    final bold = await rootBundle.load('assets/fonts/NotoSansBengali-Bold.ttf');
+    return (
+      regular: regular.buffer
+          .asUint8List(regular.offsetInBytes, regular.lengthInBytes),
+      bold: bold.buffer.asUint8List(bold.offsetInBytes, bold.lengthInBytes),
+    );
+  }
+
+  /// A document set in the booklet's faces, read from the bundle, for the branch poster, which is
+  /// laid out on the calling isolate.
   Future<pw.Document> _createDocument(String title) async {
-    final regular = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/NotoSansBengali.ttf'),
-    );
-    final bold = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/NotoSansBengali-Bold.ttf'),
-    );
+    final fonts = await loadFonts();
+    return _documentFor(title, fonts.regular, fonts.bold);
+  }
+
+  /// A document set in the booklet's faces, with [BanglaPdf] configured for them. That
+  /// configuration is global to the isolate it runs in, so it is made wherever the document is.
+  static pw.Document _documentFor(
+    String title,
+    Uint8List regularBytes,
+    Uint8List boldBytes,
+  ) {
+    final regular = pw.Font.ttf(ByteData.sublistView(regularBytes));
+    final bold = pw.Font.ttf(ByteData.sublistView(boldBytes));
 
     BanglaPdf.configure(
       shapingMode: BanglaShapingMode.unicode,
@@ -638,24 +674,70 @@ class StudyBookletPdfGenerator {
     );
   }
 
-  /// Generates a duplex-printable A4 examination question bank & model solutions booklet.
+  /// Generates a duplex-printable A4 examination question bank & model solutions booklet, laid
+  /// out on the calling isolate. [onProgress] is told how many chapters are done. When
+  /// [isCancelled] turns true the work stops at the next chapter with [StudyBookletCancelled].
   ///
-  /// The chapters are laid out one at a time, with a pause after each, so the screen stays
-  /// responsive on the web, where the layout runs on the only thread. [onProgress] is told
-  /// how many chapters are done. When [isCancelled] turns true the work stops at the next
-  /// chapter with [StudyBookletCancelled].
+  /// The screen uses `layoutBookletJob` instead, which runs the same layout in a background
+  /// isolate where the platform has one.
   Future<Uint8List> generateBookletPdf(
     StudyBookletContent content, {
     bool isBengali = true,
     bool Function()? isCancelled,
     void Function(int done, int total)? onProgress,
   }) async {
-    final doc = await _createDocument('${content.subjectTitle} - Exam Booklet');
+    final fonts = await loadFonts();
+    return layoutJob(
+      StudyBookletJob(
+        content: content,
+        isBengali: isBengali,
+        regularFont: fonts.regular,
+        boldFont: fonts.bold,
+      ),
+      isCancelled: isCancelled,
+      onProgress: onProgress,
+    );
+  }
+
+  /// Lays [job] out on the isolate this is called on. The chapters are laid out one at a time.
+  /// On the UI isolate, [pauseBetweenChapters] lets the frame, the taps and the timers run after
+  /// each one, so the page stays responsive on the web, where the layout runs on the only thread.
+  static Future<Uint8List> layoutJob(
+    StudyBookletJob job, {
+    bool Function()? isCancelled,
+    void Function(int done, int total)? onProgress,
+    bool pauseBetweenChapters = true,
+  }) async {
+    final doc = _documentFor(
+      '${job.content.subjectTitle} - Exam Booklet',
+      job.regularFont,
+      job.boldFont,
+    );
+    return _writeBooklet(
+      doc,
+      job.content,
+      isBengali: job.isBengali,
+      isCancelled: isCancelled,
+      onProgress: onProgress,
+      pauseBetweenChapters: pauseBetweenChapters,
+    );
+  }
+
+  static Future<Uint8List> _writeBooklet(
+    pw.Document doc,
+    StudyBookletContent content, {
+    required bool isBengali,
+    required bool pauseBetweenChapters,
+    bool Function()? isCancelled,
+    void Function(int done, int total)? onProgress,
+  }) async {
     final total = content.chapters.length;
     var done = 0;
     Future<void> breathe() async {
-      // Lets the frame, the taps and the timers run before the next chapter.
-      await Future<void>.delayed(const Duration(milliseconds: 16));
+      if (pauseBetweenChapters) {
+        // Lets the frame, the taps and the timers run before the next chapter.
+        await Future<void>.delayed(const Duration(milliseconds: 16));
+      }
       if (isCancelled?.call() ?? false) throw const StudyBookletCancelled();
     }
 
