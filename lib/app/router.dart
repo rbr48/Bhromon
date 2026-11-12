@@ -351,9 +351,11 @@ class AppRouter {
       ),
       GoRoute(
         path: '/group/:tourId/channels',
+        // A group chat has no tab bar on a phone: its text box is the only control at the bottom.
         pageBuilder: (context, state) => _tripPage(
           state,
           GroupChannelsScreen(tourId: state.pathParameters['tourId']!),
+          mobileNav: false,
         ),
       ),
       GoRoute(
@@ -528,12 +530,14 @@ class AppRouter {
 
   /// A tour screen inside the trip bar. See [TripShell] for why this is not a
   /// ShellRoute.
-  static Page<void> _tripPage(GoRouterState state, Widget screen) {
+  static Page<void> _tripPage(GoRouterState state, Widget screen,
+      {bool mobileNav = true}) {
     return _customPageTransition(
       state,
       TripShell(
         tourId: state.pathParameters['tourId']!,
         location: state.uri.path,
+        showMobileNav: mobileNav,
         child: screen,
       ),
       key: pageKeyFor(state),

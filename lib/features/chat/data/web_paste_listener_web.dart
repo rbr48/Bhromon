@@ -37,3 +37,14 @@ void Function() attachWebPasteListener({
   web.document.addEventListener('paste', listener);
   return () => web.document.removeEventListener('paste', listener);
 }
+
+/// Frees the object URLs of pasted files once they have been sent or set aside. A file whose path
+/// is not an object URL, such as one the clipboard copied into the app's cache, is left alone.
+void releasePastedFiles(List<SharedFile> files) {
+  for (final file in files) {
+    final path = file.path;
+    if (path != null && path.startsWith('blob:')) {
+      web.URL.revokeObjectURL(path);
+    }
+  }
+}

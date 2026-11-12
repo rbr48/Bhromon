@@ -24,6 +24,7 @@ class TripShell extends StatelessWidget {
     this.repository,
     this.guardMembership = true,
     this.ownMobileScaffold = false,
+    this.showMobileNav = true,
   });
 
   /// The width from which the tabs move to a side rail.
@@ -49,6 +50,10 @@ class TripShell extends StatelessWidget {
   /// Whether the child screen already provides its own mobile Scaffold and navigation bar.
   /// When true, below [railBreakpoint] the child is rendered as-is without an outer Scaffold.
   final bool ownMobileScaffold;
+
+  /// Whether a phone shows the tab bar under the screen. A group chat turns it off, so its
+  /// text box is the only control at the bottom. The side rail on wide screens is unchanged.
+  final bool showMobileNav;
 
   @override
   Widget build(BuildContext context) {
@@ -109,10 +114,12 @@ class TripShell extends StatelessWidget {
             ? wrappedChild
             : Scaffold(
                 body: wrappedChild,
-                bottomNavigationBar: BhromonBottomNav(
-                  selectedIndex: index,
-                  tourId: tourId.isNotEmpty ? tourId : null,
-                ),
+                bottomNavigationBar: showMobileNav
+                    ? BhromonBottomNav(
+                        selectedIndex: index,
+                        tourId: tourId.isNotEmpty ? tourId : null,
+                      )
+                    : null,
               ))
         : Scaffold(
             body: Row(

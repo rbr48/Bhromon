@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -7,20 +8,48 @@ import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../../chat/presentation/widgets/chat_formatting_toolbar.dart';
 import '../../../chat/presentation/widgets/voice_message_recorder.dart';
+import '../../../chat/data/web_paste_listener.dart';
+import '../../../chat/presentation/widgets/composer_paste.dart';
+import '../../../share_intake/domain/shared_file.dart';
 
 /// A photo, video, or file picked for the next message, not yet uploaded.
 class PendingAttachment {
   final XFile file;
   final bool isVideo;
   final bool isDocument;
+  final bool isAudio;
   final int? fileSizeBytes;
 
   const PendingAttachment({
     required this.file,
     this.isVideo = false,
     this.isDocument = false,
+    this.isAudio = false,
     this.fileSizeBytes,
   });
+}
+
+/// The pending attachment for a pasted file the member has confirmed. Its kind comes from its
+/// name, the way the uploader and the server read it.
+PendingAttachment pendingAttachmentFor(SharedFile file) {
+  final path = file.path;
+  if (path == null) {
+    throw StateError(
+        'The file was not copied before it was sent: ${file.name}');
+  }
+  final size = file.sizeBytes >= 0 ? file.sizeBytes : null;
+  final xfile = XFile(path, name: file.name, length: size);
+  return switch (sharedFileKind(file.name)) {
+    SharedFileKind.image => PendingAttachment(file: xfile),
+    SharedFileKind.video => PendingAttachment(file: xfile, isVideo: true),
+    SharedFileKind.audio => PendingAttachment(file: xfile, isAudio: true),
+    SharedFileKind.document => PendingAttachment(
+        file: xfile,
+        isDocument: true,
+        fileSizeBytes: size,
+      ),
+    null => throw StateError('The file has no supported type: ${file.name}'),
+  };
 }
 
 /// One line of the mention list. [label] is what goes after the "@".
@@ -60,6 +89,10 @@ class ChannelComposer extends StatefulWidget {
   final void Function(String path, Duration duration) onVoiceSent;
   final VoidCallback onVoiceCancel;
 
+  /// Files pasted or inserted into the box. The screen shows them for review before anything is
+  /// sent.
+  final ValueChanged<List<SharedFile>> onPastedFiles;
+
   const ChannelComposer({
     super.key,
     required this.controller,
@@ -83,6 +116,7 @@ class ChannelComposer extends StatefulWidget {
     required this.onStartVoice,
     required this.onVoiceSent,
     required this.onVoiceCancel,
+    required this.onPastedFiles,
   });
 
   @override
@@ -91,6 +125,47 @@ class ChannelComposer extends StatefulWidget {
 
 class _ChannelComposerState extends State<ChannelComposer> {
   bool _showFormatting = false;
+  void Function()? _stopWebPaste;
+
+  /// Paste and keyboard insertion. The files go up to the screen, which shows them for review.
+  late final ComposerPaste _paste = ComposerPaste(
+    onFiles: (files) => widget.onPastedFiles(files),
+    onFailed: _showReadFailed,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      // A file pasted while this box has focus is taken, as it is in the chat box. A paste while
+      // the box is busy, or while a voice note is being recorded, is left to the browser.
+      _stopWebPaste = attachWebPasteListener(
+        accept: () =>
+            mounted &&
+            widget.focusNode.hasFocus &&
+            !widget.sending &&
+            !widget.editing &&
+            !widget.recordingVoice,
+        onFiles: (files) => widget.onPastedFiles(files),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopWebPaste?.call();
+    super.dispose();
+  }
+
+  void _showReadFailed() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.translate('chan_file_read_failed')),
+        backgroundColor: AppColors.amber,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +266,8 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                 textInputAction: TextInputAction.send,
                                 onChanged: widget.onChanged,
                                 onSubmitted: (_) => widget.onSend(),
+                                contentInsertionConfiguration: _paste.insertion,
+                                contextMenuBuilder: _paste.contextMenu,
                                 style: TextStyle(
                                   color: context.forest.text,
                                   fontSize: 16,
@@ -233,32 +310,19 @@ class _ChannelComposerState extends State<ChannelComposer> {
                                 tooltip:
                                     l10n.translate('format_toolbar_toggle'),
                                 padding: EdgeInsets.zero,
-                                icon: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: _showFormatting
-                                          ? AppColors.mintGreen
-                                          : context.forest.text70,
-                                      width: 1.5,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
+                                icon: Text(
+                                  'Aa',
+                                  style: TextStyle(
                                     color: _showFormatting
                                         ? AppColors.mintGreen
-                                            .withValues(alpha: 0.15)
-                                        : Colors.transparent,
-                                  ),
-                                  child: Text(
-                                    'Aa',
-                                    style: TextStyle(
-                                      color: _showFormatting
-                                          ? AppColors.mintGreen
-                                          : context.forest.text70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      letterSpacing: -0.5,
-                                    ),
+                                        : context.forest.text70,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    letterSpacing: -0.5,
+                                    decoration: _showFormatting
+                                        ? TextDecoration.underline
+                                        : TextDecoration.none,
+                                    decorationColor: AppColors.mintGreen,
                                   ),
                                 ),
                                 onPressed: widget.sending
@@ -388,9 +452,11 @@ class _PendingRow extends StatelessWidget {
             avatar: Icon(
               item.isVideo
                   ? Icons.videocam_rounded
-                  : item.isDocument
-                      ? Icons.insert_drive_file_rounded
-                      : Icons.photo_rounded,
+                  : item.isAudio
+                      ? Icons.mic_rounded
+                      : item.isDocument
+                          ? Icons.insert_drive_file_rounded
+                          : Icons.photo_rounded,
               size: 16,
               color: AppColors.mintGreen,
             ),

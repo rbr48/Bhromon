@@ -268,6 +268,7 @@ void main() {
         onStartVoice: onStart ?? () {},
         onVoiceSent: (_, __) {},
         onVoiceCancel: () {},
+        onPastedFiles: (_) {},
       );
     }
 
