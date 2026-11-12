@@ -1,42 +1,42 @@
-# Implementation Plan: Universal SVG Vector Graphics for Study Solutions & Chat Markdown
+# Implementation Plan: Whole-Project Evaluation Improvements
 
 ## Context & Objectives
-1. **User Problem**:
-   - In study notes and solutions (e.g. 5th New BPE POE Question 3(a) Indifference Curves), diagrams are currently presented as plain text code blocks (`CODE Copy` with ASCII art).
-   - The user requested **Universal SVG** support so all economic diagrams, curves, flowcharts, and banking structures can be rendered dynamically as crisp, high-DPI, interactive vector graphics instead of ASCII text.
-2. **Architecture**:
-   - Markdown parsing (`ChatMarkdown`): Recognize ````svg ```` code fences, ````xml ```` containing `<svg>`, and raw `<svg>...</svg>` blocks, parsing them into `ChatSvgBlock`.
-   - UI Rendering (`ChatRichText` & `ChatSvgWidget`): Render `ChatSvgBlock` using `flutter_svg`'s `SvgPicture.string` with theme-aware styling, responsive scaling, and safe error fallback.
-   - Printable A4 PDF Booklets (`StudyBookletPdfGenerator`): Parse `StudyBookletSvgFigure` and draw vector graphics in the PDF via `pw.SvgImage` with fallback protection.
-   - Database Migration: Convert 5th New BPE POE Question 3(a) Indifference Curves (and additional economic charts) in Firestore from ASCII to clean SVG.
+Following the Whole-Project Evaluation of **Bhromon** (`v1.8.204+258` / `v1.8.205+259`), the user approved executing all 5 recommended architectural, CI, and maintenance workstreams:
+1. Review & merge PR #505 (`Fix exam simulator, official pack duplicates and member photo sync`).
+2. Evaluate & resolve Dependabot PR #341 (`maplibre_gl 0.26.2 -> 0.28.0`).
+3. Remove the 6 empty legacy feature skeletons under `lib/features/` and raise the CI LCOV line coverage regression floor from `25.5%` to `40.0%`.
+4. Modularize `media-server/main.py` by extracting media purge/reminder routes (`purge_routes.py`) and notification trigger routes (`notify_routes.py`) into dedicated FastAPI routers.
+5. Create cohesive sub-domain barrel entrypoints in `lib/features/tour_group/` (`study_circle/study_circle.dart` and `ledger/ledger.dart`) with unit test verification, bump version to `1.8.206+260`, and deploy the updated Flutter Web release.
 
 ---
 
 ## Tasks & Milestones
 
-- [x] **Task 1: Domain AST & Markdown Parsing for Universal SVG**
-  - Add `ChatSvgBlock` to `lib/features/tour_group/domain/services/chat_markdown.dart`.
-  - Update `parseMarkdownIntoBlocks` to parse ````svg```` fences and raw `<svg>` blocks.
-  - Add unit tests in `test/features/tour_group/domain/services/chat_markdown_chart_test.dart` verifying SVG parsing.
+- [x] **Task 1: Review & Merge PR #505**
+  - Inspect all commits and diffs on PR #505.
+  - Verify green CI checks (`Dart Format`, `Analyze`, `Test`, `Build Web (release)`, `Build Android (debug APK)`).
+  - Post Antigravity peer review sign-off and sync merged `main`.
 
-- [x] **Task 2: Presentation Widget for Dynamic SVG Rendering**
-  - Create `lib/features/chat/presentation/widgets/chat_svg_widget.dart` using `SvgPicture.string`.
-  - Add error boundary fallback to code view if SVG XML is malformed.
-  - Wire `ChatSvgBlock` into `lib/features/chat/presentation/widgets/chat_rich_text.dart`.
-  - Add widget test in `test/features/chat/presentation/widgets/chat_svg_widget_test.dart`.
+- [x] **Task 2: Evaluate & Resolve Dependabot PR #341 (`maplibre_gl 0.28.0`)**
+  - Inspect `maplibre_gl` usage across `lib/` and `web/index.html` plus PR #341 CI failure logs.
+  - Document incompatibility with Web MapLibre GL JS 4.x and Pigeon error contracts, and close PR #341 cleanly.
 
-- [x] **Task 3: Printable PDF Booklet Vector Rendering for SVG**
-  - Add `StudyBookletSvgFigure` to `lib/features/tour_group/domain/services/study_booklet_pdf_generator.dart`.
-  - Support `svg` in `solutionPieces`.
-  - Render SVG figures via `pw.SvgImage` in PDF page flow.
-  - Verify with unit tests in `test/features/tour_group/domain/services/study_booklet_figures_test.dart`.
+- [x] **Task 3: Clean Legacy Feature Skeletons & Raise CI Coverage Floor**
+  - Remove empty legacy directory trees (`feed`, `map`, `offline_vault`, `premium_guide`, `pro_tip`, `trip_log`) from `lib/features/`.
+  - Raise LCOV line coverage floor in `.github/workflows/flutter_ci.yml` from `25.5%` to `40.0%`.
 
-- [x] **Task 4: Update 5th New BPE POE (and other) Diagrams in Firestore**
-  - Convert 5th New BPE POE Question 3(a) Indifference Curve ($IC_1$ vs $IC_2$ proof of non-intersection) in both Bengali and English to clean, responsive SVG.
-  - Update Firestore documents `6S5QeCfgJekYgBO8HSTl` (Bangla) and `O0S93YI1xDgpUyVgucGg` (English).
+- [x] **Task 4: Modularize `media-server/main.py` FastAPI Routers**
+  - Extract purge & ack-reminder endpoints into `media-server/purge_routes.py` (`purge_router`).
+  - Extract notification & admin broadcast endpoints into `media-server/notify_routes.py` (`notify_router`).
+  - Preserve dynamic attribute lookup on `main` for test monkeypatching compatibility and verify all 540 `pytest` tests pass.
 
-- [x] **Task 5: Verification, Web Release Build & Deploy**
-  - Run all flutter tests and analyze (`flutter test`, `dart analyze`).
-  - Build web release (`flutter build web --release`).
-  - Deploy to hosting (`firebase deploy --only hosting`).
-  - Open PR with peer signoff documentation.
+- [x] **Task 5: Extract Cohesive `tour_group` Sub-Domain Entrypoints**
+  - Create `lib/features/tour_group/study_circle/study_circle.dart` barrel module.
+  - Create `lib/features/tour_group/ledger/ledger.dart` barrel module.
+  - Add unit test `test/features/tour_group/subdomains_barrel_test.dart`.
+  - Increment `pubspec.yaml` version to `1.8.206+260`.
+
+- [x] **Task 6: Verification, Web Release Deployment & Pull Request**
+  - Run `dart format`, `dart analyze`, `tool/check_dart_io.sh`, `tool/check_empty_catches.sh`, and unit tests.
+  - Build Flutter Web release (`flutter build web --release`) and deploy to Firebase Hosting (`firebase deploy --only hosting`).
+  - Commit changes on `chore/project-evaluation-improvements`, push branch, and open a GitHub Pull Request to `main`.
