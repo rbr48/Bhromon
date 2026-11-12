@@ -38,6 +38,7 @@ import '../widgets/group_photo_sheet.dart';
 import '../widgets/hub/preset_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../widgets/google_play_action_button.dart';
+import '../widgets/group_qr_sheet.dart';
 import '../group_type_pdf.dart';
 import '../tour_pdf_export.dart';
 import 'package:bhromon/features/official_feed/data/official_feed_repository.dart';
@@ -436,6 +437,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
+  /// The title-bar scanner. A group it reads opens the join page, where the person still
+  /// confirms before joining.
+  Future<void> _openJoinByQr(BuildContext context) async {
+    final code = await context.push<String>('/join-by-qr');
+    if (code == null || !context.mounted) return;
+    await context.push('/join/$code');
+  }
+
   void _copyInviteCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
@@ -581,6 +590,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         _copyInviteLink(group);
       case 'copy_code':
         _copyInviteCode(group.inviteCode);
+      case 'group_qr':
+        await showGroupQrSheet(context, group);
       case 'export_pdf':
         // The whole tour holds every member's photos, so its owner or an admin exports it.
         final role = await _repository.myRole(group.id);
@@ -793,6 +804,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               child: _menuRow(context, Icons.copy_rounded,
                   context.l10n.translate('hub_copy_invite_code')),
             ),
+            // Every member may show and share the join code, so no role check here.
+            if (group.inviteCode.isNotEmpty)
+              PopupMenuItem(
+                value: 'group_qr',
+                child: _menuRow(context, Icons.qr_code_2,
+                    context.l10n.translate('hub_group_qr_menu')),
+              ),
             if (exports.contains(RecordExportOption.samityStatement))
               PopupMenuItem(
                 value: 'export_samity',
@@ -1479,6 +1497,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ],
             ),
             actions: [
+              // Before the Play Store link on the web and before the language button on phones.
+              IconButton(
+                tooltip: context.l10n.translate('hub_scan_qr'),
+                icon: const Icon(Icons.qr_code_scanner_rounded,
+                    color: AppColors.midGreen),
+                onPressed: () => _openJoinByQr(context),
+              ),
               if (kIsWeb) const GooglePlayActionButton(),
               ListenableBuilder(
                 listenable: LocaleController.instance,
