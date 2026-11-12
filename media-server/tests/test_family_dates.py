@@ -346,6 +346,11 @@ class _FakeEngine:
     def get_push_targets_for_uids(self, uids):
         return [(f"token:{uid}", None, self._languages.get(uid, "en")) for uid in uids]
 
+    def record_inbox(self, uids, data, make_text):
+        """Records the entries the module keeps in each member's list, for the assertions."""
+        self.inbox_entries = getattr(self, "inbox_entries", []) + [(list(uids), dict(data))]
+        return len(list(uids))
+
     def send_localized(self, targets, make_text, data, high_priority=False):
         # The server's contract: one text per language, sent to that language's devices.
         for language in sorted({lang for _, _, lang in targets}):

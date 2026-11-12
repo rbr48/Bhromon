@@ -109,6 +109,16 @@ def call_may_still_ring(created_at: Any, now: Optional[datetime] = None) -> bool
     now = now or datetime.now(timezone.utc)
     return (now - created_at).total_seconds() <= CALL_PUSH_WINDOW_SECONDS
 
+# How many entries one batch of the notification list writes (Firestore allows 500 writes a batch).
+INBOX_BATCH_SIZE = 400
+# The fields of a push's data that name its item, in the order the list reads them. The first one present
+# becomes the entry's itemId, which the app opens the page with.
+INBOX_ITEM_KEYS = (
+    "noticeId", "expenseId", "alertId", "eventId", "threadId", "materialId", "setId", "subjectId",
+    "sessionId", "dateId", "dateKey",
+)
+
+
 class NotificationEngine:
     """Core push notification and maintenance worker backed by Firebase Admin SDK."""
 
@@ -346,6 +356,49 @@ class NotificationEngine:
 
         return sent_count
 
+    def record_inbox(self, uids: Any, data: Dict[str, str], make_text: Any) -> int:
+        """Keeps a push in each member's notification list (users/{uid}/notifications), in the member's own
+        language, so a push that was missed can still be read and opened. Every member is kept, including one
+        with no device to push to. Written with the admin SDK in batches of INBOX_BATCH_SIZE. A failure is
+        logged and never stops the push itself."""
+        try:
+            from google.cloud import firestore
+
+            db = self._get_db()
+            item = next((str(data[key]) for key in INBOX_ITEM_KEYS if data.get(key)), None)
+            tour = str(data.get("tourId") or "") or None
+            action = str(data.get("action", ""))
+            written = 0
+            pending = 0
+            batch = db.batch()
+            for uid in dict.fromkeys(u for u in uids if u):
+                title, body = make_text(self.get_language_for_uid(uid))
+                entry: Dict[str, Any] = {
+                    "title": title,
+                    "body": body,
+                    "action": action,
+                    "read": False,
+                    "timestamp": firestore.SERVER_TIMESTAMP,
+                }
+                if tour:
+                    entry["tourId"] = tour
+                if item:
+                    entry["itemId"] = item
+                ref = db.collection("users").document(uid).collection("notifications").document()
+                batch.set(ref, entry)
+                written += 1
+                pending += 1
+                if pending == INBOX_BATCH_SIZE:
+                    batch.commit()
+                    batch = db.batch()
+                    pending = 0
+            if pending:
+                batch.commit()
+            return written
+        except Exception as e:
+            logger.warning("Could not keep the push in the notification list: %s", e)
+            return 0
+
     def get_language_for_uid(self, uid: str) -> str:
         """The language the user's latest device registered with, or English."""
         try:
@@ -414,12 +467,13 @@ class NotificationEngine:
         name = str((snapshot.to_dict() or {}).get("displayName", "")).strip() if snapshot.exists else ""
         return name[:80] or SOS_DEFAULT_NAME
 
-    def _sos_recipients(self, tour_id: str, sender_email: str) -> List[Tuple[str, Any, str]]:
-        """The devices of every other active member of the tour."""
+    def _sos_recipients(self, tour_id: str, sender_email: str) -> Tuple[List[str], List[Tuple[str, Any, str]]]:
+        """The uids and the devices of every other active member of the tour."""
         emails = self.get_active_tour_members(tour_id, except_email=sender_email)
         if not emails:
-            return []
-        return self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
+            return [], []
+        uids = self.get_uids_for_emails(emails)
+        return uids, self.get_push_targets_for_uids(uids)
 
     def send_sos_alert(
         self,
@@ -445,17 +499,21 @@ class NotificationEngine:
         if not self.claim_once(f"sos_{alert_id}"):
             return {"status": "already_sent"}
         try:
-            targets = self._sos_recipients(tour_id, sender)
-            if not targets:
+            uids, targets = self._sos_recipients(tour_id, sender)
+            if not uids:
                 return {"status": "no_recipients"}
             name = self.member_display_name(tour_id, sender)
             data = {"action": "sos", "type": "sos", "tourId": tour_id, "alertId": alert_id}
+
+            def make_text(lang: str) -> Tuple[str, str]:
+                return push_text(lang, "sos.title", sender=name), push_text(lang, "sos.body")
+
+            self.record_inbox(uids, data, make_text)
+            if not targets:
+                return {"status": "no_recipients"}
             count = self.send_localized(
                 targets,
-                lambda lang: (
-                    push_text(lang, "sos.title", sender=name),
-                    push_text(lang, "sos.body"),
-                ),
+                make_text,
                 data,
                 high_priority=True,
                 sos_tag=f"sos_{alert_id}",
@@ -476,7 +534,7 @@ class NotificationEngine:
         if not self.claim_once(f"sos_ended_{alert_id}"):
             return {"status": "already_sent"}
         try:
-            targets = self._sos_recipients(tour_id, sender)
+            _, targets = self._sos_recipients(tour_id, sender)
             if not targets:
                 return {"status": "no_recipients"}
             name = self.member_display_name(tour_id, sender)
@@ -552,17 +610,19 @@ class NotificationEngine:
         thread_title: str,
     ) -> int:
         """Tells the member who asked a discussion question that someone replied to it."""
-        targets = self.get_push_targets_for_uids(self.get_uids_for_emails([asker_email]))
+        uids = self.get_uids_for_emails([asker_email])
+        targets = self.get_push_targets_for_uids(uids)
         title = thread_title.strip()
         data = {"action": "study_reply", "tourId": tour_id, "bookId": book_id, "threadId": thread_id}
-        count = self.send_localized(
-            targets,
-            lambda lang: (
+
+        def make_text(lang: str) -> Tuple[str, str]:
+            return (
                 push_text(lang, "study.reply.head"),
                 push_text(lang, "study.reply.body", title=title or push_text(lang, "study.reply.untitled")),
-            ),
-            data,
-        )
+            )
+
+        count = self.send_localized(targets, make_text, data)
+        self.record_inbox(uids, data, make_text)
         self.stats["study_reply_sent"] = self.stats.get("study_reply_sent", 0) + count
         return count
 
@@ -578,34 +638,38 @@ class NotificationEngine:
     ) -> int:
         """Tells members that a material was shared, or the admins that one waits for their approval, or
         that it has been reported again (kind "reported")."""
-        targets = self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
+        uids = self.get_uids_for_emails(emails)
+        targets = self.get_push_targets_for_uids(uids)
         kind = kind or ("review" if pending else "shared")
         name = title.strip()
         data = {"action": "study_material", "tourId": tour_id, "bookId": book_id, "materialId": material_id}
-        count = self.send_localized(
-            targets,
-            lambda lang: (
+
+        def make_text(lang: str) -> Tuple[str, str]:
+            return (
                 push_text(lang, f"study.material.{kind}.head"),
                 push_text(lang, f"study.material.{kind}.body", title=name or push_text(lang, "study.material.untitled")),
-            ),
-            data,
-        )
+            )
+
+        count = self.send_localized(targets, make_text, data)
+        self.record_inbox(uids, data, make_text)
         self.stats["study_material_sent"] = self.stats.get("study_material_sent", 0) + count
         return count
 
     def send_study_mention(self, tour_id: str, book_id: str, thread_id: str, title: str, emails: List[str]) -> int:
         """Tells the members a discussion names with @ that they were mentioned in it."""
-        targets = self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
+        uids = self.get_uids_for_emails(emails)
+        targets = self.get_push_targets_for_uids(uids)
         name = title.strip()
         data = {"action": "study_reply", "tourId": tour_id, "bookId": book_id, "threadId": thread_id}
-        count = self.send_localized(
-            targets,
-            lambda lang: (
+
+        def make_text(lang: str) -> Tuple[str, str]:
+            return (
                 push_text(lang, "study.mention.head"),
                 push_text(lang, "study.mention.body", title=name or push_text(lang, "study.reply.untitled")),
-            ),
-            data,
-        )
+            )
+
+        count = self.send_localized(targets, make_text, data)
+        self.record_inbox(uids, data, make_text)
         self.stats["study_mention_sent"] = self.stats.get("study_mention_sent", 0) + count
         return count
 
@@ -620,13 +684,14 @@ class NotificationEngine:
     ) -> int:
         """Tells members that an assignment or a past paper was added to a subject, or the admins that one waits
         for their approval. `kind` is one of assignment.new, assignment.review, paper.new or paper.review."""
-        targets = self.get_push_targets_for_uids(self.get_uids_for_emails(emails))
+        uids = self.get_uids_for_emails(emails)
+        targets = self.get_push_targets_for_uids(uids)
         name = title.strip()
         subject_name = subject_title.strip()
         data = {"action": "study_subject", "tourId": tour_id, "subjectId": subject_id}
-        count = self.send_localized(
-            targets,
-            lambda lang: (
+
+        def make_text(lang: str) -> Tuple[str, str]:
+            return (
                 push_text(lang, f"study.{kind}.head"),
                 push_text(
                     lang,
@@ -634,9 +699,10 @@ class NotificationEngine:
                     title=name or push_text(lang, "study.assignment.untitled"),
                     subject=subject_name or push_text(lang, "study.subject.untitled"),
                 ),
-            ),
-            data,
-        )
+            )
+
+        count = self.send_localized(targets, make_text, data)
+        self.record_inbox(uids, data, make_text)
         self.stats["study_subject_sent"] = self.stats.get("study_subject_sent", 0) + count
         return count
 
@@ -666,14 +732,14 @@ class NotificationEngine:
                 "tourId": tour_id,
                 "eventId": event_id,
             }
-            count = self.send_localized(
-                targets,
-                lambda lang: (
+            def make_text(lang: str) -> Tuple[str, str]:
+                return (
                     push_text(lang, f"journey.{kind}.title", sender=sender_name, place=stop_name),
                     push_text(lang, "journey.body"),
-                ),
-                data,
-            )
+                )
+
+            count = self.send_localized(targets, make_text, data)
+            self.record_inbox(uids, data, make_text)
             self.stats["journey_sent"] = self.stats.get("journey_sent", 0) + 1
             return {"status": "success", "recipients": len(emails), "devices_sent": count}
         except Exception as e:
@@ -809,6 +875,7 @@ class NotificationEngine:
                     "uid": sender_id,
                     "chatId": chat_id,
                     "messageType": message_type,
+                    "read": False,
                     "timestamp": datetime.now(timezone.utc),
                 })
             except Exception as e:
@@ -1203,17 +1270,16 @@ class NotificationEngine:
             )
             is_high = priority.lower() in ("high", "urgent", "emergency")
 
-            count = self.send_localized(
-                targets,
-                lambda lang: (
+            def make_text(lang: str) -> Tuple[str, str]:
+                return (
                     push_text(lang, "notice.title", title=clean_title)
                     if clean_title
                     else push_text(lang, "notice.untitled"),
                     short_body if short_body else push_text(lang, "notice.body", body=clean_title),
-                ),
-                data,
-                high_priority=is_high,
-            )
+                )
+
+            count = self.send_localized(targets, make_text, data, high_priority=is_high)
+            self.record_inbox(uids, data, make_text)
             self.stats["notice_pushes_sent"] += count
             return {"status": "success", "recipients": len(members), "devices_sent": count}
         except Exception as e:
@@ -1246,15 +1312,11 @@ class NotificationEngine:
                 "dateKey": str(date_key),
             }
 
-            count = self.send_localized(
-                targets,
-                lambda lang: (
-                    push_text(lang, "bazar.duty.title"),
-                    push_text(lang, "bazar.duty.body"),
-                ),
-                data,
-                high_priority=True,
-            )
+            def make_text(lang: str) -> Tuple[str, str]:
+                return push_text(lang, "bazar.duty.title"), push_text(lang, "bazar.duty.body")
+
+            count = self.send_localized(targets, make_text, data, high_priority=True)
+            self.record_inbox(uids, data, make_text)
             return {"status": "success", "recipients": len(clean_emails), "devices_sent": count}
         except Exception as e:
             self.stats["errors"] += 1
@@ -1292,15 +1354,14 @@ class NotificationEngine:
             taka = round(amount_paisa / 100)
             clean_title = (title or "expense").strip()
 
-            count = self.send_localized(
-                targets,
-                lambda lang: (
+            def make_text(lang: str) -> Tuple[str, str]:
+                return (
                     push_text(lang, "ledger.title", taka=str(taka)),
                     push_text(lang, "ledger.body", payer=payer_name, taka=str(taka), title=clean_title),
-                ),
-                data,
-                high_priority=False,
-            )
+                )
+
+            count = self.send_localized(targets, make_text, data, high_priority=False)
+            self.record_inbox(uids, data, make_text)
             self.stats["ledger_pushes_sent"] += count
             return {"status": "success", "recipients": len(members), "devices_sent": count}
         except Exception as e:

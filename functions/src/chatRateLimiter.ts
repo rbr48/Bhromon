@@ -82,6 +82,7 @@ export const chatRateLimiter = functions
             body:
               'You are sending messages too quickly. Repeated violations may result in a temporary messaging restriction.',
             action: 'rate_limit_warning',
+            read: false,
             timestamp: FieldValue.serverTimestamp(),
           });
         console.warn(

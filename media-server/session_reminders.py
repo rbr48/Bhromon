@@ -169,13 +169,12 @@ def run_session_reminders(
                 continue
             record, kind, recipients = claimed
             stats["reminded"] += 1
-            targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(recipients))
-            stats["pushes"] += engine.send_localized(
-                targets,
-                _text_for(record, kind),
-                {"action": PUSH_ACTION, "tourId": tour_id, "sessionId": doc.id},
-                high_priority=True,
-            )
+            uids = engine.get_uids_for_emails(recipients)
+            targets = engine.get_push_targets_for_uids(uids)
+            data = {"action": PUSH_ACTION, "tourId": tour_id, "sessionId": doc.id}
+            make_text = _text_for(record, kind)
+            stats["pushes"] += engine.send_localized(targets, make_text, data, high_priority=True)
+            engine.record_inbox(uids, data, make_text)
         except Exception as error:  # One bad session must not stop the others.
             stats["errors"] += 1
             logger.error("Session reminder failed for %s: %s", doc.reference.path, error)

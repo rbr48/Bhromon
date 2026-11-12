@@ -47,6 +47,7 @@ from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from call_cleanup import run_call_cleanup
 from journey_cleanup import run_journey_event_cleanup
+from notification_retention import run_notification_retention
 import live
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from notify_routes import notify_router
@@ -135,7 +136,8 @@ assignment_reminder_scheduler = AssignmentReminderScheduler(
     )
 )
 def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
-    """The 04:00 run: expired stories and their files, then old call records."""
+    """The 04:00 run: expired stories and their files, then old call records, old journey events, and the
+    in-app notification list past its 90 days."""
     db = backend._client()
     stories = run_story_cleanup(
         db,
@@ -155,12 +157,19 @@ def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
     except Exception as error:
         logger.error("Journey event cleanup failed: %s", error)
         journey = {"deleted": 0, "errors": 1}
+    try:
+        notices = run_notification_retention(db, now)
+    except Exception as error:
+        logger.error("Notification retention failed: %s", error)
+        notices = {"deleted": 0, "errors": 1}
     return {
         **stories,
         "calls_deleted": calls["deleted"],
         "call_errors": calls["errors"],
         "journey_events_deleted": journey["deleted"],
         "journey_event_errors": journey["errors"],
+        "notifications_deleted": notices["deleted"],
+        "notification_errors": notices["errors"],
     }
 
 

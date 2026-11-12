@@ -207,13 +207,14 @@ def claim_due_family_date(
     return record, plan
 
 
-def _circle_targets(engine: Any, tour_id: str) -> List[Tuple[str, Any]]:
-    """The push targets of every active member of a circle, the creator included.
+def _circle_targets(engine: Any, tour_id: str) -> Tuple[List[str], List[Tuple[str, Any]]]:
+    """The uids and the push targets of every active member of a circle, the creator included.
 
     The date is for everyone in the circle, so the creator is not left out.
     """
     emails = engine.get_active_tour_members(tour_id, "")
-    return engine.get_push_targets_for_uids(engine.get_uids_for_emails(emails))
+    uids = engine.get_uids_for_emails(emails)
+    return uids, engine.get_push_targets_for_uids(uids)
 
 
 def run_family_date_reminders(
@@ -234,7 +235,7 @@ def run_family_date_reminders(
     claim = transactional(lambda transaction, ref: claim_due_family_date(transaction, ref, today))
 
     stats = {"due": 0, "reminded": 0, "pushes": 0, "errors": 0}
-    targets_by_tour: Dict[str, List[Tuple[str, Any]]] = {}
+    targets_by_tour: Dict[str, Tuple[List[str], List[Tuple[str, Any]]]] = {}
     due = db.collection_group("family_dates").where("remindOn", "<=", today).stream()
     for doc in due:
         stats["due"] += 1
@@ -251,13 +252,12 @@ def run_family_date_reminders(
             if not plan.days_left:
                 continue
             stats["reminded"] += 1
+            uids, targets = targets_by_tour[tour_id]
             for days_left in plan.days_left:
-                stats["pushes"] += engine.send_localized(
-                    targets_by_tour[tour_id],
-                    _reminder_for(record, days_left),
-                    {"action": "family_date", "tourId": tour_id, "dateId": doc.id},
-                    high_priority=True,
-                )
+                data = {"action": "family_date", "tourId": tour_id, "dateId": doc.id}
+                make_text = _reminder_for(record, days_left)
+                stats["pushes"] += engine.send_localized(targets, make_text, data, high_priority=True)
+                engine.record_inbox(uids, data, make_text)
         except Exception as error:  # One bad date must not stop the others.
             stats["errors"] += 1
             logger.error("Family-date reminder failed for %s: %s", doc.reference.path, error)

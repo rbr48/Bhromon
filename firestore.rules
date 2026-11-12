@@ -208,10 +208,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ---- Push Notifications (admin sends, all users read own) ----
+    // ---- Admin notifications (the top-level collection). Nothing writes here today: a member's list is
+    // users/{uid}/notifications, below. Only admins read or write this collection.
     match /notifications/{id} {
-      allow read: if isAuth();
-      allow create, update, delete: if isRegionExpertOrAbove();
+      allow read, create, update, delete: if isRegionExpertOrAbove();
     }
 
     // ---- Admin Audit Logs (write-only by auth; read by admins) ----
@@ -285,7 +285,9 @@ service cloud.firestore {
       // Someone else may leave a notice only as a chat notice to a person they share
       // a tour with, for a chat that is open between them.
       match /notifications/{id} {
-        allow read, update, delete: if isOwner(uid);
+        allow read, delete: if isOwner(uid);
+        // The owner marks an entry read or unread, and changes nothing else in it.
+        allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         allow create: if isAuth()
                       && request.resource.data.timestamp == request.time
                       && request.resource.data.title is string

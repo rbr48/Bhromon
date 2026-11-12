@@ -171,15 +171,15 @@ def run_assignment_due_reminders(
             subject = subject_ref.get()
             subject_title = str((subject.to_dict() or {}).get("title", ""))
             title = str(record.get("title", ""))
-            targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(recipients))
-            stats["pushes"] += engine.send_localized(
-                targets,
-                lambda language, title=title, subject_title=subject_title: assignment_due_text(
-                    title, subject_title, language
-                ),
-                {"action": PUSH_ACTION, "tourId": tour_id, "subjectId": subject_ref.id},
-                high_priority=True,
-            )
+            uids = engine.get_uids_for_emails(recipients)
+            targets = engine.get_push_targets_for_uids(uids)
+            data = {"action": PUSH_ACTION, "tourId": tour_id, "subjectId": subject_ref.id}
+
+            def make_text(language, title=title, subject_title=subject_title):
+                return assignment_due_text(title, subject_title, language)
+
+            stats["pushes"] += engine.send_localized(targets, make_text, data, high_priority=True)
+            engine.record_inbox(uids, data, make_text)
         except Exception as error:  # One bad assignment must not stop the others.
             stats["errors"] += 1
             logger.error("Assignment reminder failed for %s: %s", doc.reference.path, error)
