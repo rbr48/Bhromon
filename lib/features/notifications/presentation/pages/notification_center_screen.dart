@@ -1,6 +1,7 @@
 import 'package:bhromon/core/widgets/skeleton.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -39,12 +40,17 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   void initState() {
     super.initState();
     _repo = widget.repository ?? NotificationCenterRepository();
+    _connectStream();
+  }
+
+  void _connectStream() {
     final uid = widget.uid ?? _signedInUid();
-    if (uid != null) {
+    if (uid != null && uid != _uid) {
       try {
         _stream = _repo!.watch(uid);
         _uid = uid;
         _openList();
+        if (mounted) setState(() {});
       } catch (_) {
         // Firebase is not up: the list reads as signed out.
         _stream = null;
@@ -55,9 +61,15 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   String? _signedInUid() {
     try {
       final authState = context.read<AuthCubit>().state;
-      return authState is Authenticated ? authState.profile.uid : null;
+      if (authState is Authenticated) {
+        return authState.profile.uid;
+      }
     } catch (_) {
       // No auth cubit above this screen: the list reads as signed out.
+    }
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
       return null;
     }
   }
@@ -73,6 +85,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_stream == null) {
+      _connectStream();
+    }
     final l10n = context.l10n;
     return PopScope(
       canPop: false,

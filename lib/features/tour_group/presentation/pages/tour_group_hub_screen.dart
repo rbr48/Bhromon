@@ -1482,23 +1482,24 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           letterSpacing: 0.5,
                         ),
                       ),
-                      Text(
-                        context.l10n.translate('login_tagline'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: context.forest.text54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                      if (effectiveExpandedId == null)
+                        Text(
+                          context.l10n.translate('login_tagline'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.forest.text54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
               ],
             ),
             actions: [
-              // The bell opens the notification list. It is hidden when no one is signed in.
+              // The bell opens the notification list.
               const NotificationBell(),
               // Before the Play Store link on the web and before the language button on phones.
               IconButton(

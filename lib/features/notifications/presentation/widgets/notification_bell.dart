@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +13,10 @@ import '../../data/notification_center_repository.dart';
 
 /// The bell in the groups list's title bar. It opens the notification list. Its badge counts the
 /// entries that arrived since the list was last opened and are still unread.
+///
+/// The bell icon is always visible in the AppBar. If no member is signed in or notifications
+/// are still connecting, it displays cleanly without an unread badge and opens the notification
+/// center when tapped.
 class NotificationBell extends StatefulWidget {
   /// The member whose list this is. Null reads the signed-in member from the auth state.
   final String? uid;
@@ -25,32 +32,87 @@ class _NotificationBellState extends State<NotificationBell> {
   String? _uid;
   Stream<List<AppNotification>>? _stream;
   DateTime? _seenAt;
+  StreamSubscription<User?>? _fbAuthSub;
 
   @override
   void initState() {
     super.initState();
     _repo = widget.repository ?? NotificationCenterRepository();
-    final uid = widget.uid ?? _signedInUid();
-    if (uid == null) return;
+    _initStream();
+    _listenAuth();
+  }
+
+  @override
+  void didUpdateWidget(covariant NotificationBell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.uid != oldWidget.uid) {
+      _initStream();
+    }
+  }
+
+  @override
+  void dispose() {
+    _fbAuthSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenAuth() {
+    if (widget.uid != null) return;
     try {
-      _stream = _repo!.watch(uid);
-      _uid = uid;
+      _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (!mounted) return;
+        final currentUid = user?.uid;
+        if (currentUid != _uid) {
+          _initStream();
+        }
+      });
     } catch (_) {
-      // Firebase is not up: the bell is hidden.
-      _stream = null;
+      // Firebase not initialized in unit tests or disabled.
+    }
+  }
+
+  String? _resolveUid() {
+    if (widget.uid != null) return widget.uid;
+    try {
+      final authState = context.read<AuthCubit>().state;
+      if (authState is Authenticated) {
+        return authState.profile.uid;
+      }
+    } catch (_) {
+      // AuthCubit not in context.
+    }
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // Firebase not initialized.
+    }
+    return null;
+  }
+
+  void _initStream() {
+    final uid = _resolveUid();
+    if (uid == _uid && _stream != null) return;
+    _uid = uid;
+    if (uid == null) {
+      if (mounted) setState(() => _stream = null);
+      return;
+    }
+    try {
+      final s = _repo!.watch(uid);
+      if (mounted) {
+        setState(() => _stream = s);
+      } else {
+        _stream = s;
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _stream = null);
+      } else {
+        _stream = null;
+      }
       return;
     }
     _loadSeen();
-  }
-
-  String? _signedInUid() {
-    try {
-      final authState = context.read<AuthCubit>().state;
-      return authState is Authenticated ? authState.profile.uid : null;
-    } catch (_) {
-      // No auth cubit above the bell: it stays hidden.
-      return null;
-    }
   }
 
   Future<void> _loadSeen() async {
@@ -70,28 +132,43 @@ class _NotificationBellState extends State<NotificationBell> {
     if (mounted) await _loadSeen();
   }
 
+  Widget _buildBellIcon({required BuildContext context, int count = 0}) {
+    final l10n = context.l10n;
+    return IconButton(
+      tooltip: l10n.translate('notif_bell_tooltip'),
+      onPressed: _openList,
+      icon: Badge(
+        isLabelVisible: count > 0,
+        label: Text(count > 99 ? '${l10n.number(99)}+' : l10n.number(count)),
+        child: const Icon(Icons.notifications_none_rounded,
+            color: AppColors.midGreen),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    // If auth state resolved after initial frame, connect the stream reactively.
+    final currentResolvedUid = _resolveUid();
+    if (currentResolvedUid != null && currentResolvedUid != _uid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _initStream();
+      });
+    }
+
     final stream = _stream;
-    if (stream == null) return const SizedBox.shrink();
+    if (stream == null) {
+      // Always keep the bell visible in the AppBar.
+      return _buildBellIcon(context: context, count: 0);
+    }
+
     return StreamBuilder<List<AppNotification>>(
       stream: stream,
       builder: (context, snap) {
         final seen = _seenAt;
         final count =
             snap.hasData && seen != null ? unseenCount(snap.data!, seen) : 0;
-        return IconButton(
-          tooltip: l10n.translate('notif_bell_tooltip'),
-          onPressed: _openList,
-          icon: Badge(
-            isLabelVisible: count > 0,
-            label:
-                Text(count > 99 ? '${l10n.number(99)}+' : l10n.number(count)),
-            child: const Icon(Icons.notifications_none_rounded,
-                color: AppColors.midGreen),
-          ),
-        );
+        return _buildBellIcon(context: context, count: count);
       },
     );
   }
