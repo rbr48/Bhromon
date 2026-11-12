@@ -37,14 +37,15 @@ class _FakeRepository extends NotificationCenterRepository {
   Future<DateTime> seenAt(String uid) async => _seen;
 }
 
-Future<void> _pump(WidgetTester tester, _FakeRepository repo) async {
+Future<void> _pump(WidgetTester tester, NotificationCenterRepository repo,
+    {String? uid = 'u1'}) async {
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
         builder: (_, __) => Scaffold(
           appBar: AppBar(
-            actions: [NotificationBell(uid: 'u1', repository: repo)],
+            actions: [NotificationBell(uid: uid, repository: repo)],
           ),
           body: const SizedBox(),
         ),
@@ -97,6 +98,20 @@ void main() {
   testWidgets('tapping the bell opens the notification list', (tester) async {
     final repo = _FakeRepository([_entry('a')]);
     await _pump(tester, repo);
+
+    await tester.tap(find.byType(IconButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('the list'), findsOneWidget);
+  });
+
+  testWidgets('the bell is still visible when signed out (uid is null)',
+      (tester) async {
+    final repo = _FakeRepository([]);
+    await _pump(tester, repo, uid: null);
+
+    expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+    expect(_badgeShown(tester), isFalse);
 
     await tester.tap(find.byType(IconButton));
     await tester.pumpAndSettle();

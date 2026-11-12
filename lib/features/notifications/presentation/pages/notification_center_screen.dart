@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:bhromon/core/widgets/skeleton.dart';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -34,17 +37,74 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   Stream<List<AppNotification>>? _stream;
   List<AppNotification> _latest = const [];
   bool _unreadOnly = false;
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<AuthState>? _cubitSubscription;
 
   @override
   void initState() {
     super.initState();
     _repo = widget.repository ?? NotificationCenterRepository();
+    _connectStream();
+    try {
+      _authSubscription =
+          FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (!mounted) return;
+        final newUid = widget.uid ?? user?.uid;
+        if (newUid != null && newUid.isNotEmpty && newUid != _uid) {
+          _connectStream();
+        }
+      });
+    } catch (_) {
+      // Firebase not initialized in headless tests.
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_cubitSubscription == null) {
+      try {
+        final cubit = context.read<AuthCubit>();
+        _cubitSubscription = cubit.stream.listen((state) {
+          if (!mounted) return;
+          if (state is Authenticated) {
+            final newUid = widget.uid ?? state.profile.uid;
+            if (newUid.isNotEmpty && newUid != _uid) {
+              _connectStream();
+            }
+          }
+        });
+      } catch (_) {
+        // No auth cubit above this screen.
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant NotificationCenterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.uid != oldWidget.uid ||
+        widget.repository != oldWidget.repository) {
+      _repo = widget.repository ?? NotificationCenterRepository();
+      _connectStream();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cubitSubscription?.cancel();
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _connectStream() {
     final uid = widget.uid ?? _signedInUid();
-    if (uid != null) {
+    if (uid != null && uid.isNotEmpty && uid != _uid) {
       try {
         _stream = _repo!.watch(uid);
         _uid = uid;
         _openList();
+        if (mounted) setState(() {});
       } catch (_) {
         // Firebase is not up: the list reads as signed out.
         _stream = null;
@@ -55,9 +115,15 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   String? _signedInUid() {
     try {
       final authState = context.read<AuthCubit>().state;
-      return authState is Authenticated ? authState.profile.uid : null;
+      if (authState is Authenticated) {
+        return authState.profile.uid;
+      }
     } catch (_) {
       // No auth cubit above this screen: the list reads as signed out.
+    }
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
       return null;
     }
   }
