@@ -56,6 +56,37 @@ void main() {
     );
   });
 
+  test(
+      'the shared fund is kept by a trip, a household and the funded presets only',
+      () {
+    expect(hubModulesFor(_group()), contains('ledger'));
+    expect(hubModulesFor(_group(family: true)), contains('ledger'),
+        reason: 'a household');
+    for (final preset in [
+      TourGroup.messPreset,
+      TourGroup.societyPreset,
+      TourGroup.campusPreset,
+      TourGroup.schoolPreset,
+      TourGroup.sportsPreset,
+      TourGroup.committeePreset,
+      TourGroup.friendsPreset,
+    ]) {
+      expect(hubModulesFor(_group(family: true, preset: preset)),
+          contains('ledger'),
+          reason: preset);
+    }
+    for (final preset in [
+      TourGroup.officePreset,
+      TourGroup.samityPreset,
+      TourGroup.studyPreset,
+      'something-new',
+    ]) {
+      expect(hubModulesFor(_group(family: true, preset: preset)),
+          isNot(contains('ledger')),
+          reason: preset);
+    }
+  });
+
   test('a study circle has no family list, and keeps its study tools', () {
     final ids =
         hubModulesFor(_group(family: true, preset: TourGroup.studyPreset));

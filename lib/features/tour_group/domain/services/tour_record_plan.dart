@@ -42,7 +42,7 @@ List<TourRecordSection> recordSectionsFor(TourGroup group) {
     TourRecordSection.members,
     if (isTrip && tools.contains('journey')) TourRecordSection.journey,
     TourRecordSection.notices,
-    TourRecordSection.money,
+    if (group.hasFund) TourRecordSection.money,
     if (isTrip && tools.contains('checklist')) TourRecordSection.checklist,
     if (isTrip && tools.contains('seats')) TourRecordSection.transport,
     if (isTrip && tools.contains('seats')) TourRecordSection.rooms,

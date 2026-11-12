@@ -139,6 +139,11 @@ class FakeEngine:
     def get_push_targets_for_uids(self, uids):
         return list(uids)
 
+    def record_inbox(self, uids, data, make_text):
+        """Records the entries the module keeps in each member's list, for the assertions."""
+        self.inbox_entries = getattr(self, "inbox_entries", []) + [(list(uids), dict(data))]
+        return len(list(uids))
+
     def send_localized(self, targets, text_for, data, high_priority=False):
         self.sent.append({"targets": list(targets), "text": text_for("en"), "data": data})
         return len(targets)

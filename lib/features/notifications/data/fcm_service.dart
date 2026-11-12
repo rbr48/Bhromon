@@ -562,6 +562,14 @@ class FcmService {
           GoRouter.of(context).go('/group/$tourId/family-dates');
         }
         break;
+      case 'bazar_duty':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/meals');
+        break;
+      case 'session':
+        if (tourId != null) {
+          GoRouter.of(context).go('/group/$tourId/study-reading');
+        }
+        break;
       case 'problem_set':
       case 'study_subject':
         if (tourId != null) {

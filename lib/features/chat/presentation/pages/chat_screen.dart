@@ -61,6 +61,9 @@ import '../../domain/call_log_entry.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/media_upload_service.dart';
+import '../../data/clipboard_files.dart';
+import '../../data/web_paste_listener.dart';
+import '../../domain/pasted_files.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -280,6 +283,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   DateTime? _clearedAt;
   StreamSubscription<DocumentSnapshot>? _chatDocSub;
   bool _sharedFilesSent = false;
+  void Function()? _stopWebPasteListener;
 
   @override
   void initState() {
@@ -305,6 +309,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     _messageController.addListener(_onTextChanged);
     unawaited(_restoreDraft());
+    if (kIsWeb) {
+      // A file pasted while the composer has focus is attached, as a picked file is.
+      _stopWebPasteListener = attachWebPasteListener(
+        accept: () =>
+            mounted && _messageFocusNode.hasFocus && !_refusedInEncryptedChat(),
+        onFiles: (files) => unawaited(_sendPastedFiles(files)),
+      );
+    }
     if (widget.sharedFiles?.isNotEmpty ?? false) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => unawaited(_sendSharedFiles()));
@@ -623,6 +635,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _onlinePoll?.cancel();
     _draftStore.dispose();
     _messageController.dispose();
+    _stopWebPasteListener?.call();
     _messageFocusNode.dispose();
     _searchController.dispose();
     _scrollController.dispose();
@@ -1049,6 +1062,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'body': body,
         'action': 'chat',
         'uid': currentUid,
+        'read': false,
         'itemId': widget.chatId,
         'chatId': widget.chatId,
         'timestamp': FieldValue.serverTimestamp(),
@@ -2330,6 +2344,146 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Files pasted into the chat box, or inserted from the keyboard. Images and videos open the
+  /// caption screen, as a picked image does. Documents and voice notes are sent as the attach
+  /// sheet sends them. A file the chat cannot send is left out, and the rest are sent.
+  Future<void> _sendPastedFiles(List<SharedFile> pasted) async {
+    if (!mounted || pasted.isEmpty || _refusedInEncryptedChat()) return;
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! Authenticated) return;
+    final uid = authState.profile.uid;
+    final name = authState.profile.displayName;
+
+    final files = [for (final file in pasted) withPastedName(file)];
+    final sendable = [
+      for (final file in files)
+        if (sharedFileIssue(file) == null) file,
+    ];
+    final refused = files.length - sendable.length;
+    if (refused > 0) {
+      final l10n = context.l10n;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.translate(
+            'share_skipped_heading',
+            args: {'count': l10n.number(refused)},
+          )),
+        ),
+      );
+    }
+
+    final images = <XFile>[];
+    final videos = <XFile>[];
+    final documents = <SharedFile>[];
+    for (final file in sendable) {
+      switch (pastedRouteOf(file)) {
+        case PastedRoute.image:
+          images.add(_xFileOf(file));
+        case PastedRoute.video:
+          videos.add(_xFileOf(file));
+        case PastedRoute.document || null:
+          documents.add(file);
+      }
+    }
+    if (images.isNotEmpty) {
+      await _runMediaCaptionFlow(images, false, uid, name);
+    }
+    if (videos.isNotEmpty) {
+      await _runMediaCaptionFlow(videos, true, uid, name);
+    }
+    for (final document in documents) {
+      if (!mounted) return;
+      await _sendDocumentMessage(await _platformFileOf(document), uid, name);
+    }
+  }
+
+  /// The file as the caption screen and the upload read it: by its path, or by its object URL
+  /// on the web.
+  XFile _xFileOf(SharedFile file) => XFile(
+        file.path!,
+        name: file.name,
+        mimeType: file.mimeType,
+        length: file.sizeBytes >= 0 ? file.sizeBytes : null,
+      );
+
+  /// The document as the send reads it. On the web the send needs its bytes, so they are read
+  /// from the object URL. Elsewhere the send reads the file from its path.
+  Future<PlatformFile> _platformFileOf(SharedFile file) async {
+    if (!kIsWeb) {
+      return PlatformFile(
+        name: file.name,
+        size: file.sizeBytes < 0 ? 0 : file.sizeBytes,
+        path: file.path,
+      );
+    }
+    final bytes = await XFile(file.path!, name: file.name).readAsBytes();
+    return PlatformFile(name: file.name, size: bytes.length, bytes: bytes);
+  }
+
+  /// Content the keyboard inserted, such as a sticker, a GIF or an image. It is copied into the
+  /// cache and then sent like a pasted file.
+  void _onKeyboardContentInserted(KeyboardInsertedContent content) {
+    unawaited(_receiveKeyboardContent(content));
+  }
+
+  Future<void> _receiveKeyboardContent(KeyboardInsertedContent content) async {
+    final file = await ClipboardFiles.copyContentUri(content.uri);
+    if (!mounted) return;
+    if (file == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.translate('chat_file_read_failed')),
+          backgroundColor: AppColors.amber,
+        ),
+      );
+      return;
+    }
+    await _sendPastedFiles([file]);
+  }
+
+  /// The text field's menu. Its Paste also takes files from the clipboard, so a copied image or
+  /// file is attached in the chat box where text would have been pasted.
+  Widget _buildComposerContextMenu(
+    BuildContext context,
+    EditableTextState editableTextState,
+  ) {
+    final items = <ContextMenuButtonItem>[];
+    var hasPaste = false;
+    for (final item in editableTextState.contextMenuButtonItems) {
+      if (item.kind == ContextMenuButtonKind.paste) {
+        hasPaste = true;
+        items.add(_pasteButton(editableTextState));
+      } else {
+        items.add(item);
+      }
+    }
+    // The standard Paste is hidden when the clipboard holds no text, so an image or file
+    // copied from another app would have no Paste at all.
+    if (!hasPaste) items.add(_pasteButton(editableTextState));
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: editableTextState.contextMenuAnchors,
+      buttonItems: items,
+    );
+  }
+
+  ContextMenuButtonItem _pasteButton(EditableTextState editableTextState) {
+    return ContextMenuButtonItem(
+      kind: ContextMenuButtonKind.paste,
+      onPressed: () => unawaited(_pasteIntoComposer(editableTextState)),
+    );
+  }
+
+  /// Attaches the files on the clipboard when there are any, and pastes the text otherwise.
+  Future<void> _pasteIntoComposer(EditableTextState editableTextState) async {
+    editableTextState.hideToolbar();
+    final files = await ClipboardFiles.readClipboard();
+    if (files.isNotEmpty) {
+      await _sendPastedFiles(files);
+      return;
+    }
+    await editableTextState.pasteText(SelectionChangedCause.toolbar);
+  }
+
   void _openAttachmentSheet(String currentUid, String currentName) {
     showModalBottomSheet<void>(
       context: context,
@@ -2352,6 +2506,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _openMediaCaptionFlow(
+    List<XFile> files,
+    bool isVideo,
+    String currentUid,
+    String currentName,
+  ) {
+    unawaited(_runMediaCaptionFlow(files, isVideo, currentUid, currentName));
+  }
+
+  /// Shows the caption screen for [files] and sends what the member confirms. It completes once
+  /// they are sent, so the pasted items of two kinds can be sent one kind after the other.
+  Future<void> _runMediaCaptionFlow(
     List<XFile> files,
     bool isVideo,
     String currentUid,
@@ -5192,6 +5357,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                                                 _messageFocusNode,
                                                             minLines: 1,
                                                             maxLines: 6,
+                                                            contentInsertionConfiguration:
+                                                                ContentInsertionConfiguration(
+                                                              onContentInserted:
+                                                                  _onKeyboardContentInserted,
+                                                            ),
+                                                            contextMenuBuilder:
+                                                                _buildComposerContextMenu,
                                                             keyboardType:
                                                                 TextInputType
                                                                     .multiline,

@@ -595,6 +595,24 @@ class TourGroup {
       isSports ||
       isCommittee;
 
+  /// Whether this group keeps a shared fund: its expenses, deposits, settle-up payments, MFS
+  /// settlements and the ledger tools. The fund is opt-in per type. A trip, a household, a mess,
+  /// a housing society, a campus, a school, a sports team, a committee and a friends circle keep
+  /// it. An office, a samity and a study circle have none, and so does a preset this list does
+  /// not name, so a type added later has no fund until it is listed here.
+  ///
+  /// The rules (`fundAllowedTour` in firestore.rules) and the VPS (`fund_policy.py`) apply the
+  /// same rule to the stored preset, so keep the three in step.
+  bool get hasFund =>
+      preset == null ||
+      preset == messPreset ||
+      preset == societyPreset ||
+      preset == campusPreset ||
+      preset == schoolPreset ||
+      preset == sportsPreset ||
+      preset == committeePreset ||
+      preset == friendsPreset;
+
   /// Whether Moments is open to members: always, except when an office or campus has
   /// turned it off.
   bool get momentsOpen => !isManaged || momentsEnabled;

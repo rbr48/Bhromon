@@ -2,6 +2,7 @@ package com.bhromon.app
 
 import android.app.KeyguardManager
 import android.app.PictureInPictureParams
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -118,6 +119,28 @@ class MainActivity: FlutterFragmentActivity() {
                     val items = pendingShares.toList()
                     pendingShares.clear()
                     result.success(items)
+                }
+                "readClipboardFiles" -> {
+                    // The clipboard is read here, on the UI thread. The files are copied off it.
+                    val uris = clipboardFileUris()
+                    shareExecutor.execute {
+                        cleanOldShares()
+                        val copied = uris.map { copyShared(it) }
+                        runOnUiThread { result.success(copied) }
+                    }
+                }
+                "copyContentUri" -> {
+                    // One item the keyboard inserted, such as a sticker, a GIF or an image.
+                    val uri = call.argument<String>("uri")
+                    if (uri == null) {
+                        result.success(null)
+                    } else {
+                        shareExecutor.execute {
+                            cleanOldShares()
+                            val copied = copyShared(Uri.parse(uri))
+                            runOnUiThread { result.success(copied) }
+                        }
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -465,6 +488,23 @@ class MainActivity: FlutterFragmentActivity() {
                 incoming.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
             }
         return list?.filterNotNull() ?: emptyList()
+    }
+
+    /// The files on the clipboard, as content URIs. Text and links are left out, so a link
+    /// copied as text is pasted into the text field as it is.
+    private fun clipboardFileUris(): List<Uri> {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            ?: return emptyList()
+        val clip = clipboard.primaryClip ?: return emptyList()
+        val uris = mutableListOf<Uri>()
+        for (i in 0 until clip.itemCount) {
+            val uri = clip.getItemAt(i).uri ?: continue
+            if (uri.scheme != "content" && uri.scheme != "file") continue
+            val mime = contentResolver.getType(uri) ?: continue
+            if (mime.startsWith("text/")) continue
+            uris.add(uri)
+        }
+        return uris.distinct()
     }
 
     /// Copies one shared file into the cache. A file that cannot be read, or is larger than

@@ -161,9 +161,61 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   // Build
   // ---------------------------------------------------------------------------
 
+  /// The page for a group without the shared fund. The route still opens from a saved
+  /// link, so it says why there is no ledger instead of showing an empty one.
+  Widget _noFundPage() {
+    final l10n = context.l10n;
+    return GroupPopScope(
+      tourId: widget.tourId,
+      child: Scaffold(
+        backgroundColor: context.forest.surfaceFor(_bg),
+        appBar: AppBar(
+          leading: GroupBackButton(tourId: widget.tourId),
+          elevation: 0,
+          backgroundColor: context.forest.surfaceFor(_card),
+          foregroundColor: context.forest.text,
+          title: Text(l10n.translate('hub_module_ledger'),
+              style: TextStyle(
+                  color: context.forest.text,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.account_balance_wallet_outlined,
+                    size: 48, color: context.forest.text60),
+                const SizedBox(height: 14),
+                Text(
+                  l10n.translate('fund_not_in_group_title'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: context.forest.text,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.translate('fund_not_in_group_body'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.forest.text70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final group = _group;
+    if (group != null && !group.hasFund) return _noFundPage();
     final allTransfers = ledgerTransfers(_transfers, _settlements);
     final summary = TripLedgerEngine.computeLedger(
       members: _inputs,
@@ -171,7 +223,6 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       deposits: _deposits,
       transfers: allTransfers,
     );
-    final group = _group;
     final report = group == null
         ? null
         : FundReport.build(

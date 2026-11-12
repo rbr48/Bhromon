@@ -268,6 +268,8 @@ class TranslationKeys {
       'share_none_destinations':
           'You have no chats or group channels to send to yet.',
       'share_load_failed': 'Could not load your chats and channels.',
+      'share_some_missing':
+          'Some groups could not be loaded, so they are not listed. Try again.',
       'share_try_again': 'Try again',
       'share_skipped_heading': '{count} cannot be sent',
       'share_reason_unsupported': 'This file type is not supported',
@@ -331,10 +333,15 @@ class TranslationKeys {
       'notif_filter_all': 'All',
       'notif_filter_unread': 'Unread',
       'notif_mark_all_read': 'Mark all as read',
-      'notif_clear_all': 'Clear all',
-      'notif_clear_all_title': 'Clear all notifications?',
-      'notif_clear_all_body':
-          'Every notification will be removed from your list.',
+      'notif_clear_read': 'Clear read',
+      'notif_clear_read_title': 'Clear read notifications?',
+      'notif_clear_read_body':
+          'Read notifications leave your list. Unread ones stay.',
+      'notif_clear_read_none': 'No read notifications to clear',
+      'notif_mark_read': 'Mark as read',
+      'notif_mark_unread': 'Mark as unread',
+      'notif_bell_tooltip': 'Notifications',
+      'notif_item_menu': 'Notification options',
       'notif_cancel': 'Cancel',
       'notif_empty': 'No notifications yet',
       'notif_empty_unread': 'No unread notifications',
@@ -763,6 +770,8 @@ class TranslationKeys {
       'share_none_destinations':
           'পাঠানোর মতো এখনও কোনো কথোপকথন বা গ্রুপ চ্যানেল নেই।',
       'share_load_failed': 'আপনার কথোপকথন ও চ্যানেল লোড করা যায়নি।',
+      'share_some_missing':
+          'কয়েকটি গ্রুপ লোড করা যায়নি, তাই সেগুলো তালিকায় নেই। আবার চেষ্টা করুন।',
       'share_try_again': 'আবার চেষ্টা করুন',
       'share_skipped_heading': '{count}টি পাঠানো যাবে না',
       'share_reason_unsupported': 'এই ধরনের ফাইল সমর্থিত নয়',
@@ -828,9 +837,15 @@ class TranslationKeys {
       'notif_filter_all': 'সব',
       'notif_filter_unread': 'অপঠিত',
       'notif_mark_all_read': 'সব পড়া হিসেবে চিহ্নিত করুন',
-      'notif_clear_all': 'সব মুছুন',
-      'notif_clear_all_title': 'সব বিজ্ঞপ্তি মুছবেন?',
-      'notif_clear_all_body': 'আপনার তালিকা থেকে সব বিজ্ঞপ্তি সরে যাবে।',
+      'notif_clear_read': 'পড়া বিজ্ঞপ্তি মুছুন',
+      'notif_clear_read_title': 'পড়া বিজ্ঞপ্তিগুলো মুছবেন?',
+      'notif_clear_read_body':
+          'পড়া বিজ্ঞপ্তিগুলো আপনার তালিকা থেকে সরে যাবে। অপঠিতগুলো থাকবে।',
+      'notif_clear_read_none': 'মোছার মতো কোনো পড়া বিজ্ঞপ্তি নেই',
+      'notif_mark_read': 'পড়া হিসেবে চিহ্নিত করুন',
+      'notif_mark_unread': 'অপঠিত হিসেবে চিহ্নিত করুন',
+      'notif_bell_tooltip': 'বিজ্ঞপ্তি',
+      'notif_item_menu': 'বিজ্ঞপ্তির বিকল্প',
       'notif_cancel': 'বাতিল',
       'notif_empty': 'এখনও কোনো বিজ্ঞপ্তি নেই',
       'notif_empty_unread': 'কোনো অপঠিত বিজ্ঞপ্তি নেই',

@@ -56,17 +56,27 @@ class TourExportCollector {
         () => _repository.watchMembers(id).first, const <TourMember>[]);
     final noticesF = _read(TourRecordSection.notices, gaps,
         () => _repository.watchNotices(id).first, const <TourNotice>[]);
-    final expensesF = _read(TourRecordSection.money, gaps,
-        () => _repository.watchExpenses(id).first, const <ExpenseItem>[]);
-    final depositsF = _read(TourRecordSection.money, gaps,
-        () => _repository.watchDeposits(id).first, const <DepositItem>[]);
-    final transfersF = _read(TourRecordSection.money, gaps,
-        () => _repository.watchTransfers(id).first, const <TransferItem>[]);
-    final settlementsF = _read(
-        TourRecordSection.money,
-        gaps,
-        () => _repository.watchSettlements(id).first,
-        const <SettlementRecord>[]);
+    // A group without a shared fund has no money section, so it reads no money at all.
+    final hasMoney = sections.contains(TourRecordSection.money);
+    final expensesF = hasMoney
+        ? _read(TourRecordSection.money, gaps,
+            () => _repository.watchExpenses(id).first, const <ExpenseItem>[])
+        : Future.value(const <ExpenseItem>[]);
+    final depositsF = hasMoney
+        ? _read(TourRecordSection.money, gaps,
+            () => _repository.watchDeposits(id).first, const <DepositItem>[])
+        : Future.value(const <DepositItem>[]);
+    final transfersF = hasMoney
+        ? _read(TourRecordSection.money, gaps,
+            () => _repository.watchTransfers(id).first, const <TransferItem>[])
+        : Future.value(const <TransferItem>[]);
+    final settlementsF = hasMoney
+        ? _read(
+            TourRecordSection.money,
+            gaps,
+            () => _repository.watchSettlements(id).first,
+            const <SettlementRecord>[])
+        : Future.value(const <SettlementRecord>[]);
 
     final checkpointsF = sections.contains(TourRecordSection.journey)
         ? _read(
@@ -174,7 +184,8 @@ class TourExportCollector {
 
     // The balances need the members and all the money; without either, no balance is shown.
     LedgerSummary? ledger;
-    if (!gaps.contains(TourRecordSection.money) &&
+    if (hasMoney &&
+        !gaps.contains(TourRecordSection.money) &&
         !gaps.contains(TourRecordSection.members)) {
       try {
         ledger = TripLedgerEngine.computeLedger(

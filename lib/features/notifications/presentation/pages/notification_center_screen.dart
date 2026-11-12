@@ -1,5 +1,4 @@
 import 'package:bhromon/core/widgets/skeleton.dart';
-import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
@@ -14,13 +13,15 @@ import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../data/fcm_service.dart';
 import '../../data/notification_center_repository.dart';
 
-enum _ListMenu { markAllRead, clearAll }
+enum _ListMenu { markAllRead, clearRead }
 
-/// The member's notification history, newest first. Unread items are marked,
-/// a tap opens what the notification is about, and a swipe deletes one.
+/// The member's notification list, newest first. A tap marks an entry read and opens what it is
+/// about. Its menu marks an entry read or unread, and a swipe deletes it.
 class NotificationCenterScreen extends StatefulWidget {
+  /// The member whose list this is. Null reads the signed-in member from the auth state.
+  final String? uid;
   final NotificationCenterRepository? repository;
-  const NotificationCenterScreen({super.key, this.repository});
+  const NotificationCenterScreen({super.key, this.repository, this.uid});
 
   @override
   State<NotificationCenterScreen> createState() =>
@@ -31,45 +32,44 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   NotificationCenterRepository? _repo;
   String _uid = '';
   Stream<List<AppNotification>>? _stream;
-
-  /// The last time the list was opened before this visit. Items newer than it
-  /// are highlighted for the whole visit, even though the badge has cleared.
-  DateTime? _previousSeenAt;
   List<AppNotification> _latest = const [];
   bool _unreadOnly = false;
 
   @override
   void initState() {
     super.initState();
-    try {
-      _repo = widget.repository ?? NotificationCenterRepository();
-    } catch (_) {
-      _repo = null;
+    _repo = widget.repository ?? NotificationCenterRepository();
+    final uid = widget.uid ?? _signedInUid();
+    if (uid != null) {
+      try {
+        _stream = _repo!.watch(uid);
+        _uid = uid;
+        _openList();
+      } catch (_) {
+        // Firebase is not up: the list reads as signed out.
+        _stream = null;
+      }
     }
+  }
+
+  String? _signedInUid() {
     try {
       final authState = context.read<AuthCubit>().state;
-      if (authState is Authenticated && _repo != null) {
-        _uid = authState.profile.uid;
-        _stream = _repo!.watch(_uid);
-        _openList();
-      }
+      return authState is Authenticated ? authState.profile.uid : null;
     } catch (_) {
-      // Safe fallback when AuthCubit or Firebase is not present
+      // No auth cubit above this screen: the list reads as signed out.
+      return null;
     }
   }
 
+  /// Opening the list clears the bell's count. The entries stay unread until they are read.
   Future<void> _openList() async {
     try {
-      final previous = await _repo?.seenAtOrSeed(_uid);
       await _repo?.markSeen(_uid);
-      if (mounted) setState(() => _previousSeenAt = previous);
     } catch (_) {
-      // The highlight is optional; the list still works without it.
+      // The bell's count is optional; the list still works without clearing it.
     }
   }
-
-  bool _isUnread(AppNotification n) =>
-      _previousSeenAt != null && notificationIsUnread(n, _previousSeenAt!);
 
   @override
   Widget build(BuildContext context) {
@@ -104,17 +104,18 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           actions: [
             if (_stream != null)
               PopupMenuButton<_ListMenu>(
+                key: const Key('notif_list_menu'),
                 onSelected: (v) => v == _ListMenu.markAllRead
                     ? _markAllRead()
-                    : _confirmClearAll(),
+                    : _confirmClearRead(),
                 itemBuilder: (_) => [
                   PopupMenuItem(
                     value: _ListMenu.markAllRead,
                     child: Text(l10n.translate('notif_mark_all_read')),
                   ),
                   PopupMenuItem(
-                    value: _ListMenu.clearAll,
-                    child: Text(l10n.translate('notif_clear_all')),
+                    value: _ListMenu.clearRead,
+                    child: Text(l10n.translate('notif_clear_read')),
                   ),
                 ],
               ),
@@ -162,7 +163,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           return const ListRowsSkeleton();
         }
         _latest = snap.data!;
-        final items = _unreadOnly ? _latest.where(_isUnread).toList() : _latest;
+        final items =
+            _unreadOnly ? _latest.where((n) => !n.read).toList() : _latest;
         if (items.isEmpty) {
           return Center(
             child: Text(l10n
@@ -179,7 +181,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   }
 
   Widget _buildTile(AppNotification n) {
-    final unread = _isUnread(n);
+    final l10n = context.l10n;
     return Dismissible(
       key: ValueKey(n.id),
       direction: DismissDirection.endToStart,
@@ -189,9 +191,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
-      onDismissed: (_) => _delete([n.id]),
+      onDismissed: (_) => _delete(n.id),
       child: ListTile(
-        tileColor: unread ? AppColors.mintGreen.withValues(alpha: 0.08) : null,
+        tileColor: n.read ? null : AppColors.mintGreen.withValues(alpha: 0.08),
         leading: CircleAvatar(
           backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
           child: Icon(_iconFor(n.action),
@@ -200,7 +202,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         title: Text(
           n.title,
           style: TextStyle(
-              fontWeight: unread ? FontWeight.bold : FontWeight.normal),
+              fontWeight: n.read ? FontWeight.normal : FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,15 +217,36 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             ),
           ],
         ),
-        trailing: unread
-            ? const CircleAvatar(
-                radius: 4, backgroundColor: AppColors.mintGreen)
-            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!n.read)
+              CircleAvatar(
+                key: Key('notif_unread_${n.id}'),
+                radius: 4,
+                backgroundColor: AppColors.mintGreen,
+              ),
+            PopupMenuButton<bool>(
+              key: Key('notif_menu_${n.id}'),
+              tooltip: l10n.translate('notif_item_menu'),
+              // The value is the read state the entry will have after the choice.
+              onSelected: (read) => _setRead(n, read),
+              itemBuilder: (_) => [
+                PopupMenuItem<bool>(
+                  value: !n.read,
+                  child: Text(l10n.translate(
+                      n.read ? 'notif_mark_unread' : 'notif_mark_read')),
+                ),
+              ],
+            ),
+          ],
+        ),
         onTap: () => _open(n),
       ),
     );
   }
 
+  /// Marks the entry read, then opens what it is about.
   Future<void> _open(AppNotification n) async {
     if (!n.read) {
       try {
@@ -237,6 +260,18 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         uid: n.uid, itemId: n.itemId, tourId: n.tourId);
   }
 
+  Future<void> _setRead(AppNotification n, bool read) async {
+    try {
+      if (read) {
+        await _repo?.markRead(_uid, n.id);
+      } else {
+        await _repo?.markUnread(_uid, n.id);
+      }
+    } catch (_) {
+      _showFailed();
+    }
+  }
+
   Future<void> _markAllRead() async {
     try {
       await _repo?.markAllRead(_uid, _latest);
@@ -245,21 +280,28 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     }
   }
 
-  Future<void> _delete(List<String> ids) async {
+  Future<void> _delete(String id) async {
     try {
-      await _repo?.deleteAll(_uid, ids);
+      await _repo?.deleteMany(_uid, [id]);
     } catch (_) {
       _showFailed();
     }
   }
 
-  Future<void> _confirmClearAll() async {
+  /// Removes the read entries after the member confirms. Unread entries are never removed here.
+  Future<void> _confirmClearRead() async {
     final l10n = context.l10n;
+    if (readIds(_latest).isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.translate('notif_clear_read_none'))),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.translate('notif_clear_all_title')),
-        content: Text(l10n.translate('notif_clear_all_body')),
+        title: Text(l10n.translate('notif_clear_read_title')),
+        content: Text(l10n.translate('notif_clear_read_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -267,12 +309,17 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.translate('notif_clear_all')),
+            child: Text(l10n.translate('notif_clear_read')),
           ),
         ],
       ),
     );
-    if (confirmed == true) await _delete([for (final n in _latest) n.id]);
+    if (confirmed != true || !mounted) return;
+    try {
+      await _repo?.clearRead(_uid, _latest);
+    } catch (_) {
+      _showFailed();
+    }
   }
 
   void _showFailed() {
@@ -305,6 +352,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         'notice' => Icons.campaign_outlined,
         'ledger' || 'expense' => Icons.receipt_long_outlined,
         'journey' => Icons.route_outlined,
+        'bazar_duty' => Icons.restaurant_outlined,
+        'family_date' => Icons.event_outlined,
+        'study_subject' ||
+        'problem_set' ||
+        'session' =>
+          Icons.menu_book_outlined,
+        'study_reply' => Icons.question_answer_outlined,
+        'study_material' => Icons.folder_outlined,
         _ => Icons.notifications_none_outlined,
       };
 }

@@ -59,7 +59,6 @@ class _ShareIntakeHostState extends State<ShareIntakeHost>
     if (auth is! Authenticated) return;
     if (AppRouter.navigatorKey.currentContext == null) return;
     final uid = auth.profile.uid;
-    final name = auth.profile.displayName;
 
     _taking = true;
     ShareBatch batch = const ShareBatch();
@@ -69,7 +68,7 @@ class _ShareIntakeHostState extends State<ShareIntakeHost>
       _taking = false;
     }
     if (!mounted || batch.isEmpty) return;
-    await _present(batch, uid: uid, name: name);
+    await _present(batch, uid: uid);
   }
 
   /// Shows the sheet for [batch] on the root navigator, then offers any share that came in
@@ -77,7 +76,6 @@ class _ShareIntakeHostState extends State<ShareIntakeHost>
   Future<void> _present(
     ShareBatch batch, {
     required String uid,
-    required String name,
   }) async {
     final root = AppRouter.navigatorKey.currentContext;
     if (root == null) return;
@@ -91,7 +89,6 @@ class _ShareIntakeHostState extends State<ShareIntakeHost>
         root,
         files: batch.files,
         currentUid: uid,
-        fallbackName: name,
         textSkipped: batch.hasText,
       );
     } finally {

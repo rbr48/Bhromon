@@ -196,18 +196,20 @@ def run_problem_set_reminders(
             stats["reminded"] += 1
             if not recipients:
                 continue
-            targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(recipients))
-            stats["pushes"] += engine.send_localized(
-                targets,
-                lambda language, record=record: problem_set_text(record, language),
-                {
-                    "action": PUSH_ACTION,
-                    "tourId": tour_id,
-                    "subjectId": subject_ref.id,
-                    "setId": set_ref.id,
-                },
-                high_priority=True,
-            )
+            uids = engine.get_uids_for_emails(recipients)
+            targets = engine.get_push_targets_for_uids(uids)
+            data = {
+                "action": PUSH_ACTION,
+                "tourId": tour_id,
+                "subjectId": subject_ref.id,
+                "setId": set_ref.id,
+            }
+
+            def make_text(language, record=record):
+                return problem_set_text(record, language)
+
+            stats["pushes"] += engine.send_localized(targets, make_text, data, high_priority=True)
+            engine.record_inbox(uids, data, make_text)
         except Exception as error:  # One bad set must not stop the others.
             stats["errors"] += 1
             logger.error("Problem-set reminder failed for %s: %s", doc.reference.path, error)
@@ -240,18 +242,20 @@ def run_problem_set_reminders(
             if not recipients:
                 continue
             set_title = (set_snapshot.to_dict() or {}).get("title")
-            targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(recipients))
-            stats["pushes"] += engine.send_localized(
-                targets,
-                lambda language, title=set_title: problem_set_text({"title": title}, language),
-                {
-                    "action": PUSH_ACTION,
-                    "tourId": tour_id,
-                    "subjectId": subject_ref.id,
-                    "setId": set_ref.id,
-                },
-                high_priority=True,
-            )
+            uids = engine.get_uids_for_emails(recipients)
+            targets = engine.get_push_targets_for_uids(uids)
+            data = {
+                "action": PUSH_ACTION,
+                "tourId": tour_id,
+                "subjectId": subject_ref.id,
+                "setId": set_ref.id,
+            }
+
+            def make_text(language, title=set_title):
+                return problem_set_text({"title": title}, language)
+
+            stats["pushes"] += engine.send_localized(targets, make_text, data, high_priority=True)
+            engine.record_inbox(uids, data, make_text)
         except Exception as error:  # One bad date must not stop the others.
             stats["errors"] += 1
             logger.error("Problem-set due date reminder failed for %s: %s", doc.reference.path, error)

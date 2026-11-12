@@ -208,10 +208,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ---- Push Notifications (admin sends, all users read own) ----
+    // ---- Admin notifications (the top-level collection). Nothing writes here today: a member's list is
+    // users/{uid}/notifications, below. Only admins read or write this collection.
     match /notifications/{id} {
-      allow read: if isAuth();
-      allow create, update, delete: if isRegionExpertOrAbove();
+      allow read, create, update, delete: if isRegionExpertOrAbove();
     }
 
     // ---- Admin Audit Logs (write-only by auth; read by admins) ----
@@ -285,7 +285,9 @@ service cloud.firestore {
       // Someone else may leave a notice only as a chat notice to a person they share
       // a tour with, for a chat that is open between them.
       match /notifications/{id} {
-        allow read, update, delete: if isOwner(uid);
+        allow read, delete: if isOwner(uid);
+        // The owner marks an entry read or unread, and changes nothing else in it.
+        allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         allow create: if isAuth()
                       && request.resource.data.timestamp == request.time
                       && request.resource.data.title is string
@@ -601,9 +603,15 @@ service cloud.firestore {
         (exists(tourMemberPath(tId)) && get(tourMemberPath(tId)).data.status == 'active')
       );
     }
+    // The owner, or an active member whose role is admin or owner. The membership is read once:
+    // this check runs inside many rules, and each read of it costs the rules' expression budget.
     function isTourAdmin(tId) {
       return isOwnerOfTour(tId) ||
-             (isActiveMember(tId) && exists(tourMemberPath(tId)) && get(tourMemberPath(tId)).data.role in ['admin', 'owner']);
+             (isAuth() && exists(tourMemberPath(tId)) && adminMembershipRow(tId));
+    }
+    function adminMembershipRow(tId) {
+      let row = get(tourMemberPath(tId)).data;
+      return row.status == 'active' && row.role in ['admin', 'owner'];
     }
     function isOwnerOfTour(tId) {
       return isAuth() && exists(/databases/$(database)/documents/tours/$(tId)) &&
@@ -704,6 +712,17 @@ service cloud.firestore {
       let tour = get(/databases/$(database)/documents/tours/$(tId));
       let preset = tour.data.get('preset', '');
       return preset == null || preset in ['', 'mess', 'society'];
+    }
+    // The shared fund (expenses, deposits, settle-ups and their MFS records) is kept by a trip,
+    // a household (no preset), a mess, a housing society, a campus, and the school, sports,
+    // committee and friends circles. An office, a samity and a study circle keep none, and a
+    // preset this list does not name keeps none either. Reads are not gated, so money already
+    // recorded stays visible. Keep this in step with TourGroup.hasFund in the app and
+    // fund_policy.py on the VPS.
+    function fundAllowedTour(tId) {
+      let tour = get(/databases/$(database)/documents/tours/$(tId));
+      let preset = tour.data.get('preset', '');
+      return preset == null || preset.matches('^(|mess|society|campus|school|sports|committee|friends)$');
     }
     // An office, a campus, a mess, a housing society or a samity: the owner and admins post
     // the notices and members answer them.
@@ -1705,11 +1724,11 @@ service cloud.firestore {
       // Expenses & deposits: any member adds; only the author or an admin edits.
       match /expenses/{expenseId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
+        allow create: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == tourUserEmail() &&
                          validOptionalMfsInfo(request.resource.data, tourId) &&
                          canVerifyMfsOnCreate(request.resource.data, tourId);
-        allow update: if isActiveMember(tourId) &&
+        allow update: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == resource.data.get('addedByEmail', '') &&
                          validOptionalMfsInfo(request.resource.data, tourId) &&
                          (
@@ -1717,17 +1736,17 @@ service cloud.firestore {
                             memberMayEditMfs(resource.data, request.resource.data)) ||
                            isTourAdmin(tourId)
                          );
-        allow delete: if isActiveMember(tourId) &&
+        allow delete: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
       match /deposits/{depositId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
+        allow create: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == tourUserEmail() &&
                          validOptionalMfsInfo(request.resource.data, tourId) &&
                          canVerifyMfsOnCreate(request.resource.data, tourId);
-        allow update: if isActiveMember(tourId) &&
+        allow update: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == resource.data.get('addedByEmail', '') &&
                          validOptionalMfsInfo(request.resource.data, tourId) &&
                          (
@@ -1735,7 +1754,7 @@ service cloud.firestore {
                             memberMayEditMfs(resource.data, request.resource.data)) ||
                            isTourAdmin(tourId)
                          );
-        allow delete: if isActiveMember(tourId) &&
+        allow delete: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
@@ -1743,7 +1762,7 @@ service cloud.firestore {
       // admin records any; the author or an admin deletes it.
       match /transfers/{transferId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
+        allow create: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == tourUserEmail() &&
                          request.resource.data.amountPaisa is int &&
                          request.resource.data.amountPaisa > 0 &&
@@ -1753,7 +1772,7 @@ service cloud.firestore {
                          validOptionalMfsInfo(request.resource.data, tourId) &&
                          canVerifyMfsOnCreate(request.resource.data, tourId);
         allow update: if false;
-        allow delete: if isActiveMember(tourId) &&
+        allow delete: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
@@ -2692,7 +2711,7 @@ service cloud.firestore {
       // settlement guarantees zero duplicate TrxIDs within the same tourId.
       match /mfs_trx_registry/{trxId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
+        allow create: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
           trxId.matches('^[A-Z0-9]{8,14}$') &&
           request.resource.data.keys().hasOnly([
             'trxId',
@@ -2709,7 +2728,7 @@ service cloud.firestore {
           request.resource.data.amountPaisa is int &&
           request.resource.data.amountPaisa > 0;
         allow update: if false;
-        allow delete: if isActiveMember(tourId) && (
+        allow delete: if fundAllowedTour(tourId) && isActiveMember(tourId) && (
           resource.data.get('addedByEmail', '') == tourUserEmail() ||
           isTourAdmin(tourId)
         );
@@ -2719,7 +2738,7 @@ service cloud.firestore {
       // Stores `SettlementRecord.toMap()` documents with full MfsPaymentInfo support.
       match /settlements/{settlementId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
+        allow create: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
           request.resource.data.tourId == tourId &&
           request.resource.data.addedByEmail == tourUserEmail() &&
           request.resource.data.amountPaisa is int &&
@@ -2731,7 +2750,7 @@ service cloud.firestore {
           ) &&
           validMfsInfo(request.resource.data.mfsInfo, tourId) &&
           canVerifyMfsOnCreate(request.resource.data, tourId);
-        allow update: if isActiveMember(tourId) &&
+        allow update: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
           request.resource.data.tourId == resource.data.tourId &&
           request.resource.data.addedByEmail == resource.data.addedByEmail &&
           request.resource.data.amountPaisa == resource.data.amountPaisa &&
@@ -2748,7 +2767,7 @@ service cloud.firestore {
               request.resource.data.mfsInfo.get('status', 'unverified') == 'unverified'
             )
           );
-        allow delete: if isActiveMember(tourId) &&
+        allow delete: if fundAllowedTour(tourId) && isActiveMember(tourId) &&
           (
             isTourAdmin(tourId) ||
             (

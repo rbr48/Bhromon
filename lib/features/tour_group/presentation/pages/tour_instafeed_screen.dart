@@ -887,6 +887,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
   List<TourDayInfo> get _tourDays => _tourGroup?.daysList ?? const [];
 
+  /// Whether the group has the shared fund ([TourGroup.hasFund]). A group without it
+  /// offers no add-to-ledger action in Moments.
+  bool get _fundOn => _tourGroup?.hasFund ?? false;
+
+  /// The add-to-ledger action, or null when the group has no shared fund.
+  void Function(TourPostItem post)? get _addToLedger =>
+      _fundOn ? _showAddToLedgerDialog : null;
+
   void _showCreatePostModal(BuildContext context, {bool isStory = false}) {
     showModalBottomSheet<void>(
       context: context,
@@ -945,13 +953,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           initialIndex: initialIndex,
           onOpenComments: (post) => _showCommentsModal(context, post),
           onShare: (post) => _showShareModal(context, post),
-          onAddToLedger: (post) => _showAddToLedgerDialog(post),
+          onAddToLedger: _addToLedger,
         ),
       ),
     );
   }
 
   Future<void> _showAddToLedgerDialog(TourPostItem post) async {
+    if (!_fundOn) return;
     final amountCtrl = TextEditingController(
       text: post.expenseAmount != null
           ? post.expenseAmount!.toStringAsFixed(0)
@@ -1571,8 +1580,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                       targetMediaIndex),
                                           onShare: (p) =>
                                               _showShareModal(context, p),
-                                          onAddToLedger: (p) =>
-                                              _showAddToLedgerDialog(p),
+                                          onAddToLedger: _addToLedger,
                                         );
                                       }
                                     },
@@ -1643,8 +1651,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                                             targetMediaIndex),
                                                 onShare: (p) =>
                                                     _showShareModal(context, p),
-                                                onAddToLedger: (p) =>
-                                                    _showAddToLedgerDialog(p),
+                                                onAddToLedger: _addToLedger,
                                                 onReelTap: (p) {
                                                   final reelIdx =
                                                       reelsList.indexOf(p);

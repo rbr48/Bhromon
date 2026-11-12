@@ -99,6 +99,11 @@ class Engine:
     def get_push_targets_for_uids(self, uids):
         return [(f"tok-{uid}", None, "en") for uid in uids]
 
+    def record_inbox(self, uids, data, make_text):
+        """Records the entries the module keeps in each member's list, for the assertions."""
+        self.inbox_entries = getattr(self, "inbox_entries", []) + [(list(uids), dict(data))]
+        return len(list(uids))
+
     def send_localized(self, targets, make_text, data, high_priority=False):
         for token, _ref, language in targets:
             title, body = make_text(language)

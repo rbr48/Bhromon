@@ -607,6 +607,7 @@ def test_send_notice_notification():
 
 def test_send_ledger_notification():
     engine = NotificationEngine()
+    engine.tour_allows_fund = MagicMock(return_value=True)
     engine.get_active_tour_members = MagicMock(return_value=["m1@test.com", "m2@test.com"])
     engine.get_uids_for_emails = MagicMock(return_value=["u1", "u2"])
     engine.get_push_targets_for_uids = MagicMock(return_value=[("tok1", MagicMock(), "en")])
@@ -624,6 +625,28 @@ def test_send_ledger_notification():
     assert res["status"] == "success"
     assert res["devices_sent"] == 1
     assert engine.stats["ledger_pushes_sent"] == 1
+
+
+def test_send_ledger_notification_skipped_without_fund():
+    """A group with no shared fund (an office, a samity, a study circle) gets no ledger push."""
+    engine = NotificationEngine()
+    engine.tour_allows_fund = MagicMock(return_value=False)
+    engine.get_active_tour_members = MagicMock(return_value=["m1@test.com"])
+    engine.send_localized = MagicMock(return_value=1)
+
+    res = engine.send_ledger_notification(
+        tour_id="tour_office",
+        expense_id="exp_02",
+        added_by_email="payer@test.com",
+        payer_name="Shohag",
+        title="Lunch",
+        amount_paisa=50000,
+    )
+
+    assert res["status"] == "no_fund"
+    engine.get_active_tour_members.assert_not_called()
+    engine.send_localized.assert_not_called()
+    assert engine.stats["ledger_pushes_sent"] == 0
 
 
 def test_send_bazar_duty_notification():
