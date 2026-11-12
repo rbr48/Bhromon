@@ -128,8 +128,21 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   late final List<SyllabusModule> _syllabusModules =
       StudySyllabusCatalog.modulesFor(widget.book.title);
 
-  StudyOfflinePackage? _cachedPackage;
+  /// The book's offline package as the index keeps it, or null when the book is not saved here.
+  StudyOfflineSummary? _offlineSummary;
   bool _isDownloadingOffline = false;
+
+  /// The readable solutions by chapter, and whether the book has any, worked out once when the
+  /// materials arrive rather than for every card built.
+  Map<String, List<StudyMaterial>> _readableByChapter = const {};
+  bool _hasReadableSolution = false;
+
+  /// Whether the route that shows this screen has finished opening. Until it has, the screen reads
+  /// nothing from the device's stores, so a read cannot hold up the transition.
+  bool _routeSettled = false;
+
+  /// The leading rows of the list before the chapter cards: summary, streak, vault and blueprint.
+  static const int _leadingItems = 4;
   final _offlineVault = StudyOfflineVault.instance;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -169,7 +182,13 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     _materialsSub =
         _repository.watchStudyMaterials(widget.tourId, widget.book.id).listen(
       (materials) {
-        if (mounted) setState(() => _materials = materials);
+        if (!mounted) return;
+        setState(() {
+          _materials = materials;
+          _readableByChapter = _readableSolutionsByChapter(materials);
+          _hasReadableSolution =
+              materials.any((m) => m.isPublished && isReadableSolution(m));
+        });
       },
       onError: (Object _) {
         // Safe fallback if study materials stream errors.
@@ -195,14 +214,58 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         .then((number) {
       if (mounted) setState(() => _here = number);
     });
-    _refreshStreak();
-    _refreshOfflineVault();
+    _whenRouteSettles(() {
+      _refreshStreak();
+      _refreshOfflineSummary();
+    });
   }
 
-  Future<void> _refreshOfflineVault() async {
+  /// Runs [action] once the route that shows this screen has finished opening, so a read of the
+  /// device's stores does not run in the middle of the transition. A screen that no route animates
+  /// runs it straight after its first frame.
+  void _whenRouteSettles(VoidCallback action) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final animation = ModalRoute.of(context)?.animation;
+      if (animation == null || animation.isCompleted) {
+        _settle(action);
+        return;
+      }
+      late final AnimationStatusListener listener;
+      listener = (status) {
+        if (status != AnimationStatus.completed) return;
+        animation.removeStatusListener(listener);
+        if (mounted) _settle(action);
+      };
+      animation.addStatusListener(listener);
+    });
+  }
+
+  void _settle(VoidCallback action) {
+    _routeSettled = true;
+    action();
+  }
+
+  /// The readable solutions of each chapter, in the order the materials came.
+  static Map<String, List<StudyMaterial>> _readableSolutionsByChapter(
+      List<StudyMaterial> materials) {
+    final byChapter = <String, List<StudyMaterial>>{};
+    for (final m in materials) {
+      final chapterId = m.chapterId;
+      if (chapterId == null || !m.isPublished || !isReadableSolution(m)) {
+        continue;
+      }
+      (byChapter[chapterId] ??= []).add(m);
+    }
+    return byChapter;
+  }
+
+  /// The book's saved package as the index keeps it. Reads the index only.
+  Future<void> _refreshOfflineSummary() async {
     try {
-      final pkg = await _offlineVault.getPackage(widget.tourId, widget.book.id);
-      if (mounted) setState(() => _cachedPackage = pkg);
+      final summary =
+          await _offlineVault.getSummary(widget.tourId, widget.book.id);
+      if (mounted) setState(() => _offlineSummary = summary);
     } catch (_) {
       // Safe fallback when local offline vault cannot be read.
     }
@@ -270,7 +333,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
       if (mounted) {
         setState(() {
-          _cachedPackage = pkg;
+          _offlineSummary = pkg.summary;
           _isDownloadingOffline = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -299,7 +362,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     try {
       await _offlineVault.removePackage(widget.tourId, widget.book.id);
       if (mounted) {
-        setState(() => _cachedPackage = null);
+        setState(() => _offlineSummary = null);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.translate('study_offline_removed'))),
         );
@@ -310,6 +373,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   }
 
   void _refreshStreak() {
+    if (!_routeSettled) return;
     StudyActivityLog().activeDays().then((days) {
       if (!mounted) return;
       final streak = StudyDailyStreakRules.computeDailyStreak(
@@ -763,8 +827,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
     try {
       final solutionTexts = <String, String>{};
-      if (_cachedPackage != null) {
-        solutionTexts.addAll(_cachedPackage!.contents);
+      if (_offlineSummary != null) {
+        // The booklet is made from the saved solutions, so they are read here, once, for it.
+        final stored =
+            await _offlineVault.getPackage(widget.tourId, widget.book.id);
+        if (stored != null) solutionTexts.addAll(stored.contents);
       }
 
       final dio = Dio(
@@ -1126,33 +1193,40 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     }
     final next = nextUnreadChapter(_chapters, _marks.keys.toSet());
     final today = DateTime.now();
-    return ListView(
+    // Built as the list scrolls, so a huge book does not build every chapter card when it opens.
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      children: [
-        _summary(next),
-        StudyDailyStreakCard(
-          streak: _dailyStreak,
-          standings: _standings,
-          onOpenBranchHall: () => BranchStudyHallSheet.show(
-            context,
-            standings: _standings,
-          ),
-        ),
-        _offlineVaultSection(),
-        _syllabusBlueprintCard(),
-        for (final chapter in _chapters) _chapterCard(chapter, today),
-      ],
+      itemCount: _leadingItems + _chapters.length,
+      itemBuilder: (context, index) {
+        switch (index) {
+          case 0:
+            return _summary(next);
+          case 1:
+            return StudyDailyStreakCard(
+              streak: _dailyStreak,
+              standings: _standings,
+              onOpenBranchHall: () => BranchStudyHallSheet.show(
+                context,
+                standings: _standings,
+              ),
+            );
+          case 2:
+            return _offlineVaultSection();
+          case 3:
+            return _syllabusBlueprintCard();
+          default:
+            return _chapterCard(_chapters[index - _leadingItems], today);
+        }
+      },
     );
   }
 
   Widget _offlineVaultSection() {
-    final hasSolutions =
-        _materials.any((m) => m.isPublished && isReadableSolution(m));
-    if (!hasSolutions && _cachedPackage == null) {
+    if (!_hasReadableSolution && _offlineSummary == null) {
       return const SizedBox.shrink();
     }
     return StudyOfflineVaultCard(
-      package: _cachedPackage,
+      summary: _offlineSummary,
       isDownloading: _isDownloadingOffline,
       onDownload: _downloadBookForOffline,
       onRemove: _removeOfflinePackage,
@@ -1380,6 +1454,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     final l10n = context.l10n;
     final palette = context.forest;
     final papers = <_ExamPaper>[];
+    // The saved solutions are read at most once for the picker, and only when a chapter needs them.
+    StudyOfflinePackage? stored;
+    var storedRead = false;
     for (final chapter in _chapters) {
       final materials = _materials
           .where((m) =>
@@ -1400,7 +1477,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       final primary = english ?? bangla!;
       final other = identical(primary, english) ? bangla : english;
       final source = solutionSource(primary, other);
-      final raw = source.rawContent ?? _cachedPackage?.contentFor(primary.id);
+      if (source.rawContent == null && _offlineSummary != null && !storedRead) {
+        stored = await _offlineVault.getPackage(widget.tourId, widget.book.id);
+        storedRead = true;
+      }
+      final raw = source.rawContent ?? stored?.contentFor(primary.id);
       final questions = raw == null || raw.trim().isEmpty
           ? 0
           : StudyExamSimulatorExtractor.extractQuestions(
@@ -1507,11 +1588,11 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   /// A note opens from its text, and a Markdown file from its address, which the reader fetches. The other
   /// language pairs only when its text is a note.
-  void _openSolution(
+  Future<void> _openSolution(
     StudyMaterial material,
     StudyMaterial? other, {
     StudyChapter? chapter,
-  }) {
+  }) async {
     final titleWithChapter = chapter != null && chapter.title.isNotEmpty
         ? '${chapter.title} · ${material.title}'
         : material.title;
@@ -1525,9 +1606,15 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       return;
     }
     final source = solutionSource(material, other);
-    final cachedPrimary = _cachedPackage?.contentFor(material.id);
-    final cachedAlternate =
-        other != null ? _cachedPackage?.contentFor(other.id) : null;
+    // A saved solution is read only when the material carries no text of its own.
+    final needsStored = source.rawContent == null ||
+        (other != null && (source.paired?.body ?? '').isEmpty);
+    final stored = needsStored && _offlineSummary != null
+        ? await _offlineVault.getPackage(widget.tourId, widget.book.id)
+        : null;
+    if (!mounted) return;
+    final cachedPrimary = stored?.contentFor(material.id);
+    final cachedAlternate = other != null ? stored?.contentFor(other.id) : null;
     final primaryContent = source.rawContent ?? cachedPrimary;
     final alternateContent = source.paired?.body ?? cachedAlternate;
 
@@ -1554,10 +1641,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     final here = _here == chapter.number;
 
     // Only a solution the reader can open gets a one-tap button: a note with text, or a Markdown file.
-    final chapterMaterials = _materials
-        .where((m) =>
-            m.chapterId == chapter.id && m.isPublished && isReadableSolution(m))
-        .toList();
+    final chapterMaterials =
+        _readableByChapter[chapter.id] ?? const <StudyMaterial>[];
 
     StudyMaterial? englishNote;
     StudyMaterial? banglaNote;

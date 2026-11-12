@@ -43,7 +43,7 @@ void main() {
       await tester.pumpWidget(
         buildTestApp(
           StudyOfflineVaultCard(
-            package: null,
+            summary: null,
             onDownload: () => downloaded = true,
             onRemove: () {},
           ),
@@ -69,7 +69,7 @@ void main() {
       await tester.pumpWidget(
         buildTestApp(
           StudyOfflineVaultCard(
-            package: null,
+            summary: null,
             isDownloading: true,
             onDownload: () {},
             onRemove: () {},
@@ -90,7 +90,7 @@ void main() {
       await tester.pumpWidget(
         buildTestApp(
           StudyOfflineVaultCard(
-            package: testPackage,
+            summary: testPackage.summary,
             onDownload: () {},
             onRemove: () => removed = true,
           ),
@@ -123,7 +123,7 @@ void main() {
       await tester.pumpWidget(
         buildTestApp(
           StudyOfflineVaultCard(
-            package: null,
+            summary: null,
             onDownload: () {},
             onRemove: () {},
           ),
