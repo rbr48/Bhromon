@@ -142,8 +142,6 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   /// nothing from the device's stores, so a read cannot hold up the transition.
   bool _routeSettled = false;
 
-  /// The leading rows of the list before the chapter cards: summary, streak, vault and blueprint.
-  static const int _leadingItems = 4;
   final _offlineVault = StudyOfflineVault.instance;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -1200,55 +1198,144 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     }
     final next = nextUnreadChapter(_chapters, _marks.keys.toSet());
     final today = DateTime.now();
-    final leadingCount = _leadingItems + (_isPoeBook ? 1 : 0);
+    final leadingWidgets = <Widget>[
+      _summary(next),
+      if (_isPoeBook) _graphAtlasCard(),
+      if (_hasBookLevelMaterials) _masterMaterialsCard(),
+      StudyDailyStreakCard(
+        streak: _dailyStreak,
+        standings: _standings,
+        onOpenBranchHall: () => BranchStudyHallSheet.show(
+          context,
+          standings: _standings,
+        ),
+      ),
+      _offlineVaultSection(),
+      _syllabusBlueprintCard(),
+    ];
+
     // Built as the list scrolls, so a huge book does not build every chapter card when it opens.
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      itemCount: leadingCount + _chapters.length,
+      itemCount: leadingWidgets.length + _chapters.length,
       itemBuilder: (context, index) {
-        if (_isPoeBook) {
-          switch (index) {
-            case 0:
-              return _summary(next);
-            case 1:
-              return _graphAtlasCard();
-            case 2:
-              return StudyDailyStreakCard(
-                streak: _dailyStreak,
-                standings: _standings,
-                onOpenBranchHall: () => BranchStudyHallSheet.show(
-                  context,
-                  standings: _standings,
-                ),
-              );
-            case 3:
-              return _offlineVaultSection();
-            case 4:
-              return _syllabusBlueprintCard();
-            default:
-              return _chapterCard(_chapters[index - leadingCount], today);
-          }
+        if (index < leadingWidgets.length) {
+          return leadingWidgets[index];
         }
-        switch (index) {
-          case 0:
-            return _summary(next);
-          case 1:
-            return StudyDailyStreakCard(
-              streak: _dailyStreak,
-              standings: _standings,
-              onOpenBranchHall: () => BranchStudyHallSheet.show(
-                context,
-                standings: _standings,
-              ),
-            );
-          case 2:
-            return _offlineVaultSection();
-          case 3:
-            return _syllabusBlueprintCard();
-          default:
-            return _chapterCard(_chapters[index - _leadingItems], today);
-        }
+        return _chapterCard(_chapters[index - leadingWidgets.length], today);
       },
+    );
+  }
+
+  bool get _hasBookLevelMaterials {
+    return _materials.any((m) => m.chapterId == null && m.isPublished);
+  }
+
+  Widget _masterMaterialsCard() {
+    final palette = context.forest;
+    final count =
+        _materials.where((m) => m.chapterId == null && m.isPublished).length;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            palette.accentText.withValues(alpha: 0.10),
+            palette.card,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: palette.accentText.withValues(alpha: 0.30),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _openMaterials,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: palette.accentText.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_stories_rounded,
+                    color: palette.accentText,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'মাস্টার এনসাইক্লোপিডিয়া ও শব্দকোষ',
+                              style: TextStyle(
+                                color: palette.text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.accentText,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '$countটি গাইড',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'সকল পরীক্ষার বিষয়ভিত্তিক মাস্টার সংকলন, সূত্রকোষ ও পূর্ণাঙ্গ পরিভাষা',
+                        style: TextStyle(
+                          color: palette.text70,
+                          fontSize: 11.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: palette.accentText,
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
