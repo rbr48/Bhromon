@@ -123,6 +123,40 @@ The relationship is primarily that of debtor and creditor.
       expect(pdfBytes.length, greaterThan(2000));
     });
 
+    test('the booklet is set in Noto Sans Bengali, Regular and Bold', () async {
+      const content = StudyBookletContent(
+        subjectTitle: 'Laws & Practice of General Banking',
+        subjectCode: 'LPGB',
+        tourName: 'JAIBB Diploma Study Circle',
+        chapters: [
+          StudyBookletChapterItem(
+            number: 1,
+            title: '96th BPE (May 2023)',
+            questions: [
+              StudyBookletQuestionItem(
+                questionNumber: '1',
+                title: 'প্রশ্ন ১ [মান: ১০]',
+                moduleCode: 'A',
+                pieces: [
+                  StudyBookletText(
+                    '**ব্যাংক** কাকে বলে? Define a bank under the Bank Company Act.',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final pdfBytes =
+          await generator.generateBookletPdf(content, isBengali: true);
+      final text = String.fromCharCodes(pdfBytes);
+
+      expect(text, contains('NotoSansBengali-Regular'));
+      expect(text, contains('NotoSansBengali-Bold'));
+      expect(text, isNot(contains('HindSiliguri')));
+    });
+
     StudyBookletContent twoChapters() => const StudyBookletContent(
           subjectTitle: 'LPGB',
           tourName: 'Circle',

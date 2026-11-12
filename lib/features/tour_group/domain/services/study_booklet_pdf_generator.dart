@@ -379,22 +379,24 @@ class StudyBookletPdfGenerator {
     return widgets;
   }
 
-  /// Loads fonts and configures [BanglaPdf] for typography.
+  /// Loads the booklet's fonts and configures [BanglaPdf] for typography.
+  ///
+  /// The booklet is set in Noto Sans Bengali, Regular and Bold: the face the app uses for Bengali
+  /// text. Its glyphs cover the Latin letters, the Bengali script and the punctuation the booklet
+  /// prints, so Hind Siliguri is not loaded here. The bangla_pdf face is the last fallback for any
+  /// character that neither face has.
   Future<pw.Document> _createDocument(String title) async {
     final regular = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/HindSiliguri-Regular.ttf'),
+      await rootBundle.load('assets/fonts/NotoSansBengali.ttf'),
     );
     final bold = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf'),
-    );
-    final bengali = pw.Font.ttf(
-      await rootBundle.load('assets/fonts/NotoSansBengali.ttf'),
+      await rootBundle.load('assets/fonts/NotoSansBengali-Bold.ttf'),
     );
 
     BanglaPdf.configure(
       shapingMode: BanglaShapingMode.unicode,
       defaultFont: regular,
-      fallbackFonts: [bengali, BanglaFontManager().defaultFont],
+      fallbackFonts: [BanglaFontManager().defaultFont],
     );
 
     return pw.Document(
@@ -404,7 +406,7 @@ class StudyBookletPdfGenerator {
         bold: bold,
         italic: regular,
         boldItalic: bold,
-        fontFallback: [bengali, BanglaFontManager().defaultFont],
+        fontFallback: [BanglaFontManager().defaultFont],
       ),
       title: title,
       author: 'Bhromon Banking Study Circle',
