@@ -302,18 +302,21 @@ class StudyBookletPdfGenerator {
   /// figure is one prose piece.
   static List<StudyBookletPiece> solutionPieces(String raw) {
     final text = raw.replaceAll('\r\n', '\n');
-    final fence = RegExp(
-      r'^```[ \t]*(chart:ppc|svg)[ \t]*\n([\s\S]*?)^```[ \t]*$',
+    final combinedPattern = RegExp(
+      r'(?:^```[ \t]*(chart:ppc|svg)[ \t]*\n([\s\S]*?)^```[ \t]*$)|'
+      r'(?:(?:<div\b[^>]*>\s*)?(<svg\b[\s\S]*?</svg>)(?:\s*</div>)?)',
       multiLine: true,
+      caseSensitive: false,
     );
     final pieces = <StudyBookletPiece>[];
     var cursor = 0;
-    for (final match in fence.allMatches(text)) {
-      final tag = match.group(1)?.trim() ?? '';
-      final body = (match.group(2) ?? '').trim();
+    for (final match in combinedPattern.allMatches(text)) {
+      final tag = match.group(1)?.trim();
+      final fenceBody = (match.group(2) ?? '').trim();
+      final rawSvgBody = (match.group(3) ?? '').trim();
 
       if (tag == 'chart:ppc') {
-        final spec = PpcSpec.parse(body);
+        final spec = PpcSpec.parse(fenceBody);
         if (spec != null) {
           final before =
               studyBookletCleanSolution(text.substring(cursor, match.start));
@@ -323,12 +326,19 @@ class StudyBookletPdfGenerator {
           continue;
         }
       } else if (tag == 'svg' &&
-          body.startsWith('<svg') &&
-          body.endsWith('</svg>')) {
+          fenceBody.startsWith('<svg') &&
+          fenceBody.endsWith('</svg>')) {
         final before =
             studyBookletCleanSolution(text.substring(cursor, match.start));
         if (before.isNotEmpty) pieces.add(StudyBookletText(before));
-        pieces.add(StudyBookletSvgFigure(body));
+        pieces.add(StudyBookletSvgFigure(fenceBody));
+        cursor = match.end;
+        continue;
+      } else if (rawSvgBody.isNotEmpty) {
+        final before =
+            studyBookletCleanSolution(text.substring(cursor, match.start));
+        if (before.isNotEmpty) pieces.add(StudyBookletText(before));
+        pieces.add(StudyBookletSvgFigure(rawSvgBody));
         cursor = match.end;
         continue;
       }

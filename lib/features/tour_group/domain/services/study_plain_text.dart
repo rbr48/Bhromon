@@ -26,6 +26,10 @@ String plainTextFromMarkdown(String source) {
         '',
       )
       .replaceAll(RegExp(r'<svg\b[\s\S]*?</svg>', caseSensitive: false), '')
+      .replaceAll(
+        RegExp(r'</?(?:div|center|p|figure)\b[^>]*>', caseSensitive: false),
+        '',
+      )
       .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
 
   // Escaped marks become private-use characters until the markup is gone.
