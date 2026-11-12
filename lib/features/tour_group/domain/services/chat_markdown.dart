@@ -314,6 +314,36 @@ String _autoWrapRawLatex(String s) {
   return s;
 }
 
+final _svgContainerPattern = RegExp(
+  r'^<(?:div|center|p|figure)\b[^>]*>\s*<svg\b',
+  caseSensitive: false,
+);
+
+final _svgOpenPattern = RegExp(
+  r'^<(?:div|center|p|figure)\b[^>]*>$',
+  caseSensitive: false,
+);
+
+final _svgClosePattern = RegExp(
+  r'^<\/(?:div|center|p|figure)>$',
+  caseSensitive: false,
+);
+
+bool _isSvgStartLine(List<String> rawLines, int index) {
+  final line = rawLines[index].trim();
+  if (line.startsWith('<svg')) return true;
+  if (_svgContainerPattern.hasMatch(line)) return true;
+  if (_svgOpenPattern.hasMatch(line)) {
+    for (var j = index + 1; j < rawLines.length && j <= index + 2; j++) {
+      final next = rawLines[j].trim();
+      if (next.isEmpty) continue;
+      if (next.startsWith('<svg')) return true;
+      break;
+    }
+  }
+  return false;
+}
+
 List<ChatBlock> parseChatBlocks(String text) {
   final counter = _Counter();
 
@@ -447,10 +477,10 @@ List<ChatBlock> parseChatBlocks(String text) {
       continue;
     }
 
-    // 1b. Raw SVG Block
-    if (trimmed.startsWith('<svg')) {
+    // 1b. Raw SVG Block (standalone <svg>, inline <div...><svg>...</svg></div>, or multiline container)
+    if (_isSvgStartLine(rawLines, i)) {
       final svgLines = <String>[rawLines[i]];
-      var foundEnd = trimmed.contains('</svg>');
+      var foundEnd = rawLines[i].contains('</svg>');
       i++;
       while (!foundEnd && i < rawLines.length) {
         svgLines.add(rawLines[i]);
@@ -459,7 +489,16 @@ List<ChatBlock> parseChatBlocks(String text) {
         }
         i++;
       }
-      blocks.add(ChatSvgBlock(svgLines.join('\n').trim()));
+      if (i < rawLines.length &&
+          _svgClosePattern.hasMatch(rawLines[i].trim())) {
+        i++;
+      }
+      final combined = svgLines.join('\n');
+      final match = RegExp(r'<svg[\s\S]*?</svg>', caseSensitive: false)
+          .firstMatch(combined);
+      if (match != null) {
+        blocks.add(ChatSvgBlock(match.group(0)!.trim()));
+      }
       continue;
     }
 
@@ -634,7 +673,7 @@ List<ChatBlock> parseChatBlocks(String text) {
       // Check if next starts another block
       final isBlockStart = nextTrimmed.startsWith('```') ||
           nextTrimmed.startsWith(r'$$') ||
-          nextTrimmed.startsWith('<svg') ||
+          _isSvgStartLine(rawLines, i) ||
           (nextTrimmed.contains('|') &&
               i + 1 < rawLines.length &&
               isTableDelimiter(rawLines[i + 1])) ||

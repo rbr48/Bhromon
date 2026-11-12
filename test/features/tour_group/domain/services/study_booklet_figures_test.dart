@@ -94,6 +94,20 @@ void main() {
       expect((pieces[1] as StudyBookletSvgFigure).svg, svg);
       expect(pieces[2], isA<StudyBookletText>());
     });
+
+    test('a div-wrapped svg element becomes a StudyBookletSvgFigure', () {
+      const svg =
+          '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
+      final pieces = StudyBookletPdfGenerator.solutionPieces(
+        'ব্যাখ্যা শুরু।\n\n<div class="svg-diagram" style="margin:14px 0;">$svg</div>\n\nব্যাখ্যা শেষ।',
+      );
+
+      expect(pieces, hasLength(3));
+      expect(pieces[0], isA<StudyBookletText>());
+      expect(pieces[1], isA<StudyBookletSvgFigure>());
+      expect((pieces[1] as StudyBookletSvgFigure).svg, svg);
+      expect(pieces[2], isA<StudyBookletText>());
+    });
   });
 
   group('StudyBookletQuestionItem', () {

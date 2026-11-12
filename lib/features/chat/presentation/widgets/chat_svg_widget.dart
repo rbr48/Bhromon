@@ -32,6 +32,16 @@ class _ChatSvgWidgetState extends State<ChatSvgWidget> {
       final title = match.group(1)!.trim();
       if (title.isNotEmpty) return title;
     }
+    final textMatch = RegExp(r'<text[^>]*>(.*?)</text>', caseSensitive: false)
+        .firstMatch(svg);
+    if (textMatch != null && textMatch.group(1) != null) {
+      final text = textMatch
+          .group(1)!
+          .replaceAll(RegExp(r'<[^>]+>'), '')
+          .replaceAll('&amp;', '&')
+          .trim();
+      if (text.isNotEmpty && text.length <= 90) return text;
+    }
     return null;
   }
 
