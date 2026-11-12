@@ -137,15 +137,17 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     _bloodGroup = widget.bloodGroup;
     if (widget.members == null) {
       _membersStream = _repo.watchMembers(widget.tourId);
+      // The group decides whether the fund shows. A caller that passes its own members and
+      // money (the direct body, used by tests) reads no group, so it shows no balance.
+      _groupSub = _repo.watchGroup(widget.tourId).listen(
+        (group) => _setHasFund(group?.hasFund ?? false),
+        onError: (Object error, StackTrace stack) {
+          // The group could not be read, so its fund is not shown.
+          logWarning('Group read failed in the member profile', error, stack);
+          _setHasFund(false);
+        },
+      );
     }
-    _groupSub = _repo.watchGroup(widget.tourId).listen(
-      (group) => _setHasFund(group?.hasFund ?? false),
-      onError: (Object error, StackTrace stack) {
-        // The group could not be read, so its fund is not shown.
-        logWarning('Group read failed in the member profile', error, stack);
-        _setHasFund(false);
-      },
-    );
     _loadExtraProfileData();
   }
 
