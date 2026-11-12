@@ -39,6 +39,9 @@ class _FakeChapterRepo extends TourGroupRepository {
   Future<TourRole?> myRole(String tourId) async => role;
 
   @override
+  Stream<TourGroup?> watchGroup(String tourId) => Stream.value(null);
+
+  @override
   Stream<List<StudyChapter>> watchStudyChapters(String tourId, String bookId) =>
       Stream.value(chapters);
 
@@ -482,6 +485,33 @@ void main() {
       expect(saved?.title, 'Part one');
       expect(saved?.pageFrom, 20);
       expect(saved?.pageTo, 25);
+    });
+  });
+
+  group('a booklet for one chapter', () {
+    testWidgets('a member is told when a chapter has no solution to print yet',
+        (tester) async {
+      final repo = _FakeChapterRepo(chapters: _chapters);
+      await _pump(
+        tester,
+        StudyBookChaptersScreen(
+          tourId: 'T',
+          book: _book,
+          repository: repo,
+          position: _FakePosition(),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Printable booklet for this chapter'));
+      await tester.pumpAndSettle();
+
+      // No solution note is in the book yet, so there is nothing to print.
+      expect(
+        find.text('This chapter has no solution to print yet.'),
+        findsOneWidget,
+      );
     });
   });
 }

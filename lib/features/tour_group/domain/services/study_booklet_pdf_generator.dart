@@ -84,6 +84,10 @@ class StudyBookletContent {
   final String? inviteCode;
   final List<StudyBookletChapterItem> chapters;
 
+  /// Whether this booklet holds one chapter only. Its cover then names that chapter and counts
+  /// its questions, instead of describing the whole book.
+  final bool scopedToChapter;
+
   const StudyBookletContent({
     required this.subjectTitle,
     this.subjectCode,
@@ -91,8 +95,17 @@ class StudyBookletContent {
     this.tourDescription,
     this.inviteCode,
     required this.chapters,
+    this.scopedToChapter = false,
   });
 }
+
+/// The text lines of a booklet cover: the subtitle under the title and the three feature lines.
+typedef StudyBookletCoverText = ({
+  String subtitle,
+  String highlight1,
+  String highlight2,
+  String highlight3,
+});
 
 /// Thrown by [StudyBookletPdfGenerator.generateBookletPdf] when the caller cancels it.
 class StudyBookletCancelled implements Exception {
@@ -115,6 +128,7 @@ class StudyBookletPdfGenerator {
     required List<StudyMaterial> materials,
     required Map<String, String> solutionTexts,
     bool isBengali = true,
+    bool scopedToChapter = false,
   }) {
     final chapterItems = <StudyBookletChapterItem>[];
 
@@ -177,6 +191,7 @@ class StudyBookletPdfGenerator {
       tourDescription: tourDescription,
       inviteCode: inviteCode,
       chapters: chapterItems,
+      scopedToChapter: scopedToChapter,
     );
   }
 
@@ -414,6 +429,78 @@ class StudyBookletPdfGenerator {
     );
   }
 
+  /// The text of a booklet's cover, decided from its content. A whole-book cover describes the
+  /// subject, as it always has. A chapter's cover names its one chapter and counts its questions,
+  /// so it never claims the seven past exam sessions that belong to the whole book.
+  static StudyBookletCoverText coverText(
+    StudyBookletContent content, {
+    required bool isBengali,
+  }) {
+    final isBanking = isBankingContent(content);
+    final chapter = content.scopedToChapter && content.chapters.isNotEmpty
+        ? content.chapters.first
+        : null;
+
+    if (chapter != null) {
+      final questions = chapter.questions.length;
+      return (
+        subtitle: isBengali
+            ? 'অধ্যায় ${_bengaliDigits(chapter.number)}: ${chapter.title}'
+            : 'Chapter ${chapter.number}: ${chapter.title}',
+        highlight1: isBengali
+            ? '• ${_bengaliDigits(questions)}টি প্রশ্ন ও বিস্তারিত সমাধান'
+            : '• $questions Questions with Detailed Solutions',
+        highlight2: isBengali
+            ? '• ১০০% নির্ভুল পরীক্ষক-মানের বিস্তারিত সমাধান'
+            : '• 100% Comprehensive Examiner-Grade Solutions',
+        highlight3: isBanking
+            ? (isBengali
+                ? '• সিলেবাস মডিউল ম্যাপিং ও ডুও-ল্যাঙ্গুয়েজ সাপোর্ট'
+                : '• Official Syllabus Module Mapping (A-E)')
+            : (isBengali
+                ? '• অফলাইন ভল্ট ও ডুও-ল্যাঙ্গুয়েজ স্টাডি সাপোর্ট'
+                : '• Offline Vault & Dual-Language Study Support'),
+      );
+    }
+
+    return (
+      subtitle: isBanking
+          ? (isBengali
+              ? '${content.subjectTitle} — বিগত প্রশ্নপত্র ও মডেল সমাধান'
+              : '${content.subjectTitle} — Question Bank & Examiner-Grade Solutions')
+          : (isBengali
+              ? '${content.subjectTitle} — প্রশ্নব্যাংক ও পরীক্ষক-মানের মডেল সমাধান'
+              : '${content.subjectTitle} — Question Bank & Model Solutions'),
+      highlight1: isBanking
+          ? (isBengali
+              ? '• ৭টি বিগত পরীক্ষা সেশন (৯৬তম - ৭ম নতুন BPE)'
+              : '• 7 Past Exam Sessions (96th BPE - 7th New BPE)')
+          : (isBengali
+              ? '• ${content.chapters.isNotEmpty ? content.chapters.length : 1}টি অধ্যায় অন্তর্ভুক্ত'
+              : '• ${content.chapters.isNotEmpty ? content.chapters.length : 1} Chapters Included'),
+      highlight2: isBengali
+          ? '• ১০০% নির্ভুল পরীক্ষক-মানের বিস্তারিত সমাধান'
+          : '• 100% Comprehensive Examiner-Grade Solutions',
+      highlight3: isBanking
+          ? (isBengali
+              ? '• সিলেবাস মডিউল ম্যাপিং ও ডুও-ল্যাঙ্গুয়েজ সাপোর্ট'
+              : '• Official Syllabus Module Mapping (A-E)')
+          : (isBengali
+              ? '• অফলাইন ভল্ট ও ডুও-ল্যাঙ্গুয়েজ স্টাডি সাপোর্ট'
+              : '• Offline Vault & Dual-Language Study Support'),
+    );
+  }
+
+  /// The digits of [n] written in Bengali (০ to ৯).
+  static String _bengaliDigits(int n) {
+    const latin = '0123456789';
+    const bengali = '০১২৩৪৫৬৭৮৯';
+    return n.toString().split('').map((c) {
+      final i = latin.indexOf(c);
+      return i < 0 ? c : bengali[i];
+    }).join();
+  }
+
   /// Returns whether this booklet or poster belongs to a banking exam circle (IBB / JAIBB / AIBB).
   static bool isBankingContent(StudyBookletContent content) {
     final titleAndName =
@@ -464,33 +551,11 @@ class StudyBookletPdfGenerator {
                       ? 'পরীক্ষা প্রস্তুতি ও স্টাডি সার্কেল বুকলেট'
                       : 'EXAM PREPARATION & STUDY BOOKLET'));
 
-          final subtitleText = isBanking
-              ? (isBengali
-                  ? '${content.subjectTitle} — বিগত প্রশ্নপত্র ও মডেল সমাধান'
-                  : '${content.subjectTitle} — Question Bank & Examiner-Grade Solutions')
-              : (isBengali
-                  ? '${content.subjectTitle} — প্রশ্নব্যাংক ও পরীক্ষক-মানের মডেল সমাধান'
-                  : '${content.subjectTitle} — Question Bank & Model Solutions');
-
-          final highlight1 = isBanking
-              ? (isBengali
-                  ? '• ৭টি বিগত পরীক্ষা সেশন (৯৬তম - ৭ম নতুন BPE)'
-                  : '• 7 Past Exam Sessions (96th BPE - 7th New BPE)')
-              : (isBengali
-                  ? '• ${content.chapters.isNotEmpty ? content.chapters.length : 1}টি অধ্যায় অন্তর্ভুক্ত'
-                  : '• ${content.chapters.isNotEmpty ? content.chapters.length : 1} Chapters Included');
-
-          final highlight2 = isBengali
-              ? '• ১০০% নির্ভুল পরীক্ষক-মানের বিস্তারিত সমাধান'
-              : '• 100% Comprehensive Examiner-Grade Solutions';
-
-          final highlight3 = isBanking
-              ? (isBengali
-                  ? '• সিলেবাস মডিউল ম্যাপিং ও ডুও-ল্যাঙ্গুয়েজ সাপোর্ট'
-                  : '• Official Syllabus Module Mapping (A-E)')
-              : (isBengali
-                  ? '• অফলাইন ভল্ট ও ডুও-ল্যাঙ্গুয়েজ স্টাডি সাপোর্ট'
-                  : '• Offline Vault & Dual-Language Study Support');
+          final cover = coverText(content, isBengali: isBengali);
+          final subtitleText = cover.subtitle;
+          final highlight1 = cover.highlight1;
+          final highlight2 = cover.highlight2;
+          final highlight3 = cover.highlight3;
 
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
