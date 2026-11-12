@@ -17,14 +17,14 @@ void main() {
   const generator = StudyBookletPdfGenerator();
 
   group('solutionPieces', () {
-    test('a solution with no figure is one cleaned prose piece', () {
+    test('a solution with no figure is one prose piece, its Markdown kept', () {
       final pieces = StudyBookletPdfGenerator.solutionPieces(
         '**উত্তর**: ব্যাংক একটি প্রতিষ্ঠান।',
       );
 
       expect(pieces, hasLength(1));
       final text = pieces.single as StudyBookletText;
-      expect(text.text, 'উত্তর: ব্যাংক একটি প্রতিষ্ঠান।');
+      expect(text.text, '**উত্তর**: ব্যাংক একটি প্রতিষ্ঠান।');
     });
 
     test('a chart between two paragraphs sits between them', () {
