@@ -925,7 +925,7 @@ class _TourPdfWriter {
             for (final transfer in ledger.settlements)
               [
                 '${transfer.fromFund ? labels.text('pdf_fund_label') : _clean(transfer.from, max: 80)}'
-                    ' → '
+                    ' — '
                     '${transfer.toFund ? labels.text('pdf_fund_label') : _clean(transfer.to, max: 80)}',
                 _amount(transfer.amountPaisa),
               ],
