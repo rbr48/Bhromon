@@ -18,7 +18,7 @@ import 'chat_table_fullscreen_modal.dart';
 /// - Themed header row with column alignments (left, center, right).
 /// - Alternating row background colors (zebra striping) for readability.
 /// - Rich inline spans inside cells (bold, italic, code, underline, highlight, links).
-/// - Micro-action toolbar in the top-right corner with 1-tap Copy/Export & Fullscreen.
+/// - Copy/Export & Fullscreen actions under the table, so they never cover a header.
 /// - Scroll-fade edge indicator indicating horizontal swipeability.
 /// - Auto-sum calculation for numeric/currency columns (Bengali & English digits).
 /// - Contextual ecosystem bridges (Notice Board, Smart Ledger).
@@ -32,6 +32,10 @@ class ChatTableWidget extends StatefulWidget {
   final VoidCallback? onPinNotice;
   final VoidCallback? onImportLedger;
 
+  /// Whether a numeric column gets a total. Study text turns this off: a column of prices or quantities is not
+  /// money to add up.
+  final bool showColumnTotals;
+
   const ChatTableWidget({
     super.key,
     required this.table,
@@ -42,6 +46,7 @@ class ChatTableWidget extends StatefulWidget {
     this.title,
     this.onPinNotice,
     this.onImportLedger,
+    this.showColumnTotals = true,
   });
 
   @override
@@ -469,6 +474,54 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
     );
   }
 
+  /// The copy and fullscreen actions. They sit under the table rather than over it, so they never cover a header.
+  Widget _tableActions(Color borderColor) {
+    final palette = context.forest;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: 'টেবিল কপি বা এক্সপোর্ট করুন',
+            button: true,
+            child: SizedBox(
+              width: 36,
+              height: 32,
+              child: IconButton(
+                tooltip: 'টেবিল এক্সপোর্ট করুন',
+                icon: Icon(Icons.copy_rounded, size: 15, color: palette.text70),
+                padding: EdgeInsets.zero,
+                onPressed: _showExportMenu,
+              ),
+            ),
+          ),
+          Semantics(
+            label: 'বড় করে দেখুন ও জুম করুন',
+            button: true,
+            child: SizedBox(
+              width: 36,
+              height: 32,
+              child: IconButton(
+                tooltip: 'বড় করে দেখুন (Fullscreen)',
+                icon: Icon(
+                  Icons.fullscreen_rounded,
+                  size: 17,
+                  color: palette.text70,
+                ),
+                padding: EdgeInsets.zero,
+                onPressed: _openFullscreen,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openFullscreen() {
     showChatTableFullscreenModal(
       context,
@@ -510,7 +563,9 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
 
     final colCount = widget.table.headers.length;
     if (colCount == 0) return const SizedBox.shrink();
-    final numericSums = _detectNumericSums();
+    final numericSums = widget.showColumnTotals
+        ? _detectNumericSums()
+        : const <({int colIndex, String header, int totalPaisa})>[];
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -576,63 +631,6 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
                     ),
                   ),
 
-                  // Floating Micro-Toolbar (Top-Right)
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white24, width: 0.8),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Semantics(
-                            label: 'টেবিল কপি বা এক্সপোর্ট করুন',
-                            button: true,
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: IconButton(
-                                tooltip: 'টেবিল এক্সপোর্ট করুন',
-                                icon: const Icon(Icons.copy_rounded,
-                                    size: 13, color: Colors.white),
-                                padding: EdgeInsets.zero,
-                                onPressed: _showExportMenu,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Semantics(
-                            label: 'বড় করে দেখুন ও জুম করুন',
-                            button: true,
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: IconButton(
-                                tooltip: 'বড় করে দেখুন (Fullscreen)',
-                                icon: const Icon(Icons.fullscreen_rounded,
-                                    size: 15, color: Colors.white),
-                                padding: EdgeInsets.zero,
-                                onPressed: _openFullscreen,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
                   // Soft Right Scroll-Fade Edge Indicator
                   if (_canScrollRight)
                     Positioned(
@@ -674,119 +672,115 @@ class _ChatTableWidgetState extends State<ChatTableWidget> {
             ),
           ),
 
-          // Auto-Sum Pill & Ecosystem Action Chips
-          if (numericSums.isNotEmpty ||
-              widget.onImportLedger != null ||
-              widget.onPinNotice != null) ...[
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                for (final sum in numericSums)
-                  Container(
+          // Table actions, the auto-sum pill and the ecosystem action chips. The actions come first.
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _tableActions(borderColor),
+              for (final sum in numericSums)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.mintGreen.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.mintGreen.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
+                    style: TextStyle(
+                      fontFamily: 'NotoSansBengali',
+                      fontFamilyFallback: const [
+                        'HindSiliguri',
+                        'Roboto',
+                        'sans-serif'
+                      ],
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.mintGreen : AppColors.darkGreen,
+                    ),
+                  ),
+                ),
+              if (widget.onImportLedger != null)
+                InkWell(
+                  onTap: widget.onImportLedger,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.mintGreen.withValues(alpha: 0.14),
+                      color: AppColors.mintGreen.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: AppColors.mintGreen.withValues(alpha: 0.35)),
+                      border:
+                          Border.all(color: AppColors.mintGreen, width: 0.8),
                     ),
-                    child: Text(
-                      '💰 মোট (${sum.header}): ${TripLedgerEngine.formatTaka(sum.totalPaisa)}',
-                      style: TextStyle(
-                        fontFamily: 'NotoSansBengali',
-                        fontFamilyFallback: const [
-                          'HindSiliguri',
-                          'Roboto',
-                          'sans-serif'
-                        ],
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            isDark ? AppColors.mintGreen : AppColors.darkGreen,
-                      ),
-                    ),
-                  ),
-                if (widget.onImportLedger != null)
-                  InkWell(
-                    onTap: widget.onImportLedger,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.mintGreen.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: AppColors.mintGreen, width: 0.8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.account_balance_wallet_outlined,
-                              size: 13, color: AppColors.mintGreen),
-                          SizedBox(width: 4),
-                          Text(
-                            'লেজারে যুক্ত',
-                            style: TextStyle(
-                              fontFamily: 'NotoSansBengali',
-                              fontFamilyFallback: [
-                                'HindSiliguri',
-                                'Roboto',
-                                'sans-serif'
-                              ],
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.mintGreen,
-                            ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined,
+                            size: 13, color: AppColors.mintGreen),
+                        SizedBox(width: 4),
+                        Text(
+                          'লেজারে যুক্ত',
+                          style: TextStyle(
+                            fontFamily: 'NotoSansBengali',
+                            fontFamilyFallback: [
+                              'HindSiliguri',
+                              'Roboto',
+                              'sans-serif'
+                            ],
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.mintGreen,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                if (widget.onPinNotice != null)
-                  InkWell(
-                    onTap: widget.onPinNotice,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkGreen.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: AppColors.darkGreen, width: 0.8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.push_pin_outlined,
-                              size: 13, color: AppColors.mintGreen),
-                          SizedBox(width: 4),
-                          Text(
-                            'নোটিশে পিন',
-                            style: TextStyle(
-                              fontFamily: 'NotoSansBengali',
-                              fontFamilyFallback: [
-                                'HindSiliguri',
-                                'Roboto',
-                                'sans-serif'
-                              ],
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.mintGreen,
-                            ),
+                ),
+              if (widget.onPinNotice != null)
+                InkWell(
+                  onTap: widget.onPinNotice,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.darkGreen.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: AppColors.darkGreen, width: 0.8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.push_pin_outlined,
+                            size: 13, color: AppColors.mintGreen),
+                        SizedBox(width: 4),
+                        Text(
+                          'নোটিশে পিন',
+                          style: TextStyle(
+                            fontFamily: 'NotoSansBengali',
+                            fontFamilyFallback: [
+                              'HindSiliguri',
+                              'Roboto',
+                              'sans-serif'
+                            ],
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.mintGreen,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ],
+                ),
+            ],
+          ),
         ],
       ),
     );

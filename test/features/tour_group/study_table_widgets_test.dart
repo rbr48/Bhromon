@@ -50,4 +50,38 @@ void main() {
     expect(find.byType(ChatTableWidget), findsNothing);
     expect(find.byType(StudyRichText), findsOneWidget);
   });
+
+  testWidgets('a study table shows no column totals and no ledger actions',
+      (tester) async {
+    await _pump(
+      tester,
+      const StudyRichText(
+          '| Price | Quantity |\n| --- | --- |\n| 10 | 50 |\n| 8 | 70 |'),
+    );
+
+    expect(find.byType(ChatTableWidget), findsOneWidget);
+    expect(find.textContaining('মোট'), findsNothing);
+    expect(find.text('লেজারে যুক্ত'), findsNothing);
+    expect(find.text('নোটিশে পিন'), findsNothing);
+  });
+
+  testWidgets('the table actions sit under the table, not over its header',
+      (tester) async {
+    await _pump(
+      tester,
+      const StudyRichText(
+          '| Price | Quantity |\n| --- | --- |\n| 10 | 50 |\n| 8 | 70 |'),
+    );
+
+    final header = tester.getRect(find.text('Quantity'));
+    final lastCell = tester.getRect(find.text('70'));
+    final copy = tester.getRect(find.byTooltip('টেবিল এক্সপোর্ট করুন'));
+    final fullscreen =
+        tester.getRect(find.byTooltip('বড় করে দেখুন (Fullscreen)'));
+
+    expect(copy.overlaps(header), isFalse);
+    expect(fullscreen.overlaps(header), isFalse);
+    expect(copy.top, greaterThanOrEqualTo(lastCell.bottom));
+    expect(fullscreen.top, greaterThanOrEqualTo(lastCell.bottom));
+  });
 }
