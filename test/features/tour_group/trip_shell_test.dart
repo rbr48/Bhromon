@@ -135,7 +135,49 @@ void main() {
         TripShell.contentMaxWidth,
       );
     });
+
+    testWidgets('a group chat on a phone has no tab bar under its text box',
+        (tester) async {
+      await _pumpPhone(tester, showMobileNav: false);
+
+      expect(find.text('body of channels'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+    });
+
+    testWidgets('a trip screen on a phone keeps the tab bar', (tester) async {
+      await _pumpPhone(tester);
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+    });
   });
+}
+
+/// Shows a trip screen at phone width, with or without its tab bar.
+Future<void> _pumpPhone(WidgetTester tester,
+    {bool showMobileNav = true}) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  // TripShell reads the router to decide whether the back button pops, so the
+  // screen is shown under a router, as in the app.
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => TripShell(
+          tourId: 't1',
+          location: '/group/t1/channels',
+          repository: _NoFirebaseRepository(),
+          showMobileNav: showMobileNav,
+          child: const _Screen('channels'),
+        ),
+      ),
+    ],
+  );
+  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+  await tester.pumpAndSettle();
 }
 
 /// A repository that never reaches Firebase. The side rail shows no group,
