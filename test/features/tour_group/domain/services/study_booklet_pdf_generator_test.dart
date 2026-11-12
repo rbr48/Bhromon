@@ -123,6 +123,40 @@ The relationship is primarily that of debtor and creditor.
       expect(pdfBytes.length, greaterThan(2000));
     });
 
+    test('the booklet is set in Noto Sans Bengali, Regular and Bold', () async {
+      const content = StudyBookletContent(
+        subjectTitle: 'Laws & Practice of General Banking',
+        subjectCode: 'LPGB',
+        tourName: 'JAIBB Diploma Study Circle',
+        chapters: [
+          StudyBookletChapterItem(
+            number: 1,
+            title: '96th BPE (May 2023)',
+            questions: [
+              StudyBookletQuestionItem(
+                questionNumber: '1',
+                title: 'প্রশ্ন ১ [মান: ১০]',
+                moduleCode: 'A',
+                pieces: [
+                  StudyBookletText(
+                    '**ব্যাংক** কাকে বলে? Define a bank under the Bank Company Act.',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final pdfBytes =
+          await generator.generateBookletPdf(content, isBengali: true);
+      final text = String.fromCharCodes(pdfBytes);
+
+      expect(text, contains('NotoSansBengali-Regular'));
+      expect(text, contains('NotoSansBengali-Bold'));
+      expect(text, isNot(contains('HindSiliguri')));
+    });
+
     StudyBookletContent twoChapters() => const StudyBookletContent(
           subjectTitle: 'LPGB',
           tourName: 'Circle',
@@ -228,6 +262,88 @@ The relationship is primarily that of debtor and creditor.
           await generator.generateBranchNoticePoster(genericContent);
       expect(posterBytes, isNotEmpty);
       expect(String.fromCharCodes(posterBytes.sublist(0, 5)), '%PDF-');
+    });
+  });
+
+  group('a booklet for one chapter', () {
+    // One chapter whose solution note has two questions.
+    StudyBookletContent chapterContent({required bool scoped}) {
+      final material = StudyMaterial(
+        id: 'm1',
+        bookId: 'b1',
+        chapterId: 'c1',
+        title: 'বাংলা সমাধান',
+        kind: StudyMaterialKind.note,
+        status: StudyMaterialStatus.published,
+        createdByEmail: 'test@bhromon.fun',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      return StudyBookletPdfGenerator.extractContent(
+        subjectTitle: 'Laws and Practice of General Banking',
+        subjectCode: 'LPGB',
+        tourName: 'Sonali Bank JAIBB Circle',
+        chapters: const [StudyChapter(id: 'c1', number: 1, title: 'First')],
+        materials: [material],
+        solutionTexts: {
+          'm1': '''
+### প্রশ্ন ১ [মান: ১০]
+ব্যাংক কাকে বলে?
+ব্যাংক হলো আমানত গ্রহণকারী ও ঋণদানকারী প্রতিষ্ঠান।
+
+### প্রশ্ন ২ [মান: ১০]
+কেওয়াইসি কী?
+গ্রাহককে সনাক্তকরণ প্রক্রিয়া।
+''',
+        },
+        isBengali: true,
+        scopedToChapter: scoped,
+      );
+    }
+
+    test('its cover names the chapter and counts its questions, in Bengali',
+        () {
+      final cover = StudyBookletPdfGenerator.coverText(
+        chapterContent(scoped: true),
+        isBengali: true,
+      );
+
+      expect(cover.subtitle, 'অধ্যায় ১: First');
+      expect(cover.highlight1, '• ২টি প্রশ্ন ও বিস্তারিত সমাধান');
+      expect(cover.highlight1, isNot(contains('বিগত পরীক্ষা সেশন')));
+    });
+
+    test('its cover names the chapter and counts its questions, in English',
+        () {
+      final cover = StudyBookletPdfGenerator.coverText(
+        chapterContent(scoped: true),
+        isBengali: false,
+      );
+
+      expect(cover.subtitle, 'Chapter 1: First');
+      expect(cover.highlight1, '• 2 Questions with Detailed Solutions');
+    });
+
+    test(
+        'the whole-book cover keeps its past-session line for a banking subject',
+        () {
+      final cover = StudyBookletPdfGenerator.coverText(
+        chapterContent(scoped: false),
+        isBengali: true,
+      );
+
+      expect(
+          cover.subtitle, startsWith('Laws and Practice of General Banking —'));
+      expect(cover.highlight1, contains('বিগত পরীক্ষা সেশন'));
+    });
+
+    test('a one-chapter booklet is made as a PDF', () async {
+      final bytes = await generator.generateBookletPdf(
+        chapterContent(scoped: true),
+        isBengali: true,
+      );
+
+      expect(bytes.length, greaterThan(2000));
+      expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
     });
   });
 }

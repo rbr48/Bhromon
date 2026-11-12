@@ -86,9 +86,9 @@ String studyBookletCleanSolution(String raw) => raw
     .trim();
 
 /// Replaces the characters the booklet's bundled fonts cannot draw, so none of them prints as a
-/// blank box. The fonts have no arrows and no ballot boxes, and Hind Siliguri has no no-break
-/// space. An arrow becomes an em dash, as it does in the group record. Zero-width characters that
-/// do nothing on the page are dropped; the joiners that Bengali conjuncts need are kept.
+/// blank box. The fonts have no arrows and no ballot boxes. An arrow becomes an em dash, as it
+/// does in the group record, and a no-break space becomes a plain space. Zero-width characters
+/// that do nothing on the page are dropped; the joiners that Bengali conjuncts need are kept.
 String studyBookletCleanText(String text) => text
     .replaceAll(' ', ' ')
     .replaceAll('\t', ' ')

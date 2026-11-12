@@ -3410,6 +3410,9 @@ class TourTranslationKeys {
       'study_printable_booklet_title': 'Printable Exam Booklet (A4 PDF)',
       'study_printable_booklet_sub':
           'Duplex-printable question bank & model solutions booklet',
+      'study_chapter_booklet': 'Printable booklet for this chapter',
+      'study_chapter_booklet_none':
+          'This chapter has no solution to print yet.',
       'study_branch_poster_title': 'Notice Board Poster (A4 PDF)',
       'study_branch_poster_sub':
           'High-impact study circle poster with invite QR code',
@@ -7260,6 +7263,9 @@ class TourTranslationKeys {
       'study_printable_booklet_title': 'প্রিন্টযোগ্য পরীক্ষা বুকলেট (A4 PDF)',
       'study_printable_booklet_sub':
           'উভয় পৃষ্ঠায় প্রিন্টযোগ্য বিগত প্রশ্ন ও মডেল সমাধান বুকলেট',
+      'study_chapter_booklet': 'এই অধ্যায়ের প্রিন্টযোগ্য বুকলেট',
+      'study_chapter_booklet_none':
+          'এই অধ্যায়ের ছাপার মতো কোনো সমাধান এখনও নেই।',
       'study_branch_poster_title': 'নোটিশ বোর্ড পোস্টার (A4 PDF)',
       'study_branch_poster_sub':
           'ইনভাইট কিউআর কোডসহ নোটিশ বোর্ডে লাগানোর জন্য পোস্টার',

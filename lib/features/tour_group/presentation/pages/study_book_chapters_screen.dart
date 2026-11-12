@@ -738,7 +738,12 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
     );
   }
 
-  Future<void> _generateAndOpenBooklet({bool isBengali = true}) async {
+  /// Makes the printable booklet of the whole book, or of [chapter] alone when one is given. A
+  /// chapter's booklet fetches only that chapter's solutions.
+  Future<void> _generateAndOpenBooklet({
+    bool isBengali = true,
+    StudyChapter? chapter,
+  }) async {
     final l10n = context.l10n;
     if (_chapters.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -771,8 +776,12 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       );
 
       // The solution files are fetched together, so the wait is one file's, not their sum.
+      final scopedMaterials = chapter == null
+          ? _materials
+          : _materials.where((m) => m.chapterId == chapter.id).toList();
+      final scopedChapters = chapter == null ? _chapters : [chapter];
       await Future.wait([
-        for (final m in _materials)
+        for (final m in scopedMaterials)
           if (!solutionTexts.containsKey(m.id))
             () async {
               final body = m.body;
@@ -841,11 +850,25 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         subjectCode: subjectCode,
         tourName: tourName,
         inviteCode: inviteCode,
-        chapters: _chapters,
-        materials: _materials,
+        chapters: scopedChapters,
+        materials: scopedMaterials,
         solutionTexts: solutionTexts,
         isBengali: isBengali,
+        scopedToChapter: chapter != null,
       );
+
+      // A chapter with no solution text to print is said so, rather than making an empty booklet.
+      if (chapter != null && content.chapters.single.questions.isEmpty) {
+        if (!isCancelled && mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.translate('study_chapter_booklet_none')),
+            ),
+          );
+        }
+        return;
+      }
 
       const generator = StudyBookletPdfGenerator();
       final pdfBytes = await generator.generateBookletPdf(
@@ -864,8 +887,9 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         Navigator.of(context, rootNavigator: true).pop();
         await PdfViewerScreen.open(
           context,
-          title:
-              '${widget.book.title} - ${isBengali ? 'প্রশ্নোত্তর বুকলেট' : 'Exam Booklet'}',
+          title: chapter == null
+              ? '${widget.book.title} - ${isBengali ? 'প্রশ্নোত্তর বুকলেট' : 'Exam Booklet'}'
+              : '${widget.book.title} - ${chapter.title} - ${isBengali ? 'প্রশ্নোত্তর বুকলেট' : 'Exam Booklet'}',
           bytes: pdfBytes,
           tourId: widget.tourId,
         );
@@ -1753,6 +1777,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
             _setHere(chapter);
           case 'summary':
             _openSummary(chapter);
+          case 'booklet':
+            _generateAndOpenBooklet(chapter: chapter);
           case 'edit':
             _editChapter(chapter);
           case 'delete':
@@ -1780,6 +1806,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         PopupMenuItem<String>(
           value: 'summary',
           child: Text(l10n.translate('study_summary_title')),
+        ),
+        PopupMenuItem<String>(
+          value: 'booklet',
+          child: Text(l10n.translate('study_chapter_booklet')),
         ),
         if (_isAdmin) ...[
           const PopupMenuDivider(),
