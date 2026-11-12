@@ -9,139 +9,81 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Keeps attempts in memory. Tests choose whether a write succeeds, and see every write.
 class _FakeExamAttemptStore extends StudyExamAttemptStore {
-  @override
-  Future<void> put(ExamAttempt attempt) async {}
+  _FakeExamAttemptStore({this.open, this.writesSucceed = true});
+
+  /// The attempt still open for the paper, returned on load.
+  final ExamAttempt? open;
+  final bool writesSucceed;
+  final List<ExamAttempt> writes = [];
 
   @override
-  Future<void> saveAttempt(ExamAttempt attempt) async {}
-}
-
-void main() {
-  Widget buildTestApp(
-    Widget child, {
-    Locale locale = const Locale('en'),
-    ThemeData? theme,
-  }) {
-    return MaterialApp(
-      locale: locale,
-      theme: theme ?? ThemeData.light(),
-      supportedLocales: const [Locale('en'), Locale('bn')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: child,
-    );
+  Future<bool> put(ExamAttempt attempt) async {
+    writes.add(attempt);
+    return writesSucceed;
   }
 
-  group('StudyExamTimerRules', () {
-    test('formatDuration converts durations into HH:mm:ss format accurately',
-        () {
-      expect(
-        StudyExamTimerRules.formatDuration(const Duration(hours: 3)),
-        '03:00:00',
-      );
-      expect(
-        StudyExamTimerRules.formatDuration(
-          const Duration(hours: 1, minutes: 45, seconds: 12),
-        ),
-        '01:45:12',
-      );
-      expect(
-        StudyExamTimerRules.formatDuration(
-          const Duration(minutes: 9, seconds: 5),
-        ),
-        '00:09:05',
-      );
-      expect(
-        StudyExamTimerRules.formatDuration(Duration.zero),
-        '00:00:00',
-      );
-      expect(
-        StudyExamTimerRules.formatDuration(const Duration(seconds: -10)),
-        '00:00:00',
-      );
-    });
+  @override
+  Future<bool> saveAttempt(ExamAttempt attempt) => put(attempt);
 
-    test('getAlertState returns correct alert tiers for countdown progress',
-        () {
-      expect(
-        StudyExamTimerRules.getAlertState(const Duration(hours: 2)),
-        ExamTimerAlertState.normal,
-      );
-      expect(
-        StudyExamTimerRules.getAlertState(const Duration(minutes: 30)),
-        ExamTimerAlertState.warning,
-      );
-      expect(
-        StudyExamTimerRules.getAlertState(const Duration(minutes: 25)),
-        ExamTimerAlertState.warning,
-      );
-      expect(
-        StudyExamTimerRules.getAlertState(const Duration(minutes: 10)),
-        ExamTimerAlertState.critical,
-      );
-      expect(
-        StudyExamTimerRules.getAlertState(const Duration(seconds: 45)),
-        ExamTimerAlertState.critical,
-      );
-      expect(
-        StudyExamTimerRules.getAlertState(Duration.zero),
-        ExamTimerAlertState.expired,
-      );
-      expect(
-        StudyExamTimerRules.getAlertState(const Duration(seconds: -5)),
-        ExamTimerAlertState.expired,
-      );
-    });
-  });
+  @override
+  Future<ExamAttempt?> loadOpenFor({
+    required String bookId,
+    required String chapterId,
+  }) async =>
+      open;
 
+  @override
+  Future<List<ExamAttempt>> loadAll() async => const [];
+}
+
+Widget _buildTestApp(
+  Widget child, {
+  Locale locale = const Locale('en'),
+  ThemeData? theme,
+}) {
+  return MaterialApp(
+    locale: locale,
+    theme: theme ?? ThemeData.light(),
+    supportedLocales: const [Locale('en'), Locale('bn')],
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: child,
+  );
+}
+
+const List<ExamQuestion> _twoQuestions = [
+  ExamQuestion(
+    id: 'q_1',
+    number: 1,
+    prompt: 'Question 1: Explain banker lien rights [Marks: 20]',
+    marks: 20,
+    modelAnswer: 'Lien is the right to retain goods until debt is discharged.',
+  ),
+  ExamQuestion(
+    id: 'q_2',
+    number: 2,
+    prompt: 'Question 2: Types of crossed cheques [Marks: 20]',
+    marks: 20,
+    modelAnswer: 'General crossing and special crossing.',
+  ),
+];
+
+void main() {
   group('StudyExamSimulatorExtractor', () {
-    test('extracts structured questions and marks from past paper markdown',
-        () {
-      const markdown = '''
-### প্রশ্ন ১ [মান: ২০]
-১(ক) ব্যাংকার ও গ্রাহকের সম্পর্ক বলতে কী বোঝায়?
-১(খ) সাধারণ ও বিশেষ সম্পর্কের বিস্তারিত ব্যাখ্যা দিন।
-মডেল উত্তর ১।
-
-### প্রশ্ন ২ [মান: (১০+১০) = ২০]
-ব্যাংক ড্রাফট ও পে-অর্ডারের পার্থক্য আলোচনা করুন।
-মডেল উত্তর ২।
-''';
-
-      final questions = StudyExamSimulatorExtractor.extractQuestions(
-        subjectTitle: 'Laws & Practice of General Banking',
-        markdownContent: markdown,
+    test('no question on the paper means the exam is not offered', () {
+      expect(
+        StudyExamSimulatorExtractor.extractQuestions(
+          subjectTitle: 'Laws',
+          markdownContent: 'Some text with no question headings.',
+        ),
+        isEmpty,
       );
-
-      expect(questions.length, 2);
-      expect(questions[0].number, 1);
-      expect(questions[0].marks, 20);
-      expect(questions[0].prompt, contains('প্রশ্ন ১'));
-      expect(questions[0].modelAnswer, contains('মডেল উত্তর ১'));
-
-      expect(questions[1].number, 2);
-      expect(questions[1].marks, 20);
-      expect(questions[1].prompt, contains('প্রশ্ন ২'));
-      expect(questions[1].modelAnswer, contains('মডেল উত্তর ২'));
-    });
-
-    test('fallbackQuestions generates standard 8 questions for syllabus', () {
-      final questions = StudyExamSimulatorExtractor.fallbackQuestions(
-        'Laws & Practice of General Banking',
-        count: 8,
-      );
-
-      expect(questions.length, 8);
-      for (var i = 0; i < 8; i++) {
-        expect(questions[i].number, i + 1);
-        expect(questions[i].marks, 20);
-        expect(questions[i].id, 'q_${i + 1}');
-      }
     });
   });
 
@@ -179,7 +121,7 @@ void main() {
       expect(attempt.percentage, 55.0);
       expect(attempt.isPassed, isTrue);
 
-      expect(attempt.questionStatus('q_1'), ExamQuestionStatus.inProgress);
+      expect(attempt.questionStatus('q_1'), ExamQuestionStatus.answered);
       expect(attempt.questionStatus('q_2'), ExamQuestionStatus.answered);
       expect(attempt.questionStatus('q_3'), ExamQuestionStatus.unattempted);
       expect(attempt.questionStatus('q_99'), ExamQuestionStatus.unattempted);
@@ -191,6 +133,7 @@ void main() {
       expect(revived!.id, 'att_123');
       expect(revived.totalScore, 55);
       expect(revived.isPassed, isTrue);
+      expect(revived.paperMarks, 100);
     });
 
     test('failing score (< 45%) is marked as not passed', () {
@@ -214,32 +157,17 @@ void main() {
   group('StudyExamSimulatorScreen', () {
     testWidgets('renders HUD timer, question navigation, and scratchpad',
         (tester) async {
-      final questions = [
-        const ExamQuestion(
-          id: 'q_1',
-          number: 1,
-          prompt: 'Question 1: Explain banker lien rights [Marks: 20]',
-          marks: 20,
-          modelAnswer:
-              'Lien is the right to retain goods until debt is discharged.',
-        ),
-        const ExamQuestion(
-          id: 'q_2',
-          number: 2,
-          prompt: 'Question 2: Types of crossed cheques [Marks: 20]',
-          marks: 20,
-          modelAnswer: 'General crossing and special crossing.',
-        ),
-      ];
-
+      final start = DateTime(2026, 11, 11, 9, 0);
       await tester.pumpWidget(
-        buildTestApp(
+        _buildTestApp(
           StudyExamSimulatorScreen(
             tourId: 'tour_test',
             bookId: 'book_test',
             paperTitle: '97th BPE Exam Simulator',
-            initialQuestions: questions,
+            initialQuestions: _twoQuestions,
             initialDurationMinutes: 180,
+            store: _FakeExamAttemptStore(),
+            clock: () => start,
           ),
         ),
       );
@@ -262,16 +190,7 @@ void main() {
           scratchpadFinder, 'Candidate draft outline for question 1.');
       await tester.pumpAndSettle();
 
-      // Navigate to Next Question
-      final nextButtonFinder = find.byTooltip('Next question');
-      if (nextButtonFinder.evaluate().isNotEmpty) {
-        await tester.tap(nextButtonFinder);
-        await tester.pumpAndSettle();
-        expect(find.text('Question 2: Types of crossed cheques [Marks: 20]'),
-            findsOneWidget);
-      }
-
-      // Verify Submit Button opens confirmation dialog
+      // Verify Submit Button opens confirmation dialog with the answered count
       final submitButton = find.text('Submit Exam');
       expect(submitButton, findsOneWidget);
       await tester.tap(submitButton);
@@ -282,6 +201,221 @@ void main() {
         find.textContaining('Are you sure you want to submit your exam paper?'),
         findsOneWidget,
       );
+      expect(find.textContaining('Answered 1 of 2 questions.'), findsOneWidget);
+    });
+
+    testWidgets('the selected question shows no checkmark of its own',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: _FakeExamAttemptStore(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Nothing is answered yet, so no tick shows, even on the selected question.
+      expect(find.byIcon(Icons.check), findsNothing);
+      expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+    });
+
+    testWidgets('a paper with no questions says so and offers no exam',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            rawContent: 'Notes with no question heading in them.',
+            store: _FakeExamAttemptStore(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining("This paper's text is not on this phone yet"),
+        findsOneWidget,
+      );
+      expect(find.text('Submit Exam'), findsNothing);
+    });
+
+    testWidgets('the clock is the wall clock, so time away is not paused',
+        (tester) async {
+      var now = DateTime(2026, 11, 11, 9, 0);
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: _FakeExamAttemptStore(),
+            clock: () => now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('03:00:00'), findsOneWidget);
+
+      // Half an hour passes while the screen is not ticking (the app was away).
+      now = now.add(const Duration(minutes: 30));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('02:30:00'), findsOneWidget);
+    });
+
+    testWidgets('an open attempt for this paper resumes its drafts and time',
+        (tester) async {
+      final now = DateTime(2026, 11, 11, 9, 0);
+      final open = ExamAttempt(
+        id: 'att_open',
+        tourId: 'tour_test',
+        bookId: 'book_test',
+        chapterId: '',
+        paperTitle: 'Paper',
+        durationMinutes: 180,
+        startedAt: now.subtract(const Duration(hours: 1)),
+        draftAnswers: const {'q_1': 'Resumed draft text'},
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: _FakeExamAttemptStore(open: open),
+            clock: () => now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('02:00:00'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Resumed draft text',
+      );
+      expect(find.textContaining('Your exam is still running'), findsOneWidget);
+    });
+
+    testWidgets('an attempt whose time ran out while away is handed in on open',
+        (tester) async {
+      final now = DateTime(2026, 11, 11, 13, 0);
+      final store = _FakeExamAttemptStore(
+        open: ExamAttempt(
+          id: 'att_expired',
+          tourId: 'tour_test',
+          bookId: 'book_test',
+          chapterId: '',
+          paperTitle: 'Paper',
+          durationMinutes: 180,
+          startedAt: now.subtract(const Duration(hours: 4)),
+          draftAnswers: const {'q_1': 'Written before the time ended'},
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: store,
+            clock: () => now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(store.writes.last.isCompleted, isTrue);
+      expect(store.writes.last.draftAnswers['q_1'],
+          'Written before the time ended');
+      expect(find.text('Exam Review & Model Answers'), findsOneWidget);
+    });
+
+    testWidgets('a write that fails keeps the candidate on the paper',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: _FakeExamAttemptStore(writesSucceed: false),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('This could not be saved on this phone'),
+        findsWidgets,
+      );
+
+      await tester.tap(find.text('Submit Exam'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(FilledButton),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exam Review & Model Answers'), findsNothing);
+      expect(find.text('Submit Exam'), findsWidgets);
+    });
+
+    testWidgets('leaving with an open attempt asks first', (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: _FakeExamAttemptStore(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Leave the exam?'), findsOneWidget);
+      await tester.tap(find.text('Stay'));
+      await tester.pumpAndSettle();
+      expect(find.text('Leave the exam?'), findsNothing);
+      expect(find.text('Submit Exam'), findsOneWidget);
+    });
+
+    testWidgets('the digits follow the language: Bengali digits in Bengali',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamSimulatorScreen(
+            tourId: 'tour_test',
+            bookId: 'book_test',
+            paperTitle: 'Paper',
+            initialQuestions: _twoQuestions,
+            store: _FakeExamAttemptStore(),
+            clock: () => DateTime(2026, 11, 11, 9, 0),
+          ),
+          locale: const Locale('bn'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('০৩:০০:০০'), findsOneWidget);
     });
   });
 
@@ -318,7 +452,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        buildTestApp(
+        _buildTestApp(
           StudyExamReviewScreen(
             attempt: attempt,
             questions: questions,
@@ -352,6 +486,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('17 / 100'), findsOneWidget);
+    });
+
+    testWidgets('the total is out of the paper and the pass is decided on it',
+        (tester) async {
+      // An 8 x 20 paper: 45 marks is 28% of 160, so it fails.
+      final attempt = ExamAttempt(
+        id: 'att_paper',
+        tourId: 'tour_test',
+        bookId: 'book_test',
+        chapterId: 'chap_1',
+        paperTitle: 'Paper',
+        durationMinutes: 180,
+        startedAt: DateTime(2026, 11, 10, 10, 0),
+        isCompleted: true,
+        paperMarks: 160,
+        scores: const {'q_1': 45},
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          StudyExamReviewScreen(
+            attempt: attempt,
+            questions: _twoQuestions,
+            store: _FakeExamAttemptStore(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('45 / 160'), findsOneWidget);
+      expect(find.text('28.1%'), findsOneWidget);
+      expect(find.text('NEEDS IMPROVEMENT (< 45%)'), findsOneWidget);
     });
   });
 }

@@ -241,7 +241,15 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
             if (_isAdmin && subjectCode != null)
               IconButton(
                 tooltip: l10n.translate('study_master_materials_title'),
-                icon: const Icon(Icons.auto_stories_rounded),
+                icon: _isLoadingMasterMaterials
+                    ? SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: palette.text,
+                        ),
+                      )
+                    : const Icon(Icons.auto_stories_rounded),
                 onPressed: _isLoadingMasterMaterials
                     ? null
                     : () async {
@@ -287,8 +295,6 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
                     _overview(),
-                    if (_isAdmin && subjectCode != null)
-                      _masterMaterialsBanner(subjectCode, settings),
                     StudyTodayCard(
                       tourId: widget.tourId,
                       subject: widget.subject,
@@ -357,76 +363,6 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
                 child:
                     StudyRichText(line, style: TextStyle(color: palette.text)),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _masterMaterialsBanner(
-    String subjectCode,
-    Map<StudyModuleKey, StudyModuleSettings> settings,
-  ) {
-    final l10n = context.l10n;
-    final palette = context.forest;
-    return Card(
-      color: palette.accentText.withValues(alpha: 0.12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: palette.accentText.withValues(alpha: 0.3)),
-      ),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.auto_stories_rounded,
-                    color: palette.accentText, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.translate('study_master_materials_title'),
-                    style: TextStyle(
-                      color: palette.text,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                if (_isLoadingMasterMaterials)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l10n.translate('study_master_materials_desc'),
-              style: TextStyle(color: palette.text70, fontSize: 13),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.download_rounded, size: 18),
-                label: Text(l10n.translate('study_master_materials_btn')),
-                onPressed: _isLoadingMasterMaterials
-                    ? null
-                    : () => _loadMasterMaterials(subjectCode, settings),
-                style: FilledButton.styleFrom(
-                  backgroundColor: palette.accentText,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -532,12 +468,17 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         );
       }
 
+      // Each item has a fixed id, so loading the pack again creates only what is missing
+      // and leaves every item already made, edited or not, as it is.
+
       // Populate Tips
       for (final tip in tips) {
-        await _repository.addStudyPost(
+        await _repository.addStudyPostIfAbsent(
           widget.tourId,
           widget.subject.id,
           StudyModuleKey.tips,
+          id: StudyBankingMasterCatalog.masterItemId(
+              subjectCode, 'tip', tip.title),
           title: tip.title,
           text: tip.text,
           shown: true,
@@ -546,16 +487,19 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
 
       // Populate Problems & Reference Solutions
       for (final p in problems) {
-        final problemId = await _repository.addStudyProblem(
+        final problemId = StudyBankingMasterCatalog.masterItemId(
+            subjectCode, 'problem', p.title);
+        await _repository.addStudyProblemIfAbsent(
           widget.tourId,
           widget.subject.id,
+          id: problemId,
           title: p.title,
           text: p.text,
           releaseAt: DateTime.now(),
           shown: true,
         );
         if (p.solution.isNotEmpty) {
-          await _repository.saveStudyReference(
+          await _repository.saveStudyReferenceIfAbsent(
             widget.tourId,
             widget.subject.id,
             problemId,
@@ -566,10 +510,12 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
 
       // Populate Past Papers
       for (final paper in papers) {
-        await _repository.addStudyPost(
+        await _repository.addStudyPostIfAbsent(
           widget.tourId,
           widget.subject.id,
           StudyModuleKey.papers,
+          id: StudyBankingMasterCatalog.masterItemId(
+              subjectCode, 'paper', paper.title),
           title: paper.title,
           text: paper.text,
           url: paper.url,
@@ -577,13 +523,16 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         );
       }
 
-      // Populate Glossary Terms if book is associated
+      // Populate Glossary Terms if book is associated. A term belongs to its book, so
+      // subjects that share a book share its terms.
       final bookId = widget.subject.bookId;
       if (bookId != null) {
         for (final term in glossary) {
-          await _repository.addGlossaryTerm(
+          await _repository.addGlossaryTermIfAbsent(
             widget.tourId,
             bookId,
+            id: StudyBankingMasterCatalog.masterItemId(
+                StudyBankingMasterCatalog.glossaryScope, 'term', term.term),
             term: term.term,
             definition: term.definition,
             approved: true,

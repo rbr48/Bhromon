@@ -23,6 +23,7 @@ import '../../domain/services/study_banking_master_catalog.dart';
 import '../../domain/services/study_booklet_pdf_generator.dart';
 import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_daily_streak_rules.dart';
+import '../../domain/services/study_exam_simulator_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import '../../data/study_offline_vault.dart';
@@ -49,6 +50,20 @@ import 'study_summary_screen.dart';
 import '../widgets/study/study_rich_text.dart';
 
 /// The learning tools a book offers, from the sheet on its chapters.
+/// A chapter's past paper the exam simulator can run: its solution text, and how many
+/// questions it holds. A paper with no text on this phone has no questions and no raw text.
+class _ExamPaper {
+  const _ExamPaper({
+    required this.chapter,
+    required this.raw,
+    required this.questionCount,
+  });
+
+  final StudyChapter chapter;
+  final String? raw;
+  final int questionCount;
+}
+
 enum _LearningTool {
   quizzes,
   glossary,
@@ -611,6 +626,10 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       await _generateAndOpenBranchPoster();
       return;
     }
+    if (tool == _LearningTool.examSimulator) {
+      await _openExamPaperPicker();
+      return;
+    }
     final Widget page = switch (tool) {
       _LearningTool.quizzes => StudyQuizzesScreen(
           tourId: widget.tourId,
@@ -627,11 +646,8 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
           tourId: widget.tourId,
           repository: _repository,
         ),
-      _LearningTool.examSimulator => StudyExamSimulatorScreen(
-          tourId: widget.tourId,
-          bookId: widget.book.id,
-          paperTitle: widget.book.title,
-        ),
+      // Opened from the paper picker above, never from here.
+      _LearningTool.examSimulator => const SizedBox.shrink(),
       _LearningTool.progress => StudyProgressScreen(
           tourId: widget.tourId,
           book: widget.book,
@@ -1333,6 +1349,138 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
   }
 
   /// Opens a solution in its reader: a PDF in the PDF viewer, and a note or a Markdown file in the Markdown reader.
+  /// The exam simulator runs one chapter's past paper. The picker lists the chapters whose
+  /// solution text is on this phone. A chapter whose solution is only a file, not yet saved
+  /// here, shows as not available, and nothing is invented to fill the paper.
+  Future<void> _openExamPaperPicker() async {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    final papers = <_ExamPaper>[];
+    for (final chapter in _chapters) {
+      final materials = _materials
+          .where((m) =>
+              m.chapterId == chapter.id &&
+              m.isPublished &&
+              isReadableSolution(m))
+          .toList();
+      if (materials.isEmpty) continue;
+      StudyMaterial? english;
+      StudyMaterial? bangla;
+      for (final m in materials) {
+        if (isBanglaSolution(m)) {
+          bangla ??= m;
+        } else {
+          english ??= m;
+        }
+      }
+      final primary = english ?? bangla!;
+      final other = identical(primary, english) ? bangla : english;
+      final source = solutionSource(primary, other);
+      final raw = source.rawContent ?? _cachedPackage?.contentFor(primary.id);
+      final questions = raw == null || raw.trim().isEmpty
+          ? 0
+          : StudyExamSimulatorExtractor.extractQuestions(
+              subjectTitle: widget.book.title,
+              markdownContent: raw,
+            ).length;
+      papers.add(_ExamPaper(
+        chapter: chapter,
+        raw: questions > 0 ? raw : null,
+        questionCount: questions,
+      ));
+    }
+    if (!mounted) return;
+
+    final chosen = await showModalBottomSheet<_ExamPaper>(
+      context: context,
+      backgroundColor: palette.card,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                l10n.translate('study_exam_pick_paper'),
+                style: TextStyle(
+                  color: palette.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Divider(height: 1, color: palette.divider10),
+            Flexible(
+              child: papers.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        l10n.translate('study_exam_no_paper'),
+                        style: TextStyle(color: palette.text70, height: 1.5),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: papers.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: palette.divider10),
+                      itemBuilder: (_, idx) {
+                        final paper = papers[idx];
+                        final ready = paper.questionCount > 0;
+                        return ListTile(
+                          enabled: ready,
+                          title: Text(
+                            paper.chapter.title.isNotEmpty
+                                ? paper.chapter.title
+                                : widget.book.title,
+                            style: TextStyle(color: palette.text),
+                          ),
+                          subtitle: Text(
+                            ready
+                                ? l10n.translate('study_exam_questions_count',
+                                    args: {
+                                        'count':
+                                            l10n.number(paper.questionCount)
+                                      })
+                                : l10n
+                                    .translate('study_exam_paper_unavailable'),
+                            style: TextStyle(
+                              color: ready ? palette.text70 : palette.text54,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: Icon(Icons.chevron_right_rounded,
+                              color: palette.text54),
+                          onTap: ready
+                              ? () => Navigator.of(sheetCtx).pop(paper)
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    await StudyExamSimulatorScreen.open(
+      context,
+      tourId: widget.tourId,
+      bookId: widget.book.id,
+      chapterId: chosen.chapter.id,
+      paperTitle: chosen.chapter.title.isNotEmpty
+          ? chosen.chapter.title
+          : widget.book.title,
+      rawContent: chosen.raw,
+    );
+  }
+
   /// A note opens from its text, and a Markdown file from its address, which the reader fetches. The other
   /// language pairs only when its text is a note.
   void _openSolution(

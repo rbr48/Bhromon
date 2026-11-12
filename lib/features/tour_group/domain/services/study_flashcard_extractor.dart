@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import '../models/study_flashcard_models.dart';
 import '../models/study_syllabus_models.dart';
 import 'study_flashcard_rules.dart';
+import 'study_plain_text.dart';
 
 /// Deterministically parses Markdown exam solutions into question-answer flashcard pairs
 /// mapped to their official IBB JAIBB syllabus modules.
@@ -79,11 +80,12 @@ class StudyFlashcardExtractor {
               : sectionBody.length;
           final subBody = sectionBody.substring(subStart, subEnd).trim();
 
-          final cleanFront = _cleanHeading('$headingText - $subPrompt');
+          final heading = _cleanHeading('$headingText - $subPrompt');
+          final cleanFront = _plainFront(heading);
           final cleanBack = _cleanAnswer(subBody);
 
           if (cleanFront.length >= 5 && cleanBack.length >= 10) {
-            final cardId = _generateCardId(deckId, cleanFront);
+            final cardId = _generateCardId(deckId, heading);
             final mod = StudySyllabusCatalog.identifyModule(
               subjectTitle,
               '$cleanFront $cleanBack',
@@ -112,11 +114,12 @@ class StudyFlashcardExtractor {
           answerBody = lines.skip(1).join('\n').trim();
         }
 
-        final cleanFront = _cleanHeading(questionPrompt);
+        final heading = _cleanHeading(questionPrompt);
+        final cleanFront = _plainFront(heading);
         final cleanBack = _cleanAnswer(answerBody);
 
         if (cleanFront.length >= 5 && cleanBack.length >= 10) {
-          final cardId = _generateCardId(deckId, cleanFront);
+          final cardId = _generateCardId(deckId, heading);
           final mod = StudySyllabusCatalog.identifyModule(
             subjectTitle,
             '$cleanFront $cleanBack',
@@ -138,6 +141,9 @@ class StudyFlashcardExtractor {
     return cards;
   }
 
+  /// The heading with its markers and spacing trimmed. It is only the text a card's id is made from, so
+  /// it must not change: a card made again from the same question then gets the same id and replaces the
+  /// old card, instead of being added beside it.
   static String _cleanHeading(String text) {
     return text
         .replaceAll(RegExp(r'^#+\s*'), '')
@@ -145,9 +151,13 @@ class StudyFlashcardExtractor {
         .trim();
   }
 
+  /// The question on a card, as plain text. [heading] is the text the card's id is made from.
+  static String _plainFront(String heading) =>
+      plainTextFromMarkdown(heading).replaceAll(RegExp(r'\s+'), ' ').trim();
+
+  /// The answer on a card, as plain text, cut at a sentence when it is longer than a card holds.
   static String _cleanAnswer(String text) {
-    final cleaned =
-        text.replaceAll(RegExp(r'^#+\s*', multiLine: true), '').trim();
+    final cleaned = plainTextFromMarkdown(text);
     if (cleaned.length <= 450) {
       return cleaned;
     }

@@ -155,6 +155,57 @@ void main() {
     });
   });
 
+  group('a saved session syncs the member rows at start', () {
+    test('starting with a saved profile syncs once and signs the person in',
+        () async {
+      when(repo.getCurrentProfile()).thenAnswer((_) async => Right(tProfile));
+      final cubit = buildCubit();
+
+      await cubit.checkAuthStatus();
+
+      expect(cubit.state, isA<Authenticated>());
+      expect(groups.syncs, 1);
+      await cubit.close();
+    });
+
+    test('starting with no saved session does not sync', () async {
+      when(repo.getCurrentProfile()).thenAnswer((_) async => const Right(null));
+      final cubit = buildCubit();
+
+      await cubit.checkAuthStatus();
+
+      expect(cubit.state, isA<Unauthenticated>());
+      expect(groups.syncs, 0);
+      await cubit.close();
+    });
+
+    test('a failed start does not sync', () async {
+      when(repo.getCurrentProfile())
+          .thenAnswer((_) async => const Left(tFailure));
+      final cubit = buildCubit();
+
+      await cubit.checkAuthStatus();
+
+      expect(cubit.state, isA<Unauthenticated>());
+      expect(groups.syncs, 0);
+      await cubit.close();
+    });
+
+    test('a failed member write at start is logged and the session still opens',
+        () async {
+      groups.failSync = true;
+      when(repo.getCurrentProfile()).thenAnswer((_) async => Right(tProfile));
+      final cubit = buildCubit();
+
+      await cubit.checkAuthStatus();
+      await pumpEventQueue();
+
+      expect(cubit.state, isA<Authenticated>());
+      expect(groups.syncs, 1);
+      await cubit.close();
+    });
+  });
+
   group('sign-out resets the group caches', () {
     test('a sign-out resets once and signs the person out', () async {
       when(repo.signOut()).thenAnswer((_) async => const Right(unit));

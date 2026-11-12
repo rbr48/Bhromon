@@ -1,4 +1,5 @@
 import '../models/study_flashcard_models.dart';
+import 'study_plain_text.dart';
 
 // The rules of the flashcards kept on a member's device: Leitner boxes with fixed intervals, the day a card is
 // due, the Anki CSV that students import, and the deck file that moves a deck to another phone. Nothing here
@@ -101,9 +102,11 @@ List<StudyFlashcard> dueCards(Iterable<StudyFlashcard> cards, DateTime today) {
 }
 
 /// The cards as the CSV that Anki imports: the front and the back of each card, in two columns, each in
-/// double quotes with an inner quote doubled. Anki reads the file as UTF-8 with no header row.
+/// double quotes with an inner quote doubled. Anki reads the file as UTF-8 with no header row. The text is
+/// plain, so a card made from a markdown solution shows no markup in Anki either.
 String toAnkiCsv(Iterable<StudyFlashcard> cards) {
-  String field(String value) => '"${value.replaceAll('"', '""')}"';
+  String field(String value) =>
+      '"${plainTextFromMarkdown(value).replaceAll('"', '""')}"';
   return [
     for (final card in cards) '${field(card.front)},${field(card.back)}',
   ].join('\n');

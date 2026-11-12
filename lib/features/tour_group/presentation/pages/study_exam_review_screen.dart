@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -40,15 +42,32 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
     _scores = Map.of(_attempt.scores);
   }
 
+  /// The paper's digits in the current language.
+  String _digitsOf(String text) {
+    final l10n = context.l10n;
+    return text.replaceAllMapped(
+      RegExp('[0-9]'),
+      (match) => l10n.number(int.parse(match.group(0)!)),
+    );
+  }
+
   void _updateScore(String questionId, int newScore) {
     setState(() {
       _scores[questionId] = newScore;
       _attempt = _attempt.copyWith(scores: Map.unmodifiable(_scores));
     });
-    // Persist asynchronously to local store
-    (widget.store ?? StudyExamAttemptStore.instance)
+    // The awarded marks are kept on this phone. A save that fails is said so, not hidden.
+    unawaited((widget.store ?? StudyExamAttemptStore.instance)
         .saveAttempt(_attempt)
-        .catchError((Object _) {});
+        .then((saved) {
+      if (!saved && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.translate('study_exam_save_failed')),
+          ),
+        );
+      }
+    }));
   }
 
   @override
@@ -114,7 +133,8 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Time Spent: $formattedTime',
+                            l10n.translate('study_exam_time_spent',
+                                args: {'time': _digitsOf(formattedTime)}),
                             style: TextStyle(
                               color: palette.text54,
                               fontSize: 12,
@@ -163,19 +183,20 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _MetricItem(
-                        label: 'Total Score',
-                        value: '$totalScore / $totalMarks',
+                        label: l10n.translate('study_exam_metric_total'),
+                        value:
+                            '${l10n.number(totalScore)} / ${l10n.number(totalMarks)}',
                         color: palette.accentText,
                       ),
                       _MetricItem(
-                        label: 'Percentage',
-                        value: '$percentage%',
+                        label: l10n.translate('study_exam_metric_percent'),
+                        value: '${l10n.number(percentage.toStringAsFixed(1))}%',
                         color: isPassed ? AppColors.mintGreen : Colors.amber,
                       ),
                       _MetricItem(
-                        label: 'Answered',
+                        label: l10n.translate('study_exam_metric_answered'),
                         value:
-                            '${_attempt.draftAnswers.values.where((v) => v.trim().isNotEmpty).length} / ${widget.questions.length}',
+                            '${l10n.number(_attempt.draftAnswers.values.where((v) => v.trim().isNotEmpty).length)} / ${l10n.number(widget.questions.length)}',
                         color: palette.text70,
                       ),
                     ],
@@ -237,9 +258,12 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
           children: [
             Expanded(
               child: Text(
-                'Question ${index + 1} (${question.marks} marks)',
+                l10n.translate('study_exam_review_question', args: {
+                  'n': l10n.number(index + 1),
+                  'marks': l10n.number(question.marks),
+                }),
                 style: TextStyle(
-                  color: palette.isDark ? Colors.white : AppColors.darkText,
+                  color: palette.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -252,7 +276,10 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Score: $score/${question.marks}',
+                l10n.translate('study_exam_score', args: {
+                  'score': l10n.number(score),
+                  'marks': l10n.number(question.marks),
+                }),
                 style: TextStyle(
                   color: palette.accentText,
                   fontSize: 12,
@@ -264,7 +291,8 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
         ),
         subtitle: question.moduleCode != null
             ? Text(
-                'Module ${question.moduleCode}',
+                l10n.translate('study_exam_module',
+                    args: {'code': question.moduleCode!}),
                 style: TextStyle(color: palette.text54, fontSize: 12),
               )
             : null,
@@ -315,11 +343,9 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                     ),
                   ),
                   child: Text(
-                    hasDraft ? draft : '(No draft written for this question)',
+                    hasDraft ? draft : l10n.translate('study_exam_no_draft'),
                     style: TextStyle(
-                      color: hasDraft
-                          ? (palette.isDark ? Colors.white : AppColors.darkText)
-                          : palette.text54,
+                      color: hasDraft ? palette.text : palette.text54,
                       fontSize: 13,
                       height: 1.45,
                       fontStyle: hasDraft ? FontStyle.normal : FontStyle.italic,
@@ -384,7 +410,7 @@ class _StudyExamReviewScreenState extends State<StudyExamReviewScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '$score / ${question.marks}',
+                        '${l10n.number(score)} / ${l10n.number(question.marks)}',
                         style: TextStyle(
                           color: palette.accentText,
                           fontSize: 13,
