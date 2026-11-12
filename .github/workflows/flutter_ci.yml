@@ -95,13 +95,13 @@ jobs:
       - name: Test the coverage script
         run: python3 -m unittest discover -s tool -p "test_*.py" -v
 
-      # Regression floor, not a target. Line coverage was 43.82% (37769 of 86187 lines) when this was last
+      # Regression floor, not a target. Line coverage was 44.05% (38195 of 86704 lines) when this was last
       # measured. Raise the floor as coverage grows. The total is read from the tracefile by
       # tool/lcov_line_coverage.py: it used to come from lcov, which apt-get installed here and
       # which hung on a stalled package mirror.
-      - name: Check coverage regression floor (min 25.5%)
+      - name: Check coverage regression floor (min 40.0%)
         timeout-minutes: 5
-        run: python3 tool/lcov_line_coverage.py --min 25.5 coverage/lcov.info
+        run: python3 tool/lcov_line_coverage.py --min 40.0 coverage/lcov.info
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
