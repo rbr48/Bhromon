@@ -1449,54 +1449,73 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     },
                   )
                 : null,
-            title: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 34,
-                  height: 34,
-                  child: Image.asset(
-                    'assets/bhromon_emblem.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.explore_rounded,
-                      color: context.forest.accentText,
-                      size: 20,
+            title: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 60) {
+                  return SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: Image.asset(
+                      'assets/bhromon_emblem.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.explore_rounded,
+                        color: context.forest.accentText,
+                        size: 20,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Bhromon',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                  );
+                }
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Image.asset(
+                        'assets/bhromon_emblem.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.explore_rounded,
                           color: context.forest.accentText,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
-                          letterSpacing: 0.5,
+                          size: 20,
                         ),
                       ),
-                      if (effectiveExpandedId == null)
-                        Text(
-                          context.l10n.translate('login_tagline'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.forest.text54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Bhromon',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: context.forest.accentText,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
+                          if (effectiveExpandedId == null)
+                            Text(
+                              context.l10n.translate('login_tagline'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.forest.text54,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             actions: [
               // The bell opens the notification list.
