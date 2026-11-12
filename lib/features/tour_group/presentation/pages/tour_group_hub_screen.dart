@@ -11,6 +11,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/models/family_date_models.dart';
 import '../../domain/services/group_search_engine.dart';
 import '../../domain/services/hub_modules.dart';
+import '../../domain/services/tour_record_plan.dart';
 import '../../domain/services/tour_choice.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
@@ -37,6 +38,7 @@ import '../widgets/group_photo_sheet.dart';
 import '../widgets/hub/preset_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../widgets/google_play_action_button.dart';
+import '../group_type_pdf.dart';
 import '../tour_pdf_export.dart';
 import 'package:bhromon/features/official_feed/data/official_feed_repository.dart';
 import 'package:bhromon/features/official_feed/presentation/official_feed_entry_card.dart';
@@ -728,12 +730,30 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'export_pdf':
         // The whole tour holds every member's photos, so its owner or an admin exports it.
         final role = await _repository.myRole(group.id);
+        if (!context.mounted) return;
         if (role == null || !role.isAdminOrOwner) {
           _snack(l10n.translate('pdf_export_admin_only'), error: true);
           return;
         }
-        if (!context.mounted) return;
         await exportTourPdf(context, group: group, repository: _repository);
+      case 'export_samity':
+        await exportSamityStatementFor(
+          context,
+          group: group,
+          repository: _repository,
+        );
+      case 'export_mess':
+        await exportMealSheetFor(
+          context,
+          group: group,
+          repository: _repository,
+        );
+      case 'export_study':
+        await exportStudyPackFor(
+          context,
+          group: group,
+          repository: _repository,
+        );
       case 'photo':
         await showGroupPhotoSheet(context,
             group: group, repository: _repository);
@@ -895,83 +915,115 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   /// The group menu: copy the code, export, Moments, add a member, renew the code, and
   /// delete or leave. Shown in the banner and on the group page.
   Widget _groupMenuButton(BuildContext context, TourGroup group) {
-    return PopupMenuButton<String>(
-      icon:
-          Icon(Icons.more_vert_rounded, color: context.forest.text70, size: 20),
-      color: context.forest.dialog,
-      onSelected: (v) => _onGroupMenu(context, group, v),
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'copy_link',
-          child: _menuRow(context, Icons.link_rounded,
-              context.l10n.translate('hub_copy_invite_link')),
-        ),
-        PopupMenuItem(
-          value: 'copy_code',
-          child: _menuRow(context, Icons.copy_rounded,
-              context.l10n.translate('hub_copy_invite_code')),
-        ),
-        PopupMenuItem(
-          value: 'export_pdf',
-          child: _menuRow(context, Icons.picture_as_pdf_rounded,
-              context.l10n.translate('pdf_export_menu')),
-        ),
-        PopupMenuItem(
-          value: 'photo',
-          child: _menuRow(context, Icons.photo_camera_rounded,
-              context.l10n.translate('group_photo_title')),
-        ),
-        PopupMenuItem(
-          value: 'edit_name',
-          child: _menuRow(context, Icons.edit_rounded,
-              context.l10n.translate('hub_edit_group_name')),
-        ),
-        if (group.isManaged)
-          PopupMenuItem(
-            value: 'moments',
-            child: _menuRow(
-                context,
-                group.momentsEnabled
-                    ? Icons.visibility_off_rounded
-                    : Icons.visibility_rounded,
-                context.l10n.translate(group.momentsEnabled
-                    ? 'hub_moments_turn_off'
-                    : 'hub_moments_turn_on')),
-          ),
-        if (group.ownerEmail == _repository.currentEmail) ...[
-          PopupMenuItem(
-            value: 'add_member',
-            child: _menuRow(context, Icons.person_add_alt_1_rounded,
-                context.l10n.translate('hub_add_member_by_email')),
-          ),
-          PopupMenuItem(
-            value: 'code',
-            child: _menuRow(context, Icons.key_rounded,
-                context.l10n.translate('hub_renew_code'),
-                iconColor: context.forest.text70),
-          ),
-          PopupMenuItem(
-            value: 'delete',
-            child: _menuRow(
-                context,
-                Icons.delete_outline_rounded,
-                context.l10n.translate(group.isHousehold
-                    ? 'hub_delete_family'
-                    : 'hub_delete_tour'),
-                color: Colors.redAccent,
-                iconColor: Colors.redAccent),
-          ),
-        ] else
-          PopupMenuItem(
-            value: 'leave',
-            child: _menuRow(
-                context,
-                Icons.logout_rounded,
-                context.l10n.translate(
-                    group.isHousehold ? 'hub_leave_family' : 'hub_leave_tour'),
-                iconColor: context.forest.text70),
-          ),
-      ],
+    // The members decide who may see the group record. The stream is shared, so the menu
+    // adds no upstream listener of its own.
+    return StreamBuilder<List<TourMember>>(
+      stream: _membersOf(group.id),
+      builder: (context, snapshot) {
+        final members = snapshot.data;
+        final exports = recordExportOptions(
+          group,
+          isAdmin: members != null && _viewerIsAdmin(members),
+        );
+        return PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert_rounded,
+              color: context.forest.text70, size: 20),
+          color: context.forest.dialog,
+          onSelected: (v) => _onGroupMenu(context, group, v),
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'copy_link',
+              child: _menuRow(context, Icons.link_rounded,
+                  context.l10n.translate('hub_copy_invite_link')),
+            ),
+            PopupMenuItem(
+              value: 'copy_code',
+              child: _menuRow(context, Icons.copy_rounded,
+                  context.l10n.translate('hub_copy_invite_code')),
+            ),
+            if (exports.contains(RecordExportOption.samityStatement))
+              PopupMenuItem(
+                value: 'export_samity',
+                child: _menuRow(context, Icons.picture_as_pdf_outlined,
+                    context.l10n.translate('samity_export_pdf')),
+              ),
+            if (exports.contains(RecordExportOption.mealSheet))
+              PopupMenuItem(
+                value: 'export_mess',
+                child: _menuRow(context, Icons.picture_as_pdf_outlined,
+                    context.l10n.translate('pdf_mess_sheet_menu')),
+              ),
+            if (exports.contains(RecordExportOption.studyPack))
+              PopupMenuItem(
+                value: 'export_study',
+                child: _menuRow(context, Icons.picture_as_pdf_outlined,
+                    context.l10n.translate('study_pack_action')),
+              ),
+            if (exports.contains(RecordExportOption.groupRecord))
+              PopupMenuItem(
+                value: 'export_pdf',
+                child: _menuRow(context, Icons.picture_as_pdf_rounded,
+                    context.l10n.translate('pdf_export_menu')),
+              ),
+            PopupMenuItem(
+              value: 'photo',
+              child: _menuRow(context, Icons.photo_camera_rounded,
+                  context.l10n.translate('group_photo_title')),
+            ),
+            PopupMenuItem(
+              value: 'edit_name',
+              child: _menuRow(context, Icons.edit_rounded,
+                  context.l10n.translate('hub_edit_group_name')),
+            ),
+            if (group.isManaged)
+              PopupMenuItem(
+                value: 'moments',
+                child: _menuRow(
+                    context,
+                    group.momentsEnabled
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    context.l10n.translate(group.momentsEnabled
+                        ? 'hub_moments_turn_off'
+                        : 'hub_moments_turn_on')),
+              ),
+            if (group.ownerEmail == _repository.currentEmail) ...[
+              PopupMenuItem(
+                value: 'add_member',
+                child: _menuRow(context, Icons.person_add_alt_1_rounded,
+                    context.l10n.translate('hub_add_member_by_email')),
+              ),
+              PopupMenuItem(
+                value: 'code',
+                child: _menuRow(context, Icons.key_rounded,
+                    context.l10n.translate('hub_renew_code'),
+                    iconColor: context.forest.text70),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: _menuRow(
+                    context,
+                    Icons.delete_outline_rounded,
+                    context.l10n.translate(group.isHousehold
+                        ? 'hub_delete_family'
+                        : 'hub_delete_tour'),
+                    color: Colors.redAccent,
+                    iconColor: Colors.redAccent),
+              ),
+            ] else
+              PopupMenuItem(
+                value: 'leave',
+                child: _menuRow(
+                    context,
+                    Icons.logout_rounded,
+                    context.l10n.translate(group.isHousehold
+                        ? 'hub_leave_family'
+                        : 'hub_leave_tour'),
+                    iconColor: context.forest.text70),
+              ),
+          ],
+        );
+      },
     );
   }
 

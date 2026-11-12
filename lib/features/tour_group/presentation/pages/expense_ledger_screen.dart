@@ -21,6 +21,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/debt_simplifier.dart';
 import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/media_rules.dart';
+import '../../domain/services/tour_record_plan.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../../data/monthly_ledger_pdf.dart';
 import '../../domain/services/bangla_qr_engine.dart';
@@ -163,24 +164,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final allTransfers = [
-      ..._transfers,
-      for (final s in _settlements.where((x) => x.isVerified))
-        TransferItem(
-          id: s.id,
-          tourId: s.tourId,
-          fromId: s.fromMemberId,
-          fromName: s.fromMemberName,
-          toId: s.toMemberId,
-          toName: s.toMemberName,
-          amountPaisa: s.creditedPaisa,
-          date: s.date,
-          notes: s.mfsInfo.provider.requiresTrxId
-              ? '${s.mfsInfo.provider.name.toUpperCase()} TrxID: ${s.mfsInfo.trxId ?? ''}'
-              : (s.notes ?? 'MFS Settlement'),
-          addedByEmail: s.addedByEmail,
-        ),
-    ];
+    final allTransfers = ledgerTransfers(_transfers, _settlements);
     final summary = TripLedgerEngine.computeLedger(
       members: _inputs,
       expenses: _expenses,
