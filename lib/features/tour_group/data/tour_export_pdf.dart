@@ -6,11 +6,13 @@ import 'package:bangla_pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 
+import '../domain/models/expense_models.dart';
 import '../domain/models/logistics_models.dart';
 import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_export_data.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
+import '../domain/services/tour_record_plan.dart';
 import '../domain/services/trip_ledger_engine.dart';
 import 'tour_export_images.dart';
 
@@ -36,15 +38,16 @@ class TourPdfLabels {
   final String Function(DateTime date) dateTime;
 }
 
-/// Builds the whole tour as one PDF: a cover, a contents list, then one section
-/// per part of the tour. Pictures are fetched first ([onImages] reports them),
-/// so the layout itself never waits on the network.
+/// Builds the group's record as one PDF: a cover, a contents list, then one section per
+/// part the record holds. Pictures are fetched first, so the layout never waits on the
+/// network. Throws [TourExportCancelled] when [cancel] is set before the file is written.
 Future<Uint8List> buildTourPdf({
   required TourExportData data,
   required TourExportImages images,
   required TourPdfLabels labels,
   void Function(int done, int total)? onImages,
   bool compress = true,
+  TourExportCancel? cancel,
 }) async {
   final regularBytes =
       await rootBundle.load('assets/fonts/HindSiliguri-Regular.ttf');
@@ -62,7 +65,12 @@ Future<Uint8List> buildTourPdf({
     fallbackFonts: [bengali, BanglaFontManager().defaultFont],
   );
 
-  await images.prefetch(_pictureUrls(data), onProgress: onImages);
+  await images.prefetch(
+    _pictureUrls(data),
+    onProgress: onImages,
+    cancel: cancel,
+  );
+  if (cancel?.isCancelled ?? false) throw const TourExportCancelled();
 
   final writer = _TourPdfWriter(data: data, images: images, labels: labels);
   final document = pw.Document(
@@ -86,7 +94,51 @@ Future<Uint8List> buildTourPdf({
   return document.save();
 }
 
-/// Every picture the PDF will show, so they can all be fetched up front.
+/// The translation key of a section's heading.
+String recordSectionKey(TourRecordSection section) => switch (section) {
+      TourRecordSection.overview => 'pdf_section_overview',
+      TourRecordSection.members => 'pdf_section_members',
+      TourRecordSection.journey => 'pdf_section_journey',
+      TourRecordSection.notices => 'pdf_section_notices',
+      TourRecordSection.money => 'pdf_section_money',
+      TourRecordSection.checklist => 'pdf_section_checklist',
+      TourRecordSection.transport => 'pdf_section_transport',
+      TourRecordSection.rooms => 'pdf_section_rooms',
+      TourRecordSection.familyDates => 'pdf_section_family_dates',
+      TourRecordSection.dependents => 'pdf_section_dependents',
+      TourRecordSection.sharedList => 'pdf_section_shared_list',
+      TourRecordSection.requests => 'pdf_section_requests',
+      TourRecordSection.safety => 'pdf_section_safety',
+      TourRecordSection.feed => 'pdf_section_feed',
+      TourRecordSection.stories => 'pdf_section_stories',
+      TourRecordSection.highlights => 'pdf_section_highlights',
+    };
+
+/// Emoji have no glyphs in the PDF fonts, so they are dropped. Zero-width joiners are kept:
+/// Bengali uses them inside some conjuncts.
+final RegExp _recordEmoji = RegExp(
+  '[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]',
+  unicode: true,
+);
+
+/// Plain text ready for the PDF: no emoji, single spaces, and at most [max] characters. A
+/// longer text is cut with an ellipsis, followed by [cutNote] when one is given.
+String cleanRecordText(String? value, {int max = 500, String cutNote = ''}) {
+  final plain = (value ?? '')
+      .replaceAll(_recordEmoji, '')
+      .replaceAll(RegExp(r'[ \t]+'), ' ')
+      .trim();
+  if (plain.length <= max) return plain;
+  var end = max;
+  // Do not split a surrogate pair in two.
+  if (end > 0 && _isHighSurrogate(plain.codeUnitAt(end - 1))) end -= 1;
+  final cut = plain.substring(0, end).trimRight();
+  return cutNote.isEmpty ? '$cut…' : '$cut… $cutNote';
+}
+
+bool _isHighSurrogate(int unit) => unit >= 0xD800 && unit <= 0xDBFF;
+
+/// Every picture the record shows, so they can all be fetched up front.
 Iterable<String> _pictureUrls(TourExportData data) sync* {
   for (final post in data.posts) {
     yield* _postPictures(post);
@@ -133,23 +185,38 @@ class _TourPdfWriter {
   static const double _margin = 40;
   static final double _contentWidth = PdfPageFormat.a4.width - 2 * _margin;
 
-  /// Emoji have no glyphs in the PDF fonts, so they are dropped from the text.
-  static final RegExp _emoji = RegExp(
-    '[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]',
-    unicode: true,
-  );
+  late final Map<String, String> _namesByEmail = {
+    for (final member in data.members)
+      member.email.trim().toLowerCase(): _cleanName(member.displayName),
+  };
+
+  String _cleanName(String name) {
+    final clean = _clean(name, max: 80);
+    return clean.isEmpty ? labels.text('ft_unnamed') : clean;
+  }
+
+  /// The name of the member with [email], or the former-member label when the member has
+  /// left. Emails are never printed.
+  String _memberName(String? email) {
+    if (email == null || email.trim().isEmpty) return '';
+    final name = _namesByEmail[email.trim().toLowerCase()];
+    if (name != null) return name;
+    // Without the member list, the name is unknown rather than a former member's.
+    return labels.text(
+      data.incomplete.contains(TourRecordSection.members)
+          ? 'ft_unnamed'
+          : 'ft_former_member',
+    );
+  }
 
   String _amount(int paisa) =>
       labels.number(TripLedgerEngine.formatTaka(paisa));
 
-  /// Plain text ready for the PDF: no emoji, and cut to [max] characters.
-  String _clean(String? value, {int max = 500}) {
-    final plain = (value ?? '')
-        .replaceAll(_emoji, '')
-        .replaceAll(RegExp(r'[ \t]+'), ' ')
-        .trim();
-    return plain.length <= max ? plain : '${plain.substring(0, max)}…';
-  }
+  String _clean(String? value, {int max = 500}) => cleanRecordText(
+        value,
+        max: max,
+        cutNote: labels.text('pdf_text_cut'),
+      );
 
   pw.TextStyle _style({
     double size = 10,
@@ -260,8 +327,8 @@ class _TourPdfWriter {
     return data.coachSeats.isNotEmpty ? 1 : 0;
   }
 
-  /// A section title, optionally with its count. A new page starts the section
-  /// only when requested and when the section has content.
+  /// A section title, optionally with its count. A new page starts the section only when
+  /// requested and when the section has content.
   List<pw.Widget> _heading(
     String title, {
     int? count,
@@ -372,33 +439,21 @@ class _TourPdfWriter {
     final rows = <pw.Widget>[];
     for (var i = 0; i < urls.length; i += 2) {
       final pair = urls.skip(i).take(2).toList();
-      if (pair.length == 2) {
-        rows.add(
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 6),
-            child: pw.Row(
-              children: [
-                pw.Expanded(child: _photoThumbnail(pair[0])),
-                pw.SizedBox(width: 6),
-                pw.Expanded(child: _photoThumbnail(pair[1])),
-              ],
-            ),
+      rows.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 6),
+          child: pw.Row(
+            children: [
+              pw.Expanded(child: _photoThumbnail(pair[0])),
+              pw.SizedBox(width: 6),
+              pw.Expanded(
+                child:
+                    pair.length == 2 ? _photoThumbnail(pair[1]) : pw.SizedBox(),
+              ),
+            ],
           ),
-        );
-      } else {
-        rows.add(
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 6),
-            child: pw.Row(
-              children: [
-                pw.Expanded(child: _photoThumbnail(pair[0])),
-                pw.SizedBox(width: 6),
-                pw.Expanded(child: pw.SizedBox()),
-              ],
-            ),
-          ),
-        );
-      }
+        ),
+      );
     }
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 4),
@@ -412,11 +467,36 @@ class _TourPdfWriter {
     return labels.text('hub_role_member');
   }
 
+  /// A category the app names is translated; a custom one prints as it was typed.
+  String _categoryLabel(String raw) {
+    final key = recordCategoryKey(raw);
+    return key == null ? _clean(raw, max: 60) : labels.text(key);
+  }
+
+  /// The part names of [parts], in the order the record prints them.
+  String _partNames(Set<TourRecordSection> parts) => [
+        for (final section in TourRecordSection.values)
+          if (parts.contains(section)) labels.text(recordSectionKey(section)),
+      ].join(', ');
+
   pw.Page cover() {
+    final group = data.group;
     final spent =
         data.expenses.fold<int>(0, (sum, expense) => sum + expense.amountPaisa);
-    final dates = '${labels.date(data.group.startDate)} – '
-        '${labels.date(data.group.endDate)}';
+    final kindKey = recordKindKey(group);
+    final isTrip = !group.isFamily;
+    final notes = <String>[
+      if (data.incomplete.isNotEmpty)
+        labels.text(
+          'pdf_incomplete_parts',
+          args: {'parts': _partNames(data.incomplete)},
+        ),
+      if (images.failedCount > 0)
+        labels.text(
+          'pdf_share_photos',
+          args: {'count': labels.number(images.failedCount)},
+        ),
+    ];
     return pw.Page(
       pageFormat: _format,
       margin: const pw.EdgeInsets.all(0),
@@ -428,17 +508,29 @@ class _TourPdfWriter {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(
-              _clean(data.group.name, max: 120),
+              _clean(group.name, max: 120),
               style: _style(size: 34, bold: true, color: PdfColors.white),
             ),
             pw.SizedBox(height: 14),
-            pw.Text(
-              _clean(data.group.destination, max: 120),
-              style: _style(size: 16, color: _gold),
-            ),
+            if (isTrip)
+              pw.Text(
+                _clean(group.destination, max: 120),
+                style: _style(size: 16, color: _gold),
+              )
+            else
+              pw.Text(
+                labels.text(kindKey ?? 'hub_family_badge'),
+                style: _style(size: 16, color: _gold),
+              ),
             pw.SizedBox(height: 6),
             pw.Text(
-              dates,
+              isTrip
+                  ? '${labels.date(group.startDate)} – '
+                      '${labels.date(group.endDate)}'
+                  : labels.text(
+                      'pdf_created_on',
+                      args: {'date': labels.date(group.createdAt)},
+                    ),
               style: _style(size: 11, color: PdfColors.grey300),
             ),
             pw.Spacer(),
@@ -459,6 +551,17 @@ class _TourPdfWriter {
                 _coverStat(_amount(spent), labels.text('pdf_spent')),
               ],
             ),
+            if (notes.isNotEmpty) ...[
+              pw.SizedBox(height: 18),
+              for (final note in notes)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Text(
+                    note,
+                    style: _style(size: 10, bold: true, color: _gold),
+                  ),
+                ),
+            ],
             pw.SizedBox(height: 28),
             pw.Text(
               labels.text(
@@ -491,7 +594,7 @@ class _TourPdfWriter {
     );
   }
 
-  /// Every section, in the order the contents list shows them.
+  /// Every section the record holds, in order, after the contents list.
   pw.MultiPage pages() {
     return pw.MultiPage(
       pageFormat: _format,
@@ -526,36 +629,37 @@ class _TourPdfWriter {
       ),
       build: (context) => [
         ..._contents(),
-        ..._overview(),
-        ..._members(),
-        ..._journey(),
-        ..._notices(),
-        ..._money(),
-        ..._checklist(),
-        ..._transport(),
-        ..._rooms(),
-        ..._safety(),
-        ..._feed(),
-        ..._stories(),
-        ..._highlights(),
+        for (final section in TourRecordSection.values)
+          if (data.sections.contains(section)) ..._block(section),
       ],
     );
   }
 
+  /// The number a section's contents line shows, or null for a section with none.
+  int? _countOf(TourRecordSection section) => switch (section) {
+        TourRecordSection.overview => null,
+        TourRecordSection.members => data.members.length,
+        TourRecordSection.journey => data.checkpoints.length,
+        TourRecordSection.notices => data.notices.length,
+        TourRecordSection.money => data.expenses.length,
+        TourRecordSection.checklist => data.checklist.length,
+        TourRecordSection.transport => _vehicleCount,
+        TourRecordSection.rooms => data.hotelRooms.length,
+        TourRecordSection.familyDates => data.familyDates.length,
+        TourRecordSection.dependents => data.dependents.length,
+        TourRecordSection.sharedList => data.familyTasks.length,
+        TourRecordSection.requests => data.serviceRequests.length,
+        TourRecordSection.safety => data.safetyAlerts.length,
+        TourRecordSection.feed => data.posts.length,
+        TourRecordSection.stories => data.stories.length,
+        TourRecordSection.highlights => data.highlights.length,
+      };
+
   List<pw.Widget> _contents() {
     final entries = <(String, int?)>[
-      (labels.text('pdf_section_overview'), null),
-      (labels.text('pdf_section_members'), data.members.length),
-      (labels.text('pdf_section_journey'), data.checkpoints.length),
-      (labels.text('pdf_section_notices'), data.notices.length),
-      (labels.text('pdf_section_money'), data.expenses.length),
-      (labels.text('pdf_section_checklist'), data.checklist.length),
-      (labels.text('pdf_section_transport'), _vehicleCount),
-      (labels.text('pdf_section_rooms'), data.hotelRooms.length),
-      (labels.text('pdf_section_safety'), data.safetyAlerts.length),
-      (labels.text('pdf_section_feed'), data.posts.length),
-      (labels.text('pdf_section_stories'), data.stories.length),
-      (labels.text('pdf_section_highlights'), data.highlights.length),
+      for (final section in TourRecordSection.values)
+        if (data.sections.contains(section))
+          (labels.text(recordSectionKey(section)), _countOf(section)),
     ];
     return [
       ..._heading(labels.text('pdf_contents'), newPage: false),
@@ -580,8 +684,31 @@ class _TourPdfWriter {
     ];
   }
 
+  List<pw.Widget> _block(TourRecordSection section) => switch (section) {
+        TourRecordSection.overview => _overview(),
+        TourRecordSection.members => _members(),
+        TourRecordSection.journey => _journey(),
+        TourRecordSection.notices => _notices(),
+        TourRecordSection.money => _money(),
+        TourRecordSection.checklist => _checklist(),
+        TourRecordSection.transport => _transport(),
+        TourRecordSection.rooms => _rooms(),
+        TourRecordSection.familyDates => _familyDates(),
+        TourRecordSection.dependents => _dependents(),
+        TourRecordSection.sharedList => _sharedList(),
+        TourRecordSection.requests => _requests(),
+        TourRecordSection.safety => _safety(),
+        TourRecordSection.feed => _feed(),
+        TourRecordSection.stories => _stories(),
+        TourRecordSection.highlights => _highlights(),
+      };
+
+  /// A trip shows its dates, destination, origin, meeting point and stops. Any other group
+  /// shows its kind, when it was created and its description, and nothing from a trip.
   List<pw.Widget> _overview() {
     final group = data.group;
+    final isTrip = !group.isFamily;
+    final kindKey = recordKindKey(group);
     final stops = group.effectiveStops;
     final meeting = [
       if ((group.meetingPointTitle ?? '').trim().isNotEmpty)
@@ -595,17 +722,15 @@ class _TourPdfWriter {
         _para(group.description),
         pw.SizedBox(height: 10),
       ],
-      _keyValue(labels.text('pdf_destination'), _clean(group.destination)),
-      _keyValue(labels.text('pdf_origin'), _clean(group.originCity)),
-      _keyValue(
-        labels.text('pdf_dates'),
-        '${labels.date(group.startDate)} – ${labels.date(group.endDate)}',
-      ),
-      _keyValue(labels.text('pdf_meeting_point'), _clean(meeting)),
-      _subtitle(labels.text('pdf_stops')),
-      if (stops.isEmpty)
-        _empty()
-      else
+      if (isTrip) ...[
+        _keyValue(labels.text('pdf_destination'), _clean(group.destination)),
+        _keyValue(labels.text('pdf_origin'), _clean(group.originCity)),
+        _keyValue(
+          labels.text('pdf_dates'),
+          '${labels.date(group.startDate)} – ${labels.date(group.endDate)}',
+        ),
+        _keyValue(labels.text('pdf_meeting_point'), _clean(meeting)),
+        _subtitle(labels.text('pdf_stops')),
         _table(
           [
             labels.text('pdf_col_name'),
@@ -623,6 +748,16 @@ class _TourPdfWriter {
               ],
           ],
         ),
+      ] else ...[
+        _keyValue(
+          labels.text('pdf_type_label'),
+          labels.text(kindKey ?? 'hub_family_badge'),
+        ),
+        _keyValue(
+          labels.text('pdf_created_label'),
+          labels.date(group.createdAt),
+        ),
+      ],
     ];
   }
 
@@ -645,7 +780,7 @@ class _TourPdfWriter {
           [
             for (final member in data.members)
               [
-                _clean(member.displayName, max: 80),
+                _cleanName(member.displayName),
                 _roleLabel(member.role),
                 labels.number(member.familyCount),
                 labels.date(member.joinedAt),
@@ -688,6 +823,7 @@ class _TourPdfWriter {
     ];
   }
 
+  /// A notice that asks for an answer lists who answered, by name.
   List<pw.Widget> _notices() {
     final notices = [...data.notices]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -722,6 +858,19 @@ class _TourPdfWriter {
             '${(notice.place ?? '').trim().isEmpty ? '' : ' · ${_clean(notice.place, max: 120)}'}',
           ),
         if (notice.content.trim().isNotEmpty) _para(notice.content),
+        if (notice.asksAnswer)
+          _meta(
+            labels.text(
+              'pdf_ack_answers',
+              args: {
+                'count': labels.number(notice.ackBy.length),
+                'names': notice.ackBy.isEmpty
+                    ? labels.text('pdf_none')
+                    : [for (final email in notice.ackBy) _memberName(email)]
+                        .join(', '),
+              },
+            ),
+          ),
         pw.SizedBox(height: 12),
       ],
     ];
@@ -731,8 +880,9 @@ class _TourPdfWriter {
     final spent = data.expenses.fold<int>(0, (sum, e) => sum + e.amountPaisa);
     final collected =
         data.deposits.fold<int>(0, (sum, d) => sum + d.amountPaisa);
-    final settled =
-        data.transfers.fold<int>(0, (sum, t) => sum + t.amountPaisa);
+    final settled = ledgerTransfers(data.transfers, data.settlements)
+        .fold<int>(0, (sum, t) => sum + t.amountPaisa);
+    final ledger = data.ledger;
     return [
       ..._heading(labels.text('pdf_section_money')),
       pw.Row(
@@ -742,6 +892,46 @@ class _TourPdfWriter {
           _total(labels.text('pdf_settled'), settled),
         ],
       ),
+      _subtitle(labels.text('pdf_money_people')),
+      if (ledger == null)
+        _empty()
+      else if (ledger.rows.isEmpty)
+        _empty()
+      else
+        _table(
+          [
+            labels.text('pdf_col_name'),
+            labels.text('pdf_col_contributed'),
+            labels.text('pdf_col_share'),
+            labels.text('pdf_col_balance'),
+          ],
+          [
+            for (final row in ledger.rows)
+              [
+                row.isFormerMember
+                    ? '${_clean(row.name, max: 80)} ${labels.text('fund_former')}'
+                    : _clean(row.name, max: 80),
+                _amount(row.contributedPaisa),
+                _amount(row.sharePaisa),
+                _amount(row.netPaisa),
+              ],
+          ],
+        ),
+      if (ledger != null && ledger.settlements.isNotEmpty) ...[
+        _subtitle(labels.text('pdf_money_suggested')),
+        _table(
+          [labels.text('pdf_col_from_to'), labels.text('pdf_col_amount')],
+          [
+            for (final transfer in ledger.settlements)
+              [
+                '${transfer.fromFund ? labels.text('pdf_fund_label') : _clean(transfer.from, max: 80)}'
+                    ' — '
+                    '${transfer.toFund ? labels.text('pdf_fund_label') : _clean(transfer.to, max: 80)}',
+                _amount(transfer.amountPaisa),
+              ],
+          ],
+        ),
+      ],
       _subtitle(labels.text('pdf_expenses')),
       if (data.expenses.isEmpty)
         _empty()
@@ -760,7 +950,7 @@ class _TourPdfWriter {
                 labels.date(expense.date),
                 _clean(expense.title, max: 120),
                 _categoryLabel(expense.category),
-                _amount(expense.amountPaisa),
+                _expenseAmount(expense),
                 _clean(expense.paidByName, max: 80),
               ],
           ],
@@ -808,91 +998,66 @@ class _TourPdfWriter {
               ],
           ],
         ),
+      _subtitle(labels.text('pdf_money_settlements')),
+      if (data.settlements.isEmpty)
+        _empty()
+      else
+        _table(
+          [
+            labels.text('pdf_col_date'),
+            labels.text('pdf_col_from_to'),
+            labels.text('pdf_col_amount'),
+            labels.text('pdf_col_provider'),
+            labels.text('pdf_col_status'),
+          ],
+          [
+            for (final settlement in data.settlements)
+              [
+                labels.date(settlement.date),
+                '${_clean(settlement.fromMemberName, max: 80)} — '
+                    '${_clean(settlement.toMemberName, max: 80)}',
+                _amount(settlement.creditedPaisa),
+                _providerLabel(settlement.mfsInfo.provider),
+                _settlementStatusLabel(settlement),
+              ],
+          ],
+        ),
       pw.SizedBox(height: 16),
     ];
   }
 
-  String _categoryLabel(String raw) {
-    final clean = raw.trim().toLowerCase();
-    switch (clean) {
-      case 'food':
-        return labels.text('fund_cat_food');
-      case 'transport':
-        return labels.text('fund_cat_transport');
-      case 'hotel':
-        return labels.text('fund_cat_hotel');
-      case 'tickets':
-      case 'ticket':
-        return labels.text('fund_cat_tickets');
-      case 'guide':
-        return labels.text('fund_cat_guide');
-      case 'activities':
-      case 'activity':
-        return labels.text('fund_cat_activities');
-      case 'shopping':
-        return labels.text('fund_cat_shopping');
-      case 'medical':
-      case 'medicine':
-      case 'medicines':
-        return labels.text('fund_cat_medical');
-      case 'tips':
-      case 'tip':
-        return labels.text('fund_cat_tips');
-      case 'groceries':
-      case 'grocery':
-        return labels.text('fund_cat_groceries');
-      case 'utilities':
-      case 'utility':
-        return labels.text('fund_cat_utilities');
-      case 'rent':
-        return labels.text('fund_cat_rent');
-      case 'school':
-        return labels.text('fund_cat_school');
-      case 'dining':
-        return labels.text('fund_cat_dining');
-      case 'gifts':
-      case 'gift':
-        return labels.text('fund_cat_gifts');
-      case 'others':
-      case 'other':
-        return labels.text('fund_cat_others');
-      case 'security':
-        return labels.text('fund_cat_security');
-      case 'cleaning':
-        return labels.text('fund_cat_cleaning');
-      case 'repairs':
-        return labels.text('fund_cat_repairs');
-      case 'generator':
-        return labels.text('fund_cat_generator');
-      case 'lift':
-        return labels.text('fund_cat_lift');
-      default:
-        return _clean(raw, max: 60);
+  /// The amount of an expense, with the original amount when it was paid in another
+  /// currency.
+  String _expenseAmount(ExpenseItem expense) {
+    final currency = (expense.currency ?? '').trim().toUpperCase();
+    final original = expense.originalMinor;
+    if (currency.isEmpty || currency == 'BDT' || original == null) {
+      return _amount(expense.amountPaisa);
     }
+    final majorUnits = (original / 100).toStringAsFixed(2);
+    return '${_amount(expense.amountPaisa)} '
+        '${labels.text('pdf_original_amount', args: {
+          'amount': labels.number('$currency $majorUnits'),
+        })}';
   }
 
-  (String title, String category) _formatChecklistItem(ChecklistItem item) {
-    String title = item.title;
-    String category = item.category;
+  String _providerLabel(MfsProvider provider) => switch (provider) {
+        MfsProvider.cash => labels.text('pdf_provider_cash'),
+        MfsProvider.bankTransfer => labels.text('pdf_provider_bank'),
+        MfsProvider.bkash => 'bKash',
+        MfsProvider.nagad => 'Nagad',
+        MfsProvider.rocket => 'Rocket',
+        MfsProvider.upay => 'Upay',
+      };
 
-    if (item.id.startsWith('default_')) {
-      final index = int.tryParse(item.id.substring(8));
-      if (index != null && index >= 0 && index < checklistDefaultItems.length) {
-        final def = checklistDefaultItems[index];
-        title = labels.text(def.title);
-        category = labels.text(def.category);
-      }
-    } else {
-      if (title.startsWith('check_item_')) {
-        title = labels.text(title);
-      }
-      if (category.startsWith('check_cat_')) {
-        category = labels.text(category);
-      } else if (category == 'Others' || category.isEmpty) {
-        category = labels.text('check_cat_custom');
-      }
-    }
-    return (_clean(title, max: 160), _clean(category, max: 60));
+  String _settlementStatusLabel(SettlementRecord settlement) {
+    if (settlement.isVerified) return labels.text('fund_mfs_verified');
+    return switch (settlement.mfsInfo.status) {
+      MfsVerificationStatus.disputed => labels.text('fund_mfs_disputed'),
+      MfsVerificationStatus.unverified ||
+      MfsVerificationStatus.verified =>
+        labels.text('fund_mfs_unverified'),
+    };
   }
 
   List<pw.Widget> _checklist() {
@@ -926,6 +1091,30 @@ class _TourPdfWriter {
         ),
       pw.SizedBox(height: 16),
     ];
+  }
+
+  (String title, String category) _formatChecklistItem(ChecklistItem item) {
+    String title = item.title;
+    String category = item.category;
+
+    if (item.id.startsWith('default_')) {
+      final index = int.tryParse(item.id.substring(8));
+      if (index != null && index >= 0 && index < checklistDefaultItems.length) {
+        final def = checklistDefaultItems[index];
+        title = labels.text(def.title);
+        category = labels.text(def.category);
+      }
+    } else {
+      if (title.startsWith('check_item_')) {
+        title = labels.text(title);
+      }
+      if (category.startsWith('check_cat_')) {
+        category = labels.text(category);
+      } else if (category == 'Others' || category.isEmpty) {
+        category = labels.text('check_cat_custom');
+      }
+    }
+    return (_clean(title, max: 160), _clean(category, max: 60));
   }
 
   List<pw.Widget> _transport() {
@@ -1019,35 +1208,163 @@ class _TourPdfWriter {
     ];
   }
 
-  /// Alerts only: when, who and whether it was closed. Locations are left out.
-  List<pw.Widget> _safety() {
+  /// A family's dates: the next day each falls on, and its note.
+  List<pw.Widget> _familyDates() {
     return [
       ..._heading(
-        labels.text('pdf_section_safety'),
-        count: data.safetyAlerts.length,
+        labels.text('pdf_section_family_dates'),
+        count: data.familyDates.length,
       ),
-      if (data.safetyAlerts.isEmpty)
+      if (data.familyDates.isEmpty)
         _empty()
       else
         _table(
           [
-            labels.text('pdf_col_when'),
-            labels.text('pdf_col_who'),
-            labels.text('pdf_col_status'),
+            labels.text('pdf_col_name'),
+            labels.text('pdf_col_date'),
+            labels.text('pdf_col_detail'),
           ],
           [
-            for (final alert in data.safetyAlerts)
+            for (final date in data.familyDates)
               [
-                alert.createdAt == null
-                    ? ''
-                    : labels.dateTime(alert.createdAt!),
-                _clean(alert.senderName, max: 80),
-                alert.resolved
-                    ? labels.text('pdf_resolved')
-                    : labels.text('pdf_open_alert'),
+                '${labels.text(recordFamilyDateKindKey(date.kind))} · '
+                    '${_clean(date.title, max: 120)}',
+                _familyDay(date.nextOn),
+                _clean(date.note, max: 300),
               ],
           ],
         ),
+      pw.SizedBox(height: 16),
+    ];
+  }
+
+  String _familyDay(String stored) {
+    final day = DateTime.tryParse(stored);
+    return day == null ? _clean(stored, max: 20) : labels.date(day);
+  }
+
+  List<pw.Widget> _dependents() {
+    return [
+      ..._heading(
+        labels.text('pdf_section_dependents'),
+        count: data.dependents.length,
+      ),
+      if (data.dependents.isEmpty)
+        _empty()
+      else
+        _table(
+          [
+            labels.text('pdf_col_name'),
+            labels.text('pdf_col_relation'),
+            labels.text('pdf_col_status'),
+          ],
+          [
+            for (final dependent in data.dependents)
+              [
+                _clean(dependent.name, max: 80),
+                _clean(dependent.relation, max: 60),
+                labels.text(
+                  dependent.countedInFamily
+                      ? 'pdf_dependent_counted'
+                      : 'pdf_dependent_not_counted',
+                ),
+              ],
+          ],
+        ),
+      pw.SizedBox(height: 16),
+    ];
+  }
+
+  /// The family's shared list: each item, whether it is to buy or to do, whether it is done,
+  /// and by whom (or for whom).
+  List<pw.Widget> _sharedList() {
+    return [
+      ..._heading(
+        labels.text('pdf_section_shared_list'),
+        count: data.familyTasks.length,
+      ),
+      if (data.familyTasks.isEmpty)
+        _empty()
+      else
+        _table(
+          [
+            labels.text('pdf_col_name'),
+            labels.text('pdf_col_category'),
+            labels.text('pdf_col_status'),
+            labels.text('pdf_col_who'),
+          ],
+          [
+            for (final task in data.familyTasks)
+              [
+                _clean(task.title, max: 160),
+                labels.text(recordFamilyTaskKindKey(task.kind)),
+                task.done ? labels.text('pdf_done') : labels.text('pdf_open'),
+                task.done
+                    ? _memberName(task.doneByEmail)
+                    : _memberName(task.assigneeEmail),
+              ],
+          ],
+        ),
+      pw.SizedBox(height: 16),
+    ];
+  }
+
+  /// A society's or committee's requests, with the admin's note for each.
+  List<pw.Widget> _requests() {
+    return [
+      ..._heading(
+        labels.text('pdf_section_requests'),
+        count: data.serviceRequests.length,
+      ),
+      if (data.serviceRequests.isEmpty)
+        _empty()
+      else
+        _table(
+          [
+            labels.text('pdf_col_name'),
+            labels.text('pdf_col_category'),
+            labels.text('pdf_col_status'),
+            labels.text('pdf_col_who'),
+            labels.text('pdf_col_detail'),
+          ],
+          [
+            for (final request in data.serviceRequests)
+              [
+                '${_clean(request.title, max: 160)}'
+                    '${request.details.trim().isEmpty ? '' : '\n${_clean(request.details, max: 300)}'}',
+                labels.text(recordRequestCategoryKey(request.category)),
+                labels.text(recordRequestStatusKey(request.status)),
+                request.createdAt == null
+                    ? _clean(request.createdByName, max: 80)
+                    : '${_clean(request.createdByName, max: 80)} · '
+                        '${labels.date(request.createdAt!)}',
+                _clean(request.adminNote, max: 300),
+              ],
+          ],
+        ),
+      pw.SizedBox(height: 16),
+    ];
+  }
+
+  /// SOS alerts as counts only: how many were raised and how many resolved. The record
+  /// never names who raised an alert or when.
+  List<pw.Widget> _safety() {
+    final counts = recordSafetyCounts(data.safetyAlerts);
+    return [
+      ..._heading(
+        labels.text('pdf_section_safety'),
+        count: counts.raised,
+      ),
+      _para(
+        labels.text(
+          'pdf_sos_counts',
+          args: {
+            'raised': labels.number(counts.raised),
+            'resolved': labels.number(counts.resolved),
+          },
+        ),
+      ),
+      pw.SizedBox(height: 16),
     ];
   }
 
@@ -1065,7 +1382,6 @@ class _TourPdfWriter {
     final tags = [
       if (post.isPinned) labels.text('pdf_pinned'),
       if (post.isReel) labels.text('pdf_reel'),
-      if (post.isArchived) labels.text('pdf_archived'),
     ];
     final likes = post.hideLikeCount
         ? labels.text('pdf_hidden_likes')
@@ -1129,14 +1445,20 @@ class _TourPdfWriter {
     );
   }
 
+  /// The stories of the last 24 hours. The video pill is text only: the PDF fonts have no
+  /// play symbol.
   List<pw.Widget> _stories() {
     return [
       ..._heading(
         labels.text('pdf_section_stories'),
         count: data.stories.length,
       ),
-      if (data.stories.isEmpty) _empty(),
+      if (data.stories.isEmpty)
+        _empty()
+      else
+        _meta(labels.text('pdf_stories_24h')),
       for (final story in data.stories) ...[
+        pw.SizedBox(height: 8),
         pw.Row(
           children: [
             pw.Expanded(
@@ -1160,7 +1482,7 @@ class _TourPdfWriter {
               border: pw.Border.all(color: _line, width: 0.5),
             ),
             child: pw.Text(
-              '▶  ${labels.text('pdf_video')}',
+              labels.text('pdf_video'),
               style: _style(size: 9, bold: true, color: _green),
             ),
           ),

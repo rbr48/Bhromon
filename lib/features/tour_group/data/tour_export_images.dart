@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:pdf/widgets.dart' as pw;
 
+import '../domain/models/tour_export_data.dart';
+
 /// A picture ready for the PDF, with its size in pixels for the layout.
 class TourExportPhoto {
   const TourExportPhoto({
@@ -19,10 +21,10 @@ class TourExportPhoto {
   final int height;
 }
 
-/// Downloads, shrinks and caches the pictures the PDF shows. Each one goes in
-/// as a JPEG at most [maxWidth] pixels wide, which keeps a long trip's file a
-/// sensible size. A picture that cannot be fetched or read is skipped rather
-/// than failing the whole export.
+/// Downloads, shrinks and caches the pictures the PDF shows. Each one goes in as a JPEG at
+/// most [maxWidth] pixels wide, which keeps a long trip's file a sensible size. A picture
+/// that cannot be fetched or read is left out rather than failing the whole export; the
+/// count of those is [failedCount], and the PDF says how many are missing.
 class TourExportImages {
   TourExportImages({http.Client? client}) : _client = client ?? http.Client();
 
@@ -33,23 +35,29 @@ class TourExportImages {
   final http.Client _client;
   final Map<String, Future<TourExportPhoto?>> _pending = {};
   final Map<String, TourExportPhoto> _ready = {};
+  int _failed = 0;
 
-  /// The picture at [url] once it has been [prefetch]ed, or null when it could
-  /// not be made.
+  /// The picture at [url] once it has been [prefetch]ed, or null when it could not be made.
   TourExportPhoto? ready(String url) => _ready[url];
+
+  /// How many distinct pictures could not be made.
+  int get failedCount => _failed;
 
   /// Releases the connections the downloads used. Call once the PDF is built.
   void close() => _client.close();
 
-  /// Fetches [urls], a few at a time, so the pictures are ready before the PDF
-  /// is laid out. [onProgress] reports how many of the unique urls are done.
+  /// Fetches [urls], a few at a time, so the pictures are ready before the PDF is laid out.
+  /// [onProgress] reports how many of the unique urls are done. Throws
+  /// [TourExportCancelled] between batches once [cancel] is set.
   Future<void> prefetch(
     Iterable<String> urls, {
     void Function(int done, int total)? onProgress,
+    TourExportCancel? cancel,
   }) async {
     final unique = urls.where((url) => url.isNotEmpty).toSet().toList();
     var done = 0;
     for (var i = 0; i < unique.length; i += _parallel) {
+      if (cancel?.isCancelled ?? false) throw const TourExportCancelled();
       final chunk = unique.skip(i).take(_parallel).toList();
       await Future.wait(chunk.map(_load));
       done += chunk.length;
@@ -60,7 +68,11 @@ class TourExportImages {
   Future<TourExportPhoto?> _load(String url) {
     return _pending.putIfAbsent(url, () async {
       final photo = await _fetch(url);
-      if (photo != null) _ready[url] = photo;
+      if (photo != null) {
+        _ready[url] = photo;
+      } else {
+        _failed++;
+      }
       return photo;
     });
   }

@@ -6,6 +6,7 @@ import 'package:bhromon/features/tour_group/data/tour_export_pdf.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_export_data.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'package:bhromon/features/tour_group/domain/services/tour_record_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -144,5 +145,86 @@ void main() {
     await images.prefetch([url]);
 
     expect(images.ready(url), isNull);
+    expect(images.failedCount, 1);
+  });
+
+  test('a household record builds with its own parts', () async {
+    final household = TourGroup(
+      id: 'h1',
+      name: 'Home',
+      ownerEmail: 'owner@example.com',
+      inviteCode: 'HOME1234',
+      startDate: DateTime(2026, 11, 1),
+      endDate: DateTime(2026, 11, 1),
+      createdAt: DateTime(2026, 10, 1),
+      kind: GroupKind.family,
+    );
+    final data = TourExportData(
+      group: household,
+      exportedAt: DateTime(2026, 10, 30),
+      members: const [],
+      notices: const [],
+      incomplete: const {TourRecordSection.money},
+    );
+
+    final bytes = await buildTourPdf(
+      data: data,
+      images: _offlineImages(),
+      labels: _labels(),
+    );
+
+    expect(_pageCount(bytes), greaterThan(2));
+  });
+
+  test('a samity record builds without any trip part', () async {
+    final samity = TourGroup(
+      id: 's1',
+      name: 'Savings',
+      ownerEmail: 'owner@example.com',
+      inviteCode: 'SAVE1234',
+      startDate: DateTime(2026, 11, 1),
+      endDate: DateTime(2026, 11, 1),
+      createdAt: DateTime(2026, 10, 1),
+      kind: GroupKind.family,
+      preset: TourGroup.samityPreset,
+    );
+    final data = TourExportData(
+      group: samity,
+      exportedAt: DateTime(2026, 10, 30),
+      members: const [],
+      notices: const [],
+    );
+
+    final bytes = await buildTourPdf(
+      data: data,
+      images: _offlineImages(),
+      labels: _labels(),
+    );
+
+    expect(_pageCount(bytes), greaterThan(2));
+  });
+
+  test('a cancelled export writes no file', () async {
+    final cancel = TourExportCancel()..cancel();
+
+    await expectLater(
+      buildTourPdf(
+        data: _data(),
+        images: _offlineImages(),
+        labels: _labels(),
+        cancel: cancel,
+      ),
+      throwsA(isA<TourExportCancelled>()),
+    );
+  });
+
+  test('a cancelled picture download stops before it fetches', () async {
+    final cancel = TourExportCancel()..cancel();
+    final images = _offlineImages();
+
+    await expectLater(
+      images.prefetch(const ['https://example.com/a.jpg'], cancel: cancel),
+      throwsA(isA<TourExportCancelled>()),
+    );
   });
 }
