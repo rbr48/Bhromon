@@ -282,7 +282,7 @@ The relationship is primarily that of debtor and creditor.
         subjectTitle: 'Laws and Practice of General Banking',
         subjectCode: 'LPGB',
         tourName: 'Sonali Bank JAIBB Circle',
-        chapters: [StudyChapter(id: 'c1', number: 1, title: 'First')],
+        chapters: const [StudyChapter(id: 'c1', number: 1, title: 'First')],
         materials: [material],
         solutionTexts: {
           'm1': '''
