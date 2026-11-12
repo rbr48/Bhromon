@@ -26,6 +26,7 @@ import '../../domain/services/study_daily_streak_rules.dart';
 import '../../domain/services/study_exam_simulator_rules.dart';
 import '../../domain/services/study_solution_rules.dart';
 import 'package:bhromon/core/media/media_access.dart';
+import '../../data/study_booklet_isolate.dart';
 import '../../data/study_offline_vault.dart';
 import '../../domain/models/study_offline_vault_models.dart';
 import '../widgets/study/branch_study_hall_sheet.dart';
@@ -936,10 +937,15 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
         return;
       }
 
-      const generator = StudyBookletPdfGenerator();
-      final pdfBytes = await generator.generateBookletPdf(
-        content,
-        isBengali: isBengali,
+      // The layout is seconds of work for one chapter, so it runs away from the screen's thread.
+      final fonts = await StudyBookletPdfGenerator.loadFonts();
+      final pdfBytes = await layoutBookletJob(
+        StudyBookletJob(
+          content: content,
+          isBengali: isBengali,
+          regularFont: fonts.regular,
+          boldFont: fonts.bold,
+        ),
         isCancelled: () => isCancelled,
         onProgress: (done, total) {
           detail.value = l10n.translate('study_booklet_progress', args: {

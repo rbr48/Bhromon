@@ -14,6 +14,12 @@ class OtData {
   final ByteData bytes;
   final int _len;
 
+  /// Coverage and ClassDef tables already read from these bytes, by offset. The bytes never
+  /// change, so each table is read once. Shaping asks for the same tables for every glyph it
+  /// checks, and reading a table again each time made shaping cost grow with the text.
+  final Map<int, Coverage> coverages = <int, Coverage>{};
+  final Map<int, ClassDef> classDefs = <int, ClassDef>{};
+
   bool has(int offset, int length) =>
       offset >= 0 && length >= 0 && offset + length <= _len;
 
@@ -37,8 +43,16 @@ class OtData {
 class Coverage {
   Coverage._(this._single, this._ranges);
 
-  /// Parses the Coverage table at [offset]. Never throws.
+  /// The Coverage table at [offset], read once for each font. Never throws.
   factory Coverage.parse(OtData d, int offset) {
+    final cached = d.coverages[offset];
+    if (cached != null) return cached;
+    final table = _read(d, offset);
+    d.coverages[offset] = table;
+    return table;
+  }
+
+  static Coverage _read(OtData d, int offset) {
     switch (d.u16(offset)) {
       case 1:
         final count = d.u16(offset + 2);
@@ -123,8 +137,16 @@ class CovRange {
 class ClassDef {
   ClassDef._(this._startGlyph, this._values, this._ranges);
 
-  /// Parses the ClassDef at [offset]. An [offset] of 0 yields an all-zero table.
+  /// The ClassDef at [offset], read once for each font. An [offset] of 0 yields an all-zero table.
   factory ClassDef.parse(OtData d, int offset) {
+    final cached = d.classDefs[offset];
+    if (cached != null) return cached;
+    final table = _read(d, offset);
+    d.classDefs[offset] = table;
+    return table;
+  }
+
+  static ClassDef _read(OtData d, int offset) {
     if (offset == 0) return ClassDef._(0, const [], const []);
     switch (d.u16(offset)) {
       case 1:
