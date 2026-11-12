@@ -12,6 +12,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+import 'package:bhromon/features/chat/data/web_paste_listener.dart';
+import 'package:bhromon/features/chat/domain/pasted_files.dart';
+import 'package:bhromon/features/chat/presentation/pages/pasted_files_review_screen.dart';
+import 'package:bhromon/features/share_intake/domain/share_plan.dart';
+import 'package:bhromon/features/share_intake/domain/shared_file.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -2298,6 +2303,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       onVoiceSent: (path, duration) =>
           unawaited(_sendVoice(channel, path, duration)),
       onVoiceCancel: () => _update(() => _recordingVoice = false),
+      onPastedFiles: (files) => unawaited(_sharePasted(channel, files)),
     );
   }
 
@@ -2437,49 +2443,59 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
   }
 
-  Future<void> _post(TourChannel channel, String text) async {
+  /// Posts one message. Without [attachments] the composer's text and pending files are sent, and
+  /// the draft is cleared once they are saved. Files given here are sent as a message of their
+  /// own, with [text] as its caption, and the composer's text and pending files are left as they
+  /// are. Returns whether the message was sent.
+  Future<bool> _post(
+    TourChannel channel,
+    String text, {
+    List<PendingAttachment>? attachments,
+  }) async {
     final l10n = context.l10n;
     final draft = _draftFor(channel.id);
+    final fromComposer = attachments == null;
+    final items = attachments ?? List<PendingAttachment>.of(_pending);
     final uploads = <TourMediaUpload>[];
-    final attachments = <ChannelAttachment>[];
+    final sent = <ChannelAttachment>[];
     _update(() {
       _sending = true;
       _uploadProgress = 0;
       _uploadDone = 0;
-      _uploadTotal = _pending.length;
+      _uploadTotal = items.length;
     });
     try {
-      for (final p in _pending) {
-        final upload = await _repo.startAttachment(
-          widget.tourId,
-          p.file,
-          isVideo: p.isVideo,
-          isDocument: p.isDocument,
-        );
+      for (final p in items) {
+        final upload = p.isAudio
+            ? await _repo.startVoice(widget.tourId, p.file)
+            : await _repo.startAttachment(
+                widget.tourId,
+                p.file,
+                isVideo: p.isVideo,
+                isDocument: p.isDocument,
+              );
         uploads.add(upload);
-        _currentUpload = upload;
-        final progress =
-            upload.progress.listen((v) => _update(() => _uploadProgress = v));
-        final url = await upload.finish();
-        await progress.cancel();
-        attachments.add(ChannelAttachment(
-          url: url,
-          isVideo: p.isVideo,
-          isFile: p.isDocument,
-          fileName: p.isDocument ? p.file.name : null,
-          fileSizeBytes: p.isDocument ? p.fileSizeBytes : null,
-        ));
+        final url = await _finishUpload(upload);
+        sent.add(p.isAudio
+            ? ChannelAttachment(url: url, isAudio: true)
+            : ChannelAttachment(
+                url: url,
+                isVideo: p.isVideo,
+                isFile: p.isDocument,
+                fileName: p.isDocument ? p.file.name : null,
+                fileSizeBytes: p.isDocument ? p.fileSizeBytes : null,
+              ));
         _update(() => _uploadDone++);
       }
       final send = _repo.sendMessage(
         widget.tourId,
         channel.id,
         text: text,
-        attachments: attachments,
+        attachments: sent,
         replyTo: _replyTo,
         mentions: resolveMentions(text, _members),
       );
-      if (attachments.isEmpty) {
+      if (sent.isEmpty) {
         // A text message is written to the local cache at once, so the composer
         // is not held while the server acknowledges it. If the server rejects
         // the write, it is rolled back and the text goes back into the draft.
@@ -2492,25 +2508,94 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       } else {
         await send;
       }
-      if (draft.text.trim() == text) draft.clear();
-      _update(() {
-        _pending.clear();
-        _replyTo = null;
-      });
+      if (fromComposer) {
+        if (draft.text.trim() == text) draft.clear();
+        _update(() {
+          _pending.clear();
+          _replyTo = null;
+        });
+      } else {
+        _update(() => _replyTo = null);
+      }
       _stopTyping();
+      return true;
     } on TourUploadCancelled {
       await _discard(uploads);
       _snack(l10n.translate('chan_upload_cancelled'));
+      return false;
     } catch (e) {
       await _discard(uploads);
       _snack(l10n.translate('tour_message_send_failed', args: {'error': e}),
           error: true);
+      return false;
     } finally {
       _currentUpload = null;
       _update(() {
         _sending = false;
         _uploadTotal = 0;
       });
+    }
+  }
+
+  /// Waits for an upload to finish, showing its progress and letting Cancel stop it, and returns
+  /// the file's address.
+  Future<String> _finishUpload(TourMediaUpload upload) async {
+    _currentUpload = upload;
+    final progress =
+        upload.progress.listen((v) => _update(() => _uploadProgress = v));
+    try {
+      return await upload.finish();
+    } finally {
+      await progress.cancel();
+    }
+  }
+
+  /// Files pasted or inserted into the message box. The member reviews them first, as a messaging
+  /// app shows a picture before it is sent. The reviewed files go out as messages of their own,
+  /// the caption on the first, and the box keeps its text and pending files. The files' object
+  /// URLs are released at the end.
+  Future<void> _sharePasted(TourChannel channel, List<SharedFile> files) async {
+    final l10n = context.l10n;
+    try {
+      if (_editing != null) {
+        _snack(l10n.translate('paste_not_while_editing'), error: true);
+        return;
+      }
+      if (_sending) {
+        _snack(l10n.translate('paste_wait_for_send'), error: true);
+        return;
+      }
+      final plan = pastedFilesPlan(files);
+      if (plan.refused > 0) {
+        _snack(l10n.translate(
+          'chan_share_skipped_heading',
+          args: {'count': l10n.number(plan.refused)},
+        ));
+      }
+      if (plan.sendable.isEmpty || !mounted) return;
+      final review = await Navigator.of(context).push<PastedReview>(
+        MaterialPageRoute(
+          builder: (_) => PastedFilesReviewScreen(
+            files: plan.sendable,
+            allowCaption: true,
+            captionMaxLength: kChannelMessageMaxLength,
+          ),
+        ),
+      );
+      if (review == null || review.files.isEmpty || !mounted) return;
+      final batches = planChannelMessages(review.files);
+      for (var i = 0; i < batches.length; i++) {
+        final sent = await _post(
+          channel,
+          i == 0 ? review.caption : '',
+          attachments: [
+            for (final file in batches[i]) pendingAttachmentFor(file),
+          ],
+        );
+        if (!sent) return;
+      }
+    } finally {
+      releasePastedFiles(files);
     }
   }
 

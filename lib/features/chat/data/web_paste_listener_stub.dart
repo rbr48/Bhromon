@@ -8,3 +8,6 @@ void Function() attachWebPasteListener({
 }) {
   return () {};
 }
+
+/// Object URLs exist only on the web, so there is nothing to free here.
+void releasePastedFiles(List<SharedFile> files) {}
