@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:bangla_pdf/bangla_pdf.dart'
@@ -5,10 +6,12 @@ import 'package:bangla_pdf/bangla_pdf.dart'
 import 'package:bangla_pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
+import 'package:qr/qr.dart';
 
 import '../models/study_material_models.dart';
 import '../models/study_models.dart';
 import '../models/study_syllabus_models.dart';
+import 'invite_join_link.dart';
 import 'ppc_curve.dart';
 import 'ppc_pdf_figure.dart';
 import 'study_booklet_markdown.dart';
@@ -116,6 +119,15 @@ class StudyBookletCancelled implements Exception {
 /// 100% deterministic native PDF layout using [bangla_pdf] with zero external AI calls.
 class StudyBookletPdfGenerator {
   const StudyBookletPdfGenerator();
+
+  /// The green of the booklet's headings and rules.
+  static const _brandGreen = PdfColor(0.08, 0.25, 0.18);
+
+  /// How strong the watermark prints. Light enough that the text stays easy to read over it.
+  static const double watermarkOpacity = 0.08;
+
+  /// The quiet margin around a join QR code, in modules. A scanner needs it to find the edges.
+  static const int joinQrQuietModules = 4;
 
   /// Extracts questions and model solutions from chapters and materials into a [StudyBookletContent].
   static StudyBookletContent extractContent({
@@ -512,6 +524,120 @@ class StudyBookletPdfGenerator {
         titleAndName.contains('ব্যাংকার্স');
   }
 
+  /// The group's invite code as the booklet prints it: trimmed and in capitals, or null when the
+  /// group has none. Without a code the cover and the closing page carry no join QR code.
+  static String? joinCodeOf(StudyBookletContent content) {
+    final code = content.inviteCode?.trim().toUpperCase() ?? '';
+    return code.isEmpty ? null : code;
+  }
+
+  /// The group's name as the watermark prints it: one line. A longer name is cut to [maxLength]
+  /// characters, at its last word break when that falls in the second half, with an ellipsis.
+  static String watermarkGroupName(String tourName, {int maxLength = 40}) {
+    final name = tourName.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (name.length <= maxLength) return name;
+    final cut = name.substring(0, maxLength);
+    final space = cut.lastIndexOf(' ');
+    final head = space > maxLength ~/ 2 ? cut.substring(0, space) : cut;
+    return '$head…';
+  }
+
+  /// The QR matrix of a group's join link. It is the same code the app draws on screen (medium
+  /// error correction over [inviteJoinLink]), so a printed copy opens the same join page.
+  static QrImage inviteJoinQr(String code) => QrImage(
+        QrCode.fromData(
+          data: inviteJoinLink(code),
+          errorCorrectLevel: QrErrorCorrectLevel.M,
+        ),
+      );
+
+  /// The page of a booklet: A4 with [margin], and the watermark behind its content. The watermark
+  /// is the page's background, so it takes no room in the layout and changes no page count.
+  static pw.PageTheme _bookletPageTheme({
+    required pw.EdgeInsets margin,
+    required String groupName,
+  }) {
+    final name = watermarkGroupName(groupName);
+    return pw.PageTheme(
+      pageFormat: PdfPageFormat.a4,
+      margin: margin,
+      buildBackground: (pw.Context context) => _watermark(name),
+    );
+  }
+
+  /// The app's name over the group's, rotated 45 degrees and centred on the page's content, in
+  /// light grey at [watermarkOpacity].
+  static pw.Widget _watermark(String groupName) {
+    const ink = PdfColors.grey800;
+    return pw.Center(
+      child: pw.Opacity(
+        opacity: watermarkOpacity,
+        child: pw.Transform.rotateBox(
+          angle: math.pi / 4,
+          child: pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                'Bhromon',
+                style: const pw.TextStyle(
+                  fontSize: 64,
+                  fontWeight: pw.FontWeight.bold,
+                  color: ink,
+                ),
+              ),
+              if (groupName.isNotEmpty)
+                pw.Text(
+                  groupName,
+                  style: const pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                    color: ink,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A join QR code drawn as vector squares on a white box with a quiet margin, [side] points
+  /// square. Nothing is rasterised, so it prints sharp at any size.
+  static pw.Widget _joinQrBox(String code, {required double side}) {
+    final image = inviteJoinQr(code);
+    final modules = image.moduleCount;
+    final span = modules + 2 * joinQrQuietModules;
+    final cell = side / span;
+    return pw.Container(
+      width: side,
+      height: side,
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        border: pw.Border.all(color: _brandGreen, width: 1.2),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      child: pw.CustomPaint(
+        size: PdfPoint(side, side),
+        painter: (PdfGraphics canvas, PdfPoint size) {
+          canvas.setFillColor(PdfColors.black);
+          for (var row = 0; row < modules; row++) {
+            for (var col = 0; col < modules; col++) {
+              if (!image.isDark(row, col)) continue;
+              // Row 0 is the top of the code; the PDF's y axis points up from the box's bottom.
+              canvas.drawRect(
+                (col + joinQrQuietModules) * cell,
+                (span - row - joinQrQuietModules - 1) * cell,
+                cell,
+                cell,
+              );
+            }
+          }
+          canvas.fillPath();
+        },
+      ),
+    );
+  }
+
   /// Generates a duplex-printable A4 examination question bank & model solutions booklet.
   ///
   /// The chapters are laid out one at a time, with a pause after each, so the screen stays
@@ -534,12 +660,15 @@ class StudyBookletPdfGenerator {
     }
 
     final isBanking = isBankingContent(content);
+    final joinCode = joinCodeOf(content);
 
     // 1. Cover Page
     doc.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
+        pageTheme: _bookletPageTheme(
+          margin: const pw.EdgeInsets.all(36),
+          groupName: content.tourName,
+        ),
         build: (pw.Context context) {
           final institutionBadge = isBanking
               ? (isBengali
@@ -648,7 +777,33 @@ class StudyBookletPdfGenerator {
                   ],
                 ),
               ),
-              pw.Spacer(flex: 2),
+              pw.Spacer(flex: 1),
+
+              // The join QR code, for a scan
+              if (joinCode != null) ...[
+                pw.Text(
+                  isBengali
+                      ? 'স্ক্যান করে স্টাডি সার্কেলে যোগ দিন'
+                      : 'Scan to join the study circle',
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _brandGreen,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                _joinQrBox(joinCode, side: 4 * PdfPageFormat.cm),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  'app.bhromon.fun',
+                  style: const pw.TextStyle(
+                    fontSize: 9.5,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ],
+              pw.Spacer(flex: 1),
 
               // Footer Metadata
               pw.Divider(color: PdfColors.grey400),
@@ -685,8 +840,10 @@ class StudyBookletPdfGenerator {
       done++;
       doc.addPage(
         pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
+          pageTheme: _bookletPageTheme(
+            margin: const pw.EdgeInsets.all(32),
+            groupName: content.tourName,
+          ),
           header: (pw.Context ctx) {
             return pw.Container(
               margin: const pw.EdgeInsets.only(bottom: 12),
@@ -784,6 +941,110 @@ class StudyBookletPdfGenerator {
         ),
       );
     }
+
+    // 3. Closing page: the app's name, the group and the join code again, larger than on the cover.
+    doc.addPage(
+      pw.Page(
+        pageTheme: _bookletPageTheme(
+          margin: const pw.EdgeInsets.all(48),
+          groupName: content.tourName,
+        ),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Spacer(flex: 2),
+              pw.Text(
+                'Bhromon',
+                style: const pw.TextStyle(
+                  fontSize: 34,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _brandGreen,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                isBengali ? 'একসাথে পথচলা' : 'Walk Together',
+                style: const pw.TextStyle(
+                  fontSize: 13,
+                  color: PdfColors.grey700,
+                ),
+              ),
+              pw.SizedBox(height: 18),
+              pw.Container(width: 120, height: 2.5, color: _brandGreen),
+              if (content.tourName.trim().isNotEmpty) ...[
+                pw.SizedBox(height: 22),
+                pw.Text(
+                  content.tourName.trim(),
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _brandGreen,
+                  ),
+                ),
+              ],
+              if (joinCode != null) ...[
+                pw.SizedBox(height: 26),
+                pw.Text(
+                  isBengali
+                      ? 'স্ক্যান করে স্টাডি সার্কেলে যোগ দিন'
+                      : 'Scan to join the study circle',
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _brandGreen,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                _joinQrBox(joinCode, side: 5.5 * PdfPageFormat.cm),
+                pw.SizedBox(height: 12),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 6),
+                  decoration: pw.BoxDecoration(
+                    color: _brandGreen,
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
+                  child: pw.Text(
+                    'Invite Code: $joinCode',
+                    style: const pw.TextStyle(
+                      color: PdfColors.white,
+                      fontSize: 13,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  isBengali
+                      ? 'অথবা app.bhromon.fun-এ গিয়ে কোডটি লিখুন'
+                      : 'Or open app.bhromon.fun and enter the code',
+                  style: const pw.TextStyle(
+                    fontSize: 10.5,
+                    color: PdfColors.grey800,
+                  ),
+                ),
+              ],
+              pw.Spacer(flex: 3),
+              pw.Divider(color: PdfColors.grey400),
+              pw.SizedBox(height: 6),
+              pw.Text(
+                isBengali
+                    ? 'ভ্রমণ (Bhromon) অ্যাপ • ১০০% ফ্রি ও ওপেন সোর্স'
+                    : 'Bhromon app • 100% free and open source',
+                style: const pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.grey600,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
 
     onProgress?.call(total, total);
     await breathe();
