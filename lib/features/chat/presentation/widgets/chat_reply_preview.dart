@@ -5,6 +5,7 @@ import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:bhromon/core/utils/image_sizing.dart';
 
 /// Data model representing a message being replied to or quoted.
 class ReplyMessageInfo {
@@ -106,6 +107,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,
+                      cacheWidth: context.decodeWidth(40),
                       errorBuilder: (_, __, ___) =>
                           const Icon(Icons.broken_image_rounded, size: 18),
                     )
@@ -114,6 +116,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,
+                      memCacheWidth: context.decodeWidth(40),
                       placeholder: (context, _) =>
                           Container(color: context.chat.divider10),
                       errorWidget: (context, _, __) => Image.network(
@@ -121,6 +124,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
+                        cacheWidth: context.decodeWidth(40),
                         errorBuilder: (_, __, ___) =>
                             const Icon(Icons.broken_image_rounded, size: 18),
                       ),
@@ -262,6 +266,7 @@ class ChatQuotedBubble extends StatelessWidget {
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
+                        cacheWidth: context.decodeWidth(32),
                         errorBuilder: (_, __, ___) =>
                             const Icon(Icons.broken_image_rounded, size: 14),
                       )
@@ -270,6 +275,7 @@ class ChatQuotedBubble extends StatelessWidget {
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
+                        memCacheWidth: context.decodeWidth(32),
                         placeholder: (context, _) =>
                             Container(color: context.chat.divider10),
                         errorWidget: (context, _, __) => Image.network(
@@ -277,6 +283,7 @@ class ChatQuotedBubble extends StatelessWidget {
                           width: 32,
                           height: 32,
                           fit: BoxFit.cover,
+                          cacheWidth: context.decodeWidth(32),
                           errorBuilder: (_, __, ___) =>
                               const Icon(Icons.broken_image_rounded, size: 14),
                         ),

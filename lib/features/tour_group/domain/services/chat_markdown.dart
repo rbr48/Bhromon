@@ -701,6 +701,59 @@ List<ChatBlock> parseChatBlocks(String text) {
   return blocks;
 }
 
+/// Parsed messages, kept so a message is parsed once and not on every rebuild.
+///
+/// A message's text decides its blocks, so the text is the key. The entries used least
+/// recently go first, when there are more than [maxEntries] of them or their texts add up
+/// to more than [maxChars].
+class ChatBlockCache {
+  ChatBlockCache({this.maxEntries = 256, this.maxChars = 400000});
+
+  final int maxEntries;
+  final int maxChars;
+
+  // A map keeps the order its keys were added in, and a hit adds its key again, so the
+  // first key is the one used least recently.
+  final Map<String, List<ChatBlock>> _entries = <String, List<ChatBlock>>{};
+  int _chars = 0;
+
+  /// How many messages are held.
+  int get length => _entries.length;
+
+  /// The blocks of [text]. The list cannot be changed, because it is shared by every
+  /// widget that shows the same text.
+  List<ChatBlock> blocksOf(String text) {
+    final held = _entries.remove(text);
+    if (held != null) {
+      _entries[text] = held;
+      return held;
+    }
+    final blocks = List<ChatBlock>.unmodifiable(parseChatBlocks(text));
+    // A text larger than the whole budget is parsed each time and never held.
+    if (text.length > maxChars) return blocks;
+    _entries[text] = blocks;
+    _chars += text.length;
+    while (_entries.length > maxEntries || _chars > maxChars) {
+      final oldest = _entries.keys.first;
+      _entries.remove(oldest);
+      _chars -= oldest.length;
+    }
+    return blocks;
+  }
+
+  /// Forgets every message.
+  void clear() {
+    _entries.clear();
+    _chars = 0;
+  }
+}
+
+final ChatBlockCache _sharedBlocks = ChatBlockCache();
+
+/// The blocks of [text], parsed once and shared. A widget that draws a message calls this
+/// while it builds; [parseChatBlocks] parses the text again on every call.
+List<ChatBlock> chatBlocksOf(String text) => _sharedBlocks.blocksOf(text);
+
 class _Counter {
   int next = 0;
 }
