@@ -21,7 +21,6 @@ import '../../domain/services/study_material_rules.dart';
 import '../widgets/study/study_material_composer.dart';
 import 'markdown_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
-import 'study_graph_atlas_screen.dart';
 
 /// The materials of one book: notes, files, links and recordings the members filed. An admin approves
 /// the waiting ones and decides the reported ones. A report hides a material at once, from everyone but
@@ -92,14 +91,6 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
     });
   }
 
-  bool get _isPoeBook {
-    final title = widget.book.title.toLowerCase();
-    return widget.book.id == 'ah9qgOp1e7uA2qcV6a7B' ||
-        title.contains('economics') ||
-        title.contains('poe') ||
-        widget.book.title.contains('অর্থনীতি');
-  }
-
   @override
   void dispose() {
     _materialsSub?.cancel();
@@ -141,15 +132,6 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
           leading: GroupBackButton(tourId: widget.tourId),
           title: Text(l10n.translate('study_material_title')),
           actions: [
-            if (_isPoeBook)
-              IconButton(
-                tooltip: 'Dynamic SVG Graph Atlas (ডাইনামিক গ্রাফ)',
-                icon: const Icon(Icons.auto_graph_rounded),
-                onPressed: () => StudyGraphAtlasScreen.open(
-                  context,
-                  tourId: widget.tourId,
-                ),
-              ),
             if (_isAdmin)
               IconButton(
                 tooltip: l10n.translate('study_material_policy_title'),
@@ -173,7 +155,6 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                 children: [
-                  if (_isPoeBook) _buildAtlasBanner(context),
                   _chapterFilter(context),
                   if (!_isAdmin && _policy.onlyAdminsPost)
                     Padding(
@@ -234,116 +215,6 @@ class _StudyMaterialsScreenState extends State<StudyMaterialsScreen> {
                     ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildAtlasBanner(BuildContext context) {
-    final palette = context.forest;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            palette.accentText.withValues(alpha: 0.12),
-            palette.card,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: palette.accentText.withValues(alpha: 0.35),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => StudyGraphAtlasScreen.open(
-            context,
-            tourId: widget.tourId,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: palette.accentText.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.auto_graph_rounded,
-                    color: palette.accentText,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'Dynamic SVG Graph Atlas',
-                              style: TextStyle(
-                                color: palette.text,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.accentText,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              '95 Graphs',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'সকল ৮টি পরীক্ষার ডাইনামিক অর্থনীতি ভেক্টর গ্রাফ (PPC, IC, AC/MC)',
-                        style: TextStyle(
-                          color: palette.text70,
-                          fontSize: 11.5,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: palette.accentText,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
