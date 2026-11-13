@@ -35,12 +35,14 @@ class StudyPostDraft {
 
 /// Opens the editor for a post. [withLink] is true for a suggestion or a past paper, which can
 /// carry a title and a link. [paper] names the post a past paper, so its words are the paper's.
-/// [existing] is null for a new post. Returns what was saved, or null when cancelled.
+/// [chart] names a post that draws a chart: it has a title, and its text is the chart and what
+/// it shows. [existing] is null for a new post. Returns what was saved, or null when cancelled.
 Future<StudyPostDraft?> showStudyPostEditor(
   BuildContext context, {
   required bool withLink,
   StudyPost? existing,
   bool paper = false,
+  bool chart = false,
   String? tourId,
 }) {
   return showStudyModal<StudyPostDraft>(
@@ -49,6 +51,7 @@ Future<StudyPostDraft?> showStudyPostEditor(
       withLink: withLink,
       existing: existing,
       paper: paper,
+      chart: chart,
       tourId: tourId,
     ),
   );
@@ -60,6 +63,7 @@ class StudyPostEditor extends StatefulWidget {
     required this.withLink,
     this.existing,
     this.paper = false,
+    this.chart = false,
     this.tourId,
   });
 
@@ -68,6 +72,9 @@ class StudyPostEditor extends StatefulWidget {
 
   /// Whether the post is a past paper.
   final bool paper;
+
+  /// Whether the post draws a chart: it has a title, and its text is the chart.
+  final bool chart;
 
   /// The group the paper belongs to. A paper can be attached as a file only when it is known, since the file is
   /// stored in the group's study folder.
@@ -208,9 +215,13 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
         _tried && !_urlOk ? l10n.translate('study_post_url_invalid') : null;
     final titleKey = widget.paper
         ? (_isNew ? 'study_paper_add' : 'study_paper_edit_title')
-        : widget.withLink
-            ? (_isNew ? 'study_post_add_suggestion' : 'study_post_edit_title')
-            : (_isNew ? 'study_post_add_tip' : 'study_post_edit_title');
+        : widget.chart
+            ? (_isNew ? 'study_chart_add' : 'study_post_edit_title')
+            : widget.withLink
+                ? (_isNew
+                    ? 'study_post_add_suggestion'
+                    : 'study_post_edit_title')
+                : (_isNew ? 'study_post_add_tip' : 'study_post_edit_title');
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -228,7 +239,7 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              if (widget.withLink)
+              if (widget.withLink || widget.chart)
                 TextField(
                   controller: _title,
                   style: TextStyle(color: palette.text),
@@ -246,12 +257,22 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                 decoration: InputDecoration(
                   labelText: l10n.translate(widget.paper
                       ? 'study_paper_text_label'
-                      : widget.withLink
-                          ? 'study_post_text_label_suggestion'
-                          : 'study_post_text_label_tip'),
+                      : widget.chart
+                          ? 'study_chart_text_label'
+                          : widget.withLink
+                              ? 'study_post_text_label_suggestion'
+                              : 'study_post_text_label_tip'),
                   errorText: textError,
                 ),
               ),
+              if (widget.chart)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    l10n.translate('study_chart_hint'),
+                    style: TextStyle(color: palette.text54, fontSize: 12),
+                  ),
+                ),
               if (widget.withLink)
                 TextField(
                   controller: _url,

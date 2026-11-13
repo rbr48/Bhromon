@@ -290,14 +290,22 @@ void main() {
     test(
         'every module the app shows is one the group can turn on, past papers and assignments among them',
         () {
-      expect(StudyModuleKey.values, hasLength(12));
+      expect(StudyModuleKey.values, hasLength(13));
       expect(
         StudyModuleKey.values,
-        containsAll([StudyModuleKey.papers, StudyModuleKey.assignments]),
+        containsAll([
+          StudyModuleKey.papers,
+          StudyModuleKey.charts,
+          StudyModuleKey.assignments
+        ]),
       );
       expect(
           StudyModuleKey.fromName('assignments'), StudyModuleKey.assignments);
+      expect(StudyModuleKey.fromName('charts'), StudyModuleKey.charts);
       expect(StudyModuleKey.fromName('papers-old'), isNull);
+      // A chart is an ordinary post module: members post in it as they do in tips.
+      expect(StudyModuleKey.charts.hasPostPolicy, isTrue);
+      expect(StudyModuleKey.charts.isBookModule, isFalse);
     });
 
     test(

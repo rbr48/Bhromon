@@ -2851,6 +2851,11 @@ class TourTranslationKeys {
       'study_module_findings': 'Shared findings',
       'study_module_problems': 'Problem solving',
       'study_module_papers': 'Past papers',
+      'study_module_charts': 'Charts & graphs',
+      'study_chart_add': 'Add a chart',
+      'study_chart_text_label': 'Describe the chart',
+      'study_chart_hint':
+          'Draw a chart in an ```svg code block, or a production possibility curve in a ```chart:ppc block. The chart appears as a picture in the post.',
       'study_module_plan': 'Study plan',
       'study_module_glossary': 'Glossary',
       'study_module_assignments': 'Assignments',
@@ -6716,6 +6721,11 @@ class TourTranslationKeys {
       'study_module_findings': 'পর্যবেক্ষণ শেয়ার',
       'study_module_problems': 'সমস্যা সমাধান',
       'study_module_papers': 'আগের প্রশ্নপত্র',
+      'study_module_charts': 'চার্ট ও গ্রাফ',
+      'study_chart_add': 'চার্ট যোগ করুন',
+      'study_chart_text_label': 'চার্টের বিবরণ',
+      'study_chart_hint':
+          'চার্ট আঁকতে ```svg কোড ব্লকে লিখুন, আর উৎপাদন সম্ভাবনা রেখা ```chart:ppc ব্লকে। চার্টটি পোস্টে ছবি হয়ে দেখা যাবে।',
       'study_module_plan': 'পড়ার পরিকল্পনা',
       'study_module_glossary': 'শব্দকোষ',
       'study_module_assignments': 'অ্যাসাইনমেন্ট',

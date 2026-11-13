@@ -36,6 +36,9 @@ class ChatRichText extends StatefulWidget {
   final int collapseThreshold;
   final VoidCallback? onExpandFullScreen;
 
+  /// Whether a numeric column in a table gets a total. Study text turns it off.
+  final bool showColumnTotals;
+
   const ChatRichText({
     super.key,
     required this.text,
@@ -49,6 +52,7 @@ class ChatRichText extends StatefulWidget {
     this.collapsible = false,
     this.collapseThreshold = 1400,
     this.onExpandFullScreen,
+    this.showColumnTotals = true,
   });
 
   @override
@@ -309,6 +313,7 @@ class _ChatRichTextState extends State<ChatRichText> {
         title: widget.tableTitle,
         onPinNotice: widget.onPinNotice,
         onImportLedger: widget.onImportLedger,
+        showColumnTotals: widget.showColumnTotals,
       );
     } else if (block is ChatCodeBlock) {
       return ChatCodeBlockWidget(

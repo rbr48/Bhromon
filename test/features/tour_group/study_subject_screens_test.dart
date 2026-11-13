@@ -546,6 +546,28 @@ void main() {
       expect(find.text('Add a tip'), findsNothing);
     });
 
+    testWidgets('a chart is added with its own label and a title, and no link',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyModulePostsScreen(
+          tourId: 'T',
+          subject: _physics,
+          moduleKey: StudyModuleKey.charts,
+          settings: _on(StudyModuleKey.charts, 'Charts & graphs'),
+          repository: _FakeSubjectRepo(role: TourRole.admin),
+        ),
+      );
+      await tester.tap(find.text('Add a chart'));
+      await tester.pumpAndSettle();
+      // The editor names the chart, asks for its description, and shows how to draw it.
+      expect(find.text('Describe the chart'), findsOneWidget);
+      expect(find.textContaining('svg code block'), findsOneWidget);
+      expect(find.text('Add a tip'), findsNothing);
+      expect(find.text('Attach a file'), findsNothing);
+      expect(find.text('Add a past paper'), findsNothing);
+    });
+
     testWidgets('a past paper offers a file to attach, and a tip does not',
         (tester) async {
       await _pump(
