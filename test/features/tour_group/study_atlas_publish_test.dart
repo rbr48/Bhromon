@@ -59,7 +59,8 @@ void main() {
     postPolicy: StudyPostPolicy.members,
   );
 
-  Widget createWidget({required TourGroupRepository repo, List<StudyPost> posts = const []}) {
+  Widget createWidget(
+      {required TourGroupRepository repo, List<StudyPost> posts = const []}) {
     return MaterialApp(
       locale: const Locale('bn'),
       supportedLocales: const [Locale('en'), Locale('bn')],
@@ -79,13 +80,16 @@ void main() {
     );
   }
 
-  testWidgets('StudyModulePostsScreen shows Quick Atlas Banner for POE subject charts module', (tester) async {
+  testWidgets(
+      'StudyModulePostsScreen shows Quick Atlas Banner for POE subject charts module',
+      (tester) async {
     final repo = _MockTourRepo();
     await tester.pumpWidget(createWidget(repo: repo));
     await tester.pumpAndSettle();
 
     // Banner card exists
-    expect(find.text('ডাইনামিক ভেক্টর গ্রাফ অ্যাটলাস (৯৫টি চার্ট)'), findsOneWidget);
+    expect(find.text('ডাইনামিক ভেক্টর গ্রাফ অ্যাটলাস (৯৫টি চার্ট)'),
+        findsOneWidget);
     expect(find.text('ব্রাউজ করুন'), findsOneWidget);
     expect(find.text('অ্যাটলাস থেকে প্রকাশ'), findsOneWidget);
 
@@ -94,14 +98,18 @@ void main() {
     expect(find.byIcon(Icons.publish_rounded), findsOneWidget);
   });
 
-  testWidgets('StudyModulePostsScreen empty state displays Atlas banner with friendly guidance', (tester) async {
+  testWidgets(
+      'StudyModulePostsScreen empty state displays Atlas banner with friendly guidance',
+      (tester) async {
     final repo = _MockTourRepo(posts: []);
     await tester.pumpWidget(createWidget(repo: repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('ডাইনামিক ভেক্টর গ্রাফ অ্যাটলাস (৯৫টি চার্ট)'), findsOneWidget);
+    expect(find.text('ডাইনামিক ভেক্টর গ্রাফ অ্যাটলাস (৯৫টি চার্ট)'),
+        findsOneWidget);
     expect(
-      find.text('এখনো কোনো চার্ট প্রকাশিত হয়নি। উপরের বোতাম চেপে অ্যাটলাস থেকে চার্ট প্রকাশ করুন।'),
+      find.text(
+          'এখনো কোনো চার্ট প্রকাশিত হয়নি। উপরের বোতাম চেপে অ্যাটলাস থেকে চার্ট প্রকাশ করুন।'),
       findsOneWidget,
     );
   });
