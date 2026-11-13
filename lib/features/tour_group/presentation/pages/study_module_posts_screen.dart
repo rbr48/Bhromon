@@ -18,6 +18,8 @@ import '../widgets/study/study_post_editor.dart';
 import '../widgets/study/study_rich_text.dart';
 import 'markdown_viewer_screen.dart';
 import 'pdf_viewer_screen.dart';
+import 'study_graph_atlas_screen.dart';
+import '../widgets/study/study_atlas_publish_sheet.dart';
 import 'package:bhromon/core/theme/colors.dart';
 
 /// The posts in one module of a subject: exam tips, or suggestions with a link. Members add
@@ -65,6 +67,13 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
 
   /// A chart carries a title, and its text draws the chart.
   bool get _chart => widget.moduleKey == StudyModuleKey.charts;
+
+  bool get _isPoeSubject =>
+      widget.subject.bookId == 'ah9qgOp1e7uA2qcV6a7B' ||
+      widget.subject.code == '103' ||
+      widget.subject.title.toLowerCase().contains('economics') ||
+      widget.subject.title.toLowerCase().contains('poe') ||
+      widget.subject.title.contains('অর্থনীতি');
 
   @override
   void initState() {
@@ -279,6 +288,29 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
           foregroundColor: palette.text,
           iconTheme: IconThemeData(color: palette.text),
           elevation: 0,
+          actions: [
+            if (_chart && _isPoeSubject) ...[
+              IconButton(
+                tooltip: 'ব্রাউজ অ্যাটলাস (Explore Atlas)',
+                icon: const Icon(Icons.auto_graph_rounded),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const StudyGraphAtlasScreen(),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'অ্যাটলাস থেকে প্রকাশ (Publish from Atlas)',
+                icon: const Icon(Icons.publish_rounded),
+                onPressed: () => StudyAtlasPublishSheet.showPublisher(
+                  context,
+                  tourId: widget.tourId,
+                  subjectId: widget.subject.id,
+                  repository: _repository,
+                ),
+              ),
+            ],
+          ],
         ),
         floatingActionButton: canPost
             ? FloatingActionButton.extended(
@@ -311,6 +343,20 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
               isAdmin: _isAdmin,
             ));
             if (posts.isEmpty) {
+              if (_chart && _isPoeSubject) {
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                  children: [
+                    _atlasBannerCard(),
+                    const SizedBox(height: 16),
+                    const EmptyState(
+                      icon: Icons.auto_graph_outlined,
+                      message:
+                          'এখনো কোনো চার্ট প্রকাশিত হয়নি। উপরের বোতাম চেপে অ্যাটলাস থেকে চার্ট প্রকাশ করুন।',
+                    ),
+                  ],
+                );
+              }
               return EmptyState(
                 icon: Icons.sticky_note_2_outlined,
                 message: l10n.translate('study_post_empty'),
@@ -318,9 +364,109 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
             }
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              children: [for (final post in posts) _postCard(post)],
+              children: [
+                if (_chart && _isPoeSubject) _atlasBannerCard(),
+                for (final post in posts) _postCard(post),
+              ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _atlasBannerCard() {
+    final palette = context.forest;
+    return Card(
+      color: palette.feedRaised,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: palette.accentText.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: palette.accentText.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.auto_graph_rounded,
+                    color: palette.accentText,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ডাইনামিক ভেক্টর গ্রাফ অ্যাটলাস (৯৫টি চার্ট)',
+                        style: TextStyle(
+                          color: palette.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '৯৬তম থেকে ৮ম BPE পর্যন্ত সকল পরীক্ষার সম্পূর্ণ ভেক্টর ডায়াগ্রাম',
+                        style: TextStyle(
+                          color: palette.text54,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const StudyGraphAtlasScreen(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.explore_outlined, size: 16),
+                    label: const Text('ব্রাউজ করুন'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: palette.text,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => StudyAtlasPublishSheet.showPublisher(
+                      context,
+                      tourId: widget.tourId,
+                      subjectId: widget.subject.id,
+                      repository: _repository,
+                    ),
+                    icon: const Icon(Icons.upload_file_rounded, size: 16),
+                    label: const Text('অ্যাটলাস থেকে প্রকাশ'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.darkGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

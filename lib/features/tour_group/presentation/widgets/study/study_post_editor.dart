@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'study_modal.dart';
+import '../../../../chat/presentation/widgets/chat_svg_widget.dart';
+import 'study_atlas_publish_sheet.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/forest_palette.dart';
@@ -265,7 +267,29 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                   errorText: textError,
                 ),
               ),
-              if (widget.chart)
+              if (widget.chart) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final item =
+                        await StudyAtlasPublishSheet.showPicker(context);
+                    if (item == null || !mounted) return;
+                    setState(() {
+                      if (_title.text.trim().isEmpty) {
+                        _title.text = '${item.title} (${item.examLabel})';
+                      }
+                      final sub = item.subtitle.trim();
+                      final subBlock = sub.isNotEmpty ? '> $sub\n\n' : '';
+                      final sanitized = ChatSvgWidget.sanitizeSvgXml(item.svg);
+                      _text.text = '*${item.examLabel} • ${item.language}*\n\n'
+                          '$subBlock'
+                          '```svg\n$sanitized\n```';
+                    });
+                  },
+                  icon: const Icon(Icons.auto_graph_rounded, size: 18),
+                  label: const Text(
+                      'অ্যাটলাস থেকে ইমপোর্ট করুন (Import from Atlas)'),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
@@ -273,6 +297,7 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                     style: TextStyle(color: palette.text54, fontSize: 12),
                   ),
                 ),
+              ],
               if (widget.withLink)
                 TextField(
                   controller: _url,
