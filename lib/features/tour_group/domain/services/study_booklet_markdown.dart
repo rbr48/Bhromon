@@ -10,6 +10,7 @@ import 'package:pdf/pdf.dart';
 
 import 'chat_markdown.dart';
 import 'ppc_pdf_figure.dart';
+import 'study_booklet_svg_text.dart';
 
 /// Most visual lines one block of solution text may take. A block has to fit on a page below the
 /// header and the footer. A block that does not is retried on each new page, and the layout gives
@@ -123,7 +124,7 @@ pw.Widget studyBookletSvgFigure(
       margin: const pw.EdgeInsets.symmetric(vertical: 8),
       alignment: pw.Alignment.center,
       child: pw.SvgImage(
-        svg: svg,
+        svg: studyBookletPdfSafeSvg(svg),
         width: width,
         height: height,
         fit: pw.BoxFit.contain,
