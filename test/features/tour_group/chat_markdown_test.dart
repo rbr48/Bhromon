@@ -313,5 +313,34 @@ And the next paragraph follows.
       expect(table.headers, hasLength(3));
       expect(table.rows, hasLength(1));
     });
+
+    test(
+        'parseChatBlocks auto-wraps bare LaTeX formulas in list items and paragraphs',
+        () {
+      const input =
+          '- \\text{LCR} = \\frac{\\text{HQLA}}{\\text{৩০ দিনের বহিঃপ্রবাহ}} \\times ১০০\\%';
+      final blocks = parseChatBlocks(input);
+      expect(blocks, hasLength(1));
+      expect(blocks[0], isA<ChatListBlock>());
+      final list = blocks[0] as ChatListBlock;
+      expect(list.items[0].spans.any((s) => s.math), isTrue);
+    });
+
+    test(
+        'parseChatBlocks converts <br> tags in table cells into clean newlines',
+        () {
+      const tableWithBr = '''
+| টাইপ | সূত্র |
+| :--- | :--- |
+| **আর্থিক সমষ্টি** | • M0 = C + R (ভল্ট ক্যাশ)<br>• M1 = COB + DD<br>• M2 = M1 + TD |
+''';
+      final blocks = parseChatBlocks(tableWithBr);
+      expect(blocks, hasLength(1));
+      expect(blocks[0], isA<ChatTableBlock>());
+      final table = blocks[0] as ChatTableBlock;
+      final cell = table.rows[0].cells[1];
+      expect(cell.plainText, contains('\n• M1 = COB + DD\n• M2 = M1 + TD'));
+      expect(cell.plainText, isNot(contains('<br>')));
+    });
   });
 }
