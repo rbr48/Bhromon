@@ -70,6 +70,23 @@ class CallAudioSession {
     }
   }
 
+  /// Back during a call, which does what Home does: a video call shrinks into
+  /// picture-in-picture, and any other call goes to the background. The call carries on
+  /// either way. Returns whether the phone took the request. Android only.
+  static Future<bool> minimizeCall() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      final done = await _channel.invokeMethod<bool>('minimizeCall');
+      return done ?? false;
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: no native handler: $e');
+      return false;
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: minimizeCall failed: ${e.message}');
+      return false;
+    }
+  }
+
   /// Puts the call's audio on the loudspeaker, or back on the default route, through
   /// the phone's own audio manager. The WebRTC plugin drops a speaker request without an
   /// error when its device list has no loudspeaker yet, so the phone answers whether the

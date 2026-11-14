@@ -41,6 +41,7 @@ class MainActivity: FlutterFragmentActivity() {
         // The largest file any destination takes (kMaxVideoBytes in media_rules.dart).
         private const val MAX_SHARE_COPY_BYTES = 100L * 1024 * 1024
         private const val SHARE_LOG = "ShareIntake"
+        private const val PIP_LOG = "CallPip"
     }
 
     private val CHANNEL = "com.bhromon.app/integrity"
@@ -195,7 +196,14 @@ class MainActivity: FlutterFragmentActivity() {
                 }
                 "setPipAllowed" -> {
                     pipAllowed = call.argument<Boolean>("allowed") ?: false
+                    applyPipParams()
                     result.success(null)
+                }
+                "minimizeCall" -> {
+                    // Back during a call does what Home does: a video call shrinks into
+                    // picture-in-picture, and any other call goes to the background. The
+                    // call itself carries on either way.
+                    result.success(minimizeCall())
                 }
                 "enterPip" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -404,14 +412,52 @@ class MainActivity: FlutterFragmentActivity() {
     /** A video call shrinks into a small window when the user leaves the app. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (!pipAllowed || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        Log.d(PIP_LOG, "left the app, picture-in-picture allowed: $pipAllowed")
+        enterCallPip()
+    }
+
+    /**
+     * The picture-in-picture settings of the call. On Android 12 and later the system shrinks
+     * a video call into the small window by itself when the user leaves the app, so that does
+     * not depend on the leave callback being delivered. Off for any other call.
+     */
+    private fun applyPipParams() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val params = PictureInPictureParams.Builder().setAspectRatio(Rational(9, 16))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            params.setAutoEnterEnabled(pipAllowed)
+        }
         try {
+            setPictureInPictureParams(params.build())
+        } catch (e: IllegalArgumentException) {
+            Log.w(PIP_LOG, "the picture-in-picture settings were refused", e)
+        }
+    }
+
+    /**
+     * Shrinks the call into picture-in-picture. False when the call does not allow it, or the
+     * system refuses it.
+     */
+    private fun enterCallPip(): Boolean {
+        if (!pipAllowed || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        if (isInPictureInPictureMode) return true
+        return try {
             enterPictureInPictureMode(
                 PictureInPictureParams.Builder().setAspectRatio(Rational(9, 16)).build()
             )
         } catch (e: Exception) {
-            // Not supported on this device, or not allowed right now.
+            Log.w(PIP_LOG, "picture-in-picture was refused", e)
+            false
         }
+    }
+
+    /**
+     * Back during a call: the same as Home. A call that may shrink does so, and any other call
+     * goes to the background. Returns whether the request was taken.
+     */
+    private fun minimizeCall(): Boolean {
+        if (enterCallPip()) return true
+        return moveTaskToBack(true)
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
