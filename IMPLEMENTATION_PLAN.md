@@ -1,42 +1,100 @@
-# Implementation Plan: Whole-Project Evaluation Improvements
+# Implementation Plan: JAIBB Theory Chapters Mapping & Past Papers Relocation
 
-## Context & Objectives
-Following the Whole-Project Evaluation of **Bhromon** (`v1.8.204+258` / `v1.8.205+259`), the user approved executing all 5 recommended architectural, CI, and maintenance workstreams:
-1. Review & merge PR #505 (`Fix exam simulator, official pack duplicates and member photo sync`).
-2. Evaluate & resolve Dependabot PR #341 (`maplibre_gl 0.26.2 -> 0.28.0`).
-3. Remove the 6 empty legacy feature skeletons under `lib/features/` and raise the CI LCOV line coverage regression floor from `25.5%` to `40.0%`.
-4. Modularize `media-server/main.py` by extracting media purge/reminder routes (`purge_routes.py`) and notification trigger routes (`notify_routes.py`) into dedicated FastAPI routers.
-5. Create cohesive sub-domain barrel entrypoints in `lib/features/tour_group/` (`study_circle/study_circle.dart` and `ledger/ledger.dart`) with unit test verification, bump version to `1.8.206+260`, and deploy the updated Flutter Web release.
+## 1. Context & Architectural Motivation
+In the current JAIBB study circle (`339f54482cec417b83ae`), the 6 book records (`study_books`) store 8 past examination diets (`96th BPE` through `8th BPE`) as their "chapters" (`study_books/{bookId}/chapters`). Consequently:
+- Opening the **Book Module** presents exam question papers rather than structured textbook / syllabus theory.
+- The dedicated **Past Exam Papers Module** (`StudyModuleKey.papers`) under each subject is currently empty (0 posts).
+- The rich master textbook theory (Chapters 2 to 10 of each subject's compendium) is trapped inside a monolithic 300KB text file in `study_materials`.
+
+### Goal & Separation of Concerns:
+1. **Book Module (`study_books/{bookId}/chapters`)**: Dedicated strictly to studying the **textbook & subject theory**, organized into genuine syllabus chapters (Chapters 1 to 10) populated with master theory, diagrams, and principles.
+2. **Past Exam Papers Module (`study_subjects/{subjectId}/posts` where `moduleKey == 'papers'`)**: Dedicated strictly to **examination solutions**, hosting all 8 BPE exams with both English and Bangla solutions, question matrices, and direct viewers.
 
 ---
 
-## Tasks & Milestones
+## 2. Subjects & Entities in Scope
 
-- [x] **Task 1: Review & Merge PR #505**
-  - Inspect all commits and diffs on PR #505.
-  - Verify green CI checks (`Dart Format`, `Analyze`, `Test`, `Build Web (release)`, `Build Android (debug APK)`).
-  - Post Antigravity peer review sign-off and sync merged `main`.
+| Subject | Code | Subject ID | Book ID | Master Theory File |
+| :--- | :---: | :---: | :---: | :--- |
+| **Monetary & Financial System (MAFS)** | 101 | `XSf1ru10XVLjMTIfCAWJ` | `r5TtVNekkfuwOLZAa1RC` | `jaibb_mafs_all_exams_master_glossary_bangla.md` |
+| **Basic Accounting & Business Analytics (BA)** | 102 | `5ApC2mvkAGaqykv6WbA4` | `41eTecc9pVGKDjw74hVw` | `JAIBB_Basic_Accounting_All_Exams_Master_Glossary_Bangla.md` |
+| **Principles of Economics (POE)** | 103 | `KCwssrcTFd7TunTZevOV` | `ah9qgOp1e7uA2qcV6a7B` | `jaibb_poe_all_exams_master_glossary_bangla.md` |
+| **Laws & Practice of General Banking (LPGB)**| 104 | `HJbR0L9Md3WoJgsc1rNk` | `QzzHcxueqg3vgAOYoUzv` | `jaibb_lpgb_all_exams_master_glossary_bangla.md` |
+| **Organization and Management (OM)** | 105 | `Hh8tHslvRVBPvHSS0YOq` | `5mpQ4NSo35E20KF0KwdD` | `jaibb_om_all_exams_master_glossary_bangla.md` |
+| **Business Communication in Financial Inst. (BCFI)** | 106 | `3IoY1KiEHsKyPhbZsvn4` | `8qB1g3HmZhGDUjeF7IqN` | `jaibb_bcfi_all_exams_master_glossary_bangla.md` |
 
-- [x] **Task 2: Evaluate & Resolve Dependabot PR #341 (`maplibre_gl 0.28.0`)**
-  - Inspect `maplibre_gl` usage across `lib/` and `web/index.html` plus PR #341 CI failure logs.
-  - Document incompatibility with Web MapLibre GL JS 4.x and Pigeon error contracts, and close PR #341 cleanly.
+---
 
-- [x] **Task 3: Clean Legacy Feature Skeletons & Raise CI Coverage Floor**
-  - Remove empty legacy directory trees (`feed`, `map`, `offline_vault`, `premium_guide`, `pro_tip`, `trip_log`) from `lib/features/`.
-  - Raise LCOV line coverage floor in `.github/workflows/flutter_ci.yml` from `25.5%` to `40.0%`.
+## 3. Detailed Work Breakdown & Milestones
 
-- [x] **Task 4: Modularize `media-server/main.py` FastAPI Routers**
-  - Extract purge & ack-reminder endpoints into `media-server/purge_routes.py` (`purge_router`).
-  - Extract notification & admin broadcast endpoints into `media-server/notify_routes.py` (`notify_router`).
-  - Preserve dynamic attribute lookup on `main` for test monkeypatching compatibility and verify all 540 `pytest` tests pass.
+### Phase 1: Migration of Existing Past Paper Chapters to Subject Module
+- [x] **Task 1.1: Extract & Catalog Existing Past Paper Materials**
+  - Query all 96 existing past paper solution materials in `study_materials` (8 exams $\times$ 2 languages $\times$ 6 subjects).
+  - Map each exam's title, exam date, question breakdown, English URL, and Bangla URL.
+- [x] **Task 1.2: Populate `StudyPosts` under `study_subjects/{subjectId}/posts`**
+  - For each subject, create 8 curated `StudyPost` records with `moduleKey: 'papers'`, `shown: true`, and `pinned: true` for the latest exams.
+  - Set rich post text with examination topic highlights and provide direct interactive links to the full English and Bangla solutions.
+- [x] **Task 1.3: Update Material References in `study_materials`**
+  - Ensure materials are linked directly to `subjectId` and decouple them from `chapterId` so they belong to the subject's past papers repository.
+- [x] **Task 1.4: Purge Past Paper Chapter Records from `study_books/{bookId}/chapters`**
+  - Safely remove the 48 legacy past paper chapters from the 6 books to prepare clean slate for genuine syllabus chapters.
 
-- [x] **Task 5: Extract Cohesive `tour_group` Sub-Domain Entrypoints**
-  - Create `lib/features/tour_group/study_circle/study_circle.dart` barrel module.
-  - Create `lib/features/tour_group/ledger/ledger.dart` barrel module.
-  - Add unit test `test/features/tour_group/subdomains_barrel_test.dart`.
-  - Increment `pubspec.yaml` version to `1.8.206+260`.
+### Phase 2: Syllabus Theory Chapter Ingestion into Books
+- [x] **Task 2.1: Decompose Master Compendiums into Structured Chapters**
+  - Parse Chapters 1 through 10 of each master markdown file.
+  - Extract for each chapter: `number`, `title`, `guide` (learning outcomes), and `readingContent` (complete formatted markdown theory with formulas and tables).
+- [x] **Task 2.2: Batch Ingest Syllabus Chapters into `study_books/{bookId}/chapters`**
+  - **MAFS**: 12 Chapters (Concepts of Money, Monetary Theories, Money Aggregates M0-M3, Central Banking & IRC, Financial System & ALM, Basel III & Supervision, Money & Capital Markets, Islamic Finance, Payment Systems & BOP, Master Problems Playbook, Master Glossary).
+  - **BA**: 5 Core Chapters/Modules (Exam Appearance Matrix, Double-Entry & Accounting Cycle, Master Formulas & 18 Financial Ratios, Comparative Part-D Matrix, Banking & Shariah Accounting with IFRS 9).
+  - **POE**: 12 Chapters (Scarcity & PPC, Utility & IC Curves, Demand/Supply & Elasticity, Production & Cost Curves, Market Structures, Market Failure & Externalities, National Income & Keynesian Economics, Inflation & Unemployment, Fiscal Policy & BOP, Master Atlas, Master Glossary).
+  - **LPGB**: 12 Chapters (Banker-Customer Relationship, Account Operations, Negotiable Instruments & Clearing, Securities & Charges, Loan Recovery & Artha Rin Adalat, Foreign Trade & LCs, AML/CFT & BFIU Guidelines, Banking Regulation, Customer Rights, Acts & Precedents, Master Glossary).
+  - **OM**: 12 Chapters (Management Principles & Fayol's 14, Organizational Environment, SMART Goals & MBO, Organizational Design & Span of Control, HRM & Staffing, QWL & Stress Management, 7 Motivation Theories, Leadership & Power, BPM & Change Management, Case Playbook, Master Glossary).
+  - **BCFI**: 8 Chapters (Communication Process & 7 Cs, Organizational Flows & Non-Verbal, Ethics & Etiquette, Active Listening & Public Speaking, Business Letters & AIDA, Official Memos & Circulars, Reports & Proposals, Digital Banking Communication, Meetings & Minutes).
+- [x] **Task 2.3: Ingest Chapter Reading Materials into `study_materials`**
+  - Create dedicated chapter reading material documents with `kind: 'note'` and `chapterId: chapter.id` so students can view individual chapter notes with 1-click in the app.
 
-- [x] **Task 6: Verification, Web Release Deployment & Pull Request**
-  - Run `dart format`, `dart analyze`, `tool/check_dart_io.sh`, `tool/check_empty_catches.sh`, and unit tests.
-  - Build Flutter Web release (`flutter build web --release`) and deploy to Firebase Hosting (`firebase deploy --only hosting`).
-  - Commit changes on `chore/project-evaluation-improvements`, push branch, and open a GitHub Pull Request to `main`.
+### Phase 3: Frontend UX Verification & Testing
+- [x] **Task 3.1: Verify Book Chapters Screen (`StudyBookChaptersScreen`)**
+  - Verify that opening any of the 6 books now shows clean, pedagogical textbook chapters (1 to 10) instead of exam diets.
+  - Verify chapter reading progress, offline vault caching, and markdown rendering.
+- [x] **Task 3.2: Verify Past Exam Papers Screen (`StudyModulePostsScreen`)**
+  - Verify that opening "Past Exam Papers" (বিগত পরীক্ষার প্রশ্নপত্র ও সমাধান) displays all 8 exams with bilingual access.
+  - Verify that tapping "Open" launches the English and Bangla solution markdown viewers seamlessly.
+- [x] **Task 3.3: Automated Regression & Unit Tests**
+  - Run `flutter test` across all study module unit tests.
+  - Verify `StudyBankingMasterCatalog` compatibility.
+
+### Phase 4: Glossary Search & Markdown Rich Rendering
+- [x] **Task 4.1: Rich Markdown Rendering in Glossary Cards**
+  - Replace raw `Text` with `StudyRichText` in `StudyGlossaryScreen._termCard` for both `term.term` and `term.definition`.
+  - Enhance `_span` in `ChatRichText` for `span.code` with proper Bengali font fallback (`fontFamilyFallback`) and adaptive light/dark theme background colors.
+- [x] **Task 4.2: Full Glossary Search & Filtering**
+  - Add interactive search in AppBar and persistent search bar at the top of the glossary list.
+  - Real-time case-insensitive filtering across terms (English/Bangla), definitions, and acronyms.
+  - Add chapter filter chips for 1-tap filtering by syllabus chapter.
+  - Add result count indicator and clean empty state for searches with no match.
+  - Add English and Bengali localization strings for glossary search.
+- [x] **Task 4.3: Automated Tests & Verification**
+  - Add unit and widget tests for glossary search, filtering, and rich text rendering in `test/features/tour_group/`.
+  - Run `flutter test` and `flutter analyze` to ensure 0 errors and clean green state.
+
+---
+
+## 4. Verification Commands & Acceptance Criteria
+1. **Firestore Verification Command**:
+   ```bash
+   python scratch/verify_theory_and_past_papers.py
+   ```
+   *Acceptance Criteria*:
+   - Each of the 6 subjects has exactly 8 `StudyPost` entries in `study_subjects/{id}/posts` under `moduleKey: 'papers'`.
+   - Each of the 6 books has 5–10 genuine syllabus chapters in `study_books/{id}/chapters`.
+   - Zero past paper chapters remaining in `study_books`.
+2. **Flutter Code & Unit Tests**:
+   ```bash
+   flutter test test/features/tour_group/
+   flutter test test/features/chat/
+   ```
+   *Acceptance Criteria*: All tests pass with zero regressions.
+3. **End-to-End Visual Verification**:
+   - Web: Verified on `app.bhromon.fun` / local emulator.
+   - Mobile: Verified on Android build.
