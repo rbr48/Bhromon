@@ -387,7 +387,8 @@ describe('study subjects, modules and posts', () => {
           newPost(people.member.email, { title: 'Repo Rate vs Bank Rate', text: 'Comparison table and explanation' })
         )
       );
-      await assertSucceeds(mark('member', 'differences', 'diff1'));
+      await assertSucceeds(mark('other', 'differences', 'diff1'));
+      await assertFails(mark('other', 'differences', 'diff1'));
       await assertFails(mark('member', 'differences', 'diff1'));
     });
 
