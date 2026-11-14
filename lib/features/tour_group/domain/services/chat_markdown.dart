@@ -314,6 +314,10 @@ String _restoreCollapsedStructure(String s) {
 
 /// Parses [text] into block-level elements (tables, code blocks, lists, headings, dividers, paragraphs).
 String _autoWrapRawLatex(String s) {
+  s = s.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+  if (s.contains('\n')) {
+    return s.split('\n').map(_autoWrapRawLatex).join('\n');
+  }
   if (s.contains(r'$')) return s;
   final trimmed = s.trim();
   if (trimmed.isEmpty) return s;
@@ -844,6 +848,7 @@ const int _schemeLength = 8; // "https://"
 final RegExp _wordChar = RegExp(r'[\p{L}\p{N}_]', unicode: true);
 
 List<ChatSpan> _inline(String s, _Style style, _Counter counter) {
+  s = s.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
   final out = <ChatSpan>[];
   final plain = StringBuffer();
 
