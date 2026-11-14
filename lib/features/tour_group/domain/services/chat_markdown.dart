@@ -318,13 +318,6 @@ String _autoWrapRawLatex(String s) {
   final trimmed = s.trim();
   if (trimmed.isEmpty) return s;
 
-  // Complex Indic / Bengali script must not be auto-wrapped into LaTeX math!
-  // flutter_math_fork lacks HarfBuzz font shaping, which renders broken ligatures
-  // and Unicode dotted circles (U+25CC).
-  if (RegExp(r'[\u0980-\u09FF]').hasMatch(trimmed)) {
-    return s;
-  }
-
   const indicators = [
     r'\frac',
     r'\text{',
@@ -332,6 +325,7 @@ String _autoWrapRawLatex(String s) {
     r'\sqrt',
     r'\sum',
     r'\mathbf{',
+    r'\mathrm{',
     r'\implies',
     r'\pm',
     r'\div',
@@ -345,12 +339,21 @@ String _autoWrapRawLatex(String s) {
   if (!hasIndicator) return s;
 
   if (trimmed.startsWith(r'\text{') ||
+      trimmed.startsWith(r'\\text{') ||
       trimmed.startsWith(r'\frac') ||
+      trimmed.startsWith(r'\\frac') ||
       trimmed.startsWith(r'\sqrt') ||
       trimmed.startsWith(r'\mathbf{') ||
+      trimmed.startsWith(r'\mathrm{') ||
       trimmed.startsWith(r'\left') ||
       trimmed.contains(r'\frac') ||
-      trimmed.contains(r'\times')) {
+      trimmed.contains(r'\\frac') ||
+      trimmed.contains(r'\times') ||
+      trimmed.contains(r'\\times') ||
+      trimmed.contains(r'\ge') ||
+      trimmed.contains(r'\\ge') ||
+      trimmed.contains(r'\le') ||
+      trimmed.contains(r'\\le')) {
     return '\$$trimmed\$';
   }
   return s;
@@ -629,7 +632,7 @@ List<ChatBlock> parseChatBlocks(String text) {
           quoteRawLines.add(body);
           quoteLines.add(ChatLine(
             quote: true,
-            spans: _inline(body, const _Style(), counter),
+            spans: _inline(_autoWrapRawLatex(body), const _Style(), counter),
           ));
           i++;
         } else {
@@ -662,7 +665,7 @@ List<ChatBlock> parseChatBlocks(String text) {
           final body = tMatch.group(2)!;
           items.add(ChatListItem(
             isChecked: checked,
-            spans: _inline(body, const _Style(), counter),
+            spans: _inline(_autoWrapRawLatex(body), const _Style(), counter),
           ));
           i++;
           continue;
@@ -672,7 +675,7 @@ List<ChatBlock> parseChatBlocks(String text) {
         if (uMatch != null && !isOrdered) {
           final body = uMatch.group(1)!;
           items.add(ChatListItem(
-            spans: _inline(body, const _Style(), counter),
+            spans: _inline(_autoWrapRawLatex(body), const _Style(), counter),
           ));
           i++;
           continue;
@@ -684,7 +687,7 @@ List<ChatBlock> parseChatBlocks(String text) {
           final body = oMatch.group(2)!;
           items.add(ChatListItem(
             number: num,
-            spans: _inline(body, const _Style(), counter),
+            spans: _inline(_autoWrapRawLatex(body), const _Style(), counter),
           ));
           i++;
           continue;
@@ -730,7 +733,7 @@ List<ChatBlock> parseChatBlocks(String text) {
 
       paraLines.add(ChatLine(
         quote: false,
-        spans: _inline(next, const _Style(), counter),
+        spans: _inline(_autoWrapRawLatex(next), const _Style(), counter),
       ));
       i++;
     }
