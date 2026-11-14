@@ -52,7 +52,7 @@ dependencies:
   firebase_storage: ^14.0.1
   cloud_functions: ^7.0.1
   firebase_messaging: ^17.0.1
-  flutter_local_notifications: ^17.2.3
+  flutter_local_notifications: ^23.0.2
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
   maplibre_gl: ^0.26.2
@@ -99,7 +99,7 @@ dependencies:
   local_auth: ^2.2.0
 
   path: ^1.9.0
-  timezone: ^0.9.4
+  timezone: ^0.11.2
   video_compress: ^3.1.4
   flutter_webrtc: ^1.6.2+hotfix.4
   web_socket_channel: ^3.0.3
