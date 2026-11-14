@@ -175,26 +175,66 @@ class ChatSvgBlock extends ChatBlock {
 /// shaping in flutter_math_fork and converting fractions and symbols into legible Unicode text.
 String cleanBengaliMath(String input) {
   var s = input.trim();
-  // Handle fractions: \frac{A}{B} -> (A ÷ B)
-  s = s.replaceAllMapped(
-    RegExp(r'\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}'),
-    (m) => '(${m.group(1)} ÷ ${m.group(2)})',
-  );
+
+  // 1. Unescape escaped dollar signs if present
+  s = s.replaceAll(r'\$', r'$');
+
+  // 2. Remove \left and \right delimiters before symbol replacements so \le doesn't corrupt \left
+  s = s.replaceAll(r'\left(', '(').replaceAll(r'\right)', ')');
+  s = s.replaceAll(r'\left[', '[').replaceAll(r'\right]', ']');
+  s = s.replaceAll(r'\left\{', '{').replaceAll(r'\right\}', '}');
+  s = s.replaceAll(r'\left.', '').replaceAll(r'\right.', '');
+  s = s.replaceAll(r'\left', '').replaceAll(r'\right', '');
+
+  // 3. Unwrap \text{...}, \mathbf{...}, \mathrm{...}, etc. using replaceAllMapped
+  // Repeat while loop to handle any nested formatting wrappers cleanly
+  while (RegExp(
+          r'\\(?:text|mathbf|mathrm|mathit|textbf|textit|mathsf)\s*\{([^{}]+)\}')
+      .hasMatch(s)) {
+    s = s.replaceAllMapped(
+      RegExp(
+          r'\\(?:text|mathbf|mathrm|mathit|textbf|textit|mathsf)\s*\{([^{}]+)\}'),
+      (m) => m.group(1) ?? '',
+    );
+  }
+
+  // 4. Handle nested fractions \frac{A}{B} -> (A ÷ B) from inside out
+  while (RegExp(r'\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}').hasMatch(s)) {
+    s = s.replaceAllMapped(
+      RegExp(r'\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}'),
+      (m) => '(${m.group(1)!.trim()} ÷ ${m.group(2)!.trim()})',
+    );
+  }
+
+  // 5. Replace LaTeX operators and symbols with standard Unicode equivalents
   s = s.replaceAll(r'\times', '×');
   s = s.replaceAll(r'\div', '÷');
   s = s.replaceAll(r'\cdot', '·');
   s = s.replaceAll(r'\pm', '±');
   s = s.replaceAll(r'\approx', '≈');
   s = s.replaceAll(r'\neq', '≠');
-  s = s.replaceAll(r'\le', '≤');
-  s = s.replaceAll(r'\ge', '≥');
+  s = s.replaceAll(RegExp(r'\\le(?![a-zA-Z])'), '≤');
+  s = s.replaceAll(RegExp(r'\\ge(?![a-zA-Z])'), '≥');
   s = s.replaceAll(r'\rightarrow', '→');
   s = s.replaceAll(r'\implies', '⇒');
-  s = s.replaceAll(RegExp(r'\\text\s*\{([^{}]+)\}'), r'$1');
-  s = s.replaceAll(RegExp(r'\\mathbf\s*\{([^{}]+)\}'), r'$1');
-  s = s.replaceAll(RegExp(r'\\math[a-zA-Z]+\s*\{([^{}]+)\}'), r'$1');
+  s = s.replaceAll(r'\%', '%');
+  s = s.replaceAll(r'\\%', '%');
+
+  // 6. Clean up remaining standalone braces and redundant backslashes
   s = s.replaceAll('{', '').replaceAll('}', '');
-  return s;
+  s = s.replaceAll(r'\\', '');
+
+  // 7. Collapse redundant nested parentheses e.g. ((...)) -> (...)
+  while (s.contains('((') && s.contains('))')) {
+    final before = s;
+    s = s.replaceAllMapped(
+      RegExp(r'\(\(([^\(\)]+)\)\)'),
+      (m) => '(${m.group(1)})',
+    );
+    if (s == before) break;
+  }
+
+  return s.trim();
 }
 
 /// Splits [text] into lines, each with its styled runs.
