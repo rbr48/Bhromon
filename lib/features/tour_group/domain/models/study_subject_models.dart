@@ -18,6 +18,7 @@ enum StudyModuleKey {
   problems,
   papers,
   charts,
+  differences,
   plan,
   glossary,
   assignments,

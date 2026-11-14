@@ -97,8 +97,8 @@ void main() {
       (tester) async {
     await _open(tester, const {}, (_) {});
 
-    // The eight modules that keep their own posts have a policy; the five book modules do not.
-    expect(find.text('Who can post'), findsNWidgets(8));
+    // The nine modules that keep their own posts have a policy; the five book modules do not.
+    expect(find.text('Who can post'), findsNWidgets(9));
     expect(find.textContaining('open this book'), findsNWidgets(5));
     for (final label in [
       'Discussion',

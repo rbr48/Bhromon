@@ -78,6 +78,31 @@ In the current JAIBB study circle (`339f54482cec417b83ae`), the 6 book records (
   - Add unit and widget tests for glossary search, filtering, and rich text rendering in `test/features/tour_group/`.
   - Run `flutter test` and `flutter analyze` to ensure 0 errors and clean green state.
 
+### Phase 5: Subject Differences Module & Broad Questions / Problems Resolution
+- [x] **Task 5.1: Problems Module & Formula Cheatsheet Resolution**
+  - Remove "MAFS গাণিতিক সমস্যার ১০টি অব্যর্থ সূত্র (Math Formula Master Matrix)" from `study_subjects/{id}/problems` (as it is a reference formula guide, not a peer exercise problem).
+  - Clean up `<br>` tags in formula table markdown to render cleanly across all screens.
+  - Unlock reference solutions for actual problems (Padma Bank Basel-III, Bond YTM/Gordon) with `releaseAt` set to past and reference solution populated under `problems/{id}/reference/solution`.
+- [x] **Task 5.2: Chapter 1 Broad Questions & Model Solutions Integration**
+  - Update Chapter 1's primary note (`35L3pLqPp0u411KxdIsK`) so that clicking "বাংলা সমাধান / নোট" on Chapter 1 directly presents:
+    1. বিগত ৮টি পরীক্ষার সিলেবাস ও টপিক ম্যাট্রিক্স
+    2. Part-A রচনামূলক ১৫টি সর্বাধিক গুরুত্বপূর্ণ প্রশ্নের রেডি-টু-রাইট উত্তর কাঠামো
+    3. ১০০ নম্বরের পূর্বাভাসকৃত মডেল টেস্টের বিভাগ-ক (রচনামূলক প্রশ্ন ১–৪ এর পুঙ্খানুপুঙ্খ মডেল সমাধান)
+  - Remove any shadowed duplicate materials on Chapter 1 so the broad questions are immediately accessible.
+- [x] **Task 5.3: Implement New "Differences" (`differences` / তুলনামূলক পার্থক্য) Subject Module**
+  - Delegate Firestore Security Rules to `firestore-rules-author` subagent to add `/differences/{postId}` subcollection and include `'differences'` in `studyPostKeys`.
+  - Add `differences` to `StudyModuleKey` enum in `study_subject_models.dart`.
+  - Add localized strings: `study_module_differences` ("Differences" / "তুলনামূলক পার্থক্য") and `study_difference_add` in `tour_translation_keys.dart`.
+  - Update `study_subject_screen.dart`, `study_labels.dart`, and `study_module_posts_screen.dart`.
+  - Update tour content purge and automated tests in `test/features/tour_group/`.
+- [x] **Task 5.4: Ingest Part-D 8 Differences into MAFS Subject**
+  - Enable `differences` module in MAFS subject (`XSf1ru10XVLjMTIfCAWJ`).
+  - Batch create 8 high-yield comparative difference posts in `study_subjects/{subjectId}/differences` with rich markdown comparison tables from the playbook.
+- [x] **Task 5.5: Quality Gate & Verification**
+  - Run `flutter analyze` and `flutter test`.
+  - Verify all 8 differences in Firestore and confirm Chapter 1 broad questions render correctly.
+
+
 ---
 
 ## 4. Verification Commands & Acceptance Criteria

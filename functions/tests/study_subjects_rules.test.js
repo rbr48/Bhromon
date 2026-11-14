@@ -326,7 +326,7 @@ describe('study subjects, modules and posts', () => {
     });
 
     test('every module the app shows can be turned on', async () => {
-      for (const key of ['papers', 'charts', 'assignments', 'discussion', 'plan', 'glossary', 'flashcards', 'quizzes']) {
+      for (const key of ['papers', 'charts', 'differences', 'assignments', 'discussion', 'plan', 'glossary', 'flashcards', 'quizzes']) {
         await assertSucceeds(setDoc(moduleRef(db('admin'), key), moduleSettings({ name: key, enabled: false })));
       }
     });
@@ -377,6 +377,19 @@ describe('study subjects, modules and posts', () => {
       await assertSucceeds(mark('member', 'charts', 'chart4'));
       await assertFails(mark('member', 'charts', 'chart4'));
       await assertFails(mark('admin', 'charts', 'chart4'));
+    });
+
+    test('an admin turns on differences, and a member posts a difference comparison', async () => {
+      await assertSucceeds(setDoc(moduleRef(db('admin'), 'differences'), moduleSettings({ name: 'Differences' })));
+      await assertSucceeds(
+        setDoc(
+          postRef(db('member'), 'differences', 'diff1'),
+          newPost(people.member.email, { title: 'Repo Rate vs Bank Rate', text: 'Comparison table and explanation' })
+        )
+      );
+      await assertSucceeds(mark('other', 'differences', 'diff1'));
+      await assertFails(mark('other', 'differences', 'diff1'));
+      await assertFails(mark('member', 'differences', 'diff1'));
     });
 
     test('a post policy is one of the three', async () => {

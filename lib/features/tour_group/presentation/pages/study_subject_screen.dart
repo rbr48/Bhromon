@@ -573,6 +573,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
         StudyModuleKey.challenges => Icons.flag_rounded,
         StudyModuleKey.papers => Icons.description_rounded,
         StudyModuleKey.charts => Icons.bar_chart_rounded,
+        StudyModuleKey.differences => Icons.compare_arrows_rounded,
         StudyModuleKey.assignments => Icons.assignment_turned_in_rounded,
         StudyModuleKey.discussion => Icons.forum_rounded,
         StudyModuleKey.glossary => Icons.menu_book_rounded,

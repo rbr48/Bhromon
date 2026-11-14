@@ -68,6 +68,9 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
   /// A chart carries a title, and its text draws the chart.
   bool get _chart => widget.moduleKey == StudyModuleKey.charts;
 
+  /// A difference carries a title and comparative analysis.
+  bool get _difference => widget.moduleKey == StudyModuleKey.differences;
+
   bool get _isPoeSubject =>
       widget.subject.bookId == 'ah9qgOp1e7uA2qcV6a7B' ||
       widget.subject.code == '103' ||
@@ -89,6 +92,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       withLink: _withLink,
       paper: _paper,
       chart: _chart,
+      difference: _difference,
       tourId: widget.tourId,
     );
     if (draft == null || !mounted) return;
@@ -168,6 +172,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
       existing: post,
       paper: _paper,
       chart: _chart,
+      difference: _difference,
       tourId: widget.tourId,
     );
     if (draft == null || !mounted) return;
@@ -320,9 +325,11 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
                     ? 'study_paper_add'
                     : _chart
                         ? 'study_chart_add'
-                        : _withLink
-                            ? 'study_post_add_suggestion'
-                            : 'study_post_add_tip')),
+                        : _difference
+                            ? 'study_difference_add'
+                            : _withLink
+                                ? 'study_post_add_suggestion'
+                                : 'study_post_add_tip')),
               )
             : null,
         body: StreamBuilder<List<StudyPost>>(
