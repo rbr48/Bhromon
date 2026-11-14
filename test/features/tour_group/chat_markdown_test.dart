@@ -268,6 +268,16 @@ And the next paragraph follows.
       // Repurchase total with \text{}
       expect(
           cleanBengaliMath(r'\text{আসল} + \text{রেপো সুদ}'), 'আসল + রেপো সুদ');
+      // Double backslash normalization
+      expect(
+          cleanBengaliMath(
+              r'\\text{LCR} = \\frac{\\text{HQLA}}{\\text{৩০ দিনের নিট নগদ বহিঃপ্রবাহ}} \\times ১০০\\%'),
+          'LCR = (HQLA ÷ ৩০ দিনের নিট নগদ বহিঃপ্রবাহ) × ১০০%');
+      expect(cleanBengaliMath(r'\\ge ১০০\\%'), '≥ ১০০%');
+      expect(
+          cleanBengaliMath(
+              r'Approx. YTM: \left(\frac{C + \frac{F - P}{n}}{\frac{F + P}{২}}\right) \times ১০০\%'),
+          'Approx. YTM: (C + (F - P ÷ n) ÷ (F + P ÷ ২)) × ১০০%');
     });
 
     test(

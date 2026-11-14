@@ -176,6 +176,9 @@ class ChatSvgBlock extends ChatBlock {
 String cleanBengaliMath(String input) {
   var s = input.trim();
 
+  // 0. Normalize double or multiple backslashes in TeX commands (e.g. \\frac -> \frac, \\text -> \text)
+  s = s.replaceAll(RegExp(r'\\{2,}'), r'\');
+
   // 1. Unescape escaped dollar signs if present
   s = s.replaceAll(r'\$', r'$');
 
@@ -218,17 +221,16 @@ String cleanBengaliMath(String input) {
   s = s.replaceAll(r'\rightarrow', '→');
   s = s.replaceAll(r'\implies', '⇒');
   s = s.replaceAll(r'\%', '%');
-  s = s.replaceAll(r'\\%', '%');
 
   // 6. Clean up remaining standalone braces and redundant backslashes
   s = s.replaceAll('{', '').replaceAll('}', '');
-  s = s.replaceAll(r'\\', '');
+  s = s.replaceAll(r'\', '');
 
   // 7. Collapse redundant nested parentheses e.g. ((...)) -> (...)
-  while (s.contains('((') && s.contains('))')) {
+  while (RegExp(r'\(\((\s*.+?\s*)\)\)').hasMatch(s)) {
     final before = s;
     s = s.replaceAllMapped(
-      RegExp(r'\(\(([^\(\)]+)\)\)'),
+      RegExp(r'\(\((\s*.+?\s*)\)\)'),
       (m) => '(${m.group(1)})',
     );
     if (s == before) break;
