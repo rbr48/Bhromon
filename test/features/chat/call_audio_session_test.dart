@@ -124,4 +124,38 @@ void main() {
 
     expect(await CallAudioSession.enterPip(), isFalse);
   });
+
+  test(
+      'asks the phone to minimize a call on Android and reports whether it took',
+      () async {
+    MethodCall? seen;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      seen = call;
+      return true;
+    });
+
+    expect(await CallAudioSession.minimizeCall(), isTrue);
+    expect(seen?.method, 'minimizeCall');
+  });
+
+  test('minimizeCall does nothing off Android', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    MethodCall? seen;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      seen = call;
+      return true;
+    });
+
+    expect(await CallAudioSession.minimizeCall(), isFalse);
+    expect(seen, isNull);
+  });
+
+  test('minimizeCall reports false when the phone refuses', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => false);
+
+    expect(await CallAudioSession.minimizeCall(), isFalse);
+  });
 }

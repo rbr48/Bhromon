@@ -15,6 +15,7 @@ import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
 import '../../data/call_telemetry.dart';
 import '../../data/system_call_bridge.dart';
+import '../../domain/call_back_rules.dart';
 import '../../domain/call_display.dart';
 import '../../domain/call_ringback_audio.dart';
 import '../../domain/speaker_route.dart';
@@ -71,6 +72,9 @@ class _CallScreenState extends State<CallScreen> {
   bool _remoteVideoConnected = false;
   bool _controlsVisible = true;
   bool _hasExited = false;
+
+  /// The call is over: it was declined, missed, ended or failed.
+  bool _callOver = false;
 
   /// Whether the other side's camera is on. A video call starts with it on;
   /// either side can turn a camera on or off at any time.
@@ -361,9 +365,12 @@ class _CallScreenState extends State<CallScreen> {
             _onVideoModeChanged();
           case 'reconnecting':
             _isConnected = false;
+            _syncPipAllowed();
             _statusKey = 'call_status_reconnecting';
           case 'declined' || 'missed' || 'ended' || 'failed':
             _stopRingback();
+            _callOver = true;
+            _syncPipAllowed();
             _statusKey = switch (state) {
               'declined' => 'call_status_declined',
               'missed' => 'call_status_no_answer',
@@ -567,6 +574,21 @@ class _CallScreenState extends State<CallScreen> {
     _onVideoModeChanged();
   }
 
+  /// Whether back minimizes this call here: Android only, and only while the call is still on.
+  bool get _onAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Tells the phone whether the call may shrink into picture-in-picture when the user leaves
+  /// the app: a connected video call that is not over. It is asked again whenever any of those
+  /// changes, so a call that connects after it started is still allowed.
+  void _syncPipAllowed() {
+    unawaited(CallAudioSession.setPipAllowed(callShrinksToPip(
+      videoMode: _videoMode,
+      connected: _isConnected,
+      callOver: _callOver,
+    )));
+  }
+
   /// Keeps the screen, the background service, the ear sensor and the
   /// picture-in-picture window in step with whether the call shows video.
   void _onVideoModeChanged() {
@@ -576,7 +598,7 @@ class _CallScreenState extends State<CallScreen> {
       unawaited(video ? WakelockPlus.enable() : WakelockPlus.disable());
     }
     _updateProximity();
-    unawaited(CallAudioSession.setPipAllowed(video && _isConnected));
+    _syncPipAllowed();
     if (!_systemCall && _signaling.hasLocalVideo && _isConnected) {
       // The background service now has to keep the camera running too.
       final l10n = context.l10n;
@@ -783,10 +805,22 @@ class _CallScreenState extends State<CallScreen> {
     final remoteHasVideo =
         _remoteRenderer.srcObject?.getVideoTracks().isNotEmpty ?? false;
     final canPop = Navigator.of(context).canPop();
+    // On Android, back minimizes a call that is still on, so the route must stay in place.
+    final minimizeOnBack = callBackActionFor(
+          onAndroid: _onAndroid,
+          callOver: _callOver || _hasExited,
+        ) ==
+        CallBackAction.minimize;
 
     return PopScope(
-      canPop: canPop,
+      canPop: canPop && !minimizeOnBack,
       onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && minimizeOnBack) {
+          // The call and this screen carry on. Only the app goes to the background, or a
+          // video call into picture-in-picture.
+          unawaited(CallAudioSession.minimizeCall());
+          return;
+        }
         _hasExited = true;
         _signaling.endCall();
         if (!didPop) {
