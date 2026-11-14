@@ -525,7 +525,7 @@ export async function purgeMemberContent(
   // helpful marks come out, and each post's count drops by the mark removed.
   const subjects = await tour.collection('study_subjects').get();
   for (const subject of subjects.docs) {
-    for (const kind of ['tips', 'suggestions', 'papers', 'charts']) {
+    for (const kind of ['tips', 'suggestions', 'papers', 'charts', 'differences']) {
       const posts = subject.ref.collection(kind);
       await applyToQuery(db, posts, anonymize(STUDY_POST, email, standIn));
       const docs = await posts.get();

@@ -2856,6 +2856,11 @@ class TourTranslationKeys {
       'study_chart_text_label': 'Describe the chart',
       'study_chart_hint':
           'Draw a chart in an ```svg code block, or a production possibility curve in a ```chart:ppc block. The chart appears as a picture in the post.',
+      'study_module_differences': 'Differences',
+      'study_difference_add': 'Add a difference',
+      'study_difference_title_label':
+          'Compared terms (e.g. Mudaraba vs. Musharaka)',
+      'study_difference_text_label': 'Difference table and points',
       'study_module_plan': 'Study plan',
       'study_module_glossary': 'Glossary',
       'study_module_assignments': 'Assignments',
@@ -6732,6 +6737,11 @@ class TourTranslationKeys {
       'study_chart_text_label': 'চার্টের বিবরণ',
       'study_chart_hint':
           'চার্ট আঁকতে ```svg কোড ব্লকে লিখুন, আর উৎপাদন সম্ভাবনা রেখা ```chart:ppc ব্লকে। চার্টটি পোস্টে ছবি হয়ে দেখা যাবে।',
+      'study_module_differences': 'তুলনামূলক পার্থক্য',
+      'study_difference_add': 'পার্থক্য যোগ করুন',
+      'study_difference_title_label':
+          'তুলনাকৃত বিষয়সমূহ (যেমন: মুদারাবা বনাম মুশারাকা)',
+      'study_difference_text_label': 'পার্থক্যের সারণি ও বিশ্লেষণ',
       'study_module_plan': 'পড়ার পরিকল্পনা',
       'study_module_glossary': 'শব্দকোষ',
       'study_module_assignments': 'অ্যাসাইনমেন্ট',

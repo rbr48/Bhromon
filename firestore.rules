@@ -883,7 +883,7 @@ service cloud.firestore {
     }
     // The modules a study subject can turn on: every module the app shows.
     function studyModuleLive(key) {
-      return key in ['tips', 'suggestions', 'discussion', 'findings', 'problems', 'papers', 'charts', 'plan', 'glossary',
+      return key in ['tips', 'suggestions', 'discussion', 'findings', 'problems', 'papers', 'charts', 'differences', 'plan', 'glossary',
                      'assignments', 'challenges', 'flashcards', 'quizzes'];
     }
     // The modules that show the book their subject names. A subject must name a book before one of them is turned on.
@@ -2272,6 +2272,28 @@ service cloud.firestore {
                              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/charts/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/charts/$(postId)).data.helpfulCount + 1;
             allow delete: if isActiveMember(tourId) && voter == tourUserEmail() &&
                              getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/charts/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/charts/$(postId)).data.helpfulCount - 1;
+          }
+        }
+
+        // Differences: comparative distinctions between concepts. Follows the same rules as charts and tips.
+        match /differences/{postId} {
+          allow read: if isActiveMember(tourId);
+          allow create: if studyPostCreateAllowed(tourId, subjectId, 'differences', request.resource.data);
+          allow update: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           studyPostUpdateAllowed(tourId, subjectId, 'differences', postId, request.resource.data, resource.data);
+          allow delete: if isStudyTour(tourId) && isActiveMember(tourId) &&
+                           (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+
+          match /helpful/{voter} {
+            allow read: if isActiveMember(tourId);
+            allow create: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                             request.resource.data.keys().hasOnly(['createdAt']) &&
+                             request.resource.data.createdAt == request.time &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/differences/$(postId)).data.createdByEmail != tourUserEmail() &&
+                             get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/differences/$(postId)).data.shown == true &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/differences/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/differences/$(postId)).data.helpfulCount + 1;
+            allow delete: if isActiveMember(tourId) && voter == tourUserEmail() &&
+                             getAfter(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/differences/$(postId)).data.helpfulCount == get(/databases/$(database)/documents/tours/$(tourId)/study_subjects/$(subjectId)/differences/$(postId)).data.helpfulCount - 1;
           }
         }
 

@@ -568,6 +568,28 @@ void main() {
       expect(find.text('Add a past paper'), findsNothing);
     });
 
+    testWidgets(
+        'a difference post editor asks for compared terms and difference details',
+        (tester) async {
+      await _pump(
+        tester,
+        StudyModulePostsScreen(
+          tourId: 'T',
+          subject: _physics,
+          moduleKey: StudyModuleKey.differences,
+          settings: _on(StudyModuleKey.differences, 'Differences'),
+          repository: _FakeSubjectRepo(role: TourRole.admin),
+        ),
+      );
+      await tester.tap(find.text('Add a difference'));
+      await tester.pumpAndSettle();
+      expect(find.text('Compared terms (e.g. Mudaraba vs. Musharaka)'),
+          findsOneWidget);
+      expect(find.text('Difference table and points'), findsOneWidget);
+      expect(find.text('Add a tip'), findsNothing);
+      expect(find.text('Attach a file'), findsNothing);
+    });
+
     testWidgets('a past paper offers a file to attach, and a tip does not',
         (tester) async {
       await _pump(

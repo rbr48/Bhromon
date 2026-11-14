@@ -45,6 +45,7 @@ Future<StudyPostDraft?> showStudyPostEditor(
   StudyPost? existing,
   bool paper = false,
   bool chart = false,
+  bool difference = false,
   String? tourId,
 }) {
   return showStudyModal<StudyPostDraft>(
@@ -54,6 +55,7 @@ Future<StudyPostDraft?> showStudyPostEditor(
       existing: existing,
       paper: paper,
       chart: chart,
+      difference: difference,
       tourId: tourId,
     ),
   );
@@ -66,6 +68,7 @@ class StudyPostEditor extends StatefulWidget {
     this.existing,
     this.paper = false,
     this.chart = false,
+    this.difference = false,
     this.tourId,
   });
 
@@ -77,6 +80,9 @@ class StudyPostEditor extends StatefulWidget {
 
   /// Whether the post draws a chart: it has a title, and its text is the chart.
   final bool chart;
+
+  /// Whether the post describes a comparative difference between concepts.
+  final bool difference;
 
   /// The group the paper belongs to. A paper can be attached as a file only when it is known, since the file is
   /// stored in the group's study folder.
@@ -219,11 +225,13 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
         ? (_isNew ? 'study_paper_add' : 'study_paper_edit_title')
         : widget.chart
             ? (_isNew ? 'study_chart_add' : 'study_post_edit_title')
-            : widget.withLink
-                ? (_isNew
-                    ? 'study_post_add_suggestion'
-                    : 'study_post_edit_title')
-                : (_isNew ? 'study_post_add_tip' : 'study_post_edit_title');
+            : widget.difference
+                ? (_isNew ? 'study_difference_add' : 'study_post_edit_title')
+                : widget.withLink
+                    ? (_isNew
+                        ? 'study_post_add_suggestion'
+                        : 'study_post_edit_title')
+                    : (_isNew ? 'study_post_add_tip' : 'study_post_edit_title');
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -241,14 +249,16 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              if (widget.withLink || widget.chart)
+              if (widget.withLink || widget.chart || widget.difference)
                 TextField(
                   controller: _title,
                   style: TextStyle(color: palette.text),
                   decoration: InputDecoration(
                     labelText: l10n.translate(widget.paper
                         ? 'study_paper_title_label'
-                        : 'study_post_title_label'),
+                        : widget.difference
+                            ? 'study_difference_title_label'
+                            : 'study_post_title_label'),
                   ),
                 ),
               StudyTextField(
@@ -261,9 +271,11 @@ class _StudyPostEditorState extends State<StudyPostEditor> {
                       ? 'study_paper_text_label'
                       : widget.chart
                           ? 'study_chart_text_label'
-                          : widget.withLink
-                              ? 'study_post_text_label_suggestion'
-                              : 'study_post_text_label_tip'),
+                          : widget.difference
+                              ? 'study_difference_text_label'
+                              : widget.withLink
+                                  ? 'study_post_text_label_suggestion'
+                                  : 'study_post_text_label_tip'),
                   errorText: textError,
                 ),
               ),

@@ -34,6 +34,7 @@ String studyModuleLabelKey(StudyModuleKey key) => switch (key) {
       StudyModuleKey.problems => 'study_module_problems',
       StudyModuleKey.papers => 'study_module_papers',
       StudyModuleKey.charts => 'study_module_charts',
+      StudyModuleKey.differences => 'study_module_differences',
       StudyModuleKey.plan => 'study_module_plan',
       StudyModuleKey.glossary => 'study_module_glossary',
       StudyModuleKey.assignments => 'study_module_assignments',
