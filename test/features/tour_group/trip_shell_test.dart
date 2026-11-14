@@ -136,15 +136,31 @@ void main() {
       );
     });
 
-    testWidgets('a group chat on a phone has no tab bar under its text box',
+    testWidgets('a group chat on a phone keeps the tab bar', (tester) async {
+      await _pumpPhone(tester, hideNavWhileTyping: true);
+
+      expect(find.text('body of channels'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsOneWidget);
+    });
+
+    testWidgets(
+        'a group chat on a phone takes the tab bar away while the keyboard is open',
         (tester) async {
-      await _pumpPhone(tester, showMobileNav: false);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+
+      await _pumpPhone(tester, hideNavWhileTyping: true);
 
       expect(find.text('body of channels'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
     });
 
-    testWidgets('a trip screen on a phone keeps the tab bar', (tester) async {
+    testWidgets(
+        'a trip screen on a phone keeps the tab bar with the keyboard open',
+        (tester) async {
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+
       await _pumpPhone(tester);
 
       expect(find.byType(NavigationBar), findsOneWidget);
@@ -152,9 +168,9 @@ void main() {
   });
 }
 
-/// Shows a trip screen at phone width, with or without its tab bar.
+/// Shows a trip screen at phone width. [hideNavWhileTyping] is the group chat's setting.
 Future<void> _pumpPhone(WidgetTester tester,
-    {bool showMobileNav = true}) async {
+    {bool hideNavWhileTyping = false}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -170,7 +186,7 @@ Future<void> _pumpPhone(WidgetTester tester,
           tourId: 't1',
           location: '/group/t1/channels',
           repository: _NoFirebaseRepository(),
-          showMobileNav: showMobileNav,
+          hideNavWhileTyping: hideNavWhileTyping,
           child: const _Screen('channels'),
         ),
       ),

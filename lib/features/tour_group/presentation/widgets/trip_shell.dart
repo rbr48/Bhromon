@@ -24,7 +24,7 @@ class TripShell extends StatelessWidget {
     this.repository,
     this.guardMembership = true,
     this.ownMobileScaffold = false,
-    this.showMobileNav = true,
+    this.hideNavWhileTyping = false,
   });
 
   /// The width from which the tabs move to a side rail.
@@ -51,9 +51,10 @@ class TripShell extends StatelessWidget {
   /// When true, below [railBreakpoint] the child is rendered as-is without an outer Scaffold.
   final bool ownMobileScaffold;
 
-  /// Whether a phone shows the tab bar under the screen. A group chat turns it off, so its
-  /// text box is the only control at the bottom. The side rail on wide screens is unchanged.
-  final bool showMobileNav;
+  /// Whether the tab bar leaves a phone while the keyboard is open. A group chat sets it, so its
+  /// text box sits on the keyboard rather than under a bar that the keyboard pushes up. The bar
+  /// is back once the keyboard closes. The side rail on wide screens is unchanged.
+  final bool hideNavWhileTyping;
 
   @override
   Widget build(BuildContext context) {
@@ -108,13 +109,16 @@ class TripShell extends StatelessWidget {
 
     final double screenWidth = MediaQuery.sizeOf(context).width;
     final double rightDockWidth = screenWidth >= 1200 ? 320 : 280;
+    // With the keyboard open, a screen that asks for it has no bar under it.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final showTabBar = !(hideNavWhileTyping && keyboardOpen);
 
     final Widget scaffold = screenWidth < railBreakpoint
         ? (ownMobileScaffold
             ? wrappedChild
             : Scaffold(
                 body: wrappedChild,
-                bottomNavigationBar: showMobileNav
+                bottomNavigationBar: showTabBar
                     ? BhromonBottomNav(
                         selectedIndex: index,
                         tourId: tourId.isNotEmpty ? tourId : null,

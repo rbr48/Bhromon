@@ -351,11 +351,12 @@ class AppRouter {
       ),
       GoRoute(
         path: '/group/:tourId/channels',
-        // A group chat has no tab bar on a phone: its text box is the only control at the bottom.
+        // The tab bar stays under a group chat on a phone. It leaves while the keyboard is open,
+        // so the text box sits on the keyboard (see TripShell.hideNavWhileTyping).
         pageBuilder: (context, state) => _tripPage(
           state,
           GroupChannelsScreen(tourId: state.pathParameters['tourId']!),
-          mobileNav: false,
+          hideNavWhileTyping: true,
         ),
       ),
       GoRoute(
@@ -531,13 +532,13 @@ class AppRouter {
   /// A tour screen inside the trip bar. See [TripShell] for why this is not a
   /// ShellRoute.
   static Page<void> _tripPage(GoRouterState state, Widget screen,
-      {bool mobileNav = true}) {
+      {bool hideNavWhileTyping = false}) {
     return _customPageTransition(
       state,
       TripShell(
         tourId: state.pathParameters['tourId']!,
         location: state.uri.path,
-        showMobileNav: mobileNav,
+        hideNavWhileTyping: hideNavWhileTyping,
         child: screen,
       ),
       key: pageKeyFor(state),
