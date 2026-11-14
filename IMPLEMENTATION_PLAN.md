@@ -102,6 +102,35 @@ In the current JAIBB study circle (`339f54482cec417b83ae`), the 6 book records (
   - Run `flutter analyze` and `flutter test`.
   - Verify all 8 differences in Firestore and confirm Chapter 1 broad questions render correctly.
 
+### Phase 6: Math Fraction & Bengali Formula Engine Fix and BCFI Playbook Ingestion
+- [x] **Task 6.1: Fix Math Fraction & Bengali LaTeX Formula Engine (`chat_markdown.dart`)**
+  - Fix the literal `$1` bug by replacing `s.replaceAll(..., r'$1')` with `s.replaceAllMapped(..., (m) => m.group(1) ?? '')`.
+  - Fix nested braces failure in `\frac` by recursively resolving `\frac{A}{B}` and unwrapping `\text{...}` first.
+  - Fix `\le` word-boundary collision breaking `\left(`.
+  - Cleanly unwrap `\left`, `\right`, `\%`, and standard TeX operators into readable Unicode math.
+  - Write comprehensive unit tests in `test/features/tour_group/chat_markdown_test.dart` asserting that formulas and fractions (LCR, YTM, Current Yield, Repo, CRAR) render without raw `$1`, `\frac`, or broken brackets.
+- [x] **Task 6.2: Enable Differences Module & Ingest Part-D Comparative Distinctions for BCFI**
+  - Enable `differences` module on BCFI subject (`3IoY1KiEHsKyPhbZsvn4`).
+  - Batch create 8 high-yield comparative difference posts in `study_subjects/{id}/differences`:
+    1. উল্লম্ব বনাম সমান্তরাল যোগাযোগ (`Vertical vs. Horizontal Communication`)
+    2. সার্কুলার বনাম সার্কুলার লেটার (`Circular vs. Circular Letter`)
+    3. আলোচ্যসূচি বনাম কার্যবিবরণী (`Agenda vs. Minutes`)
+    4. অনুসন্ধান বনাম ফরমায়েশ পত্র (`Inquiry vs. Order Letter`)
+    5. RfP বনাম EoI (`Request for Proposal vs. Expression of Interest`)
+    6. KYC বনাম CDD (`Know Your Customer vs. Customer Due Diligence`)
+    7. ক্রেডিট রেটিং বনাম ক্রেডিট স্কোরিং (`Credit Rating vs. Credit Scoring`)
+    8. SWIFT বনাম NPSB (`SWIFT vs. NPSB`)
+- [x] **Task 6.3: Ingest BCFI Playbook into Book Chapters & Reference Materials**
+  - Chapter 1 (`6fbT3ahwpIoDTJSxnryF`): Ingest 8-exam trend blueprint, Part-A 15 master questions/answer structures, and 100-mark model test section A solutions into `study_materials`.
+  - Chapter 11 (`YeF8jjticss1vFqS2Xng`): Ingest Part-B 6 practical drafting blueprints (Office Memo, Persuasive Letter via AIDA, Loan Rejection Letter, Appreciation Letter, Notice/Agenda/Minutes, Analytical Report).
+  - Seed 3-hour exam time management and 1-page master cheatsheet into BCFI `tips`.
+  - Ingest crisis communication case study (Eid ATM/App Outage & flood SME recovery) into `problems` with unlocked reference solutions.
+- [x] **Task 6.4: Fix MAFS Formulas Text in Firestore**
+  - Fix stray `$` symbols and ensure formulas in MAFS differences and tips match the clean standard.
+- [ ] **Task 6.5: Quality Gate & Verification**
+  - Run `flutter analyze` and `flutter test`.
+  - Build and deploy web release and test live.
+
 
 ---
 

@@ -252,6 +252,32 @@ And the next paragraph follows.
           '(চলতি সম্পদ ÷ চলতি দায়)');
       expect(cleanBengaliMath(r'GPM = \frac{মোট লাভ}{বিক্রয়} \times ১০০'),
           'GPM = (মোট লাভ ÷ বিক্রয়) × ১০০');
+      // LCR formula from screenshot with nested \text{} tags
+      expect(
+          cleanBengaliMath(
+              r'\text{LCR} = \frac{\text{HQLA}}{\text{৩০ দিনের নিট নগদ বহিঃপ্রবাহ}} \times ১০০\%'),
+          'LCR = (HQLA ÷ ৩০ দিনের নিট নগদ বহিঃপ্রবাহ) × ১০০%');
+      // Current yield formula with \left( and \right) and \text{}
+      expect(
+          cleanBengaliMath(
+              r'Current Yield: \left(\frac{\text{বার্ষিক কুপন } C}{\text{বর্তমান বাজার মূল্য } P}\right) \times ১০০\%'),
+          'Current Yield: (বার্ষিক কুপন  C ÷ বর্তমান বাজার মূল্য  P) × ১০০%');
+      // Greater than or equal with Bengali numbers
+      expect(cleanBengaliMath(r'\ge ১০০\% (১০০ শতাংশ বা তার বেশি)'),
+          '≥ ১০০% (১০০ শতাংশ বা তার বেশি)');
+      // Repurchase total with \text{}
+      expect(
+          cleanBengaliMath(r'\text{আসল} + \text{রেপো সুদ}'), 'আসল + রেপো সুদ');
+      // Double backslash normalization
+      expect(
+          cleanBengaliMath(
+              r'\\text{LCR} = \\frac{\\text{HQLA}}{\\text{৩০ দিনের নিট নগদ বহিঃপ্রবাহ}} \\times ১০০\\%'),
+          'LCR = (HQLA ÷ ৩০ দিনের নিট নগদ বহিঃপ্রবাহ) × ১০০%');
+      expect(cleanBengaliMath(r'\\ge ১০০\\%'), '≥ ১০০%');
+      expect(
+          cleanBengaliMath(
+              r'Approx. YTM: \left(\frac{C + \frac{F - P}{n}}{\frac{F + P}{২}}\right) \times ১০০\%'),
+          'Approx. YTM: (C + (F - P ÷ n) ÷ (F + P ÷ ২)) × ১০০%');
     });
 
     test(
