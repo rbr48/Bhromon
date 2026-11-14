@@ -120,8 +120,19 @@ class _ChatRichTextState extends State<ChatRichText> {
         if (span.underline || span.link != null) TextDecoration.underline,
       ]),
       fontFamily: span.code ? 'monospace' : null,
+      fontFamilyFallback: span.code
+          ? const [
+              'monospace',
+              'NotoSansBengali',
+              'HindSiliguri',
+              'Roboto',
+              'sans-serif',
+            ]
+          : null,
       backgroundColor: span.code
-          ? Colors.black38
+          ? (context.forest.isDark
+              ? const Color(0x33FFFFFF)
+              : const Color(0x18000000))
           : (span.highlight ? AppColors.gold.withValues(alpha: 0.35) : null),
       color: span.link != null
           ? (widget.isMine ? const Color(0xFF0D47A1) : AppColors.mintGreen)

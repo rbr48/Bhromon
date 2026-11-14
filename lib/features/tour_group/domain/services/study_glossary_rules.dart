@@ -44,3 +44,29 @@ bool canRemoveTerm(
   if (isAdmin) return true;
   return !term.approved && term.createdByEmail == viewerEmail;
 }
+
+/// Filters glossary terms by search query and optional chapter id.
+/// Matches against the term title and definition, ignoring case and stripped markdown markup.
+List<StudyGlossaryTerm> searchGlossaryTerms(
+  Iterable<StudyGlossaryTerm> terms, {
+  String query = '',
+  String? chapterId,
+}) {
+  final clean = query.trim().toLowerCase();
+  return terms.where((term) {
+    if (chapterId != null &&
+        chapterId.isNotEmpty &&
+        term.chapterId != chapterId) {
+      return false;
+    }
+    if (clean.isEmpty) return true;
+    final termClean =
+        term.term.replaceAll(RegExp(r'[`*_~#]'), '').toLowerCase();
+    final defClean =
+        term.definition.replaceAll(RegExp(r'[`*_~#]'), '').toLowerCase();
+    return termClean.contains(clean) ||
+        defClean.contains(clean) ||
+        term.term.toLowerCase().contains(clean) ||
+        term.definition.toLowerCase().contains(clean);
+  }).toList();
+}

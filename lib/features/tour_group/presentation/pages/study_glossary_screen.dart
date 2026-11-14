@@ -19,6 +19,7 @@ import '../../domain/services/study_chapter_rules.dart';
 import '../../domain/services/study_flashcard_rules.dart';
 import '../../domain/services/study_glossary_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
+import '../widgets/study/study_rich_text.dart';
 import 'package:bhromon/core/theme/colors.dart';
 
 /// The glossary of one book. A member proposes a term and an admin approves it. An approved term can be made into
@@ -60,6 +61,11 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
   bool _loaded = false;
   bool _failed = false;
 
+  bool _searching = false;
+  String _query = '';
+  String? _selectedChapterId;
+  final TextEditingController _searchCtrl = TextEditingController();
+
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
   String get _email => _repository.currentEmail;
 
@@ -95,6 +101,7 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
   void dispose() {
     _termSub?.cancel();
     _chapterSub?.cancel();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -204,16 +211,65 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
       child: Scaffold(
         backgroundColor: palette.background,
         appBar: AppBar(
-          leading: GroupBackButton(tourId: widget.tourId),
-          title: Text(l10n.translate('study_glossary_title'),
-              style: TextStyle(
-                  color: palette.text,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18)),
+          leading: _searching
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => setState(() {
+                    _searching = false;
+                    _searchCtrl.clear();
+                    _query = '';
+                  }),
+                )
+              : GroupBackButton(tourId: widget.tourId),
+          title: _searching
+              ? TextField(
+                  controller: _searchCtrl,
+                  autofocus: true,
+                  style: TextStyle(
+                    color: palette.text,
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: l10n.translate('study_glossary_search_hint'),
+                    hintStyle: TextStyle(
+                      color: palette.text54,
+                      fontSize: 14,
+                    ),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) => setState(() => _query = value),
+                )
+              : Text(
+                  l10n.translate('study_glossary_title'),
+                  style: TextStyle(
+                    color: palette.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
           backgroundColor: palette.card,
           foregroundColor: palette.text,
           iconTheme: IconThemeData(color: palette.text),
           elevation: 0,
+          actions: [
+            if (_searching) ...[
+              if (_query.isNotEmpty)
+                IconButton(
+                  tooltip: 'Clear',
+                  icon: const Icon(Icons.clear_rounded),
+                  onPressed: () => setState(() {
+                    _searchCtrl.clear();
+                    _query = '';
+                  }),
+                ),
+            ] else ...[
+              IconButton(
+                tooltip: l10n.translate('study_glossary_search'),
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () => setState(() => _searching = true),
+              ),
+            ],
+          ],
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _addTerm,
@@ -247,14 +303,183 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
         message: l10n.translate('study_glossary_empty'),
       );
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+
+    final filteredApproved = searchGlossaryTerms(
+      approved,
+      query: _query,
+      chapterId: _selectedChapterId,
+    );
+    final filteredProposals = searchGlossaryTerms(
+      proposals,
+      query: _query,
+      chapterId: _selectedChapterId,
+    );
+
+    return Column(
       children: [
-        for (final term in approved) _termCard(term),
-        if (proposals.isNotEmpty)
-          _heading(l10n.translate('study_glossary_proposals_heading')),
-        for (final term in proposals) _termCard(term),
+        _searchHeader(
+          totalApproved: approved.length,
+          filteredCount: filteredApproved.length,
+        ),
+        if (_chapters.isNotEmpty) _chapterFilterBar(),
+        Expanded(
+          child: filteredApproved.isEmpty && filteredProposals.isEmpty
+              ? EmptyState(
+                  icon: Icons.search_off_rounded,
+                  message: l10n.translate('study_glossary_search_empty'),
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                  children: [
+                    for (final term in filteredApproved) _termCard(term),
+                    if (filteredProposals.isNotEmpty)
+                      _heading(
+                          l10n.translate('study_glossary_proposals_heading')),
+                    for (final term in filteredProposals) _termCard(term),
+                  ],
+                ),
+        ),
       ],
+    );
+  }
+
+  Widget _searchHeader({
+    required int totalApproved,
+    required int filteredCount,
+  }) {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    final hasFilter = _query.isNotEmpty || _selectedChapterId != null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 42,
+              decoration: BoxDecoration(
+                color: palette.card,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: palette.divider10,
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: palette.accentText,
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style: TextStyle(color: palette.text, fontSize: 14),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: l10n.translate('study_glossary_search_hint'),
+                        hintStyle: TextStyle(
+                          color: palette.text54,
+                          fontSize: 13,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      onChanged: (val) => setState(() => _query = val),
+                    ),
+                  ),
+                  if (_query.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      color: palette.text54,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: palette.accentText.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              hasFilter
+                  ? l10n.translate('study_glossary_results_count',
+                      args: {'count': l10n.number(filteredCount)})
+                  : l10n.translate('study_glossary_terms_count',
+                      args: {'count': l10n.number(totalApproved)}),
+              style: TextStyle(
+                color: palette.accentText,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chapterFilterBar() {
+    final l10n = context.l10n;
+    final palette = context.forest;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: Text(l10n.translate('study_glossary_all_chapters')),
+            selected: _selectedChapterId == null,
+            onSelected: (_) => setState(() => _selectedChapterId = null),
+            selectedColor: palette.accentText.withValues(alpha: 0.2),
+            labelStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: _selectedChapterId == null
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+              color: _selectedChapterId == null
+                  ? palette.accentText
+                  : palette.text70,
+            ),
+          ),
+          for (final ch in _chapters) ...[
+            const SizedBox(width: 6),
+            ChoiceChip(
+              label: Text('${l10n.number(ch.number)}: ${ch.title}'),
+              selected: _selectedChapterId == ch.id,
+              onSelected: (selected) => setState(() {
+                _selectedChapterId = selected ? ch.id : null;
+              }),
+              selectedColor: palette.accentText.withValues(alpha: 0.2),
+              labelStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: _selectedChapterId == ch.id
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+                color: _selectedChapterId == ch.id
+                    ? palette.accentText
+                    : palette.text70,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -283,22 +508,68 @@ class _StudyGlossaryScreenState extends State<StudyGlossaryScreen> {
     return Card(
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: palette.divider10, width: 0.8),
+      ),
       child: ListTile(
-        title: Text(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        title: StudyRichText(
           term.term,
-          style: TextStyle(color: palette.text, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: palette.text,
+            fontWeight: FontWeight.bold,
+            fontSize: 15.5,
+          ),
         ),
-        subtitle: Text(
-          [
-            term.definition,
-            if (chapter != null)
-              l10n.translate('study_chapter_title_line', args: {
-                'number': l10n.number(chapter.number),
-                'title': chapter.title,
-              }),
-            if (!term.approved) l10n.translate('study_material_waiting'),
-          ].join('\n'),
-          style: TextStyle(color: palette.text70),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StudyRichText(
+                term.definition,
+                style: TextStyle(
+                  color: palette.text70,
+                  fontSize: 13.5,
+                  height: 1.45,
+                ),
+              ),
+              if (chapter != null) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: palette.accentText.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    l10n.translate('study_chapter_title_line', args: {
+                      'number': l10n.number(chapter.number),
+                      'title': chapter.title,
+                    }),
+                    style: TextStyle(
+                      color: palette.accentText,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+              if (!term.approved) ...[
+                const SizedBox(height: 4),
+                Text(
+                  l10n.translate('study_material_waiting'),
+                  style: TextStyle(
+                    color: palette.text54,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
