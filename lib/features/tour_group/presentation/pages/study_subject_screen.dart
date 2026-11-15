@@ -28,6 +28,7 @@ import 'study_reading_screen.dart';
 
 import '../widgets/study/study_rich_text.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// One subject: its modules. Members see the modules an admin has turned on. An admin sees
 /// every module, and customises them.
@@ -169,7 +170,7 @@ class _StudySubjectScreenState extends State<StudySubjectScreen> {
   }
 
   void _push(Widget page) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => page,
     ));
   }

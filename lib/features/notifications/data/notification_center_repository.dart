@@ -27,6 +27,18 @@ class AppNotification {
     required this.read,
   });
 
+  /// The words every chat notice's title starts with as it is stored. The sender's app
+  /// writes the title and cannot know the reader's language.
+  static const String chatTitlePrefix = 'New message from ';
+
+  /// The sender's name in a chat notice, or null when this is not a chat notice written in
+  /// the stored form. The list shows such a notice in the reader's own language.
+  String? get chatSenderName {
+    if (action != 'chat' || !title.startsWith(chatTitlePrefix)) return null;
+    final name = title.substring(chatTitlePrefix.length).trim();
+    return name.isEmpty ? null : name;
+  }
+
   factory AppNotification.fromDoc(
       QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();

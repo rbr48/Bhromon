@@ -2,7 +2,7 @@ class TranslationKeys {
   static const Map<String, Map<String, String>> localizedValues = {
     'en': {
       // ── Chat list ──────────────────────────────────────────────────────────
-      'chats_title': 'Bhromon Chat',
+      'chats_title': 'Chats',
       'chat_search_chats_hint': 'Search chats...',
       'chat_open_file_failed': 'Could not open file: {error}',
       'chat_you': 'You',
@@ -330,6 +330,10 @@ class TranslationKeys {
       // ── App General ────────────────────────────────────────────────────────
       'app_title': 'Bhromon',
       'notif_center_title': 'Notifications',
+      'notif_chat_title': 'New message from {name}',
+      'game_zone_title': 'Game Zone',
+      'ig_view_list': 'List',
+      'ig_view_grid': 'Grid',
       'notif_filter_all': 'All',
       'notif_filter_unread': 'Unread',
       'notif_mark_all_read': 'Mark all as read',
@@ -512,7 +516,7 @@ class TranslationKeys {
     },
     'bn': {
       // ── Chat list ──────────────────────────────────────────────────────────
-      'chats_title': 'ভ্রমণ চ্যাট',
+      'chats_title': 'চ্যাট',
       'chat_search_chats_hint': 'চ্যাট খুঁজুন...',
       'chat_open_file_failed': 'ফাইলটি খোলা যায়নি: {error}',
       'chat_you': 'আপনি',
@@ -839,6 +843,10 @@ class TranslationKeys {
       // ── App General ────────────────────────────────────────────────────────
       'app_title': 'ভ্রমণ',
       'notif_center_title': 'বিজ্ঞপ্তি',
+      'notif_chat_title': '{name} বার্তা পাঠিয়েছেন',
+      'game_zone_title': 'গেম জোন',
+      'ig_view_list': 'তালিকা',
+      'ig_view_grid': 'গ্রিড',
       'notif_filter_all': 'সব',
       'notif_filter_unread': 'অপঠিত',
       'notif_mark_all_read': 'সব পড়া হিসেবে চিহ্নিত করুন',

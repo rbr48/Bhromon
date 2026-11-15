@@ -49,6 +49,7 @@ import 'study_quizzes_screen.dart';
 import 'study_summary_screen.dart';
 
 import '../widgets/study/study_rich_text.dart';
+import '../widgets/shell_page_route.dart';
 
 /// The learning tools a book offers, from the sheet on its chapters.
 /// A chapter's past paper the exam simulator can run: its solution text, and how many
@@ -553,7 +554,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   /// Opens the materials of this book: the notes, files, links and recordings members filed.
   void _openMaterials() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyMaterialsScreen(
         tourId: widget.tourId,
         book: widget.book,
@@ -564,7 +565,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   /// Opens the discussion of this book: its threads, with the fence and the member's place.
   void _openDiscussion() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyDiscussionScreen(
         tourId: widget.tourId,
         book: widget.book,
@@ -722,7 +723,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
       _LearningTool.printableBooklet => const SizedBox.shrink(),
       _LearningTool.branchPoster => const SizedBox.shrink(),
     };
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+    Navigator.of(context).push(ShellPageRoute<void>(builder: (_) => page));
   }
 
   /// Shows the progress card of a booklet or poster being made. [detail] is the line under
@@ -1069,7 +1070,7 @@ class _StudyBookChaptersScreenState extends State<StudyBookChaptersScreen> {
 
   /// The shared summary of a chapter: the revision the group reads, and the older ones.
   void _openSummary(StudyChapter chapter) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudySummaryScreen(
         tourId: widget.tourId,
         book: widget.book,

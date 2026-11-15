@@ -256,9 +256,10 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   }
                 },
               ),
-              title: const Text(
-                'Travel GameZone',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              title: Text(
+                context.l10n.translate('game_zone_title'),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               centerTitle: true,
               backgroundColor:

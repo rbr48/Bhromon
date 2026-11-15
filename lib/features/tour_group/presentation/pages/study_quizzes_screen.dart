@@ -16,6 +16,7 @@ import '../../domain/services/study_chapter_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
 import 'study_quiz_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// The quizzes of one book, in chapter order. An admin writes a quiz on a chapter. Every member can open a quiz,
 /// propose questions for it, and take it. The list shows how many members have taken each quiz, and nothing about
@@ -141,7 +142,7 @@ class _StudyQuizzesScreenState extends State<StudyQuizzesScreen> {
   }
 
   void _open(StudyQuiz quiz) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyQuizScreen(
         tourId: widget.tourId,
         book: widget.book,

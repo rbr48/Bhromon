@@ -18,6 +18,7 @@ import '../widgets/study/study_problem_set_sheets.dart';
 import '../widgets/study/study_reported_work_sheet.dart';
 import 'study_problem_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// The problems of one subject. Members open a problem to submit their own working; an admin posts
 /// problems, shows the ones that wait for approval, and pins the ones to read first.
@@ -107,7 +108,7 @@ class _StudyProblemsScreenState extends State<StudyProblemsScreen> {
   /// Opens a problem. When the member comes back, their working is read again, since they may have
   /// submitted it on the problem's page.
   Future<void> _open(StudyProblem problem, {String? setTitle}) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(
+    await Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyProblemScreen(
         tourId: widget.tourId,
         subject: widget.subject,

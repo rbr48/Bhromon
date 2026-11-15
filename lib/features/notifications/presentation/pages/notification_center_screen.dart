@@ -266,7 +266,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               color: context.forest.accentText, size: 20),
         ),
         title: Text(
-          n.title,
+          n.chatSenderName == null
+              ? n.title
+              : context.l10n.translate('notif_chat_title',
+                  args: {'name': n.chatSenderName!}),
           style: TextStyle(
               fontWeight: n.read ? FontWeight.normal : FontWeight.bold),
         ),

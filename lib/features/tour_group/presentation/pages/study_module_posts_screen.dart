@@ -21,6 +21,7 @@ import 'pdf_viewer_screen.dart';
 import 'study_graph_atlas_screen.dart';
 import '../widgets/study/study_atlas_publish_sheet.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// The posts in one module of a subject: exam tips, or suggestions with a link. Members add
 /// posts where the module lets them, mark posts helpful, and see the most helpful first. An
@@ -299,7 +300,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
                 tooltip: 'ব্রাউজ অ্যাটলাস (Explore Atlas)',
                 icon: const Icon(Icons.auto_graph_rounded),
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
+                  ShellPageRoute<void>(
                     builder: (_) => const StudyGraphAtlasScreen(),
                   ),
                 ),
@@ -441,7 +442,7 @@ class _StudyModulePostsScreenState extends State<StudyModulePostsScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
+                      ShellPageRoute<void>(
                         builder: (_) => const StudyGraphAtlasScreen(),
                       ),
                     ),

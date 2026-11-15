@@ -23,6 +23,7 @@ import '../widgets/holiday_calendar/holiday_leave_view.dart';
 import '../widgets/holiday_calendar/holiday_list_view.dart';
 import '../widgets/holiday_calendar/holiday_month_view.dart';
 import 'study_session_screen.dart';
+import '../widgets/shell_page_route.dart';
 
 enum HolidayView { month, year, list, leave }
 
@@ -195,7 +196,7 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
+                    ShellPageRoute<void>(
                       builder: (_) => StudySessionScreen(
                         tourId: widget.tourId,
                         session: session,

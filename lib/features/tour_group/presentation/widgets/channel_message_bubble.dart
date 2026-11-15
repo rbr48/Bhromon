@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'dart:async';
 
 import 'package:bhromon/core/theme/forest_palette.dart';
@@ -90,8 +92,10 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
         onLongPress: widget.onLongPress,
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          constraints:
-              BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+          // Four fifths of the page, and never wider than a line reads comfortably: on a
+          // desktop window a bubble ran the whole width of the page.
+          constraints: BoxConstraints(
+              maxWidth: math.min(MediaQuery.sizeOf(context).width * 0.8, 640)),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
           decoration: BoxDecoration(
             color: widget.isHighlighted

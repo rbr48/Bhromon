@@ -16,6 +16,8 @@ import '../widgets/study/study_labels.dart';
 import '../widgets/study/study_vote_row.dart';
 import 'study_book_chapters_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
+import '../../../../core/widgets/data_list_table.dart';
 
 /// A study or book club's shared book list. A member proposes a book, and an admin lists it
 /// or declines it. Anyone moves a listed book along its statuses. A book's creator or an
@@ -134,7 +136,7 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
 
   /// Opens a listed book's chapters, with the reading progress of the signed-in member.
   void _openChapters(StudyBook book) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyBookChaptersScreen(
         tourId: widget.tourId,
         book: book,
@@ -253,7 +255,11 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
                 for (final status in kStudyBookSectionOrder)
                   if (groups[status]!.isNotEmpty) ...[
                     _header(l10n.translate(studyBookStatusKey(status))),
-                    for (final book in groups[status]!) _tile(book),
+                    // A wide screen shows each status as a table; a phone, as cards.
+                    if (showsDataTable(context))
+                      _bookTable(status, groups[status]!)
+                    else
+                      for (final book in groups[status]!) _tile(book),
                   ],
                 if (declined.isNotEmpty) ...[
                   _header(l10n.translate('study_book_declined_section')),
@@ -375,10 +381,49 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
     );
   }
 
-  Widget _tile(StudyBook book) {
+  /// The menu at the end of a listed book's row: its status, and edit and remove for the
+  /// member who may change it.
+  Widget _bookMenu(StudyBook book) {
     final l10n = context.l10n;
     final palette = context.forest;
     final canEdit = _canEdit(book);
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded, color: palette.text54),
+      tooltip: l10n.translate('study_book_menu'),
+      onSelected: (value) {
+        switch (value) {
+          case 'edit':
+            _edit(book);
+          case 'delete':
+            _remove(book);
+          default:
+            _setStatus(book, StudyBookStatus.values.byName(value));
+        }
+      },
+      itemBuilder: (_) => [
+        for (final status in StudyBookStatus.values)
+          PopupMenuItem<String>(
+            value: status.name,
+            enabled: status != book.status,
+            child: Text(l10n.translate(studyBookStatusKey(status))),
+          ),
+        if (canEdit) const PopupMenuDivider(),
+        if (canEdit)
+          PopupMenuItem<String>(
+            value: 'edit',
+            child: Text(l10n.translate('study_edit')),
+          ),
+        if (canEdit)
+          PopupMenuItem<String>(
+            value: 'delete',
+            child: Text(l10n.translate('study_remove')),
+          ),
+      ],
+    );
+  }
+
+  Widget _tile(StudyBook book) {
+    final palette = context.forest;
     return Card(
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
@@ -389,40 +434,42 @@ class _StudyBooksScreenState extends State<StudyBooksScreen> {
         subtitle: book.author.isEmpty
             ? null
             : Text(book.author, style: TextStyle(color: palette.text54)),
-        trailing: PopupMenuButton<String>(
-          icon: Icon(Icons.more_vert_rounded, color: palette.text54),
-          tooltip: l10n.translate('study_book_menu'),
-          onSelected: (value) {
-            switch (value) {
-              case 'edit':
-                _edit(book);
-              case 'delete':
-                _remove(book);
-              default:
-                _setStatus(book, StudyBookStatus.values.byName(value));
-            }
-          },
-          itemBuilder: (_) => [
-            for (final status in StudyBookStatus.values)
-              PopupMenuItem<String>(
-                value: status.name,
-                enabled: status != book.status,
-                child: Text(l10n.translate(studyBookStatusKey(status))),
-              ),
-            if (canEdit) const PopupMenuDivider(),
-            if (canEdit)
-              PopupMenuItem<String>(
-                value: 'edit',
-                child: Text(l10n.translate('study_edit')),
-              ),
-            if (canEdit)
-              PopupMenuItem<String>(
-                value: 'delete',
-                child: Text(l10n.translate('study_remove')),
-              ),
-          ],
-        ),
+        trailing: _bookMenu(book),
       ),
+    );
+  }
+
+  /// The books of one status as a table, for a wide screen: title, author and note.
+  Widget _bookTable(StudyBookStatus status, List<StudyBook> books) {
+    final palette = context.forest;
+    final l10n = context.l10n;
+    final muted = TextStyle(color: palette.text70);
+    return DataListTable(
+      key: ValueKey<String>('study_books_table_${status.name}'),
+      columns: [
+        DataListColumn(l10n.translate('study_table_book'), flex: 3),
+        DataListColumn(l10n.translate('study_table_author'), flex: 2),
+        DataListColumn(l10n.translate('study_table_note'), flex: 2),
+      ],
+      rows: [
+        for (final book in books)
+          DataListRow(
+            key: ValueKey<String>('study_book_row_${book.id}'),
+            onTap: () => _openChapters(book),
+            trailing: _bookMenu(book),
+            cells: [
+              Text(book.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: palette.text, fontWeight: FontWeight.w600)),
+              Text(book.author.isEmpty ? '—' : book.author,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+              Text(book.notes.isEmpty ? '—' : book.notes,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+            ],
+          ),
+      ],
     );
   }
 }

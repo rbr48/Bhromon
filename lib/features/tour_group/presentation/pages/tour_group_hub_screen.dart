@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/family_date_models.dart';
 import '../../domain/services/group_search_engine.dart';
+import '../../domain/services/desktop_nav.dart';
 import '../../domain/services/hub_modules.dart';
 import '../../domain/services/tour_record_plan.dart';
 import '../../domain/services/tour_choice.dart';
@@ -2024,41 +2025,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        group.isFriends
-                            ? context.l10n.translate('hub_friends_badge')
-                            : group.isOffice
-                                ? context.l10n.translate('hub_office_badge')
-                                : group.isCampus
-                                    ? context.l10n.translate('hub_campus_badge')
-                                    : group.isMess
-                                        ? context.l10n
-                                            .translate('hub_mess_badge')
-                                        : group.isSociety
-                                            ? context.l10n
-                                                .translate('hub_society_badge')
-                                            : group.isSamity
-                                                ? context.l10n.translate(
-                                                    'hub_samity_badge')
-                                                : group.isSchool
-                                                    ? context.l10n.translate(
-                                                        'hub_school_badge')
-                                                    : group.isSports
-                                                        ? context.l10n.translate(
-                                                            'hub_sports_badge')
-                                                        : group.isStudy
-                                                            ? context.l10n
-                                                                .translate(
-                                                                    'hub_study_badge')
-                                                            : group.isCommittee
-                                                                ? context.l10n
-                                                                    .translate(
-                                                                        'hub_committee_badge')
-                                                                : group.isFamily
-                                                                    ? context
-                                                                        .l10n
-                                                                        .translate(
-                                                                            'hub_family_badge')
-                                                                    : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                        groupTypeLabelKey(group) != null
+                            ? context.l10n.translate(groupTypeLabelKey(group)!)
+                            : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
                         style: TextStyle(
                           color: context.forest.accentText,
                           fontSize: 12,
@@ -2718,26 +2687,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final int crossAxisCount;
-        final double childAspectRatio;
-        if (constraints.maxWidth >= 760) {
-          crossAxisCount = 4;
-          childAspectRatio = 2.15;
-        } else if (constraints.maxWidth >= 500) {
-          crossAxisCount = 3;
-          childAspectRatio = 2.1;
-        } else {
-          crossAxisCount = 2;
-          childAspectRatio = 2.0;
-        }
+        final layout = hubToolGridFor(constraints.maxWidth);
 
         final grid = GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: modules.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: childAspectRatio / tileTextScale,
+            crossAxisCount: layout.columns,
+            mainAxisExtent: layout.tileHeight * tileTextScale,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
           ),

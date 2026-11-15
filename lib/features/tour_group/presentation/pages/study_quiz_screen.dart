@@ -18,6 +18,7 @@ import 'study_quiz_run_screen.dart';
 
 import '../widgets/study/study_rich_text.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// One quiz. It shows the signed-in member's own record, which nobody else reads, and the questions an admin has
 /// approved. Proposed questions are listed for everyone, with the actions each person may take: an admin approves
@@ -194,7 +195,7 @@ class _StudyQuizScreenState extends State<StudyQuizScreen> {
   }
 
   void _take() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyQuizRunScreen(
         tourId: widget.tourId,
         bookId: widget.book.id,

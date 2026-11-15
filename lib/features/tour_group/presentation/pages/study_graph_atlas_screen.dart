@@ -9,6 +9,7 @@ import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/theme/theme_context.dart';
 import '../../../chat/presentation/widgets/chat_svg_widget.dart';
 import '../widgets/group_back_button.dart';
+import '../widgets/shell_page_route.dart';
 
 /// Represents a single economic vector diagram from the POE Exam Dynamic SVG Atlas.
 class AtlasGraphItem {
@@ -77,7 +78,7 @@ class StudyGraphAtlasScreen extends StatefulWidget {
     String? initialLanguage,
   }) {
     return Navigator.of(context).push(
-      MaterialPageRoute(
+      ShellPageRoute(
         builder: (_) => StudyGraphAtlasScreen(
           tourId: tourId,
           initialExam: initialExam,

@@ -60,10 +60,28 @@ List<StudyPost> sortStudyPosts(List<StudyPost> posts) {
   return sorted;
 }
 
-/// The subjects sorted by title, ignoring case.
+/// The subjects in the order a syllabus lists them: by subject code (101 before 102, and 9
+/// before 10), and by title among subjects with the same code. A subject with no code comes
+/// after the ones that have one, by title, ignoring case.
 List<StudySubject> studySubjectsByTitle(Iterable<StudySubject> subjects) =>
-    subjects.toList()
-      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    subjects.toList()..sort(compareStudySubjects);
+
+/// The order of two subjects in a list. See [studySubjectsByTitle].
+int compareStudySubjects(StudySubject a, StudySubject b) {
+  final codeA = a.code.trim();
+  final codeB = b.code.trim();
+  if (codeA.isEmpty != codeB.isEmpty) return codeA.isEmpty ? 1 : -1;
+  if (codeA != codeB) {
+    final numberA = int.tryParse(codeA);
+    final numberB = int.tryParse(codeB);
+    if (numberA != null && numberB != null && numberA != numberB) {
+      return numberA.compareTo(numberB);
+    }
+    final byCode = codeA.toLowerCase().compareTo(codeB.toLowerCase());
+    if (byCode != 0) return byCode;
+  }
+  return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+}
 
 /// The subjects the group studies: listed and not archived. Members see only these, and so
 /// does the exam countdown on the Today card. A proposal waits for an admin, and an archived

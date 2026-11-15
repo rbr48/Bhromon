@@ -13,6 +13,7 @@ import '../../../data/predefined_spots_repository.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../transport/local_fare_guide_sheet.dart';
 import '../../itinerary_pdf_export.dart';
+import '../shell_page_route.dart';
 
 /// The result of editing an itinerary.
 class ItineraryEdit {
@@ -38,7 +39,7 @@ IconData tourTypeIcon(TourType t) => switch (t) {
 Future<ItineraryEdit?> showItineraryEditor(
     BuildContext context, TourGroup group) {
   return Navigator.of(context).push<ItineraryEdit>(
-    MaterialPageRoute(
+    ShellPageRoute(
       fullscreenDialog: true,
       builder: (_) => _ItineraryEditorPage(group: group),
     ),

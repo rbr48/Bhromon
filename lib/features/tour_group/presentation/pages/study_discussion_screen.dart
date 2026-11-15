@@ -19,6 +19,7 @@ import '../widgets/study/study_chat_composer.dart';
 import '../widgets/study/study_thread_composer.dart';
 import 'study_thread_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// The discussions of a study book, opened as a conversation: the threads members have started, in
 /// chat order (pinned ones first, the newest at the foot), with the chat box under them. A member
@@ -288,7 +289,7 @@ class _StudyDiscussionScreenState extends State<StudyDiscussionScreen> {
   }
 
   void _open(StudyThread thread) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyThreadScreen(
         tourId: widget.tourId,
         bookId: widget.book.id,

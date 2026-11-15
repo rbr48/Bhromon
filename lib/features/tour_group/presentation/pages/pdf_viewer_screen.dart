@@ -16,6 +16,7 @@ import '../../../../core/utils/app_logger.dart';
 import '../tour_pdf_download.dart';
 import '../viewer_file_helper.dart';
 import '../widgets/group_back_button.dart';
+import '../widgets/shell_page_route.dart';
 
 /// Fullscreen in-app viewer for PDF documents (.pdf) with pinch-to-zoom,
 /// multi-page swipe navigation, jump controls, and system fallback launcher.
@@ -45,7 +46,7 @@ class PdfViewerScreen extends StatefulWidget {
     String? tourId,
   }) {
     return Navigator.of(context).push(
-      MaterialPageRoute(
+      ShellPageRoute(
         builder: (_) => PdfViewerScreen(
           title: title,
           filePath: filePath,
