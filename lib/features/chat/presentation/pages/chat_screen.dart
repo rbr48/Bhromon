@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:bhromon/features/chat/domain/message_paging.dart';
-import 'package:bhromon/features/chat/domain/message_receipts.dart';
 import 'package:bhromon/features/chat/domain/chat_messages_listener_state.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/localized_date.dart';
@@ -28,19 +27,22 @@ import '../widgets/chat_media_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/chat_media_bubble.dart';
+import '../widgets/chat_message_bubble.dart';
+import '../widgets/chat_bubble_clippers.dart';
+import '../widgets/chat_skeleton.dart';
+import '../../data/cached_message_doc.dart';
+import '../../domain/cached_messages.dart';
+import '../../domain/chat_stream_retry.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/voice_message_recorder.dart';
 import '../widgets/voice_message_bubble.dart';
-import '../widgets/swipe_to_reply.dart';
 import '../widgets/chat_reply_preview.dart';
 import '../widgets/chat_reaction_bar.dart';
 import '../widgets/chat_document_bubble.dart';
-import '../widgets/chat_location_bubble.dart';
 import '../widgets/chat_attachment_sheet.dart';
 import '../widgets/chat_forward_dialog.dart';
 import '../widgets/chat_media_caption_screen.dart';
-import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/e2ee/e2ee_chat_controller.dart';
@@ -181,6 +183,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         state == AppLifecycleState.paused) {
       _updatePresence();
     }
+    // Back in the app: a listener that failed meanwhile is opened again at once.
+    if (state == AppLifecycleState.resumed) _maybeRetryStream(now: true);
   }
 
   String _formatLastSeen(DateTime lastSeen, bool isBn) {
@@ -226,7 +230,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   int _searchMatchIndex = 0;
   final List<int> _matchingIndices = [];
   String? _highlightedMessageId;
-  final Map<String, GlobalKey> _messageItemKeys = {};
+  final ChatBubbleRegistry _bubbleRegistry = ChatBubbleRegistry();
   QueryDocumentSnapshot? _reactionTargetDoc;
 
   // Pending uploads shown optimistically before Firestore write completes.
@@ -242,6 +246,37 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _hasMoreMessages = true; // false once all pages loaded
   bool _isLoadingMore = false; // prevents duplicate fetches
   final List<QueryDocumentSnapshot> _allMessages = [];
+
+  // The messages listener has answered once, from the server or from Firestore's own cache.
+  bool _firstSnapshotReceived = false;
+  // The list holds the phone's cached copy until that first answer.
+  bool _showingCached = false;
+
+  // The messages listener failed and has not delivered since. It is opened again after a
+  // growing wait (chatStreamRetryDelay), and at once when the app or the network comes back.
+  bool _streamFailed = false;
+  int _streamRetryAttempt = 0;
+  Timer? _streamRetryTimer;
+
+  bool _offline = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+
+  // The reader is scrolled away from the newest message, and how many messages from the
+  // other person arrived meanwhile.
+  bool _awayFromLatest = false;
+  int _newWhileAway = 0;
+
+  // The messages the list shows, and where each one is. Worked out once and kept until the
+  // next setState, since any change to the messages or the filters goes through one.
+  List<QueryDocumentSnapshot>? _visibleCache;
+  Map<String, int>? _visibleIndex;
+
+  @override
+  void setState(VoidCallback fn) {
+    _visibleCache = null;
+    _visibleIndex = null;
+    super.setState(fn);
+  }
 
   /// The two pages of the chat: messages (0) and calls (1). A swipe changes page only
   /// when it comes to rest; the composer and the header stay outside the pager.
@@ -333,6 +368,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
     _scrollController.addListener(_onScroll);
     _startChatOpenTrace();
+    unawaited(_showCachedMessages());
+    _watchConnectivity();
     _subscribeToLatestMessages();
     _chatDocSub = _chatDocStream.listen((snap) {
       if (!mounted) return;
@@ -352,6 +389,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _chatIsEncrypted = encrypted;
           _chatDocExists = snap.exists;
         });
+        _maybeRetryStream();
       }
       final secs = (data?['disappearingTimerSeconds'] as num?)?.toInt() ?? 0;
       final authState = context.read<AuthCubit>().state;
@@ -389,6 +427,83 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Shows the messages kept on this phone, so the chat opens with its conversation in place.
+  /// The listener's first answer replaces them.
+  Future<void> _showCachedMessages() async {
+    final cached = await ChatLocalCache().getCachedMessages(widget.chatId);
+    if (!mounted || _firstSnapshotReceived || _allMessages.isNotEmpty) return;
+    final messages = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .collection('messages');
+    final docs = <QueryDocumentSnapshot>[
+      for (final message in newestCachedMessages(cached, limit: _pageSize))
+        CachedMessageDoc(
+          id: message['id'] as String,
+          data: message,
+          reference: messages.doc(message['id'] as String),
+        ),
+    ];
+    if (docs.isEmpty) return;
+    setState(() {
+      _allMessages.addAll(docs);
+      _showingCached = true;
+    });
+    unawaited(_resolveEncryptedMessages(docs));
+  }
+
+  /// Follows the phone's connection, for the offline line above the messages. A connection that
+  /// comes back opens a failed messages listener again at once.
+  void _watchConnectivity() {
+    bool isOffline(List<ConnectivityResult> results) =>
+        results.isEmpty || results.every((r) => r == ConnectivityResult.none);
+    void apply(List<ConnectivityResult> results) {
+      if (!mounted) return;
+      final offline = isOffline(results);
+      if (offline != _offline) setState(() => _offline = offline);
+      if (!offline) _maybeRetryStream(now: true);
+    }
+
+    try {
+      final connectivity = Connectivity();
+      _connectivitySub = connectivity.onConnectivityChanged.listen(
+        apply,
+        onError: (Object error, StackTrace stackTrace) =>
+            logSkipped(error, stackTrace),
+      );
+      connectivity.checkConnectivity().then(apply).catchError(
+          (Object error, StackTrace stackTrace) =>
+              logSkipped(error, stackTrace));
+    } catch (error, stackTrace) {
+      // No connectivity plugin on this platform: the line is simply never shown.
+      logSkipped(error, stackTrace);
+    }
+  }
+
+  /// Opens a failed messages listener again: after the next wait, or at once with [now].
+  void _maybeRetryStream({bool now = false}) {
+    if (!mounted) return;
+    if (now) {
+      if (!_streamFailed || !_chatDocExists) return;
+      _streamRetryTimer?.cancel();
+      _streamRetryTimer = null;
+      _subscribeToLatestMessages();
+      return;
+    }
+    if (!shouldRetryChatStream(
+      failed: _streamFailed,
+      chatExists: _chatDocExists,
+      retryPending: _streamRetryTimer != null,
+    )) {
+      return;
+    }
+    final delay = chatStreamRetryDelay(_streamRetryAttempt++);
+    _streamRetryTimer = Timer(delay, () {
+      _streamRetryTimer = null;
+      if (mounted) _subscribeToLatestMessages();
+    });
+  }
+
   /// Subscribes to the latest [_pageSize] messages in real-time.
   void _subscribeToLatestMessages() {
     _messagesSub?.cancel();
@@ -403,19 +518,47 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         .listen((snap) {
       if (!mounted) return;
       _messagesListener.delivered();
+      _streamRetryTimer?.cancel();
+      _streamRetryTimer = null;
+      _streamRetryAttempt = 0;
       final incoming = snap.docs;
-      // Cache messages locally for offline viewing
+      // Only the messages that are new or changed are saved for offline viewing, so a tick
+      // on one message does not rewrite the whole page.
       final cacheList = <Map<String, dynamic>>[];
-      for (final doc in incoming) {
-        cacheList.add({'id': doc.id, ...doc.data()});
+      var arrived = 0;
+      final authState = context.read<AuthCubit>().state;
+      final currentUid =
+          authState is Authenticated ? authState.profile.uid : '';
+      for (final change in snap.docChanges) {
+        if (change.type == DocumentChangeType.removed) continue;
+        final data = change.doc.data();
+        if (data == null) continue;
+        cacheList.add({'id': change.doc.id, ...data});
+        if (change.type == DocumentChangeType.added &&
+            data['senderId'] != currentUid) {
+          arrived++;
+        }
       }
       if (cacheList.isNotEmpty) {
         ChatLocalCache().cacheMessages(widget.chatId, cacheList);
       }
 
       final incomingIds = {for (final d in incoming) d.id};
+      final firstAnswer = !_firstSnapshotReceived;
 
       setState(() {
+        _firstSnapshotReceived = true;
+        _streamFailed = false;
+        // The cached copy gives way to the listener's answer. An empty answer from
+        // Firestore's own cache says nothing yet, so the cached copy stays until the
+        // server answers.
+        if (_showingCached &&
+            !(snap.metadata.isFromCache && incoming.isEmpty)) {
+          _allMessages.clear();
+          _showingCached = false;
+        }
+        if (!firstAnswer && _awayFromLatest) _newWhileAway += arrived;
+
         // Remove from optimistic pending text list once confirmed by snapshot
         _pendingTextMessages.removeWhere((p) => incomingIds.contains(p.id));
 
@@ -430,15 +573,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ..clear()
           ..addAll(merged);
 
-        if (incoming.length < _pageSize) _hasMoreMessages = false;
+        if (incoming.length < _pageSize && !_showingCached) {
+          _hasMoreMessages = false;
+        }
       });
 
       unawaited(_resolveEncryptedMessages(incoming));
       // Automatically mark unread incoming messages as seen on snapshot receive
       try {
-        final authState = context.read<AuthCubit>().state;
-        final currentUid =
-            authState is Authenticated ? authState.profile.uid : '';
         if (currentUid.isNotEmpty) {
           _markMessagesAsSeen(incoming, currentUid);
         }
@@ -447,14 +589,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
     }, onError: (Object error, StackTrace stackTrace) {
       // Firestore closes a listener after an error, so it stays closed until it
-      // is opened again.
+      // is opened again. It is opened again after a wait, and the screen says so.
       _messagesListener.failed();
       _logStreamError(error, stackTrace);
+      if (!mounted) return;
+      if (!_streamFailed) {
+        setState(() => _streamFailed = true);
+      }
+      _maybeRetryStream();
     });
   }
 
   /// Called when the user scrolls near the top (oldest messages end).
   void _onScroll() {
+    // Away from the newest message: the jump-to-latest button shows, and new messages are
+    // counted on it. Only a change of side rebuilds the screen.
+    final away = _scrollController.position.pixels > 320;
+    if (away != _awayFromLatest) {
+      setState(() {
+        _awayFromLatest = away;
+        if (!away) _newWhileAway = 0;
+      });
+    }
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
         _hasMoreMessages &&
@@ -465,6 +621,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   /// Loads the next page of older messages.
   Future<void> _loadEarlierMessages() async {
+    // A cached copy has no place in the server's order to continue from.
+    if (_showingCached) return;
     if (_isLoadingMore || !_hasMoreMessages || _oldestLoadedDoc == null) return;
     setState(() => _isLoadingMore = true);
     try {
@@ -632,6 +790,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _scrollController.removeListener(_onScroll);
     _typingTimer?.cancel();
     _messagesSub?.cancel();
+    _streamRetryTimer?.cancel();
+    _connectivitySub?.cancel();
     _chatDocSub?.cancel();
     final authState = context.read<AuthCubit>().state;
     if (authState is Authenticated) {
@@ -1337,6 +1497,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     setState(() {
       _pendingTextMessages.add(pendingMsg);
     });
+    HapticFeedback.lightImpact();
 
     _scrollController.animateTo(
       0.0,
@@ -2769,10 +2930,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       return;
     }
 
-    final key = _messageItemKeys[messageId];
-    if (key?.currentContext != null && key!.currentContext!.mounted) {
+    final shown = _bubbleRegistry.contextOf(messageId);
+    if (shown != null && shown.mounted) {
       await Scrollable.ensureVisible(
-        key.currentContext!,
+        shown,
         alignment: 0.5,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -2792,10 +2953,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       await WidgetsBinding.instance.endOfFrame;
 
-      final fineKey = _messageItemKeys[messageId];
-      if (fineKey?.currentContext != null && fineKey!.currentContext!.mounted) {
+      final nowShown = _bubbleRegistry.contextOf(messageId);
+      if (nowShown != null && nowShown.mounted) {
         await Scrollable.ensureVisible(
-          fineKey.currentContext!,
+          nowShown,
           alignment: 0.5,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
@@ -3441,7 +3602,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return localizedDateFormat('h:mm a').format(date);
   }
 
-  List<QueryDocumentSnapshot> get _visibleMessages {
+  List<QueryDocumentSnapshot> get _visibleMessages =>
+      _visibleCache ??= _computeVisibleMessages();
+
+  /// Where the message [messageId] is among the visible messages, or null.
+  int? _visibleIndexOf(String messageId) {
+    final index = _visibleIndex ??= {
+      for (final (i, doc) in _visibleMessages.indexed) doc.id: i,
+    };
+    return index[messageId];
+  }
+
+  List<QueryDocumentSnapshot> _computeVisibleMessages() {
     final authState = context.read<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
     return _allMessages.where((doc) {
@@ -3470,6 +3642,95 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
       return true;
     }).toList();
+  }
+
+  /// One line above the messages while the phone is offline, or while the messages listener
+  /// is being opened again. Nothing otherwise.
+  Widget _connectionLine() {
+    final reconnecting = _streamFailed && _chatDocExists;
+    if (!_offline && !reconnecting) return const SizedBox.shrink();
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        color: context.chat.bar,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _offline ? Icons.cloud_off_rounded : Icons.sync_rounded,
+              size: 14,
+              color: context.chat.text70,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                context.l10n.translate(
+                    _offline ? 'chat_offline_banner' : 'chat_reconnecting'),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.chat.text70, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The button that returns to the newest message, with the count of messages that arrived
+  /// while the reader was scrolled away.
+  Widget _jumpToLatestButton() {
+    final count = _newWhileAway;
+    return Semantics(
+      button: true,
+      label: count > 0
+          ? context.l10n.translate('chat_new_messages_count',
+              args: {'count': context.l10n.number(count)})
+          : context.l10n.translate('chat_jump_latest'),
+      child: Material(
+        color: context.chat.bar,
+        elevation: 3,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
+          },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (count > 0) ...[
+                    Text(
+                      context.l10n.translate('chat_new_messages_count',
+                          args: {'count': context.l10n.number(count)}),
+                      style: const TextStyle(
+                        color: AppColors.chatGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      color: context.chat.text70),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -4220,897 +4481,262 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             },
                           ),
                         ),
+                      _connectionLine(),
                       Expanded(
-                        child: RepaintBoundary(
-                          child: () {
-                            final docs = _visibleMessages;
-                            final hasAnyMessages = docs.isNotEmpty ||
-                                _pendingUploads.isNotEmpty ||
-                                _pendingTextMessages.isNotEmpty;
-                            if (!hasAnyMessages && _messagesSub == null) {
-                              return const Center(
-                                  child: CircularProgressIndicator(
-                                      color: AppColors.chatGreen));
-                            }
-                            if (!hasAnyMessages) {
-                              return Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: context.chat.bar,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    context.l10n.translate(
-                                        'chat_start_conversation',
-                                        args: {'name': otherName}),
-                                    style: TextStyle(
-                                        color: context.chat.text70,
-                                        fontSize: 12),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return ListView.builder(
-                              reverse: true,
-                              controller: _scrollController,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 16),
-                              itemCount: docs.length +
-                                  _pendingUploads.length +
-                                  _pendingTextMessages.length +
-                                  (_isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                // ── Loading more indicator at the bottom (oldest end) ──
-                                if (index ==
-                                    docs.length +
-                                        _pendingUploads.length +
-                                        _pendingTextMessages.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.chatGreen,
-                                          strokeWidth: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                // ── Pending text message bubbles (newest outgoing) ──
-                                if (index < _pendingTextMessages.length) {
-                                  final pending = _pendingTextMessages[
-                                      _pendingTextMessages.length - 1 - index];
-                                  return _buildPendingTextMessageBubble(
-                                      pending);
-                                }
-
-                                // ── Pending upload bubbles ──────────────────────
-                                final uploadIndex =
-                                    index - _pendingTextMessages.length;
-                                if (uploadIndex < _pendingUploads.length) {
-                                  final pending = _pendingUploads[
-                                      _pendingUploads.length - 1 - uploadIndex];
-                                  return Semantics(
-                                    label: context.l10n
-                                        .translate('chat_uploading', args: {
-                                      'type': pending.type,
-                                      'percent':
-                                          ((pending.progress) * 100).toInt()
-                                    }),
-                                    child: Align(
-                                      alignment: Alignment.centerRight,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(
-                                            bottom: 8, left: 48),
-                                        child: pending.type == 'document'
-                                            ? ChatDocumentBubble(
-                                                documentUrl: '',
-                                                fileName:
-                                                    pending.fileName ?? '',
-                                                fileSizeBytes:
-                                                    pending.fileSizeBytes ?? 0,
-                                                isMe: true,
-                                                timeStr: '',
-                                                uploadProgress:
-                                                    pending.progress,
-                                              )
-                                            : pending.type == 'audio'
-                                                ? VoiceMessageBubble(
-                                                    audioUrl: '',
-                                                    durationSeconds:
-                                                        pending.durationSeconds,
-                                                    isMe: true,
-                                                    uploadProgress:
-                                                        pending.progress,
-                                                  )
-                                                : ChatMediaBubble(
-                                                    localFile: pending.file,
-                                                    localFiles: pending.files,
-                                                    bytes: pending.bytes,
-                                                    multiBytes:
-                                                        pending.multiBytes,
-                                                    type: pending.type,
-                                                    uploadProgress:
-                                                        pending.progress,
-                                                    isMe: true,
-                                                  ),
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                // ── Real Firestore messages ─────────────────────
-                                final realIndex =
-                                    uploadIndex - _pendingUploads.length;
-                                final doc = docs[realIndex];
-                                final data = _messageData(doc);
-                                final String msgType =
-                                    (data['type'] as String?) ?? 'text';
-                                // A call log is a record, not a message: it sits
-                                // centred in the conversation.
-                                if (msgType == 'call') {
-                                  return _buildCallLogEntry(
-                                    data,
-                                    currentUid,
-                                    onCallBack: () => _initiateCall(
-                                      isVideo:
-                                          CallLogEntry.fromData(data).isVideo,
-                                      currentUid: currentUid,
-                                      otherUid: resolvedOtherUid,
-                                      otherName: otherName,
-                                      avatarUrl: avatarUrl,
-                                      localUserName: currentName,
-                                      localAvatarUrl: currentAvatarUrl,
-                                    ),
-                                  );
-                                }
-                                final String text =
-                                    (data['text'] as String?) ?? '';
-                                final String mediaUrl =
-                                    (data['mediaUrl'] as String?) ?? '';
-                                final List<String>? mediaUrls =
-                                    (data['mediaUrls'] is List)
-                                        ? (data['mediaUrls'] as List)
-                                            .cast<String>()
-                                        : null;
-                                final senderId = data['senderId'] ?? '';
-                                final isMe = senderId == currentUid;
-                                final bool seen =
-                                    data['seen'] as bool? ?? false;
-                                // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
-                                final bool hasPendingWrites =
-                                    doc.metadata.hasPendingWrites;
-                                final String status = hasPendingWrites
-                                    ? 'pending'
-                                    : ((data['status'] as String?) ??
-                                        (seen ? 'read' : 'sent'));
-                                final timestamp =
-                                    data['timestamp'] as Timestamp?;
-
-                                // Locale-aware time string
-                                String timeStr = '';
-                                if (timestamp != null) {
-                                  final date = timestamp.toDate();
-                                  try {
-                                    timeStr = _formatTime(date);
-                                  } catch (_) {
-                                    timeStr = localizedDateFormat('h:mm a')
-                                        .format(date);
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: RepaintBoundary(
+                                child: () {
+                                  final docs = _visibleMessages;
+                                  final hasAnyMessages = docs.isNotEmpty ||
+                                      _pendingUploads.isNotEmpty ||
+                                      _pendingTextMessages.isNotEmpty;
+                                  if (!hasAnyMessages &&
+                                      !_firstSnapshotReceived) {
+                                    return const ChatSkeleton();
                                   }
-                                }
-
-                                // Delivery tick icon: a clock while pending, a single check
-                                // when sent, double grey when delivered, double blue when read.
-                                Widget deliveryIcon() {
-                                  switch (receiptStateFor(
-                                      status: status, seen: seen)) {
-                                    case ReceiptState.pending:
-                                      return Icon(Icons.access_time_rounded,
-                                          size: 11, color: context.chat.text54);
-                                    case ReceiptState.read:
-                                      return const Icon(Icons.done_all_rounded,
-                                          size: 13, color: Color(0xFF53BDEB));
-                                    case ReceiptState.delivered:
-                                      return Icon(Icons.done_all_rounded,
-                                          size: 13, color: context.chat.text54);
-                                    case ReceiptState.sent:
-                                      return Icon(Icons.done_rounded,
-                                          size: 13, color: context.chat.text54);
-                                  }
-                                }
-
-                                final isSelected =
-                                    _selectedMessageIds.contains(doc.id);
-                                final isHighlighted =
-                                    _highlightedMessageId == doc.id;
-                                final replyData =
-                                    data['replyTo'] as Map<String, dynamic>?;
-                                final replyModel = replyData != null
-                                    ? ReplyMessageInfo.fromMap(replyData)
-                                    : null;
-                                final reactions = (data['reactions']
-                                        as Map<String, dynamic>?) ??
-                                    {};
-                                final starredBy = (data['starredBy']
-                                        as Map<String, dynamic>?) ??
-                                    {};
-                                final isStarred = starredBy[currentUid] == true;
-                                final isEdited = data['isEdited'] == true;
-                                final isForwarded = data['isForwarded'] == true;
-
-                                Widget metaRow() {
-                                  return Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isEdited) ...[
-                                        Text(
-                                            context.l10n
-                                                .translate('chat_edited'),
-                                            style: TextStyle(
-                                                color: context.chat.text38,
-                                                fontSize: 11)),
-                                        const SizedBox(width: 3),
-                                      ],
-                                      Text(
-                                        timeStr,
-                                        style: TextStyle(
-                                          color: context.chat.text54,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      if (isStarred) ...[
-                                        const SizedBox(width: 3),
-                                        Icon(Icons.star_rounded,
-                                            size: 10,
-                                            color: context.chat.text60),
-                                      ],
-                                      if (isMe) ...[
-                                        const SizedBox(width: 4),
-                                        deliveryIcon(),
-                                      ],
-                                    ],
-                                  );
-                                }
-
-                                Widget bubbleBody;
-
-                                // ── Deleted Message Tombstone (WhatsApp Style) ──
-                                if (msgType == 'deleted' ||
-                                    data['isDeleted'] == true) {
-                                  bubbleBody = Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: context.chat.bar,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: context.chat.divider10,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.block_flipped,
-                                          size: 14,
-                                          color: context.chat.text38,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          isMe
-                                              ? context.l10n.translate(
-                                                  'chat_deleted_by_me')
-                                              : context.l10n.translate(
-                                                  'chat_deleted_message'),
-                                          style: TextStyle(
-                                            fontStyle: FontStyle.italic,
-                                            color: context.chat.text54,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          timeStr,
-                                          style: TextStyle(
-                                            color: context.chat.text30,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                                // ── Document Message ──────────────────────────────
-                                else if (msgType == 'document') {
-                                  bubbleBody = Column(
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      if (replyModel != null)
-                                        ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ChatDocumentBubble(
-                                        documentUrl:
-                                            (data['documentUrl'] as String?) ??
-                                                '',
-                                        fileName:
-                                            (data['fileName'] as String?) ??
-                                                context.l10n.translate(
-                                                    'chat_attach_document'),
-                                        fileSizeBytes:
-                                            (data['fileSizeBytes'] as num?)
-                                                    ?.toInt() ??
-                                                0,
-                                        isMe: isMe,
-                                        timeStr: timeStr,
-                                        deliveryIcon:
-                                            isMe ? deliveryIcon() : null,
-                                      ),
-                                    ],
-                                  );
-                                }
-                                // ── Location Message ──────────────────────────────
-                                else if (msgType == 'location') {
-                                  bubbleBody = Column(
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      if (replyModel != null)
-                                        ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ChatLocationBubble(
-                                        latitude: (data['latitude'] as num?)
-                                                ?.toDouble() ??
-                                            0.0,
-                                        longitude: (data['longitude'] as num?)
-                                                ?.toDouble() ??
-                                            0.0,
-                                        title: (data['title'] as String?) ??
-                                            context.l10n.translate(
-                                                'chat_location_title'),
-                                        address:
-                                            (data['address'] as String?) ?? '',
-                                        isMe: isMe,
-                                        timeStr: timeStr,
-                                        deliveryIcon:
-                                            isMe ? deliveryIcon() : null,
-                                      ),
-                                    ],
-                                  );
-                                }
-                                // ── Travel Expense / Split Message ────────────────
-                                else if (msgType == 'expense') {
-                                  bubbleBody = Column(
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      if (replyModel != null)
-                                        ChatQuotedBubble(
-                                          reply: replyModel,
-                                          isMe: isMe,
-                                          onTap: () => _scrollToMessage(
-                                              replyModel.messageId),
-                                        ),
-                                      ChatExpenseBubble(
-                                        title:
-                                            (data['expenseTitle'] as String?) ??
-                                                context.l10n.translate(
-                                                    'chat_expense_split_title'),
-                                        amount: (data['amount'] as num?)
-                                                ?.toDouble() ??
-                                            0.0,
-                                        paidByName:
-                                            (data['paidByName'] as String?) ??
-                                                context.l10n
-                                                    .translate('chats_member'),
-                                        isPaidByMe:
-                                            data['paidById'] == currentUid,
-                                        isSettled: data['isSettled'] == true,
-                                        timeStr: timeStr,
-                                        deliveryIcon:
-                                            isMe ? deliveryIcon() : null,
-                                        onSettle: data['isSettled'] == true
-                                            ? null
-                                            : () {
-                                                doc.reference.update(
-                                                    {'isSettled': true});
-                                              },
-                                      ),
-                                    ],
-                                  );
-                                }
-                                // ── Media Message (Photo / Video with Caption) ───
-                                else if (msgType == 'image' ||
-                                    msgType == 'video') {
-                                  final bool isViewOnce =
-                                      data['isViewOnce'] == true;
-                                  final bool isOpened =
-                                      data['isOpened'] == true;
-
-                                  if (isViewOnce) {
-                                    if (isOpened) {
-                                      bubbleBody = Container(
+                                  if (!hasAnyMessages) {
+                                    return Center(
+                                      child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
+                                            horizontal: 20, vertical: 10),
                                         decoration: BoxDecoration(
-                                          color: isMe
-                                              ? context.chat.outgoing
-                                              : context.chat.panel,
+                                          color: context.chat.bar,
                                           borderRadius:
-                                              BorderRadius.circular(16),
+                                              BorderRadius.circular(12),
                                         ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.looks_one_outlined,
-                                                color: context.chat.text54,
-                                                size: 18),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                                context.l10n
-                                                    .translate('chat_opened'),
-                                                style: TextStyle(
-                                                    color: context.chat.text54,
-                                                    fontStyle: FontStyle.italic,
-                                                    fontSize: 13)),
-                                            const SizedBox(width: 8),
-                                            Text(timeStr,
-                                                style: TextStyle(
-                                                    color: context.chat.text38,
-                                                    fontSize: 11)),
-                                            if (isMe) ...[
-                                              const SizedBox(width: 4),
-                                              deliveryIcon(),
-                                            ],
-                                          ],
+                                        child: Text(
+                                          context.l10n.translate(
+                                              'chat_start_conversation',
+                                              args: {'name': otherName}),
+                                          style: TextStyle(
+                                              color: context.chat.text70,
+                                              fontSize: 12),
                                         ),
-                                      );
-                                    } else {
-                                      bubbleBody = InkWell(
-                                        onTap: () {
-                                          if (isMe) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                  content: Text(context.l10n
-                                                      .translate(
-                                                          'chat_view_once_sent'))),
-                                            );
-                                            return;
-                                          }
-                                          Navigator.of(context)
-                                              .push(
-                                            MaterialPageRoute<void>(
-                                              builder: (ctx) => Scaffold(
-                                                backgroundColor: Colors.black,
-                                                appBar: AppBar(
-                                                  backgroundColor: Colors.black,
-                                                  iconTheme:
-                                                      const IconThemeData(
-                                                          color: Colors.white),
-                                                  title: Text(
-                                                      msgType == 'video'
-                                                          ? context.l10n.translate(
-                                                              'chat_view_once_video')
-                                                          : context.l10n.translate(
-                                                              'chat_view_once_photo'),
-                                                      style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 16)),
-                                                ),
-                                                body: Center(
-                                                  child: InteractiveViewer(
-                                                    child: kIsWeb
-                                                        ? Image.network(
-                                                            signedMediaUrl(
-                                                                mediaUrl),
-                                                            fit: BoxFit.contain,
-                                                          )
-                                                        : CachedNetworkImage(
-                                                            imageUrl:
-                                                                signedMediaUrl(
-                                                                    mediaUrl),
-                                                            fit: BoxFit.contain,
-                                                            errorWidget: (_, __,
-                                                                    ___) =>
-                                                                Image.network(
-                                                              signedMediaUrl(
-                                                                  mediaUrl),
-                                                              fit: BoxFit
-                                                                  .contain,
-                                                            ),
-                                                          ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                              .then((_) {
-                                            doc.reference.update({
-                                              'isOpened': true,
-                                              'openedAt':
-                                                  FieldValue.serverTimestamp(),
-                                            });
-                                          });
-                                        },
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: isMe
-                                                ? context.chat.outgoing
-                                                : context.chat.panel,
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                width: 22,
-                                                height: 22,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                      color: const Color(
-                                                          0xFF00A884),
-                                                      width: 1.5),
-                                                ),
-                                                child: Center(
-                                                  child: Text('1',
-                                                      style: TextStyle(
-                                                          color: context
-                                                              .chat.accentText,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 12)),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                  msgType == 'video'
-                                                      ? context.l10n.translate(
-                                                          'chat_video_label')
-                                                      : context.l10n.translate(
-                                                          'chat_label_photo'),
-                                                  style: TextStyle(
-                                                      color: context.chat.text,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 13)),
-                                              const SizedBox(width: 8),
-                                              Text(timeStr,
-                                                  style: TextStyle(
-                                                      color:
-                                                          context.chat.text54,
-                                                      fontSize: 11)),
-                                              if (isMe) ...[
-                                                const SizedBox(width: 4),
-                                                deliveryIcon(),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  } else {
-                                    bubbleBody = Container(
-                                      decoration: BoxDecoration(
-                                        color: isMe
-                                            ? context.chat.outgoing
-                                            : context.chat.panel,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      padding: const EdgeInsets.all(4),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: isMe
-                                            ? CrossAxisAlignment.end
-                                            : CrossAxisAlignment.start,
-                                        children: [
-                                          if (isForwarded)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      6, 4, 6, 2),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.forward_rounded,
-                                                      size: 11,
-                                                      color:
-                                                          context.chat.text54),
-                                                  const SizedBox(width: 3),
-                                                  Text(
-                                                      context.l10n.translate(
-                                                          'chat_forwarded_label'),
-                                                      style: TextStyle(
-                                                          fontStyle:
-                                                              FontStyle.italic,
-                                                          color: context
-                                                              .chat.text54,
-                                                          fontSize: 11)),
-                                                ],
-                                              ),
-                                            ),
-                                          if (replyModel != null)
-                                            ChatQuotedBubble(
-                                              reply: replyModel,
-                                              isMe: isMe,
-                                              onTap: () => _scrollToMessage(
-                                                  replyModel.messageId),
-                                            ),
-                                          ChatMediaBubble(
-                                            mediaUrl: mediaUrl,
-                                            mediaUrls: mediaUrls,
-                                            type: msgType,
-                                            isMe: isMe,
-                                          ),
-                                          if (text.isNotEmpty)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      6, 6, 6, 2),
-                                              child: Text(
-                                                text,
-                                                style: TextStyle(
-                                                  color: context.chat.text,
-                                                  fontSize: 16,
-                                                  height: 1.4,
-                                                  letterSpacing: 0.15,
-                                                ),
-                                              ),
-                                            ),
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                                6, 2, 6, 4),
-                                            child: metaRow(),
-                                          ),
-                                        ],
                                       ),
                                     );
                                   }
-                                }
-                                // ── Voice / Audio message ────────────────────────
-                                else if (msgType == 'audio') {
-                                  bubbleBody = Container(
-                                    decoration: BoxDecoration(
-                                      color: isMe
-                                          ? context.chat.outgoing
-                                          : context.chat.panel,
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: const Radius.circular(12),
-                                        topRight: const Radius.circular(12),
-                                        bottomLeft: isMe
-                                            ? const Radius.circular(12)
-                                            : Radius.zero,
-                                        bottomRight: isMe
-                                            ? Radius.zero
-                                            : const Radius.circular(12),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: isMe
-                                          ? CrossAxisAlignment.end
-                                          : CrossAxisAlignment.start,
-                                      children: [
-                                        if (replyModel != null)
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                                8, 8, 8, 0),
-                                            child: ChatQuotedBubble(
-                                              reply: replyModel,
-                                              isMe: isMe,
-                                              onTap: () => _scrollToMessage(
-                                                  replyModel.messageId),
-                                            ),
-                                          ),
-                                        VoiceMessageBubble(
-                                          audioUrl: mediaUrl,
-                                          durationSeconds:
-                                              (data['durationSeconds'] as num?)
-                                                  ?.toInt(),
-                                          isMe: isMe,
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              10, 0, 10, 6),
-                                          child: metaRow(),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                                // ── Text bubble ─────────────────────────────────
-                                else {
-                                  bubbleBody = PhysicalShape(
-                                    clipper: isMe
-                                        ? SenderBubbleClipper()
-                                        : ReceiverBubbleClipper(),
-                                    color: isMe
-                                        ? context.chat.outgoing
-                                        : context.chat.panel,
-                                    elevation: 1,
-                                    child: Padding(
-                                      padding: EdgeInsets.fromLTRB(
-                                          isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: isMe
-                                            ? CrossAxisAlignment.end
-                                            : CrossAxisAlignment.start,
-                                        children: [
-                                          if (isForwarded)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 2),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.forward_rounded,
-                                                      size: 11,
-                                                      color:
-                                                          context.chat.text54),
-                                                  const SizedBox(width: 3),
-                                                  Text(
-                                                      context.l10n.translate(
-                                                          'chat_forwarded_label'),
-                                                      style: TextStyle(
-                                                          fontStyle:
-                                                              FontStyle.italic,
-                                                          color: context
-                                                              .chat.text54,
-                                                          fontSize: 11)),
-                                                ],
-                                              ),
-                                            ),
-                                          if (replyModel != null)
-                                            ChatQuotedBubble(
-                                              reply: replyModel,
-                                              isMe: isMe,
-                                              onTap: () => _scrollToMessage(
-                                                  replyModel.messageId),
-                                            ),
-                                          ChatRichText(
-                                            text: text,
-                                            collapsible: true,
-                                            onExpandFullScreen: () =>
-                                                _showPinnedMessageFullView({
-                                              'id': doc.id,
-                                              'text': text,
-                                              'senderId': senderId,
-                                              'timestamp': timestamp,
-                                            }),
-                                            baseStyle: TextStyle(
-                                              color: context.chat.text,
-                                              fontSize: 16,
-                                              height: 1.4,
-                                              letterSpacing: 0.05,
-                                              fontFamily: 'NotoSansBengali',
-                                              fontFamilyFallback: const [
-                                                'HindSiliguri',
-                                                'Roboto',
-                                                'sans-serif'
-                                              ],
-                                            ),
-                                            isMine: isMe,
-                                          ),
-                                          const SizedBox(height: 2),
-                                          metaRow(),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }
 
-                                return KeyedSubtree(
-                                  key: _messageItemKeys.putIfAbsent(
-                                      doc.id, () => GlobalKey()),
-                                  child: SwipeToReply(
-                                    isMe: isMe,
-                                    enabled: chatActionAllowed(ChatAction.reply,
-                                        encrypted: _chatIsEncrypted),
-                                    onReply: () => _setReplyToMessage(doc),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        if (_selectedMessageIds.isNotEmpty) {
-                                          setState(() {
-                                            if (isSelected) {
-                                              _selectedMessageIds
-                                                  .remove(doc.id);
-                                            } else {
-                                              _selectedMessageIds.add(doc.id);
-                                            }
-                                          });
-                                        } else if (_reactionTargetDoc != null) {
-                                          setState(
-                                              () => _reactionTargetDoc = null);
-                                        }
-                                      },
-                                      onLongPress: () {
-                                        HapticFeedback.mediumImpact();
-                                        setState(() {
-                                          _selectedMessageIds.add(doc.id);
-                                          _reactionTargetDoc =
-                                              chatActionAllowed(
-                                                      ChatAction.react,
-                                                      encrypted:
-                                                          _chatIsEncrypted)
-                                                  ? doc
-                                                  : null;
-                                        });
-                                      },
-                                      child: Container(
-                                        color: isSelected
-                                            ? AppColors.chatGreen
-                                                .withValues(alpha: 0.18)
-                                            : isHighlighted
-                                                ? AppColors.chatGreen
-                                                    .withValues(alpha: 0.28)
-                                                : Colors.transparent,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: Stack(
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            Align(
-                                              alignment: isMe
-                                                  ? Alignment.centerRight
-                                                  : Alignment.centerLeft,
-                                              child: Padding(
-                                                padding: EdgeInsets.only(
-                                                  bottom: 8,
-                                                  left: isMe ? 48 : 0,
-                                                  right: isMe ? 0 : 48,
-                                                ),
-                                                child: bubbleBody,
+                                  return ListView.builder(
+                                    reverse: true,
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    // A new message moves every bubble one place. Finding each
+                                    // by its id keeps its state (a playing voice note) in place.
+                                    findChildIndexCallback: (key) {
+                                      if (key is! ValueKey<String>) return null;
+                                      final index = _visibleIndexOf(key.value);
+                                      if (index == null) return null;
+                                      return _pendingTextMessages.length +
+                                          _pendingUploads.length +
+                                          index;
+                                    },
+                                    itemCount: docs.length +
+                                        _pendingUploads.length +
+                                        _pendingTextMessages.length +
+                                        (_isLoadingMore ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      // ── Loading more indicator at the bottom (oldest end) ──
+                                      if (index ==
+                                          docs.length +
+                                              _pendingUploads.length +
+                                              _pendingTextMessages.length) {
+                                        return const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                color: AppColors.chatGreen,
+                                                strokeWidth: 2,
                                               ),
                                             ),
-                                            if (reactions.isNotEmpty)
-                                              Positioned(
-                                                bottom: 0,
-                                                right: isMe ? 8 : null,
-                                                left: isMe ? null : 8,
-                                                child: ChatReactionBadge(
-                                                  reactions: reactions,
-                                                  onTap: () =>
-                                                      showReactionDetailsSheet(
-                                                    context,
-                                                    reactions: reactions,
-                                                    currentUid: currentUid,
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }(),
+                                          ),
+                                        );
+                                      }
+
+                                      // ── Pending text message bubbles (newest outgoing) ──
+                                      if (index < _pendingTextMessages.length) {
+                                        final pending = _pendingTextMessages[
+                                            _pendingTextMessages.length -
+                                                1 -
+                                                index];
+                                        return _buildPendingTextMessageBubble(
+                                            pending);
+                                      }
+
+                                      // ── Pending upload bubbles ──────────────────────
+                                      final uploadIndex =
+                                          index - _pendingTextMessages.length;
+                                      if (uploadIndex <
+                                          _pendingUploads.length) {
+                                        final pending = _pendingUploads[
+                                            _pendingUploads.length -
+                                                1 -
+                                                uploadIndex];
+                                        return Semantics(
+                                          label: context.l10n.translate(
+                                              'chat_uploading',
+                                              args: {
+                                                'type': pending.type,
+                                                'percent':
+                                                    ((pending.progress) * 100)
+                                                        .toInt()
+                                              }),
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 8, left: 48),
+                                              child: pending.type == 'document'
+                                                  ? ChatDocumentBubble(
+                                                      documentUrl: '',
+                                                      fileName:
+                                                          pending.fileName ??
+                                                              '',
+                                                      fileSizeBytes: pending
+                                                              .fileSizeBytes ??
+                                                          0,
+                                                      isMe: true,
+                                                      timeStr: '',
+                                                      uploadProgress:
+                                                          pending.progress,
+                                                    )
+                                                  : pending.type == 'audio'
+                                                      ? VoiceMessageBubble(
+                                                          audioUrl: '',
+                                                          durationSeconds: pending
+                                                              .durationSeconds,
+                                                          isMe: true,
+                                                          uploadProgress:
+                                                              pending.progress,
+                                                        )
+                                                      : ChatMediaBubble(
+                                                          localFile:
+                                                              pending.file,
+                                                          localFiles:
+                                                              pending.files,
+                                                          bytes: pending.bytes,
+                                                          multiBytes: pending
+                                                              .multiBytes,
+                                                          type: pending.type,
+                                                          uploadProgress:
+                                                              pending.progress,
+                                                          isMe: true,
+                                                        ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      // ── Real Firestore messages ─────────────────────
+                                      final realIndex =
+                                          uploadIndex - _pendingUploads.length;
+                                      final doc = docs[realIndex];
+                                      final data = _messageData(doc);
+                                      final String msgType =
+                                          (data['type'] as String?) ?? 'text';
+                                      // A call log is a record, not a message: it sits
+                                      // centred in the conversation.
+                                      if (msgType == 'call') {
+                                        return KeyedSubtree(
+                                          key: ValueKey<String>(doc.id),
+                                          child: _buildCallLogEntry(
+                                            data,
+                                            currentUid,
+                                            onCallBack: () => _initiateCall(
+                                              isVideo:
+                                                  CallLogEntry.fromData(data)
+                                                      .isVideo,
+                                              currentUid: currentUid,
+                                              otherUid: resolvedOtherUid,
+                                              otherName: otherName,
+                                              avatarUrl: avatarUrl,
+                                              localUserName: currentName,
+                                              localAvatarUrl: currentAvatarUrl,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      final isSelected =
+                                          _selectedMessageIds.contains(doc.id);
+                                      return ChatMessageBubble(
+                                        key: ValueKey<String>(doc.id),
+                                        messageId: doc.id,
+                                        data: data,
+                                        hasPendingWrites:
+                                            doc.metadata.hasPendingWrites,
+                                        fromLocalCache: doc is CachedMessageDoc,
+                                        currentUid: currentUid,
+                                        isSelected: isSelected,
+                                        isHighlighted:
+                                            _highlightedMessageId == doc.id,
+                                        replyEnabled: chatActionAllowed(
+                                            ChatAction.reply,
+                                            encrypted: _chatIsEncrypted),
+                                        registry: _bubbleRegistry,
+                                        formatTime: _formatTime,
+                                        onScrollToMessage: _scrollToMessage,
+                                        onExpandText:
+                                            _showPinnedMessageFullView,
+                                        onReply: () {
+                                          HapticFeedback.selectionClick();
+                                          _setReplyToMessage(doc);
+                                        },
+                                        onTap: () {
+                                          if (_selectedMessageIds.isNotEmpty) {
+                                            setState(() {
+                                              if (isSelected) {
+                                                _selectedMessageIds
+                                                    .remove(doc.id);
+                                              } else {
+                                                _selectedMessageIds.add(doc.id);
+                                              }
+                                            });
+                                          } else if (_reactionTargetDoc !=
+                                              null) {
+                                            setState(() =>
+                                                _reactionTargetDoc = null);
+                                          }
+                                        },
+                                        onSettleExpense: () => doc.reference
+                                            .update({'isSettled': true}),
+                                        onViewOnceOpened: () =>
+                                            doc.reference.update({
+                                          'isOpened': true,
+                                          'openedAt':
+                                              FieldValue.serverTimestamp(),
+                                        }),
+                                        onLongPress: () {
+                                          HapticFeedback.mediumImpact();
+                                          setState(() {
+                                            _selectedMessageIds.add(doc.id);
+                                            _reactionTargetDoc =
+                                                chatActionAllowed(
+                                                        ChatAction.react,
+                                                        encrypted:
+                                                            _chatIsEncrypted)
+                                                    ? doc
+                                                    : null;
+                                          });
+                                        },
+                                      );
+                                    },
+                                  );
+                                }(),
+                              ),
+                            ),
+                            if (_awayFromLatest)
+                              Positioned(
+                                right: 12,
+                                bottom: 12,
+                                child: _jumpToLatestButton(),
+                              ),
+                          ],
                         ),
                       ),
 
@@ -5526,52 +5152,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 } // _ChatScreenState
 
 // ── CUSTOM CLIPPERS & BACKGROUND WALLPAPER ───────────────────────────────────
-
-class SenderBubbleClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.moveTo(12, 0);
-    path.lineTo(size.width - 12, 0);
-    // top-right tail shape
-    path.lineTo(size.width, 0);
-    path.lineTo(size.width - 6, 8);
-    path.lineTo(size.width - 6, size.height - 12);
-    path.quadraticBezierTo(
-        size.width - 6, size.height, size.width - 18, size.height);
-    path.lineTo(12, size.height);
-    path.quadraticBezierTo(0, size.height, 0, size.height - 12);
-    path.lineTo(0, 12);
-    path.quadraticBezierTo(0, 0, 12, 0);
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-class ReceiverBubbleClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.moveTo(18, 0);
-    // top-left tail shape
-    path.lineTo(6, 0);
-    path.lineTo(0, 0);
-    path.lineTo(6, 8);
-    path.lineTo(6, size.height - 12);
-    path.quadraticBezierTo(6, size.height, 18, size.height);
-    path.lineTo(size.width - 12, size.height);
-    path.quadraticBezierTo(
-        size.width, size.height, size.width, size.height - 12);
-    path.lineTo(size.width, 12);
-    path.quadraticBezierTo(size.width, 0, size.width - 12, 0);
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
 
 class WhatsappWallpaper extends StatelessWidget {
   final Widget child;
