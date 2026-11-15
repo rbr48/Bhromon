@@ -24,6 +24,7 @@ import '../../domain/services/study_solution_rules.dart';
 import '../widgets/study/study_learning_dialogs.dart';
 import 'study_flashcard_review_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// The flashcards of one book, kept on this device. Cards never go to the server; they leave the phone only when
 /// the member exports them to a file. A member reviews the cards that are due, adds a card by hand, or imports a
@@ -152,7 +153,7 @@ class _StudyFlashcardsScreenState extends State<StudyFlashcardsScreen> {
   }
 
   Future<void> _review(List<StudyFlashcard> due) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(
+    await Navigator.of(context).push(ShellPageRoute<void>(
       builder: (_) => StudyFlashcardReviewScreen(
         cards: due,
         tourId: widget.tourId,

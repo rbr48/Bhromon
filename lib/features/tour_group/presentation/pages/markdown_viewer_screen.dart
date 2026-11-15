@@ -20,6 +20,7 @@ import '../tour_pdf_download.dart';
 import '../viewer_file_helper.dart';
 import '../widgets/group_back_button.dart';
 import '../widgets/study/study_commute_audio_bar.dart';
+import '../widgets/shell_page_route.dart';
 
 /// Represents a distinct section or question in a Markdown document.
 class _MarkdownSection {
@@ -87,7 +88,7 @@ class MarkdownViewerScreen extends StatefulWidget {
     String? chapterTitle,
   }) {
     return Navigator.of(context).push(
-      MaterialPageRoute(
+      ShellPageRoute(
         builder: (_) => MarkdownViewerScreen(
           title: title,
           filePath: filePath,

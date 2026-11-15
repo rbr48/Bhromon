@@ -15,6 +15,8 @@ import '../../data/active_group.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/date_codec.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/desktop_nav.dart';
+import '../tour_routes.dart';
 import 'tour_group_dialogs.dart';
 
 /// The right-side dock displayed on wide desktop screens (>= 900px).
@@ -29,12 +31,20 @@ class DesktopRightDock extends StatelessWidget {
   final double width;
   final String? currentLocation;
 
+  /// Whether the groups list is shown. The groups page leaves it out: it is that list.
+  final bool showGroups;
+
+  /// Whether the direct messages are shown. The chats page leaves them out: it is that list.
+  final bool showChats;
+
   const DesktopRightDock({
     super.key,
     this.activeTourId,
     this.repository,
     this.width = 320,
     this.currentLocation,
+    this.showGroups = true,
+    this.showChats = true,
   });
 
   @override
@@ -65,29 +75,25 @@ class DesktopRightDock extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Upper Half: My Groups & Circles (~50% height)
-          Expanded(
-            flex: 5,
-            child: DesktopGroupListPanel(
-              activeTourId: activeTourId,
-              repository: repo,
-              currentLocation: currentLocation,
+          // Upper half: the groups. A panel the page already shows is left out, and the
+          // other takes the whole dock.
+          if (showGroups)
+            Expanded(
+              flex: 5,
+              child: DesktopGroupListPanel(
+                activeTourId: activeTourId,
+                repository: repo,
+                currentLocation: currentLocation,
+              ),
             ),
-          ),
-
-          // Subtle horizontal divider between panels
-          Container(
-            height: 1,
-            color: context.forest.divider10,
-          ),
-
-          // Lower Half: 1-on-1 Direct Chats (~50% height)
-          Expanded(
-            flex: 5,
-            child: DesktopDirectChatsPanel(
-              currentUid: currentUid,
+          if (showGroups && showChats)
+            Container(height: 1, color: context.forest.divider10),
+          // Lower half: the one-to-one chats.
+          if (showChats)
+            Expanded(
+              flex: 5,
+              child: DesktopDirectChatsPanel(currentUid: currentUid),
             ),
-          ),
         ],
       ),
     );
@@ -108,6 +114,11 @@ class DesktopGroupListPanel extends StatelessWidget {
   });
 
   String _groupIcon(TourGroup g) {
+    if (g.isStudy) return '📚';
+    if (g.isFriends) return '🤝';
+    if (g.isSchool) return '🏫';
+    if (g.isSports) return '⚽';
+    if (g.isCommittee) return '🏛️';
     if (g.isMess) return '🍛';
     if (g.isSamity) return '🪙';
     if (g.isOffice) return '🏢';
@@ -121,17 +132,9 @@ class DesktopGroupListPanel extends StatelessWidget {
     await ActiveGroup.instance.select(group.id);
     if (!context.mounted) return;
 
-    final loc = currentLocation ?? '';
-    if (loc.startsWith('/group/')) {
-      // Replaces the old tourId in the current sub-screen route
-      final segments = loc.split('/');
-      if (segments.length >= 4) {
-        final subPath = segments.sublist(3).join('/');
-        context.go('/group/${group.id}/$subPath');
-        return;
-      }
-    }
-    context.go('/group/${group.id}/channels');
+    // The same tool in the new group when it has that tool, and otherwise the group's
+    // own page: a study circle picked from a trip's seat plan does not open a seat plan.
+    goFromShell(context, pathForGroupSwitch(group, currentLocation ?? ''));
   }
 
   Stream<List<TourGroup>> _safeGroupsStream() {
@@ -313,17 +316,15 @@ class DesktopGroupListPanel extends StatelessWidget {
                         final g = groups[index];
                         final isActive = g.id == activeTourId;
 
-                        String subtitle = g.kind == GroupKind.family
-                            ? (g.isMess
-                                ? (isBn ? 'মেস ও ফ্ল্যাট' : 'Mess & Flat')
-                                : (g.isSamity
-                                    ? (isBn ? 'সঞ্চয় সমিতি' : 'Savings Samity')
-                                    : (g.isOffice
-                                        ? (isBn ? 'অফিস টিম' : 'Office Team')
-                                        : (isBn
-                                            ? 'পারিবারিক সার্কেল'
-                                            : 'Family Circle'))))
-                            : '${g.originCity.isNotEmpty ? g.originCity : (isBn ? 'ঢাকা' : 'Dhaka')} ➔ ${g.destination.isNotEmpty ? g.destination : (isBn ? 'কক্সবাজার' : "Cox's Bazar")}';
+                        // One type name everywhere: the hub's badge, the sidebar and
+                        // this list all take it from groupTypeLabelKey.
+                        final typeKey = groupTypeLabelKey(g);
+                        final subtitle = typeKey != null
+                            ? l10n.translate(typeKey)
+                            : (g.originCity.isNotEmpty &&
+                                    g.destination.isNotEmpty
+                                ? '${g.originCity} ➔ ${g.destination}'
+                                : l10n.translate('desktop_sidebar_trip'));
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 6),
@@ -682,24 +683,32 @@ class DesktopDirectChatsPanel extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    isBn ? 'বন্ধুগণ সক্রিয়' : 'Friends active',
-                    style:
-                        TextStyle(color: context.forest.text54, fontSize: 11),
-                  ),
-                ],
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        isBn ? 'বন্ধুগণ সক্রিয়' : 'Friends active',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => context.push('/chats'),
                 child: Text(

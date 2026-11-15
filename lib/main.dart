@@ -2,6 +2,7 @@ import 'package:bhromon/core/theme/colors.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:intl/date_symbol_data_local.dart';
+import 'core/layout/app_scroll_behavior.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -419,6 +420,7 @@ class MyApp extends StatelessWidget {
         builder: (context, _) => MaterialApp.router(
           title: 'Bhromon',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: const AppScrollBehavior(),
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeController.instance.mode,

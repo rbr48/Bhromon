@@ -7,7 +7,9 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/family_date_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/desktop_nav.dart';
 import '../tour_routes.dart';
 import 'command_palette_dialog.dart';
 
@@ -15,6 +17,9 @@ class DesktopTourSidebar extends StatelessWidget {
   final String tourId;
   final String currentLocation;
   final TourGroupRepository repository;
+
+  /// The sidebar's width.
+  static const double width = 260;
 
   const DesktopTourSidebar({
     super.key,
@@ -33,7 +38,7 @@ class DesktopTourSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 260,
+      width: width,
       decoration: BoxDecoration(
         color: context.forest.surfaceFor(const Color(0xFF141414)),
         border: Border(right: BorderSide(color: context.forest.divider10)),
@@ -52,7 +57,7 @@ class DesktopTourSidebar extends StatelessWidget {
           final routeSubtitle = (origin.isNotEmpty && destination.isNotEmpty)
               ? '$origin ➔ $destination'
               : (group != null
-                  ? group.kind.name
+                  ? _typeLabel(context, group)
                   : (tourId.isEmpty
                       ? l10n.translate('desktop_sidebar_select_group')
                       : l10n.translate('desktop_sidebar_loading')));
@@ -121,8 +126,12 @@ class DesktopTourSidebar extends StatelessWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        Icon(Icons.route_rounded,
-                            size: 13, color: context.forest.accentText),
+                        Icon(
+                            group != null && group.isFamily
+                                ? Icons.groups_2_outlined
+                                : Icons.route_rounded,
+                            size: 13,
+                            color: context.forest.accentText),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -195,125 +204,10 @@ class DesktopTourSidebar extends StatelessWidget {
               // Scrollable Navigation List
               Expanded(
                 child: ListView(
+                  key: const PageStorageKey<String>('desktop_sidebar_nav'),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  children: [
-                    _buildSectionHeader(context,
-                        l10n.translate('desktop_sidebar_core_modules')),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_group_hub'),
-                      icon: Icons.dashboard_outlined,
-                      activeIcon: Icons.dashboard_rounded,
-                      route: tourHubPath(tourId),
-                      isActive: _isActive('/group-hub'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_journey'),
-                      icon: Icons.calendar_month_outlined,
-                      activeIcon: Icons.calendar_month_rounded,
-                      route: '/group/$tourId/journey',
-                      isActive: _isActive('/group/$tourId/journey'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_feed'),
-                      icon: Icons.photo_library_outlined,
-                      activeIcon: Icons.photo_library_rounded,
-                      route: '/group/$tourId/feed',
-                      isActive: _isActive('/group/$tourId/feed'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_channels'),
-                      icon: Icons.forum_outlined,
-                      activeIcon: Icons.forum_rounded,
-                      route: '/group/$tourId/channels',
-                      isActive: _isActive('/group/$tourId/channels'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_game_zone'),
-                      icon: Icons.sports_esports_outlined,
-                      activeIcon: Icons.sports_esports_rounded,
-                      route: '/game-zone',
-                      isActive: _isActive('/game-zone'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_ledger'),
-                      icon: Icons.account_balance_wallet_outlined,
-                      activeIcon: Icons.account_balance_wallet_rounded,
-                      route: '/group/$tourId/ledger',
-                      isActive: _isActive('/group/$tourId/ledger'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_logistics'),
-                      icon: Icons.airline_seat_recline_extra_outlined,
-                      activeIcon: Icons.airline_seat_recline_extra_rounded,
-                      route: '/group/$tourId/logistics',
-                      isActive: _isActive('/group/$tourId/logistics'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_notices'),
-                      icon: Icons.campaign_outlined,
-                      activeIcon: Icons.campaign_rounded,
-                      route: '/group/$tourId/notices',
-                      isActive: _isActive('/group/$tourId/notices'),
-                    ),
-                    _buildNavItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_checklist'),
-                      icon: Icons.checklist_outlined,
-                      activeIcon: Icons.checklist_rounded,
-                      route: '/group/$tourId/checklist',
-                      isActive: _isActive('/group/$tourId/checklist'),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSectionHeader(
-                        context, l10n.translate('desktop_sidebar_superpowers')),
-                    // The Safety hub is the SOS feature: only the groups that have SOS show it.
-                    if (group != null && group.supportsSafetyAlerts)
-                      _buildToolItem(
-                        context,
-                        title: l10n.translate('desktop_sidebar_safety'),
-                        badge: 'GPS',
-                        icon: Icons.fmd_good_rounded,
-                        route: '/group/$tourId/safety',
-                        badgeColor: Colors.redAccent,
-                        isActive: _isActive('/group/$tourId/safety'),
-                      ),
-                    _buildToolItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_tide'),
-                      badge: l10n.translate('desktop_sidebar_badge_beach'),
-                      icon: Icons.tsunami_rounded,
-                      route: '/group/$tourId/tide',
-                      badgeColor: Colors.cyanAccent,
-                      isActive: _isActive('/group/$tourId/tide'),
-                    ),
-                    _buildToolItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_scrapbook'),
-                      badge: 'PDF',
-                      icon: Icons.menu_book_rounded,
-                      route: '/group/$tourId/scrapbook',
-                      badgeColor: Colors.amberAccent,
-                      isActive: _isActive('/group/$tourId/scrapbook'),
-                    ),
-                    _buildToolItem(
-                      context,
-                      title: l10n.translate('desktop_sidebar_quiz'),
-                      badge: l10n.translate('desktop_sidebar_badge_quiz'),
-                      icon: Icons.quiz_rounded,
-                      route: '/group/$tourId/quiz',
-                      badgeColor: Colors.greenAccent,
-                      isActive: _isActive('/group/$tourId/quiz'),
-                    ),
-                  ],
+                  children: _navItems(context, group),
                 ),
               ),
 
@@ -325,6 +219,133 @@ class DesktopTourSidebar extends StatelessWidget {
       ),
     );
   }
+
+  /// The name of the group's type, as the hub's badge gives it. A trip with no route yet
+  /// is called a trip.
+  String _typeLabel(BuildContext context, TourGroup group) {
+    return context.l10n
+        .translate(groupTypeLabelKey(group) ?? 'desktop_sidebar_trip');
+  }
+
+  /// The sidebar's entries. The group's tools are the ones its own hub shows
+  /// ([sidebarGroupTools]), so a study circle is never offered a seat plan or a route.
+  List<Widget> _navItems(BuildContext context, TourGroup? group) {
+    final l10n = context.l10n;
+    return [
+      _buildSectionHeader(
+          context, l10n.translate('desktop_sidebar_core_modules')),
+      _buildNavItem(
+        context,
+        title: l10n.translate('desktop_sidebar_group_hub'),
+        icon: Icons.dashboard_outlined,
+        activeIcon: Icons.dashboard_rounded,
+        route: tourHubPath(tourId),
+        isActive: _isActive('/group-hub'),
+      ),
+      if (group != null)
+        for (final id in sidebarGroupTools(group))
+          _buildNavItem(
+            context,
+            title: _toolTitle(context, group, id),
+            icon: _toolIcons[id]?.$1 ?? Icons.extension_outlined,
+            activeIcon: _toolIcons[id]?.$2 ?? Icons.extension_rounded,
+            route: groupToolRoute(group.id, id)!,
+            isActive: _isActive(groupToolRoute(group.id, id)!),
+          ),
+      const SizedBox(height: 12),
+      _buildSectionHeader(context, l10n.translate('desktop_sidebar_personal')),
+      _buildNavItem(
+        context,
+        title: l10n.translate('shell_chat'),
+        icon: Icons.chat_bubble_outline_rounded,
+        activeIcon: Icons.chat_bubble_rounded,
+        route: '/chats',
+        isActive: _isActive('/chats') || _isActive('/chat/'),
+      ),
+      _buildNavItem(
+        context,
+        title: l10n.translate('desktop_sidebar_notifications'),
+        icon: Icons.notifications_none_rounded,
+        activeIcon: Icons.notifications_rounded,
+        route: '/notifications',
+        isActive: _isActive('/notifications'),
+      ),
+      const SizedBox(height: 12),
+      _buildSectionHeader(context, l10n.translate('desktop_sidebar_more')),
+      if (group == null || group.modules.games)
+        _buildNavItem(
+          context,
+          title: l10n.translate('desktop_sidebar_game_zone'),
+          icon: Icons.sports_esports_outlined,
+          activeIcon: Icons.sports_esports_rounded,
+          route: '/game-zone',
+          isActive: _isActive('/game-zone'),
+        ),
+      _buildNavItem(
+        context,
+        title: l10n.translate('hub_module_news'),
+        icon: Icons.article_outlined,
+        activeIcon: Icons.article_rounded,
+        route: '/newspaper-hub',
+        isActive: _isActive('/newspaper'),
+      ),
+    ];
+  }
+
+  /// A tool's name, the one its hub tile carries.
+  String _toolTitle(BuildContext context, TourGroup group, String id) {
+    final l10n = context.l10n;
+    switch (id) {
+      case 'calendar':
+        return groupDateScreenTitle(group, l10n);
+      case 'tide':
+        return l10n.translate(group.tourType == TourType.beach
+            ? 'hub_module_tide'
+            : 'hub_module_weather');
+      case 'meals':
+        return l10n.translate('mess_module_meals');
+      case 'requests':
+        return l10n.translate('society_module_requests');
+      case 'samity':
+        return l10n.translate('samity_module_samity');
+      default:
+        return l10n.translate('hub_module_$id');
+    }
+  }
+
+  /// Each tool's icon, plain and selected.
+  static const Map<String, (IconData, IconData)> _toolIcons = {
+    'feed': (Icons.photo_library_outlined, Icons.photo_library_rounded),
+    'ledger': (
+      Icons.account_balance_wallet_outlined,
+      Icons.account_balance_wallet_rounded
+    ),
+    'seats': (
+      Icons.airline_seat_recline_extra_outlined,
+      Icons.airline_seat_recline_extra_rounded
+    ),
+    'calendar': (Icons.event_available_outlined, Icons.event_available_rounded),
+    'family_tasks': (Icons.checklist_outlined, Icons.checklist_rounded),
+    'meals': (Icons.restaurant_outlined, Icons.restaurant_rounded),
+    'requests': (Icons.build_circle_outlined, Icons.build_circle_rounded),
+    'samity': (Icons.savings_outlined, Icons.savings_rounded),
+    'dependents': (
+      Icons.family_restroom_outlined,
+      Icons.family_restroom_rounded
+    ),
+    'album': (Icons.photo_album_outlined, Icons.photo_album_rounded),
+    'tide': (Icons.wb_sunny_outlined, Icons.wb_sunny_rounded),
+    'notices': (Icons.campaign_outlined, Icons.campaign_rounded),
+    'study_subjects': (Icons.school_outlined, Icons.school_rounded),
+    'study_reading': (Icons.event_note_outlined, Icons.event_note_rounded),
+    'study_books': (Icons.menu_book_outlined, Icons.menu_book_rounded),
+    'journey': (Icons.alt_route_outlined, Icons.alt_route_rounded),
+    'safety': (Icons.shield_outlined, Icons.shield_rounded),
+    'quiz': (Icons.quiz_outlined, Icons.quiz_rounded),
+    'scrapbook': (Icons.auto_stories_outlined, Icons.auto_stories_rounded),
+    'checklist': (Icons.fact_check_outlined, Icons.fact_check_rounded),
+    'channels': (Icons.forum_outlined, Icons.forum_rounded),
+  };
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
@@ -351,11 +372,7 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
-        if (route.contains('/group//')) {
-          context.go('/group-hub');
-          return;
-        }
-        context.go(route);
+        goFromShell(context, route.contains('/group//') ? '/group-hub' : route);
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -387,90 +404,14 @@ class DesktopTourSidebar extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: isActive
                       ? context.forest.accentText
                       : context.forest.text,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToolItem(
-    BuildContext context, {
-    required String title,
-    required String badge,
-    required IconData icon,
-    required String route,
-    required Color badgeColor,
-    required bool isActive,
-  }) {
-    return InkWell(
-      onTap: () {
-        if (route.contains('/group//')) {
-          context.go('/group-hub');
-          return;
-        }
-        context.go(route);
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 1.5),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.18)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: isActive
-              ? Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.4),
-                  width: 0.8)
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(icon,
-                size: 16,
-                color: isActive
-                    ? context.forest.accentText
-                    : context.forest.text70),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: isActive
-                      ? context.forest.accentText
-                      : context.forest.text70,
-                  fontSize: 12,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: badgeColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                    color: badgeColor.withValues(alpha: 0.4), width: 0.6),
-              ),
-              child: Text(
-                badge,
-                style: TextStyle(
-                  color: badgeColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),

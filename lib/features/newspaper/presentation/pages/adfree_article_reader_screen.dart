@@ -8,6 +8,7 @@ import '../../data/news_tts_service.dart';
 import '../../data/newspaper_service.dart';
 import '../../domain/models/newspaper_models.dart';
 import 'adblock_browser_screen.dart';
+import '../../../tour_group/presentation/widgets/shell_page_route.dart';
 
 enum ReaderTheme { light, sepia, dark }
 
@@ -329,7 +330,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                   const Icon(Icons.public_rounded, color: AppColors.mintGreen),
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute<void>(
+                  ShellPageRoute<void>(
                     builder: (_) => AdBlockBrowserScreen(
                       initialUrl: widget.articleUrl,
                       initialTitle: title,

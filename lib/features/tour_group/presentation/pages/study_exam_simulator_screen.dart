@@ -12,6 +12,7 @@ import '../../domain/models/study_exam_simulator_models.dart';
 import '../../domain/services/study_exam_simulator_rules.dart';
 import '../widgets/group_back_button.dart';
 import 'study_exam_review_screen.dart';
+import '../widgets/shell_page_route.dart';
 
 /// Fullscreen timed exam simulator for a past paper.
 ///
@@ -61,7 +62,7 @@ class StudyExamSimulatorScreen extends StatefulWidget {
     List<ExamQuestion>? initialQuestions,
   }) {
     return Navigator.of(context).push(
-      MaterialPageRoute(
+      ShellPageRoute(
         builder: (_) => StudyExamSimulatorScreen(
           tourId: tourId,
           bookId: bookId,
@@ -320,7 +321,7 @@ class _StudyExamSimulatorScreenState extends State<StudyExamSimulatorScreen>
       _showMessage(context.l10n.translate('study_exam_time_up'));
     }
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
+      ShellPageRoute<void>(
         builder: (_) => StudyExamReviewScreen(
           attempt: submitted,
           questions: _questions,

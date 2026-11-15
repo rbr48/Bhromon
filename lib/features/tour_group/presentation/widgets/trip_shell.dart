@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/layout/desktop_shell_scope.dart';
 import '../../data/tour_group_repository.dart';
 import '../tour_routes.dart';
 import 'bhromon_bottom_nav.dart';
@@ -28,10 +30,19 @@ class TripShell extends StatelessWidget {
   });
 
   /// The width from which the tabs move to a side rail.
-  static const double railBreakpoint = 900;
+  static const double railBreakpoint = kDesktopShellBreakpoint;
 
   /// The widest a tour screen's content may grow.
-  static const double contentMaxWidth = 960;
+  static const double contentMaxWidth = kDesktopContentMaxWidth;
+
+  /// Whether the right dock's groups list is shown beside [location]. The groups page is
+  /// that list already.
+  static bool dockShowsGroups(String location) => location != '/group-hub';
+
+  /// Whether the right dock's direct messages are shown beside [location]. The chats list
+  /// and an open chat are those messages already.
+  static bool dockShowsChats(String location) =>
+      location != '/chats' && !location.startsWith('/chat/');
 
   final String tourId;
 
@@ -108,49 +119,78 @@ class TripShell extends StatelessWidget {
     };
 
     final double screenWidth = MediaQuery.sizeOf(context).width;
-    final double rightDockWidth = screenWidth >= 1200 ? 320 : 280;
+    // The dock is shown only where it leaves the page room (kDesktopDockBreakpoint), and
+    // never repeats the list the page itself is showing.
+    final showGroups = dockShowsGroups(location);
+    final showChats = dockShowsChats(location);
+    final showDock =
+        isDesktopDockWidth(screenWidth) && (showGroups || showChats);
     // With the keyboard open, a screen that asks for it has no bar under it.
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final showTabBar = !(hideNavWhileTyping && keyboardOpen);
 
-    final Widget scaffold = screenWidth < railBreakpoint
-        ? (ownMobileScaffold
-            ? wrappedChild
-            : Scaffold(
-                body: wrappedChild,
-                bottomNavigationBar: showTabBar
-                    ? BhromonBottomNav(
-                        selectedIndex: index,
-                        tourId: tourId.isNotEmpty ? tourId : null,
-                      )
-                    : null,
-              ))
-        : Scaffold(
-            body: Row(
-              children: [
-                DesktopTourSidebar(
-                  tourId: tourId,
-                  currentLocation: location,
-                  repository: repository ?? TourGroupRepository(),
-                ),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(maxWidth: contentMaxWidth),
-                      child: wrappedChild,
+    // A shell inside a shell (a page pushed over a tool, see ShellPageRoute) draws its
+    // page only: the outer shell already carries the sidebar and the dock.
+    final nested = DesktopShellScope.isActive(context);
+    final Widget scaffold;
+    if (nested) {
+      scaffold = wrappedChild;
+    } else if (screenWidth < railBreakpoint) {
+      scaffold = ownMobileScaffold
+          ? wrappedChild
+          : Scaffold(
+              body: wrappedChild,
+              bottomNavigationBar: showTabBar
+                  ? BhromonBottomNav(
+                      selectedIndex: index,
+                      tourId: tourId.isNotEmpty ? tourId : null,
+                    )
+                  : null,
+            );
+    } else {
+      final dockWidth = showDock ? desktopDockWidthFor(screenWidth) : 0.0;
+      final contentWidth = desktopContentWidth(
+        screenWidth,
+        sidebarWidth: DesktopTourSidebar.width,
+        dockWidth: dockWidth,
+      );
+      final media = MediaQuery.of(context);
+      scaffold = Scaffold(
+        body: Row(
+          children: [
+            DesktopTourSidebar(
+              tourId: tourId,
+              currentLocation: location,
+              repository: repository ?? TourGroupRepository(),
+            ),
+            Expanded(
+              child: Center(
+                child: SizedBox(
+                  width: contentWidth,
+                  // The page is told its own width, so a screen that chooses a layout by
+                  // width chooses the one that fits this column, not the whole window.
+                  child: MediaQuery(
+                    data: media.copyWith(
+                      size: Size(contentWidth, media.size.height),
                     ),
+                    child: DesktopShellScope(child: wrappedChild),
                   ),
                 ),
-                DesktopRightDock(
-                  activeTourId: tourId.isNotEmpty ? tourId : null,
-                  repository: repository ?? TourGroupRepository(),
-                  width: rightDockWidth,
-                  currentLocation: location,
-                ),
-              ],
+              ),
             ),
-          );
+            if (showDock)
+              DesktopRightDock(
+                activeTourId: tourId.isNotEmpty ? tourId : null,
+                repository: repository ?? TourGroupRepository(),
+                width: dockWidth,
+                currentLocation: location,
+                showGroups: showGroups,
+                showChats: showChats,
+              ),
+          ],
+        ),
+      );
+    }
 
     return CallbackShortcuts(
       bindings: shortcuts,

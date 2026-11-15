@@ -16,6 +16,8 @@ import '../widgets/study/study_decline_dialog.dart';
 import '../widgets/study/study_subject_editor.dart';
 import 'study_subject_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
+import '../../../../core/widgets/data_list_table.dart';
 
 /// A study group's subjects: what the group studies. An admin adds a subject, and a member
 /// proposes one for an admin to decide. Each subject holds its own modules.
@@ -257,7 +259,11 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
-                for (final subject in listed) _subjectTile(subject),
+                // A wide screen shows the listed subjects as a table; a phone, as cards.
+                if (listed.isNotEmpty && showsDataTable(context))
+                  _subjectTable(listed)
+                else
+                  for (final subject in listed) _subjectTile(subject),
                 if (proposed.isNotEmpty) ...[
                   _header(l10n.translate('study_book_proposed_section')),
                   for (final subject in proposed)
@@ -303,49 +309,104 @@ class _StudySubjectsScreenState extends State<StudySubjectsScreen> {
     );
   }
 
+  void _openSubject(StudySubject subject) {
+    Navigator.of(context).push(ShellPageRoute<void>(
+      builder: (_) => StudySubjectScreen(
+        tourId: widget.tourId,
+        subject: subject,
+        repository: _repository,
+      ),
+    ));
+  }
+
+  /// The menu at the end of a listed subject's row, or an arrow for a member with nothing
+  /// to change.
+  Widget _subjectTrailing(StudySubject subject) {
+    final palette = context.forest;
+    final l10n = context.l10n;
+    if (!(_canEdit(subject) || _isAdmin)) {
+      return Icon(Icons.chevron_right_rounded, color: palette.text54);
+    }
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded, color: palette.text54),
+      tooltip: l10n.translate('study_subject_menu'),
+      onSelected: (choice) =>
+          choice == 'archive' ? _archive(subject) : _edit(subject),
+      itemBuilder: (_) => [
+        if (_canEdit(subject))
+          PopupMenuItem<String>(
+            value: 'edit',
+            child: Text(l10n.translate('study_edit')),
+          ),
+        if (_isAdmin)
+          PopupMenuItem<String>(
+            value: 'archive',
+            child: Text(l10n.translate('study_subject_archive')),
+          ),
+      ],
+    );
+  }
+
   /// A listed subject. Tapping it opens the subject, with its modules.
   Widget _subjectTile(StudySubject subject) {
     final palette = context.forest;
-    final l10n = context.l10n;
     final subtitle = _subtitleFor(subject);
     return Card(
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => StudySubjectScreen(
-            tourId: widget.tourId,
-            subject: subject,
-            repository: _repository,
-          ),
-        )),
+        onTap: () => _openSubject(subject),
         title: Text(subject.title,
             style: TextStyle(color: palette.text, fontWeight: FontWeight.w600)),
         subtitle: subtitle == null
             ? null
             : Text(subtitle, style: TextStyle(color: palette.text54)),
-        trailing: _canEdit(subject) || _isAdmin
-            ? PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, color: palette.text54),
-                tooltip: l10n.translate('study_subject_menu'),
-                onSelected: (choice) =>
-                    choice == 'archive' ? _archive(subject) : _edit(subject),
-                itemBuilder: (_) => [
-                  if (_canEdit(subject))
-                    PopupMenuItem<String>(
-                      value: 'edit',
-                      child: Text(l10n.translate('study_edit')),
-                    ),
-                  if (_isAdmin)
-                    PopupMenuItem<String>(
-                      value: 'archive',
-                      child: Text(l10n.translate('study_subject_archive')),
-                    ),
-                ],
-              )
-            : Icon(Icons.chevron_right_rounded, color: palette.text54),
+        trailing: _subjectTrailing(subject),
       ),
     );
+  }
+
+  /// The listed subjects as a table, for a wide screen: code, name and the exam, one
+  /// compact row each.
+  Widget _subjectTable(List<StudySubject> subjects) {
+    final palette = context.forest;
+    final l10n = context.l10n;
+    final muted = TextStyle(color: palette.text70);
+    return DataListTable(
+      key: const ValueKey<String>('study_subjects_table'),
+      columns: [
+        DataListColumn(l10n.translate('study_table_code'), width: 96),
+        DataListColumn(l10n.translate('study_table_subject'), flex: 3),
+        DataListColumn(l10n.translate('study_table_exam'), flex: 1),
+      ],
+      rows: [
+        for (final subject in subjects)
+          DataListRow(
+            key: ValueKey<String>('study_subject_row_${subject.id}'),
+            onTap: () => _openSubject(subject),
+            trailing: _subjectTrailing(subject),
+            cells: [
+              Text(subject.code.isEmpty ? '—' : subject.code,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+              Text(subject.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: palette.text, fontWeight: FontWeight.w600)),
+              Text(_examCell(subject),
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+            ],
+          ),
+      ],
+    );
+  }
+
+  /// A subject's exam, for the table: how far off it is, or a dash when none is near.
+  String _examCell(StudySubject subject) {
+    final exam = subject.examDate;
+    if (exam == null) return '—';
+    final parts = _examParts(exam, context.l10n);
+    return parts.isEmpty ? '—' : parts.join(' · ');
   }
 
   /// A subject an admin archived. Members do not see it; an admin restores it from here.

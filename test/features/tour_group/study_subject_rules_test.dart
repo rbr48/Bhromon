@@ -37,8 +37,8 @@ StudyPost _post(
       pinned: pinned,
     );
 
-StudySubject _subject(String id, String title) =>
-    StudySubject(id: id, title: title);
+StudySubject _subject(String id, String title, {String code = ''}) =>
+    StudySubject(id: id, title: title, code: code);
 
 void main() {
   group('modules a viewer sees', () {
@@ -195,6 +195,27 @@ void main() {
         _subject('3', 'Chemistry'),
       ]);
       expect(sorted.map((s) => s.id), ['2', '3', '1']);
+    });
+
+    test('subjects with codes come in code order, by number', () {
+      final sorted = studySubjectsByTitle([
+        _subject('ba', 'Basic Accounting', code: '102'),
+        _subject('om', 'Organization and Management', code: '105'),
+        _subject('mafs', 'Monetary and Financial System', code: '101'),
+        _subject('nine', 'Short code', code: '9'),
+        _subject('ten', 'Longer code', code: '10'),
+      ]);
+      expect(sorted.map((s) => s.id), ['nine', 'ten', 'mafs', 'ba', 'om']);
+    });
+
+    test('a subject with no code comes after the coded ones', () {
+      final sorted = studySubjectsByTitle([
+        _subject('z', 'Zoology'),
+        _subject('b', 'Banking', code: 'B-2'),
+        _subject('a', 'Algebra'),
+        _subject('c', 'Credit', code: 'B-1'),
+      ]);
+      expect(sorted.map((s) => s.id), ['c', 'b', 'a', 'z']);
     });
 
     test('a subject with no title is not read', () {

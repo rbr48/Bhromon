@@ -164,7 +164,7 @@ void main() {
     expect(find.text('Safety hub & SOS'), findsOneWidget);
     expect(find.text('Trip Milestones & Dates'), findsOneWidget);
 
-    // Verify Navigation bar tabs
-    expect(find.byType(NavigationBar), findsOneWidget);
+    // On desktop widths (>= 900), bottom navigation bar is suppressed
+    expect(find.byType(NavigationBar), findsNothing);
   });
 }

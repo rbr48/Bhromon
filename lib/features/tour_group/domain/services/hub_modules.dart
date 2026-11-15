@@ -102,3 +102,19 @@ const int kHubToolsShown = 6;
   }
   return (shown: ids.sublist(0, shown), more: ids.sublist(shown));
 }
+
+/// How the group tools are laid out in a space [width] wide: how many tiles across, and
+/// how tall each tile is.
+///
+/// A phone keeps two tiles across, at half their width in height. From 500 the tiles have a
+/// fixed height and there are as many across as leaves each one room for its name and its
+/// line of description (about 250): the page of a desktop window was showing three narrow
+/// tiles with both lines cut off.
+({int columns, double tileHeight}) hubToolGridFor(double width) {
+  const spacing = 8.0;
+  if (width < 500) {
+    return (columns: 2, tileHeight: ((width - spacing) / 2) / 2.0);
+  }
+  final columns = width >= 1000 ? 4 : (width >= 750 ? 3 : 2);
+  return (columns: columns, tileHeight: 84);
+}

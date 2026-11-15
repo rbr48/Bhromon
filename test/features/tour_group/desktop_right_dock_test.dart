@@ -82,4 +82,81 @@ void main() {
     expect(find.text('Cox Trip 2026'), findsOneWidget);
     expect(find.text('Bachelor Mess'), findsOneWidget);
   });
+
+  TourGroup circle(String id, String name, String? preset) {
+    final now = DateTime(2026, 11, 1);
+    return TourGroup(
+      id: id,
+      name: name,
+      destination: '',
+      startDate: now,
+      endDate: now,
+      kind: GroupKind.family,
+      preset: preset,
+      ownerEmail: 'owner@test.com',
+      inviteCode: 'CODE1234',
+      createdAt: now,
+    );
+  }
+
+  Future<void> pumpDock(
+    WidgetTester tester,
+    List<TourGroup> groups, {
+    bool showGroups = true,
+    bool showChats = true,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en', ''), Locale('bn', '')],
+        home: Scaffold(
+          body: DesktopRightDock(
+            activeTourId: groups.first.id,
+            repository: _FakeTourRepo(groups),
+            showGroups: showGroups,
+            showChats: showChats,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('each group is named by its own type, as on its hub card',
+      (tester) async {
+    await pumpDock(tester, [
+      circle('s', 'JAIBB', TourGroup.studyPreset),
+      circle('c', 'Batch 12', TourGroup.campusPreset),
+      circle('o', 'Khaurun Complex', TourGroup.societyPreset),
+      circle('f', 'Home', null),
+    ]);
+
+    expect(find.text('Study group'), findsOneWidget);
+    expect(find.text('Campus'), findsOneWidget);
+    expect(find.text('Society'), findsOneWidget);
+    // Only the plain family circle is called a family.
+    expect(find.text('Family'), findsOneWidget);
+    expect(find.text('Family Circle'), findsNothing);
+  });
+
+  testWidgets('the groups page is shown the chats only', (tester) async {
+    await pumpDock(tester, [circle('s', 'JAIBB', TourGroup.studyPreset)],
+        showGroups: false);
+
+    expect(find.byType(DesktopGroupListPanel), findsNothing);
+    expect(find.byType(DesktopDirectChatsPanel), findsOneWidget);
+  });
+
+  testWidgets('the chats page is shown the groups only', (tester) async {
+    await pumpDock(tester, [circle('s', 'JAIBB', TourGroup.studyPreset)],
+        showChats: false);
+
+    expect(find.byType(DesktopGroupListPanel), findsOneWidget);
+    expect(find.byType(DesktopDirectChatsPanel), findsNothing);
+  });
 }

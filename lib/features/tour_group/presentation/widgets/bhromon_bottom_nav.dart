@@ -3,6 +3,8 @@ import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/layout/desktop_shell_scope.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../tour_routes.dart';
@@ -138,6 +140,12 @@ class BhromonBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On a desktop window the sidebar is the navigation, so a screen that carries its own
+    // tab bar (the groups page, the chats list, the profile) shows none there.
+    if (DesktopShellScope.isActive(context) ||
+        isDesktopShellWidth(MediaQuery.sizeOf(context).width)) {
+      return const SizedBox.shrink();
+    }
     // A fixed-height bar cannot grow with the text, so its labels stop at 1.3x.
     final navBar = MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,

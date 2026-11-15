@@ -194,7 +194,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'List',
+                                context.l10n.translate('ig_view_list'),
                                 style: TextStyle(
                                   color: !isGridView
                                       ? context.forest.accentText
@@ -230,7 +230,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Grid',
+                                context.l10n.translate('ig_view_grid'),
                                 style: TextStyle(
                                   color: isGridView
                                       ? context.forest.accentText

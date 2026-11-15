@@ -14,6 +14,7 @@ import '../../domain/services/study_rules.dart';
 import '../widgets/study/reading_session_editor.dart';
 import 'study_session_screen.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import '../widgets/shell_page_route.dart';
 
 /// A study or book club's reading plan: the sessions the group has planned, upcoming ones
 /// first. Any member plans a session. Its creator or an admin changes or removes it.
@@ -274,7 +275,7 @@ class _StudyReadingScreenState extends State<StudyReadingScreen> {
       color: palette.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+        onTap: () => Navigator.of(context).push(ShellPageRoute<void>(
           builder: (_) => StudySessionScreen(
             tourId: widget.tourId,
             session: session,

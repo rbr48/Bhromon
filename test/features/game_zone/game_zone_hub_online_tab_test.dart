@@ -91,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify AppBar Title & TabBar
-    expect(find.text('Travel GameZone'), findsOneWidget);
+    expect(find.text('Game Zone'), findsOneWidget);
     expect(find.text('Offline Arcade'), findsOneWidget);
     expect(find.text('Tour Online Tables'), findsOneWidget);
 
