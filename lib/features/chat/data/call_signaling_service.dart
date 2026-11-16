@@ -982,22 +982,27 @@ class CallSignalingService {
     _stopRebuildResend();
   }
 
-  Future<bool> _refreshIceConfiguration(RTCPeerConnection pc) async {
-    final freshIce = await CallIceConfig.shared.refresh();
-    if (_finished || _peerConnection != pc) return false;
+  /// Refreshes TURN credentials and applies them to [pc] while still active.
+  ///
+  /// Failures (such as platforms that reject mid-call `setConfiguration`) are
+  /// logged without aborting rebuild so ICE restart can still fall back to the
+  /// existing peer configuration.
+  Future<void> _refreshIceConfiguration(RTCPeerConnection pc) async {
     try {
+      final freshIce = await CallIceConfig.shared.refresh();
+      if (_finished || _peerConnection != pc) return;
       await pc.setConfiguration(freshIce);
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
     }
-    return true;
   }
 
   Future<void> _sendRebuildOffer() async {
     final pc = _peerConnection;
     if (pc == null || _callId == null) return;
     try {
-      if (!await _refreshIceConfiguration(pc)) return;
+      await _refreshIceConfiguration(pc);
+      if (_finished || _peerConnection != pc) return;
       final offer = await pc.createOffer({
         'iceRestart': true,
         'offerToReceiveAudio': 1,
@@ -1065,7 +1070,8 @@ class CallSignalingService {
     _enterRebuild();
     _stopRebuildResend();
     try {
-      if (!await _refreshIceConfiguration(pc)) return;
+      await _refreshIceConfiguration(pc);
+      if (_finished || _peerConnection != pc) return;
       await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
       await _drainPendingIceCandidates();
       final answer = await pc.createAnswer({
