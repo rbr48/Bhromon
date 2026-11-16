@@ -69,6 +69,7 @@ import 'channel_read_store.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 import 'vps_notification_service.dart';
+import '../domain/services/groups_list_policy.dart';
 
 /// Thrown when an action needs a signed-in member. The message is shown to users.
 class TourAccessException implements Exception {
@@ -503,7 +504,17 @@ class TourGroupRepository {
     var heardFromServer = false;
     // Role each membership row says we have, by tour id.
     final rolesByTour = <String, String>{};
-    String? boundUserId;
+    // The account and email the list is bound to (groupsBindKey).
+    String? boundKey;
+    // Failed reads are tried again: a read made just after sign-in can be refused before
+    // the database has the new sign-in, and that must not empty the list for the session.
+    final tourRetries = <String, int>{};
+    final tourRetryTimers = <String, Timer>{};
+    var membershipRetries = 0;
+    Timer? membershipRetryTimer;
+    Timer? serverWaitTimer;
+    late void Function(String tourId, String email) listenTour;
+    late void Function(String email) listenMemberships;
 
     void emit() {
       if (controller.isClosed) return;
@@ -513,6 +524,8 @@ class TourGroupRepository {
     }
 
     void stopTour(String tourId) {
+      tourRetryTimers.remove(tourId)?.cancel();
+      tourRetries.remove(tourId);
       tourSubs.remove(tourId)?.cancel();
       tours.remove(tourId);
       _sessionTourDocs.remove(tourId);
@@ -546,11 +559,17 @@ class TourGroupRepository {
         });
       }
 
+      listenTour(tourId, email);
+    }
+
+    listenTour = (String tourId, String email) {
+      tourSubs.remove(tourId)?.cancel();
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
         (doc) {
           try {
             final data = doc.data();
             if (doc.exists && data != null) {
+              tourRetries.remove(tourId);
               final group = TourGroup.fromMap(doc.id, data);
               tours[tourId] = group;
               _sessionTourDocs[tourId] = group;
@@ -583,28 +602,47 @@ class TourGroupRepository {
           }
         },
         onError: (Object e) {
-          // Losing access to a tour means the user is no longer a member.
+          // A refused read is not proof that the person left: the membership row still
+          // lists the tour, and only that row, or the server saying the tour is gone,
+          // takes it off the list. Firestore closes a listener that failed, so it is
+          // opened again, a few times, while the row still lists the tour.
           logWarning('[TourGroupRepository] tour $tourId unavailable', e);
-          stopTour(tourId);
-          listedIds.remove(tourId);
-          unawaited(clearLocalTourData(tourId));
-          emit();
+          tourSubs.remove(tourId)?.cancel();
+          final attempt = tourRetries[tourId] ?? 0;
+          if (!retriesGroupsRead(attempt)) return;
+          tourRetries[tourId] = attempt + 1;
+          tourRetryTimers[tourId]?.cancel();
+          tourRetryTimers[tourId] = Timer(groupsRetryDelay(attempt), () {
+            tourRetryTimers.remove(tourId);
+            if (controller.isClosed || !listedIds.contains(tourId)) return;
+            listenTour(tourId, email);
+          });
         },
       );
-    }
+    };
 
     void clearUserTours() {
       membershipSub?.cancel();
       membershipSub = null;
+      membershipRetryTimer?.cancel();
+      membershipRetryTimer = null;
+      membershipRetries = 0;
+      serverWaitTimer?.cancel();
+      serverWaitTimer = null;
       for (final sub in tourSubs.values) {
         sub.cancel();
       }
       tourSubs.clear();
+      for (final timer in tourRetryTimers.values) {
+        timer.cancel();
+      }
+      tourRetryTimers.clear();
+      tourRetries.clear();
       tours.clear();
       listedIds.clear();
       rolesByTour.clear();
       heardFromServer = false;
-      boundUserId = null;
+      boundKey = null;
     }
 
     void bindUser(User? user) {
@@ -616,34 +654,60 @@ class TourGroupRepository {
         emit();
         return;
       }
-      if (boundUserId == user.uid) {
-        // Already bound to this user, do not clear tours.
-        return;
-      }
-      clearUserTours();
-      _sessionTourDocs.clear();
-      boundUserId = user.uid;
-
       final rawEmail = user.email;
       final email = (rawEmail != null && rawEmail.trim().isNotEmpty)
           ? normalizeEmail(rawEmail)
           : (user.uid.isNotEmpty ? '${user.uid}@bhromon.app' : '');
+      final key = groupsBindKey(user.uid, email);
+      if (boundKey == key) {
+        // Already bound to this account and email, do not clear tours.
+        return;
+      }
+      // The memberships are looked up by email. An account whose email arrives after
+      // sign-in is bound again here, under the email its memberships are stored under.
+      clearUserTours();
+      _sessionTourDocs.clear();
+      boundKey = key;
+
       if (email.isEmpty) {
         emit();
         return;
       }
 
       getLocalGroups().then((local) {
-        if (!heardFromServer && !controller.isClosed) {
+        // An empty local copy says nothing: after the browser's data is cleared it is
+        // always empty, and showing it would say "no groups" before the server answers.
+        if (local.isNotEmpty && !heardFromServer && !controller.isClosed) {
           controller.add(local);
         }
       });
 
+      // If the server has not answered in time (offline), show what there is.
+      serverWaitTimer = Timer(kGroupsServerWait, () {
+        if (!heardFromServer && tours.isEmpty) emit();
+      });
+
+      listenMemberships(email);
+    }
+
+    listenMemberships = (String email) {
+      membershipSub?.cancel();
       membershipSub =
           _memberships.where('email', isEqualTo: email).snapshots().listen(
         (snapshot) {
+          final fromCache = snapshot.metadata.isFromCache;
+          if (!showsMembershipAnswer(
+            fromCache: fromCache,
+            empty: snapshot.docs.isEmpty,
+            heardFromServer: heardFromServer,
+          )) {
+            // The device remembers nothing yet. The server's answer follows.
+            return;
+          }
           heardFromServer = true;
-          groupsServedFromCache.value = snapshot.metadata.isFromCache;
+          membershipRetries = 0;
+          serverWaitTimer?.cancel();
+          groupsServedFromCache.value = fromCache;
           rolesByTour.clear();
           for (final d in snapshot.docs) {
             final data = d.data();
@@ -676,10 +740,25 @@ class TourGroupRepository {
         },
         onError: (Object e) {
           logWarning('[TourGroupRepository] memberships error', e);
-          if (!controller.isClosed) controller.addError(e);
+          // Firestore closes a listener that failed. It is opened again a few times
+          // before the list reports the error, so a read refused just after sign-in
+          // does not leave the list broken until the page is loaded again.
+          membershipSub?.cancel();
+          membershipSub = null;
+          final attempt = membershipRetries;
+          if (!retriesGroupsRead(attempt)) {
+            if (!controller.isClosed) controller.addError(e);
+            return;
+          }
+          membershipRetries = attempt + 1;
+          membershipRetryTimer?.cancel();
+          membershipRetryTimer = Timer(groupsRetryDelay(attempt), () {
+            if (controller.isClosed || boundKey == null) return;
+            listenMemberships(email);
+          });
         },
       );
-    }
+    };
 
     controller = StreamController<List<TourGroup>>.broadcast(
       onListen: () {
@@ -687,7 +766,8 @@ class TourGroupRepository {
           if (_auth.currentUser != null) {
             bindUser(_auth.currentUser);
           }
-          authSub = _auth.authStateChanges().listen((user) {
+          // userChanges also reports an email that arrives after sign-in.
+          authSub = _auth.userChanges().listen((user) {
             bindUser(user);
           });
         } catch (_) {
