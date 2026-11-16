@@ -119,6 +119,7 @@ class VoiceRoomService {
   bool _isAudioMuted = false;
   bool _isVideoOn = false;
   bool _isSpeakerOn = false;
+  bool _joining = false;
 
   MediaStream? _localStream;
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
@@ -187,6 +188,34 @@ class VoiceRoomService {
     required String myUid,
     bool enableVideo = false,
     // A study room holds fewer people than a channel's voice room.
+    int capacity = kVoiceRoomMaxParticipants,
+  }) async {
+    if (_joining) return;
+    _joining = true;
+    try {
+      await _joinVoiceRoomInternal(
+        tourId: tourId,
+        channelId: channelId,
+        myEmail: myEmail,
+        myName: myName,
+        photoUrl: photoUrl,
+        myUid: myUid,
+        enableVideo: enableVideo,
+        capacity: capacity,
+      );
+    } finally {
+      _joining = false;
+    }
+  }
+
+  Future<void> _joinVoiceRoomInternal({
+    required String tourId,
+    required String channelId,
+    required String myEmail,
+    required String myName,
+    String? photoUrl,
+    required String myUid,
+    bool enableVideo = false,
     int capacity = kVoiceRoomMaxParticipants,
   }) async {
     // If already in a room, leave it first
@@ -435,6 +464,14 @@ class VoiceRoomService {
         pendingCandidates.clear();
       }
 
+      pc.onIceConnectionState = (RTCIceConnectionState state) {
+        if (state == RTCIceConnectionState.RTCIceConnectionStateFailed &&
+            _stillWanted(remoteEmail, remoteSession, mySession)) {
+          _disconnectFromPeer(remoteEmail);
+          _scheduleRetry();
+        }
+      };
+
       pc.onIceCandidate = (RTCIceCandidate candidate) {
         unawaited(_addQuietly(ownCandidates, {
           'candidate': candidate.candidate,
@@ -503,15 +540,17 @@ class VoiceRoomService {
           await drainCandidates();
         });
       } else {
-        var answered = false;
+        String? handledOfferKey;
         _signalSubs['${remoteEmail}_sig'] =
             signalRef.snapshots().listen((snap) async {
           final data = snap.data();
-          if (data == null || answered) return;
+          if (data == null) return;
           final offerMap = data['offer'] as Map<String, dynamic>?;
           // Only the peer's current join is answered. An offer from an earlier join is ignored.
           if (offerMap == null || data['offerSession'] != remoteSession) return;
-          answered = true;
+          final offerKey = '${data['offerSession']}:${offerMap['sdp']}';
+          if (handledOfferKey == offerKey) return;
+          handledOfferKey = offerKey;
 
           await pc
               .setRemoteDescription(RTCSessionDescription(
@@ -519,18 +558,26 @@ class VoiceRoomService {
                 offerMap['type'] as String,
               ))
               .catchError((_) {});
+          if (!_stillWanted(remoteEmail, remoteSession, mySession)) return;
           await drainCandidates();
+          if (!_stillWanted(remoteEmail, remoteSession, mySession)) return;
 
           final answer = await pc.createAnswer({
             'offerToReceiveAudio': 1,
             'offerToReceiveVideo': 1,
           });
           await pc.setLocalDescription(answer);
+          if (!_stillWanted(remoteEmail, remoteSession, mySession)) return;
 
-          await signalRef.update({
-            'answer': {'type': answer.type, 'sdp': answer.sdp},
-            'answerSession': mySession,
-          }).catchError((_) {});
+          try {
+            await signalRef.update({
+              'answer': {'type': answer.type, 'sdp': answer.sdp},
+              'answerSession': mySession,
+            });
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+            if (handledOfferKey == offerKey) handledOfferKey = null;
+          }
         });
       }
     } catch (e, st) {
@@ -543,7 +590,9 @@ class VoiceRoomService {
             failed.close().then((_) => failed.dispose()).catchError((_) {}));
       }
       _disconnectFromPeer(remoteEmail);
-      _scheduleRetry();
+      if (_stillWanted(remoteEmail, remoteSession, mySession)) {
+        _scheduleRetry();
+      }
     } finally {
       _connecting.remove(remoteEmail);
     }
@@ -551,7 +600,7 @@ class VoiceRoomService {
 
   /// Tries the peers that failed again shortly, since no seat change may come to trigger it.
   void _scheduleRetry() {
-    if (_retryTimer != null) return;
+    if (!isConnected || _retryTimer != null) return;
     _retryTimer = Timer(_retryAfter, () {
       _retryTimer = null;
       final snap = _lastSeats;
@@ -798,6 +847,30 @@ class VoiceRoomService {
     final channelId = _activeChannelId;
     final myEmail = _myEmail;
 
+    // Immediately mark disconnected, cancel seat listener, and silence mic/camera
+    // before awaiting remote teardown.
+    _activeTourId = null;
+    _activeChannelId = null;
+    _myEmail = null;
+    _myName = null;
+    _myUid = null;
+    _myPhotoUrl = null;
+    _mySession = null;
+    _isAudioMuted = false;
+    _isVideoOn = false;
+    _isSpeakerOn = false;
+
+    await _participantsSub?.cancel();
+    _participantsSub = null;
+    _lastSeats = null;
+
+    _localStream?.getTracks().forEach((track) => track.stop());
+    await _localStream?.dispose();
+    _localStream = null;
+    if (_localRendererInitialized) {
+      _localRenderer.srcObject = null;
+    }
+
     if (tourId != null && channelId != null && myEmail != null) {
       try {
         await _seats(tourId, channelId).doc(myEmail).delete();
@@ -806,18 +879,12 @@ class VoiceRoomService {
       }
     }
 
-    await _participantsSub?.cancel();
-    _participantsSub = null;
-    _lastSeats = null;
-
     final openPeers = _peerConnections.keys.toList();
     for (final email in openPeers) {
       await _closePeer(email);
     }
-    if (openPeers.isEmpty) {
-      // No connection was made, so the plugin never switches the audio session off.
-      await CallAudioSession.release();
-    }
+    await CallAudioSession.release();
+
     // Candidates of connections that never registered are removed as well.
     for (final refs in _ownCandidates.values) {
       for (final ref in refs) {
@@ -834,23 +901,6 @@ class VoiceRoomService {
       await sub.cancel();
     }
     _signalSubs.clear();
-
-    _localStream?.getTracks().forEach((track) => track.stop());
-    await _localStream?.dispose();
-    _localStream = null;
-
-    _localRenderer.srcObject = null;
-
-    _activeTourId = null;
-    _activeChannelId = null;
-    _myEmail = null;
-    _myName = null;
-    _myUid = null;
-    _myPhotoUrl = null;
-    _mySession = null;
-    _isAudioMuted = false;
-    _isVideoOn = false;
-    _isSpeakerOn = false;
 
     _notify();
   }

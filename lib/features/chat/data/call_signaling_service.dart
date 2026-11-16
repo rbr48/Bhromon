@@ -982,10 +982,22 @@ class CallSignalingService {
     _stopRebuildResend();
   }
 
+  Future<bool> _refreshIceConfiguration(RTCPeerConnection pc) async {
+    final freshIce = await CallIceConfig.shared.refresh();
+    if (_finished || _peerConnection != pc) return false;
+    try {
+      await pc.setConfiguration(freshIce);
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
+    return true;
+  }
+
   Future<void> _sendRebuildOffer() async {
     final pc = _peerConnection;
     if (pc == null || _callId == null) return;
     try {
+      if (!await _refreshIceConfiguration(pc)) return;
       final offer = await pc.createOffer({
         'iceRestart': true,
         'offerToReceiveAudio': 1,
@@ -1053,6 +1065,7 @@ class CallSignalingService {
     _enterRebuild();
     _stopRebuildResend();
     try {
+      if (!await _refreshIceConfiguration(pc)) return;
       await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
       await _drainPendingIceCandidates();
       final answer = await pc.createAnswer({
@@ -1591,10 +1604,10 @@ class CallSignalingService {
       } catch (error, stackTrace) {
         logSkipped(error, stackTrace);
       }
-    } else {
-      // Audio may have been opened before any connection existed.
-      await CallAudioSession.release();
     }
+    // Always release CallAudioSession so Android audio focus / speaker mode
+    // never stays stuck after peer disposal.
+    await CallAudioSession.release();
 
     _localStream?.getTracks().forEach((track) => track.stop());
     await _localStream?.dispose();
