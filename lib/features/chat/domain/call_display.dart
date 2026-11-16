@@ -40,3 +40,30 @@ AudioOutputKind audioOutputKind(String deviceId, String label) {
   if (text.contains('speaker')) return AudioOutputKind.speaker;
   return AudioOutputKind.other;
 }
+
+/// Voice calls default to the earpiece; video calls default to the speaker.
+bool defaultCallSpeakerOn({required bool isVideoCall}) => isVideoCall;
+
+/// Platform speaker/earpiece routing is only available outside the Web target.
+bool shouldShowSpeakerControl({required bool isWeb}) => !isWeb;
+
+/// Camera switching is only available on mobile when local video is active.
+bool shouldShowFlipCameraControl({
+  required bool isWeb,
+  required bool cameraOn,
+}) =>
+    !isWeb && cameraOn;
+
+/// Whether our own Android foreground service should be started/updated so
+/// mic and camera keep running in the background even when accepted via CallKit.
+bool shouldStartOngoingService({
+  required bool systemCall,
+  required bool needsMicFgs,
+  required bool needsCameraFgs,
+  required bool hasLocalVideo,
+}) =>
+    !systemCall || needsMicFgs || (hasLocalVideo && needsCameraFgs);
+
+/// When a call reaches a terminal state (`declined`/`missed`/`ended`/`failed`),
+/// CallScreen waits briefly to display the status banner before popping.
+bool shouldExitImmediatelyOnCallEnded({required bool callOver}) => !callOver;
