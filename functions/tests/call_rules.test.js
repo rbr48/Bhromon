@@ -260,6 +260,8 @@ describe('call and voice rules', () => {
     test('the end time must be the server time and the duration a whole number', async () => {
       await assertFails(updateDoc(callRef(ALICE), { status: 'ended', endedAt: new Date(0) }));
       await assertFails(updateDoc(callRef(ALICE), { status: 'ended', durationSeconds: '12' }));
+      await assertFails(updateDoc(callRef(ALICE), { status: 'ended', durationSeconds: -1 }));
+      await assertFails(updateDoc(callRef(ALICE), { status: 'ended', durationSeconds: 86401 }));
     });
 
     test('calls are never deleted by a client', async () => {
@@ -311,6 +313,23 @@ describe('call and voice rules', () => {
         setDoc(doc(as(ALICE), 'calls', 'no-such-call', 'offerCandidates', 'c1'), CANDIDATE),
       );
     });
+
+    test('candidates validate sdpMid/sdpMLineIndex and cannot be added after call ends', async () => {
+      await assertFails(
+        setDoc(doc(as(ALICE), 'calls', CALL, 'offerCandidates', 'bad-mid'), {
+          ...CANDIDATE,
+          sdpMid: 123,
+        }),
+      );
+      await assertFails(
+        setDoc(doc(as(ALICE), 'calls', CALL, 'offerCandidates', 'bad-idx'), {
+          ...CANDIDATE,
+          sdpMLineIndex: -1,
+        }),
+      );
+      await seedCall({ status: 'ended' });
+      await assertFails(offerCandidate(ALICE, 'after-end'));
+    });
   });
 
   describe('voice seats', () => {
@@ -350,6 +369,9 @@ describe('call and voice rules', () => {
       const ref = doc(as(ALICE), ...seatPath(ALICE.email));
       await assertFails(setDoc(ref, seat(ALICE, { role: 'admin' })));
       await assertFails(setDoc(ref, seat(ALICE, { displayName: 'x'.repeat(81) })));
+      await assertFails(setDoc(ref, seat(ALICE, { displayName: 123 })));
+      await assertFails(setDoc(ref, seat(ALICE, { isAudioMuted: 'yes' })));
+      await assertFails(setDoc(ref, seat(ALICE, { sessionId: 's'.repeat(129) })));
     });
 
     test('a non-member cannot take a seat, and cannot read the room', async () => {
@@ -395,7 +417,23 @@ describe('call and voice rules', () => {
 
     test('a pair id must name exactly two members, one of them the caller', async () => {
       await assertFails(setDoc(doc(as(ALICE), ...signalPath(ALICE.email)), offerDoc));
+      await assertFails(setDoc(doc(as(ALICE), ...signalPath(`${ALICE.email}__${ALICE.email}`)), offerDoc));
       await assertFails(setDoc(doc(as(EVE), ...signalPath(PAIR)), offerDoc));
+    });
+
+    test('voice signals and candidates validate payload schemas and collection names', async () => {
+      await assertFails(setDoc(doc(as(ALICE), ...signalPath(PAIR)), { offer: OFFER, junk: 1 }));
+      await assertFails(setDoc(doc(as(ALICE), ...signalPath(PAIR)), { offer: ANSWER }));
+      await setDoc(doc(as(ALICE), ...signalPath(PAIR)), offerDoc);
+      await assertFails(
+        setDoc(doc(as(ALICE), ...signalPath(PAIR), 'evilCollection', 'c1'), CANDIDATE),
+      );
+      await assertFails(
+        setDoc(doc(as(ALICE), ...signalPath(PAIR), 'offerCandidates', 'bad'), {
+          ...CANDIDATE,
+          sdpMLineIndex: 'zero',
+        }),
+      );
     });
   });
 });

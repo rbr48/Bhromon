@@ -709,13 +709,41 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('profiles'), profileOf(email, memberUid));
 
   // Group chat: their messages, their reactions and votes, the mentions and tags
-  // naming them, and their typing and voice presence in each channel.
-  const channels = await tour.collection('channels').get();
+  // naming them, and their typing and voice presence in each channel (including
+  // virtual channels such as game_voice and study_<id> that only hold voice subcollections).
+  const channelsCol = tour.collection('channels');
+  const channels = await channelsCol.get();
   await applyToDocs(
     db,
     channels.docs.map((channel: QueryDocumentSnapshot) => channel.ref),
     anonymize(CHANNEL, email, standIn),
   );
+  const channelRefsByPath = new Map<string, DocumentReference>(
+    channels.docs.map((channel: QueryDocumentSnapshot) => [channel.ref.path, channel.ref]),
+  );
+  const addChannelRef = (ref: DocumentReference | null): void => {
+    if (ref !== null && !channelRefsByPath.has(ref.path)) {
+      channelRefsByPath.set(ref.path, ref);
+    }
+  };
+  if (typeof channelsCol.listDocuments === 'function') {
+    for (const ref of await channelsCol.listDocuments()) addChannelRef(ref);
+  }
+  for (const session of sessions.docs) {
+    addChannelRef(channelsCol.doc(`study_${session.id}`));
+  }
+  const gameDocs = await tour.collection('games').get();
+  for (const game of gameDocs.docs) {
+    addChannelRef(channelsCol.doc(`game_${game.id}`));
+  }
+  // In the Firestore emulator, CollectionReference.listDocuments() omits phantom channel
+  // documents whose only contents are subcollections; discover them via active participants.
+  const voiceParticipantsSnap = await db.collectionGroup('voice_participants').get();
+  for (const doc of voiceParticipantsSnap.docs) {
+    if (inTour(doc.ref.path)) {
+      addChannelRef(doc.ref.parent.parent);
+    }
+  }
   for (const channel of channels.docs) {
     const messages = channel.ref.collection('messages');
     await deleteMatching(
@@ -739,12 +767,14 @@ export async function purgeMemberContent(
       messages.where('pinnedByEmail', '==', email),
       anonymize(PINNED_MESSAGE, email, standIn),
     );
+  }
+  for (const channelRef of channelRefsByPath.values()) {
     await deleteRefs(db, [
-      channel.ref.collection('typing').doc(email),
-      channel.ref.collection('voice_participants').doc(email),
+      channelRef.collection('typing').doc(email),
+      channelRef.collection('voice_participants').doc(email),
     ]);
     // Voice signalling between the person and another member.
-    await applyToQuery(db, channel.ref.collection('voice_signals'), pairWith(email));
+    await applyToQuery(db, channelRef.collection('voice_signals'), pairWith(email));
   }
 
   // Their files in the tour's Storage folder (uploads from before the media server).
