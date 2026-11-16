@@ -517,3 +517,66 @@ def test_extra_turn_over_tls_addresses_come_from_the_environment(monkeypatch):
     )
     urls = turn_urls()
     assert urls == chat.TURN_URLS + ["turns:turn.example.com:443?transport=tcp"]
+
+
+def test_ios_fcm_is_skipped_when_pushkit_succeeds_and_used_as_fallback(monkeypatch, tmp_path):
+    db = chat.ChatDatabase(tmp_path / "chat.db")
+    db.register_device_token("uid-bob", "voip-token", device_id="iphone:voip", platform="ios-voip")
+    db.register_device_token("uid-bob", "ios-fcm-token", device_id="iphone", platform="ios")
+    fcm = []
+    monkeypatch.setattr("firebase_admin._apps", {"[DEFAULT]": object()})
+    monkeypatch.setattr("firebase_admin.messaging.send", lambda msg: fcm.append(msg))
+    monkeypatch.setattr(chat.voip_sender, "send_call", MagicMock(return_value="sent"))
+
+    count = chat.PushNotificationDispatcher(db).send_call_push_to_uid(
+        "uid-bob", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=False
+    )
+    assert count == 1
+    assert fcm == []
+
+    monkeypatch.setattr(chat.voip_sender, "send_call", MagicMock(return_value="skipped"))
+    fallback_count = chat.PushNotificationDispatcher(db).send_call_push_to_uid(
+        "uid-bob", call_id="c2", caller_id="uid-alice", caller_name="Alice", is_video=False
+    )
+    assert fallback_count == 1
+    assert [m.token for m in fcm] == ["ios-fcm-token"]
+
+
+def test_send_call_ended_push_to_uid_sends_and_purges_dead(monkeypatch, tmp_path):
+    db = chat.ChatDatabase(tmp_path / "chat.db")
+    db.register_device_token("uid-bob", "voip-token", device_id="d0", platform="ios-voip")
+    db.register_device_token("uid-bob", "web-token", device_id="d1", platform="web")
+    db.register_device_token("uid-bob", "dead-token", device_id="d2", platform="android")
+    sent = []
+
+    def fake_send(msg):
+        if msg.token == "dead-token":
+            raise RuntimeError("messaging/registration-token-not-registered")
+        sent.append(msg)
+
+    monkeypatch.setattr("firebase_admin._apps", {"[DEFAULT]": object()})
+    monkeypatch.setattr("firebase_admin.messaging.send", fake_send)
+
+    count = chat.PushNotificationDispatcher(db).send_call_ended_push_to_uid("uid-bob", "c99")
+    assert count == 1
+    assert [m.token for m in sent] == ["web-token"]
+    assert sent[0].data == {"action": "end_call", "callId": "c99"}
+    remaining_tokens = [row["token"] for row in db.get_device_tokens("uid-bob")]
+    assert remaining_tokens == ["voip-token", "web-token"]
+
+
+def test_end_signal_triggers_call_ended_push(client, fake_firebase, monkeypatch):
+    ended_push = MagicMock(return_value=1)
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_ended_push_to_uid", ended_push)
+    with _signed_in(client, "tok-alice") as alice:
+        alice.receive_json()
+        alice.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "uid-bob",
+            "signalType": "declined",
+            "payload": {},
+        })
+        alice.send_json({"type": "ping"})
+        assert alice.receive_json() == {"type": "pong"}
+    ended_push.assert_called_once_with(recipient_uid="uid-bob", call_id="c1")

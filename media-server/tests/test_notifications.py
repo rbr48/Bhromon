@@ -289,6 +289,29 @@ def test_send_call_ended_push():
     res = engine.send_call_ended_push(call_id="c_123", callee_id="uid_bob")
     assert res["status"] == "success"
     assert res["devices_sent"] == 1
+    kwargs = mock_messaging.MulticastMessage.call_args[1]
+    assert kwargs["apns"] is not None
+    assert kwargs["webpush"] is not None
+
+
+def test_send_call_ended_push_purges_dead_tokens():
+    mock_messaging = MagicMock()
+    dead_ref = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.success_count = 0
+    mock_resp.responses = [
+        MagicMock(success=False, exception=RuntimeError("registration-token-not-registered"))
+    ]
+    mock_messaging.send_each_for_multicast.return_value = mock_resp
+
+    engine = NotificationEngine(messaging_mod=mock_messaging)
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_dead", dead_ref, "en")])
+
+    res = engine.send_call_ended_push(call_id="c_124", callee_id="uid_bob")
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 0
+    dead_ref.delete.assert_called_once()
+    assert engine.stats["dead_tokens_purged"] == 1
 
 
 def test_watcher_call_snapshot():

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -210,20 +211,33 @@ class AppRouter {
         path: '/call/:callId',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
-          final sharedTourId = (extra['sharedTourId'] as String?) ??
-              state.uri.queryParameters['tourId'];
+          final query = state.uri.queryParameters;
+          final sharedTourId =
+              (extra['sharedTourId'] as String?) ?? query['tourId'];
+          final localUid = (extra['localUid'] as String?) ??
+              FirebaseAuth.instance.currentUser?.uid ??
+              '';
+          final remoteUid =
+              (extra['remoteUid'] as String?) ?? query['callerId'] ?? '';
+          final remoteUserName = (extra['remoteUserName'] as String?) ??
+              query['callerName'] ??
+              'Member';
+          final isVideoCall = extra['isVideoCall'] as bool? ??
+              (query.containsKey('isVideo')
+                  ? query['isVideo'] == 'true'
+                  : true);
           return _customPageTransition(
             state,
             CallScreen(
               callId: state.pathParameters['callId']!,
-              localUid: extra['localUid'] as String? ?? '',
-              remoteUid: extra['remoteUid'] as String? ?? '',
+              localUid: localUid,
+              remoteUid: remoteUid,
               remoteEmail: extra['remoteEmail'] as String?,
               sharedTourId: sharedTourId,
-              remoteUserName: extra['remoteUserName'] as String? ?? 'Member',
+              remoteUserName: remoteUserName,
               remoteAvatarUrl: extra['remoteAvatarUrl'] as String?,
               isCaller: extra['isCaller'] as bool? ?? false,
-              isVideoCall: extra['isVideoCall'] as bool? ?? true,
+              isVideoCall: isVideoCall,
               localUserName: extra['localUserName'] as String?,
               localAvatarUrl: extra['localAvatarUrl'] as String?,
             ),

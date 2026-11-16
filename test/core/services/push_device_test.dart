@@ -17,4 +17,29 @@ void main() {
       expect(a, isNot(contains('.')));
     });
   });
+
+  group('getOrCreatePushDeviceId', () {
+    test('reuses an existing persisted id', () async {
+      String? stored = 'stable-device-123';
+      final id = await getOrCreatePushDeviceId(
+        reader: () async => stored,
+        writer: (value) async => stored = value,
+      );
+      expect(id, 'stable-device-123');
+    });
+
+    test('generates and persists an id when missing or blank', () async {
+      String? stored = '   ';
+      final first = await getOrCreatePushDeviceId(
+        reader: () async => stored,
+        writer: (value) async => stored = value,
+      );
+      final second = await getOrCreatePushDeviceId(
+        reader: () async => stored,
+        writer: (value) async => stored = value,
+      );
+      expect(first, isNotEmpty);
+      expect(second, first);
+    });
+  });
 }

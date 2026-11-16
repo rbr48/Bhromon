@@ -411,8 +411,10 @@ class FcmService {
     final platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
     // The server writes push text in this language, so the device says which it is.
     final language = LocaleController.instance.locale.languageCode;
+    final deviceId = await getOrCreatePushDeviceId();
     final Map<String, dynamic> data = {
       'token': token,
+      'deviceId': deviceId,
       'platform': platform,
       'language': language,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -420,8 +422,12 @@ class FcmService {
 
     // 1. Immediately register with VPS for instant server-direct push notifications
     try {
-      await VpsChatService()
-          .registerDeviceToken(token, platform: platform, language: language);
+      await VpsChatService().registerDeviceToken(
+        token,
+        deviceId: deviceId,
+        platform: platform,
+        language: language,
+      );
     } catch (e, st) {
       logWarning('[FcmService] VPS token registration error', e, st);
     }
@@ -501,6 +507,10 @@ class FcmService {
   }
 
   void _handleTap(RemoteMessage message, BuildContext context) {
+    final isVideoRaw = message.data['isVideo'];
+    final bool? isVideo = isVideoRaw is String
+        ? isVideoRaw == 'true'
+        : (isVideoRaw is bool ? isVideoRaw : null);
     routeFromPayload(
       message.data['action'] as String?,
       context,
@@ -508,6 +518,10 @@ class FcmService {
       itemId: (message.data['itemId'] as String?) ??
           (message.data['chatId'] as String?),
       tourId: message.data['tourId'] as String?,
+      callId: message.data['callId'] as String?,
+      callerId: message.data['callerId'] as String?,
+      callerName: message.data['callerName'] as String?,
+      isVideo: isVideo,
     );
   }
 
@@ -518,6 +532,10 @@ class FcmService {
     String? uid,
     String? itemId,
     String? tourId,
+    String? callId,
+    String? callerId,
+    String? callerName,
+    bool? isVideo,
   }) {
     if (action == null || action.isEmpty) return;
     switch (action) {
@@ -590,7 +608,21 @@ class FcmService {
         if (tourId != null) GoRouter.of(context).go('/group/$tourId/journey');
         break;
       case 'call':
-        // Native CallNotificationService manages incoming call overlay/ringing
+        final targetCallId = (callId ?? itemId ?? '').trim();
+        if (targetCallId.isNotEmpty) {
+          final targetCallerId = (callerId ?? uid ?? '').trim();
+          final targetCallerName = (callerName ?? '').trim();
+          GoRouter.of(context).go(
+            Uri(
+              path: '/call/$targetCallId',
+              queryParameters: {
+                if (targetCallerId.isNotEmpty) 'callerId': targetCallerId,
+                if (targetCallerName.isNotEmpty) 'callerName': targetCallerName,
+                if (isVideo != null) 'isVideo': isVideo ? 'true' : 'false',
+              },
+            ).toString(),
+          );
+        }
         break;
       case 'broadcast':
         break;
