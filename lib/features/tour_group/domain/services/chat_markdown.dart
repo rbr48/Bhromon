@@ -318,7 +318,8 @@ String _autoWrapRawLatex(String s) {
   if (s.contains('\n')) {
     return s.split('\n').map(_autoWrapRawLatex).join('\n');
   }
-  if (s.contains(r'$')) return s;
+  // If already wrapped in $$...$$ or $...$, return as-is
+  if (RegExp(r'^\s*\${1,2}[\s\S]+\${1,2}\s*$').hasMatch(s)) return s;
   final trimmed = s.trim();
   if (trimmed.isEmpty) return s;
 

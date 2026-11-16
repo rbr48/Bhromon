@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'tour_hub_preference.dart';
 
 /// The group the user is working in on this device: the one the groups hub opened
@@ -14,7 +16,17 @@ class ActiveGroup {
       : _preference = preference ?? TourHubPreference();
 
   /// The app-wide instance.
-  static final ActiveGroup instance = ActiveGroup();
+  static ActiveGroup instance = ActiveGroup();
+
+  @visibleForTesting
+  static void setInstanceForTesting(ActiveGroup testInstance) {
+    instance = testInstance;
+  }
+
+  @visibleForTesting
+  static void resetInstanceForTesting() {
+    instance = ActiveGroup();
+  }
 
   final TourHubPreference _preference;
   final StreamController<String?> _changes =

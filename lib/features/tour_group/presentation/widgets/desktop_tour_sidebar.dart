@@ -12,6 +12,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/desktop_nav.dart';
 import '../tour_routes.dart';
 import 'command_palette_dialog.dart';
+import 'desktop_group_switcher_dialog.dart';
 
 class DesktopTourSidebar extends StatelessWidget {
   final String tourId;
@@ -74,78 +75,127 @@ class DesktopTourSidebar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 36,
-                          height: 36,
-                          child: Image.asset(
-                            'assets/bhromon_emblem.png',
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Center(
-                              child: Icon(Icons.explore_rounded,
-                                  color: Colors.white, size: 20),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Bhromon',
-                                style: TextStyle(
-                                  color: context.forest.accentText,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.5,
+                    InkWell(
+                      onTap: () => goFromShell(context, '/group-hub'),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Image.asset(
+                                'assets/bhromon_emblem.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.explore_rounded,
+                                      color: Colors.white, size: 20),
                                 ),
                               ),
-                              Text(
-                                l10n.translate('login_tagline'),
-                                style: TextStyle(
-                                    color: context.forest.text54, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      tourTitle,
-                      style: TextStyle(
-                        color: context.forest.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(
-                            group != null && group.isFamily
-                                ? Icons.groups_2_outlined
-                                : Icons.route_rounded,
-                            size: 13,
-                            color: context.forest.accentText),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            routeSubtitle,
-                            style: TextStyle(
-                              color: context.forest.text70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Bhromon',
+                                    style: TextStyle(
+                                      color: context.forest.accentText,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    l10n.translate('login_tagline'),
+                                    style: TextStyle(
+                                        color: context.forest.text54,
+                                        fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () => DesktopGroupSwitcherDialog.show(
+                        context,
+                        activeTourId: tourId,
+                        currentLocation: currentLocation,
+                        repository: repository,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      hoverColor:
+                          context.forest.accentText.withValues(alpha: 0.08),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: context.forest.divider10,
+                          ),
+                          color: context.forest.surfaceFor(
+                            const Color(0xFF132219),
                           ),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tourTitle,
+                                    style: TextStyle(
+                                      color: context.forest.text,
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        group != null && group.isFamily
+                                            ? Icons.groups_2_outlined
+                                            : Icons.route_rounded,
+                                        size: 13,
+                                        color: context.forest.accentText,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          routeSubtitle,
+                                          style: TextStyle(
+                                            color: context.forest.text70,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.unfold_more_rounded,
+                              size: 18,
+                              color: context.forest.text54,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),

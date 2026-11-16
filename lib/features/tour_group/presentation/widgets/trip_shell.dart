@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/layout/desktop_shell_scope.dart';
+import '../../data/active_group.dart';
 import '../../data/tour_group_repository.dart';
 import '../tour_routes.dart';
 import 'bhromon_bottom_nav.dart';
@@ -17,7 +20,7 @@ import 'tour_membership_guard.dart';
 ///
 /// Below [railBreakpoint] the tabs sit in a persistent bottom bar. From it they move to a
 /// side rail on wide screens, and the tour content is capped at [contentMaxWidth].
-class TripShell extends StatelessWidget {
+class TripShell extends StatefulWidget {
   const TripShell({
     super.key,
     required this.tourId,
@@ -35,9 +38,10 @@ class TripShell extends StatelessWidget {
   /// The widest a tour screen's content may grow.
   static const double contentMaxWidth = kDesktopContentMaxWidth;
 
-  /// Whether the right dock's groups list is shown beside [location]. The groups page is
-  /// that list already.
-  static bool dockShowsGroups(String location) => location != '/group-hub';
+  /// Whether the right dock's groups list is shown beside [location].
+  /// Kept visible across all screens including /group-hub so users can always
+  /// switch groups in 1 click from the persistent right dock.
+  static bool dockShowsGroups(String location) => true;
 
   /// Whether the right dock's direct messages are shown beside [location]. The chats list
   /// and an open chat are those messages already.
@@ -68,32 +72,90 @@ class TripShell extends StatelessWidget {
   final bool hideNavWhileTyping;
 
   @override
+  State<TripShell> createState() => _TripShellState();
+}
+
+class _TripShellState extends State<TripShell> {
+  late String _activeTourId;
+  StreamSubscription<String?>? _activeGroupSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeTourId = widget.tourId.isNotEmpty
+        ? widget.tourId
+        : (ActiveGroup.instance.current ?? '');
+    _subscribeToActiveGroup();
+  }
+
+  @override
+  void didUpdateWidget(covariant TripShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.tourId != oldWidget.tourId) {
+      _activeTourId = widget.tourId.isNotEmpty
+          ? widget.tourId
+          : (ActiveGroup.instance.current ?? '');
+    }
+    if (widget.location != oldWidget.location) {
+      _activeGroupSub?.cancel();
+      _subscribeToActiveGroup();
+    }
+  }
+
+  void _subscribeToActiveGroup() {
+    // Top-level screens (such as /group-hub, /chats, /notifications, /profile/me)
+    // are not strictly bound to a single tour's URL path parameter (/group/:tourId/...).
+    // When the user selects or switches active groups, these screens dynamically
+    // update their sidebar and shell to reflect the newly active group.
+    final isTopLevel = !widget.location.startsWith('/group/');
+    if (isTopLevel) {
+      _activeGroupSub = ActiveGroup.instance.changes.listen((newTourId) {
+        if (!mounted) return;
+        if (newTourId != null &&
+            newTourId.isNotEmpty &&
+            newTourId != _activeTourId) {
+          setState(() {
+            _activeTourId = newTourId;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _activeGroupSub?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final index = tripTabFor(location);
+    final index = tripTabFor(widget.location);
 
     void select(int i) {
       BhromonBottomNav.handleSelect(
         context,
         i,
-        tourId: tourId.isNotEmpty ? tourId : null,
+        tourId: _activeTourId.isNotEmpty ? _activeTourId : null,
         currentIndex: index,
       );
     }
 
-    final Widget guardedChild = (guardMembership && tourId.isNotEmpty)
-        ? TourMembershipGuard(
-            tourId: tourId,
-            repository: repository,
-            child: child,
-          )
-        : child;
+    final Widget guardedChild =
+        (widget.guardMembership && _activeTourId.isNotEmpty)
+            ? TourMembershipGuard(
+                tourId: _activeTourId,
+                repository: widget.repository,
+                child: widget.child,
+              )
+            : widget.child;
 
     final wrappedChild = PopScope(
       canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (tourId.isNotEmpty) {
-          context.go(tourHubPath(tourId));
+        if (_activeTourId.isNotEmpty) {
+          context.go(tourHubPath(_activeTourId));
         } else {
           context.go('/group-hub');
         }
@@ -113,21 +175,21 @@ class TripShell extends StatelessWidget {
       const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () =>
           select(4),
       const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
-          CommandPaletteDialog.show(context, tourId),
+          CommandPaletteDialog.show(context, _activeTourId),
       const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
-          CommandPaletteDialog.show(context, tourId),
+          CommandPaletteDialog.show(context, _activeTourId),
     };
 
     final double screenWidth = MediaQuery.sizeOf(context).width;
     // The dock is shown only where it leaves the page room (kDesktopDockBreakpoint), and
     // never repeats the list the page itself is showing.
-    final showGroups = dockShowsGroups(location);
-    final showChats = dockShowsChats(location);
+    final showGroups = TripShell.dockShowsGroups(widget.location);
+    final showChats = TripShell.dockShowsChats(widget.location);
     final showDock =
         isDesktopDockWidth(screenWidth) && (showGroups || showChats);
     // With the keyboard open, a screen that asks for it has no bar under it.
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final showTabBar = !(hideNavWhileTyping && keyboardOpen);
+    final showTabBar = !(widget.hideNavWhileTyping && keyboardOpen);
 
     // A shell inside a shell (a page pushed over a tool, see ShellPageRoute) draws its
     // page only: the outer shell already carries the sidebar and the dock.
@@ -135,15 +197,15 @@ class TripShell extends StatelessWidget {
     final Widget scaffold;
     if (nested) {
       scaffold = wrappedChild;
-    } else if (screenWidth < railBreakpoint) {
-      scaffold = ownMobileScaffold
+    } else if (screenWidth < TripShell.railBreakpoint) {
+      scaffold = widget.ownMobileScaffold
           ? wrappedChild
           : Scaffold(
               body: wrappedChild,
               bottomNavigationBar: showTabBar
                   ? BhromonBottomNav(
                       selectedIndex: index,
-                      tourId: tourId.isNotEmpty ? tourId : null,
+                      tourId: _activeTourId.isNotEmpty ? _activeTourId : null,
                     )
                   : null,
             );
@@ -159,9 +221,9 @@ class TripShell extends StatelessWidget {
         body: Row(
           children: [
             DesktopTourSidebar(
-              tourId: tourId,
-              currentLocation: location,
-              repository: repository ?? TourGroupRepository(),
+              tourId: _activeTourId,
+              currentLocation: widget.location,
+              repository: widget.repository ?? TourGroupRepository(),
             ),
             Expanded(
               child: Center(
@@ -180,10 +242,10 @@ class TripShell extends StatelessWidget {
             ),
             if (showDock)
               DesktopRightDock(
-                activeTourId: tourId.isNotEmpty ? tourId : null,
-                repository: repository ?? TourGroupRepository(),
+                activeTourId: _activeTourId.isNotEmpty ? _activeTourId : null,
+                repository: widget.repository ?? TourGroupRepository(),
                 width: dockWidth,
-                currentLocation: location,
+                currentLocation: widget.location,
                 showGroups: showGroups,
                 showChats: showChats,
               ),

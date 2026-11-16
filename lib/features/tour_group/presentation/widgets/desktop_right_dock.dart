@@ -132,9 +132,8 @@ class DesktopGroupListPanel extends StatelessWidget {
     await ActiveGroup.instance.select(group.id);
     if (!context.mounted) return;
 
-    // The same tool in the new group when it has that tool, and otherwise the group's
-    // own page: a study circle picked from a trip's seat plan does not open a seat plan.
-    goFromShell(context, pathForGroupSwitch(group, currentLocation ?? ''));
+    final nextPath = pathForGroupSwitch(group, currentLocation ?? '');
+    goFromShell(context, nextPath);
   }
 
   Stream<List<TourGroup>> _safeGroupsStream() {
