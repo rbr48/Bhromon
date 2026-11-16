@@ -26,8 +26,14 @@ def delete_with_children(db: Any, ref: Any) -> None:
         recursive(ref)
         return
     for child in ref.collections():
-        for doc in child.stream():
-            doc.reference.delete()
+        while True:
+            docs = list(child.limit(BATCH_SIZE).stream())
+            if not docs:
+                break
+            for doc in docs:
+                doc.reference.delete()
+            if len(docs) < BATCH_SIZE:
+                break
     ref.delete()
 
 
@@ -39,11 +45,18 @@ def run_call_cleanup(
     max_batches: int = MAX_BATCHES_PER_RUN,
 ) -> Dict[str, int]:
     """Deletes calls created more than CALL_RETENTION ago, `batch` at a time."""
+    safe_batch = max(1, batch)
+    safe_max_batches = max(0, max_batches)
     now_utc = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
     threshold = now_utc - CALL_RETENTION
     stats = {"deleted": 0, "errors": 0}
-    for _ in range(max_batches):
-        old = list(db.collection("calls").where("createdAt", "<", threshold).limit(batch).stream())
+    for _ in range(safe_max_batches):
+        try:
+            old = list(db.collection("calls").where("createdAt", "<", threshold).limit(safe_batch).stream())
+        except Exception as error:
+            stats["errors"] += 1
+            logger.error("Call cleanup query failed: %s", error)
+            break
         for doc in old:
             try:
                 delete_with_children(db, doc.reference)
@@ -51,6 +64,6 @@ def run_call_cleanup(
             except Exception as error:
                 stats["errors"] += 1
                 logger.error("Call cleanup failed for %s: %s", doc.reference.path, error)
-        if len(old) < batch or stats["errors"]:
+        if len(old) < safe_batch or stats["errors"]:
             break
     return stats

@@ -37,7 +37,32 @@ describe('fcm_tokens/{uid}/devices rules', () => {
 
   test('a user can register their own device', async () => {
     await assertSucceeds(
-      setDoc(doc(db('babu'), 'fcm_tokens', 'babu', 'devices', 'tablet'), { token: 't_tablet' }),
+      setDoc(doc(db('babu'), 'fcm_tokens', 'babu', 'devices', 'tablet'), {
+        token: 't_tablet',
+        deviceId: 'dev-1',
+        platform: 'android',
+        language: 'bn',
+      }),
+    );
+  });
+
+  test('token payloads reject unknown fields, empty/oversized tokens, and invalid types', async () => {
+    await assertFails(
+      setDoc(doc(db('babu'), 'fcm_tokens', 'babu', 'devices', 'bad1'), {
+        token: '',
+      }),
+    );
+    await assertFails(
+      setDoc(doc(db('babu'), 'fcm_tokens', 'babu', 'devices', 'bad2'), {
+        token: 't_tablet',
+        admin: true,
+      }),
+    );
+    await assertFails(
+      setDoc(doc(db('babu'), 'fcm_tokens', 'babu', 'devices', 'bad3'), {
+        token: 't_tablet',
+        platform: 123,
+      }),
     );
   });
 

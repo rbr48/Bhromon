@@ -27,10 +27,12 @@ service cloud.firestore {
              request.resource.data[field] <= request.time;
     }
 
-    // Ensures a string field does not exceed the given character limit
+    // Ensures a string field (when present and non-null) does not exceed the given character limit
     function maxLength(field, limit) {
       return !(field in request.resource.data) ||
-             request.resource.data[field].size() <= limit;
+             request.resource.data[field] == null ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() <= limit);
     }
 
     // Validates that a required field exists and is not empty
@@ -188,11 +190,27 @@ service cloud.firestore {
 
     // ---- FCM Tokens ----
     match /fcm_tokens/{uid} {
-      allow read, write: if isOwner(uid);
+      function isValidFcmTokenDoc() {
+        return isOwner(uid)
+          && request.resource.data.keys().hasOnly(['token', 'deviceId', 'platform', 'language', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.token.size() <= 512
+          && maxLength('deviceId', 128)
+          && maxLength('platform', 32)
+          && maxLength('language', 16)
+          && (!('updatedAt' in request.resource.data)
+              || request.resource.data.updatedAt == request.time
+              || request.resource.data.updatedAt is timestamp);
+      }
+
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isValidFcmTokenDoc();
 
       // One document per signed-in device. Written by that user's app only.
       match /devices/{deviceId} {
-        allow read, write: if isOwner(uid);
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isValidFcmTokenDoc();
       }
     }
 
@@ -513,7 +531,9 @@ service cloud.firestore {
       function isCandidate(data) {
         return data.keys().hasOnly(['candidate', 'sdpMid', 'sdpMLineIndex'])
           && data.candidate is string
-          && data.candidate.size() <= 2048;
+          && data.candidate.size() <= 2048
+          && (!('sdpMid' in data) || data.sdpMid == null || (data.sdpMid is string && data.sdpMid.size() <= 64))
+          && (!('sdpMLineIndex' in data) || data.sdpMLineIndex == null || (data.sdpMLineIndex is int && data.sdpMLineIndex >= 0 && data.sdpMLineIndex <= 32));
       }
 
       allow read: if isAuth() && resource != null && isParty(resource.data);
@@ -550,7 +570,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'answer', 'endedAt', 'durationSeconds'])
         && (!('endedAt' in request.resource.data) || request.resource.data.endedAt == request.time)
-        && (!('durationSeconds' in request.resource.data) || request.resource.data.durationSeconds is int)
+        && (!('durationSeconds' in request.resource.data) || (request.resource.data.durationSeconds is int && request.resource.data.durationSeconds >= 0 && request.resource.data.durationSeconds <= 86400))
         && (
           // The callee answers a ringing call. The status and the SDP answer change together.
           (request.resource.data.status == 'answered'
@@ -571,6 +591,7 @@ service cloud.firestore {
         allow read: if isAuth() && isParty(get(/databases/$(database)/documents/calls/$(callId)).data);
         allow create: if isAuth()
           && isCaller(get(/databases/$(database)/documents/calls/$(callId)).data)
+          && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['calling', 'answered']
           && isCandidate(request.resource.data);
         allow update, delete: if false;
       }
@@ -579,6 +600,7 @@ service cloud.firestore {
         allow read: if isAuth() && isParty(get(/databases/$(database)/documents/calls/$(callId)).data);
         allow create: if isAuth()
           && isCallee(get(/databases/$(database)/documents/calls/$(callId)).data)
+          && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['calling', 'answered']
           && isCandidate(request.resource.data);
         allow update, delete: if false;
       }
@@ -3019,9 +3041,13 @@ service cloud.firestore {
               'email', 'displayName', 'photoUrl', 'uid', 'isAudioMuted',
               'isVideoOn', 'joinedAt', 'lastSeenAt', 'sessionId'
             ])
+            && request.resource.data.isAudioMuted is bool
+            && request.resource.data.isVideoOn is bool
+            && request.resource.data.joinedAt is timestamp
             && request.resource.data.lastSeenAt == request.time
             && maxLength('displayName', 80)
-            && maxLength('photoUrl', 512);
+            && maxLength('photoUrl', 512)
+            && (!('sessionId' in request.resource.data) || (request.resource.data.sessionId is string && request.resource.data.sessionId.size() <= 128));
           allow delete: if isOwnSeat();
         }
 
@@ -3032,11 +3058,42 @@ service cloud.firestore {
           function isPairMember() {
             return isActiveMember(tourId)
               && pairId.split('__').size() == 2
+              && pairId.split('__')[0] != pairId.split('__')[1]
               && tourUserEmail() in pairId.split('__');
           }
-          allow read, write: if isPairMember();
+          allow read, delete: if isPairMember();
+          allow create, update: if isPairMember()
+            && request.resource.data.keys().hasOnly([
+              'offer', 'answer', 'offerer', 'answerer', 'offerSession', 'answerSession', 'createdAt'
+            ])
+            && (!('offer' in request.resource.data) || (
+              request.resource.data.offer is map
+              && request.resource.data.offer.keys().hasOnly(['type', 'sdp'])
+              && request.resource.data.offer.type == 'offer'
+              && request.resource.data.offer.sdp is string
+              && request.resource.data.offer.sdp.size() <= 65536
+            ))
+            && (!('answer' in request.resource.data) || (
+              request.resource.data.answer is map
+              && request.resource.data.answer.keys().hasOnly(['type', 'sdp'])
+              && request.resource.data.answer.type == 'answer'
+              && request.resource.data.answer.sdp is string
+              && request.resource.data.answer.sdp.size() <= 65536
+            ))
+            && maxLength('offerer', 256)
+            && maxLength('answerer', 256)
+            && maxLength('offerSession', 128)
+            && maxLength('answerSession', 128);
           match /{candCollection}/{candId} {
-            allow read, write: if isPairMember();
+            allow read, delete: if isPairMember() && candCollection in ['offerCandidates', 'answerCandidates'];
+            allow create, update: if isPairMember()
+              && candCollection in ['offerCandidates', 'answerCandidates']
+              && request.resource.data.keys().hasOnly(['candidate', 'sdpMid', 'sdpMLineIndex', 'session'])
+              && request.resource.data.candidate is string
+              && request.resource.data.candidate.size() <= 2048
+              && (!('sdpMid' in request.resource.data) || request.resource.data.sdpMid == null || (request.resource.data.sdpMid is string && request.resource.data.sdpMid.size() <= 64))
+              && (!('sdpMLineIndex' in request.resource.data) || request.resource.data.sdpMLineIndex == null || (request.resource.data.sdpMLineIndex is int && request.resource.data.sdpMLineIndex >= 0 && request.resource.data.sdpMLineIndex <= 32))
+              && maxLength('session', 128);
           }
         }
 

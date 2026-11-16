@@ -1380,4 +1380,20 @@ describe('tour content purge', () => {
     expect(calls.media).toEqual([[TOUR, null]]);
     expect(calls.storage).toEqual([[TOUR, null]]);
   });
+
+  it('removing a member also clears voice seats and signals in virtual game/study channels', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    await db.doc(`tours/${TOUR}/channels/game_voice/voice_participants/${LEAVER}`).set({ email: LEAVER });
+    await db.doc(`tours/${TOUR}/channels/game_voice/voice_participants/${OTHER}`).set({ email: OTHER });
+    await db.doc(`tours/${TOUR}/channels/game_voice/voice_signals/${OTHER}__${LEAVER}`).set({ offer: 'x' });
+    await db.doc(`tours/${TOUR}/channels/study_s1/voice_participants/${LEAVER}`).set({ email: LEAVER });
+
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    expect(await exists(`tours/${TOUR}/channels/game_voice/voice_participants/${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/channels/game_voice/voice_participants/${OTHER}`)).toBe(true);
+    expect(await exists(`tours/${TOUR}/channels/game_voice/voice_signals/${OTHER}__${LEAVER}`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/channels/study_s1/voice_participants/${LEAVER}`)).toBe(false);
+  });
 });

@@ -39,3 +39,13 @@ def test_a_failed_delete_is_counted_and_stops_the_run():
 
     assert stats["errors"] == 2
     assert stats["deleted"] == 0
+
+
+def test_query_failure_is_counted_without_crashing():
+    db = MagicMock()
+    db.collection.return_value.where.return_value.limit.return_value.stream.side_effect = RuntimeError("rpc")
+
+    stats = call_cleanup.run_call_cleanup(db, datetime(2026, 3, 1, tzinfo=timezone.utc), batch=0, max_batches=1)
+
+    assert stats == {"deleted": 0, "errors": 1}
+    db.collection.return_value.where.return_value.limit.assert_called_with(1)

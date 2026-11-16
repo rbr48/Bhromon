@@ -369,13 +369,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   void _startDirectCall(TourMember member, {required bool isVideo}) {
     final l10n = context.l10n;
-    final me = _repository.currentEmail;
-    final myUid =
-        _repository.currentUid.isNotEmpty ? _repository.currentUid : me;
-    final remoteId = (member.uid != null && member.uid!.isNotEmpty)
-        ? member.uid!
-        : member.email;
-    if (remoteId.isEmpty) {
+    final myUid = _repository.currentUid.trim();
+    final remoteId = member.uid?.trim() ?? '';
+    if (myUid.isEmpty || remoteId.isEmpty || remoteId == myUid) {
       _snack(l10n.translate('chan_call_offline'), error: true);
       return;
     }
