@@ -990,13 +990,16 @@ class NotificationEngine:
 
             sent_count = 0
             for language, group in groups.items():
-                # The alert shows on iOS only, in the language of the callee's device.
+                # The alert shows on iOS/Web only, in the language of the callee's device.
+                kind_label = push_text(
+                    language,
+                    "call.kind.video" if is_video else "call.kind.voice",
+                )
+                title_text = push_text(language, "call.title", kind=kind_label)
+                body_text = push_text(language, "call.body", caller=c_name)
+
                 apns_config = None
                 if hasattr(messaging_mod, "APNSConfig"):
-                    kind_label = push_text(
-                        language,
-                        "call.kind.video" if is_video else "call.kind.voice",
-                    )
                     apns_config = messaging_mod.APNSConfig(
                         headers={
                             "apns-priority": "10",
@@ -1005,14 +1008,27 @@ class NotificationEngine:
                         payload=messaging_mod.APNSPayload(
                             aps=messaging_mod.Aps(
                                 alert=messaging_mod.ApsAlert(
-                                    title=push_text(language, "call.title", kind=kind_label),
-                                    body=push_text(language, "call.body", caller=c_name),
+                                    title=title_text,
+                                    body=body_text,
                                 ),
                                 sound="default",
                                 content_available=True,
                             ),
                         ),
                     )
+
+                webpush_config = None
+                if hasattr(messaging_mod, "WebpushConfig"):
+                    webpush_kwargs: Dict[str, Any] = {
+                        "headers": {"Urgency": "high", "TTL": str(CALL_RING_SECONDS)},
+                    }
+                    if hasattr(messaging_mod, "WebpushNotification"):
+                        webpush_kwargs["notification"] = messaging_mod.WebpushNotification(
+                            title=title_text,
+                            body=body_text,
+                            icon="/icons/Icon-192.png",
+                        )
+                    webpush_config = messaging_mod.WebpushConfig(**webpush_kwargs)
 
                 for i in range(0, len(group), FCM_BATCH_LIMIT):
                     batch = group[i : i + FCM_BATCH_LIMIT]
@@ -1023,6 +1039,7 @@ class NotificationEngine:
                         data=data_payload,  # DATA-ONLY for Android!
                         android=android_config,
                         apns=apns_config,
+                        webpush=webpush_config,
                     )
 
                     try:
@@ -1073,6 +1090,22 @@ class NotificationEngine:
                     priority="high",
                     ttl=10,
                 )
+            apns_config = None
+            if hasattr(messaging_mod, "APNSConfig") and hasattr(messaging_mod, "APNSPayload") and hasattr(messaging_mod, "Aps"):
+                apns_config = messaging_mod.APNSConfig(
+                    headers={
+                        "apns-push-type": "background",
+                        "apns-priority": "5",
+                    },
+                    payload=messaging_mod.APNSPayload(
+                        aps=messaging_mod.Aps(content_available=True),
+                    ),
+                )
+            webpush_config = None
+            if hasattr(messaging_mod, "WebpushConfig"):
+                webpush_config = messaging_mod.WebpushConfig(
+                    headers={"Urgency": "high", "TTL": "10"},
+                )
 
             data_payload = {
                 "action": "end_call",
@@ -1083,8 +1116,19 @@ class NotificationEngine:
                 tokens=[t[0] for t in targets],
                 data=data_payload,
                 android=android_config,
+                apns=apns_config,
+                webpush=webpush_config,
             )
             response = messaging_mod.send_each_for_multicast(multicast)
+            for idx, resp in enumerate(getattr(response, "responses", []) or []):
+                if not resp.success and resp.exception:
+                    err_code = getattr(resp.exception, "code", "") or str(resp.exception)
+                    if any(code in err_code for code in DEAD_TOKEN_CODES):
+                        try:
+                            targets[idx][1].delete()
+                            self.stats["dead_tokens_purged"] += 1
+                        except Exception as ex:
+                            logger.warning("Could not delete dead token doc: %s", ex)
             return {"status": "success", "devices_sent": response.success_count}
         except Exception as e:
             logger.error("Error in send_call_ended_push: %s", e)

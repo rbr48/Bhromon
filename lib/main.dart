@@ -489,7 +489,6 @@ class _OtaListenerWrapperState extends State<OtaListenerWrapper> {
   @override
   void initState() {
     super.initState();
-    CallNotificationService().init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = context.read<OtaCubit>().state;
       if (state is OtaUpdateAvailable) {

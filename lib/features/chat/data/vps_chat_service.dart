@@ -338,6 +338,7 @@ class VpsChatService {
 
   Future<void> registerDeviceToken(
     String token, {
+    String? deviceId,
     String? platform,
     String? language,
   }) async {
@@ -349,6 +350,8 @@ class VpsChatService {
         'token',
         data: {
           'token': token,
+          if (deviceId != null && deviceId.trim().isNotEmpty)
+            'deviceId': deviceId.trim(),
           'platform': platform ?? (kIsWeb ? 'web' : 'mobile'),
           // The server sends the push text in this language.
           if (language != null) 'language': language,

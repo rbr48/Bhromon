@@ -11,8 +11,10 @@ import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
 import '../../../core/localization/locale_controller.dart';
 import '../../../core/audio/call_audio_session.dart';
+import '../../../core/services/push_device.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../firebase_options.dart';
+import '../../tour_group/data/voice_room_service.dart';
 import '../domain/call_ringback_audio.dart';
 import '../presentation/widgets/incoming_call_dialog.dart';
 import 'call_signaling_service.dart';
@@ -121,6 +123,7 @@ Future<String?> _signedInUid() async {
   try {
     final user = await FirebaseAuth.instance
         .authStateChanges()
+        .where((user) => user != null)
         .first
         .timeout(const Duration(seconds: 3));
     return user?.uid;
@@ -143,6 +146,7 @@ class CallNotificationService {
   factory CallNotificationService() => _instance;
   CallNotificationService._internal();
 
+  bool _initialized = false;
   StreamSubscription<User?>? _authSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _callsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _emailCallsSub;
@@ -237,9 +241,10 @@ class CallNotificationService {
   }
 
   void init() {
+    if (Firebase.apps.isEmpty || _initialized) return;
+    _initialized = true;
     _lifecycleListener ??=
         AppLifecycleListener(onStateChange: _onAppLifecycleChanged);
-    if (Firebase.apps.isEmpty) return;
     _authSub?.cancel();
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
@@ -291,8 +296,10 @@ class CallNotificationService {
     try {
       final token = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
       if (token is String && token.isNotEmpty) {
+        final baseDeviceId = await getOrCreatePushDeviceId();
         await VpsChatService().registerDeviceToken(
           token,
+          deviceId: '$baseDeviceId:voip',
           platform: 'ios-voip',
           language: LocaleController.instance.locale.languageCode,
         );
@@ -467,12 +474,12 @@ class CallNotificationService {
           } else {
             // A ringing call closed. The caller's own timer marks it missed, so
             // nothing is written here.
-            _dismissIncomingUI();
+            _dismissIncomingUI(callId: id.isNotEmpty ? id : null);
           }
           break;
 
-        case CallEventActionCallTimeout():
-          _dismissIncomingUI();
+        case CallEventActionCallTimeout(:final id):
+          _dismissIncomingUI(callId: id.isNotEmpty ? id : null);
           break;
 
         case CallEventActionDidUpdateDevicePushTokenVoip():
@@ -568,42 +575,46 @@ class CallNotificationService {
     final stopped = previous.difference(ringing);
     final active = _activeIncomingCallId;
     if (active != null && stopped.contains(active)) {
-      _dismissIncomingUI();
+      _dismissIncomingUI(callId: active);
     }
 
     if (snap.docs.isEmpty) return;
-    final callDoc = snap.docs.first;
-    final callId = callDoc.id;
-    final data = callDoc.data();
+    final now = DateTime.now();
+    for (final callDoc in snap.docs) {
+      final callId = callDoc.id;
+      final data = callDoc.data();
 
-    final callerId = data['callerId'] as String? ?? '';
-    final sdp =
-        (data['offer'] as Map<String, dynamic>?)?['sdp'] as String? ?? '';
-    final isVideo = data['isVideo'] is bool
-        ? data['isVideo'] as bool
-        : sdp.contains('m=video');
+      final callerId = data['callerId'] as String? ?? '';
+      final sdp =
+          (data['offer'] as Map<String, dynamic>?)?['sdp'] as String? ?? '';
+      final isVideo = data['isVideo'] is bool
+          ? data['isVideo'] as bool
+          : sdp.contains('m=video');
 
-    final createdAt = data['createdAt'] as Timestamp?;
-    if (createdAt != null &&
-        DateTime.now().difference(createdAt.toDate()) > _staleCallAge) {
-      // The caller's app went away without ending it. This phone never rang
-      // for it, so it is closed as missed rather than declined.
-      unawaited(_expireStaleCall(callId, callerId: callerId, isVideo: isVideo));
-      return;
+      final createdAt = data['createdAt'] as Timestamp?;
+      if (createdAt != null &&
+          now.difference(createdAt.toDate()) > _staleCallAge) {
+        // The caller's app went away without ending it. This phone never rang
+        // for it, so it is closed as missed rather than declined.
+        unawaited(
+            _expireStaleCall(callId, callerId: callerId, isVideo: isVideo));
+        continue;
+      }
+      if (_shown.isClaimed(callId, now)) continue;
+      final (callerName, callerAvatar) = await _resolveCaller(
+        callerId,
+        fallbackName: data['callerName'] as String?,
+        fallbackAvatar: data['callerAvatar'] as String?,
+      );
+
+      await _presentIncomingCall(
+        callId: callId,
+        callerId: callerId,
+        callerName: callerName,
+        callerAvatar: callerAvatar,
+        isVideo: isVideo,
+      );
     }
-    final (callerName, callerAvatar) = await _resolveCaller(
-      callerId,
-      fallbackName: data['callerName'] as String?,
-      fallbackAvatar: data['callerAvatar'] as String?,
-    );
-
-    await _presentIncomingCall(
-      callId: callId,
-      callerId: callerId,
-      callerName: callerName,
-      callerAvatar: callerAvatar,
-      isVideo: isVideo,
-    );
   }
 
   Future<void> _presentFromRelay(
@@ -669,8 +680,9 @@ class CallNotificationService {
     if (await SystemCallBridge.isActive(callId)) return;
     if (!await CallSignalingService.isStillRinging(callId)) return;
 
-    final waiting = CallSignalingService.isInCall &&
-        CallSignalingService.activeCallId != callId;
+    final waiting = (CallSignalingService.isInCall &&
+            CallSignalingService.activeCallId != callId) ||
+        VoiceRoomService().isConnected;
     if (waiting && kIsWeb && !_canShowInAppDialog()) {
       // A browser has no native screen to ring a second call on.
       await CallSignalingService().declineCall(
@@ -972,6 +984,7 @@ class CallNotificationService {
   }
 
   void dispose() {
+    _initialized = false;
     _stopInAppRingtone();
     _lifecycleListener?.dispose();
     _lifecycleListener = null;

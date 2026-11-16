@@ -56,9 +56,11 @@ import flutter_callkit_incoming
     data.duration = 45000
     data.supportsVideo = true
     data.audioSessionMode = "videoChat"
-    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(
-      data, fromPushKit: true
-    ) {
+    if let callkit = SwiftFlutterCallkitIncomingPlugin.sharedInstance {
+      callkit.showCallkitIncoming(data, fromPushKit: true) {
+        completion()
+      }
+    } else {
       completion()
     }
   }

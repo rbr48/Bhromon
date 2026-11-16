@@ -915,28 +915,39 @@ class PushNotificationDispatcher:
         }
 
         sent_count = 0
-        for entry in tokens:
+        voip_entries = [e for e in tokens if e.get("platform") == VOIP_PLATFORM]
+        fcm_entries = [e for e in tokens if e.get("platform") != VOIP_PLATFORM]
+        voip_sent = False
+
+        for entry in voip_entries:
+            token = entry["token"]
+            language = normalize_language(entry.get("language"))
+            # A closed iPhone shows the system call screen only for a VoIP push.
+            result = voip_sender.send_call(
+                token,
+                call_id=call_id,
+                caller_id=caller_id,
+                caller_name=caller_name,
+                is_video=is_video,
+                language=language,
+            )
+            if result == "sent":
+                sent_count += 1
+                voip_sent = True
+            elif result == "dead":
+                self.db.delete_device_token(token)
+
+        for entry in fcm_entries:
+            platform = entry.get("platform")
+            if platform == "ios" and voip_sent:
+                # PushKit already rang CallKit on iOS; avoid a duplicate APNs banner.
+                continue
             token = entry["token"]
             # Each device rings in its own language.
             language = normalize_language(entry.get("language"))
             entry_title, entry_body = call_alert(language, is_video, caller_name)
-            if entry.get("platform") == VOIP_PLATFORM:
-                # A closed iPhone shows the system call screen only for a VoIP push.
-                result = voip_sender.send_call(
-                    token,
-                    call_id=call_id,
-                    caller_id=caller_id,
-                    caller_name=caller_name,
-                    is_video=is_video,
-                    language=language,
-                )
-                if result == "sent":
-                    sent_count += 1
-                elif result == "dead":
-                    self.db.delete_device_token(token)
-                continue
             try:
-                if entry.get("platform") == "web":
+                if platform == "web":
                     # A browser has no native call screen, so it gets a visible alert.
                     msg = messaging.Message(
                         token=token,
@@ -975,6 +986,61 @@ class PushNotificationDispatcher:
                 if any(dead_code in err_str for dead_code in DEAD_TOKEN_CODES):
                     self.db.delete_device_token(token)
 
+        return sent_count
+
+    def send_call_ended_push_to_uid(self, recipient_uid: str, call_id: str) -> int:
+        """Dismisses incoming call ringing on recipient devices via VPS tokens."""
+        tokens = self.db.get_device_tokens(recipient_uid)
+        if not tokens:
+            return 0
+
+        import firebase_admin
+        from firebase_admin import messaging
+
+        if not firebase_admin._apps:
+            return 0
+
+        data = {
+            "action": "end_call",
+            "callId": str(call_id),
+        }
+        sent_count = 0
+        for entry in tokens:
+            platform = entry.get("platform")
+            if platform == VOIP_PLATFORM:
+                continue
+            token = entry["token"]
+            try:
+                if platform == "web":
+                    msg = messaging.Message(
+                        token=token,
+                        data=data,
+                        webpush=messaging.WebpushConfig(
+                            headers={"Urgency": "high", "TTL": "10"},
+                        ),
+                    )
+                else:
+                    msg = messaging.Message(
+                        token=token,
+                        data=data,
+                        android=messaging.AndroidConfig(priority="high", ttl=10),
+                        apns=messaging.APNSConfig(
+                            headers={
+                                "apns-push-type": "background",
+                                "apns-priority": "5",
+                            },
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(content_available=True)
+                            ),
+                        ),
+                    )
+                messaging.send(msg)
+                sent_count += 1
+            except Exception as e:
+                err_str = str(e)
+                logger.warning("Failed to send call-ended push to token %s: %s", token[:15], err_str)
+                if any(dead_code in err_str for dead_code in DEAD_TOKEN_CODES):
+                    self.db.delete_device_token(token)
         return sent_count
 
 
@@ -1564,6 +1630,14 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
                 caller_id=uid,
                 caller_name=_short_text(data.get("callerName"), 80) or "A member",
                 is_video=bool(data.get("isVideo", False)),
+            )
+        )
+    elif signal_type in {"end", "declined", "missed"}:
+        _start_background(
+            run_in_threadpool(
+                push_dispatcher.send_call_ended_push_to_uid,
+                recipient_uid=target_uid,
+                call_id=call_id,
             )
         )
 
