@@ -272,6 +272,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
     unawaited(_pinnedStreams.clear());
     unawaited(_seatStreams.clear());
+    if (_voiceService.isConnected &&
+        _voiceService.currentTourId == widget.tourId) {
+      unawaited(_voiceService.leaveVoiceRoom());
+    }
     super.dispose();
   }
 
@@ -630,6 +634,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               if (!selected.isVoice) ...[
                 _TypingLine(stream: _typingOf(selected.id), myEmail: _me),
                 if (_voiceService.isConnected &&
+                    _voiceService.currentTourId == widget.tourId &&
                     _voiceService.currentChannelId != selected.id)
                   _buildDockedVoiceBar(channels),
                 if (canPost)
@@ -1127,6 +1132,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   Widget _buildVoiceRoom(TourChannel channel) {
     final l10n = context.l10n;
     final isConnectedToThis = _voiceService.isConnected &&
+        _voiceService.currentTourId == widget.tourId &&
         _voiceService.currentChannelId == channel.id;
 
     return StreamBuilder<List<VoiceParticipant>>(
@@ -1502,130 +1508,150 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     );
     final l10n = context.l10n;
 
-    return Material(
-      color: context.forest.surfaceFor(const Color(0xFF13261A)),
-      child: InkWell(
-        onTap: () => _selectChannel(activeId),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: const BoxDecoration(
-            border:
-                Border(left: BorderSide(color: AppColors.mintGreen, width: 3)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.volume_up_rounded,
-                  color: context.forest.accentText, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.translate('chan_voice_connected'),
-                      style: TextStyle(
-                          color: context.forest.accentText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      _titleOf(activeChan),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(color: context.forest.text, fontSize: 13),
-                    ),
-                  ],
-                ),
+    return Stack(
+      children: [
+        Material(
+          color: context.forest.surfaceFor(const Color(0xFF13261A)),
+          child: InkWell(
+            onTap: () => _selectChannel(activeId),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: const BoxDecoration(
+                border: Border(
+                    left: BorderSide(color: AppColors.mintGreen, width: 3)),
               ),
-              StreamBuilder<List<VoiceParticipant>>(
-                stream: _participantsOf(activeId),
-                builder: (context, snap) {
-                  final participants = snap.data ?? const <VoiceParticipant>[];
-                  if (participants.isEmpty) return const SizedBox.shrink();
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(width: 6),
-                      for (final p in participants.take(3)) ...[
-                        Builder(
-                          builder: (context) {
-                            final isSpeaking =
-                                _voiceService.isSpeaking(p.email);
-                            return Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSpeaking
-                                      ? AppColors.mintGreen
-                                      : Colors.transparent,
-                                  width: isSpeaking ? 2 : 1,
-                                ),
-                                boxShadow: isSpeaking
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.mintGreen
-                                              .withValues(alpha: 0.6),
-                                          blurRadius: 6,
-                                          spreadRadius: 1,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: CircleAvatar(
-                                radius: 12,
-                                backgroundColor: context.forest
-                                    .surfaceFor(AppColors.chatPanel),
-                                backgroundImage:
-                                    p.photoUrl != null && p.photoUrl!.isNotEmpty
-                                        ? NetworkImage(p.photoUrl!)
-                                        : null,
-                                child: p.photoUrl == null || p.photoUrl!.isEmpty
-                                    ? Text(
-                                        p.displayName.isNotEmpty
-                                            ? p.displayName[0].toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold),
-                                      )
-                                    : null,
-                              ),
-                            );
-                          },
+              child: Row(
+                children: [
+                  Icon(Icons.volume_up_rounded,
+                      color: context.forest.accentText, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.translate('chan_voice_connected'),
+                          style: TextStyle(
+                              color: context.forest.accentText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          _titleOf(activeChan),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: context.forest.text, fontSize: 13),
                         ),
                       ],
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                  StreamBuilder<List<VoiceParticipant>>(
+                    stream: _participantsOf(activeId),
+                    builder: (context, snap) {
+                      final participants =
+                          snap.data ?? const <VoiceParticipant>[];
+                      if (participants.isEmpty) return const SizedBox.shrink();
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 6),
+                          for (final p in participants.take(3)) ...[
+                            Builder(
+                              builder: (context) {
+                                final isSpeaking =
+                                    _voiceService.isSpeaking(p.email);
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSpeaking
+                                          ? AppColors.mintGreen
+                                          : Colors.transparent,
+                                      width: isSpeaking ? 2 : 1,
+                                    ),
+                                    boxShadow: isSpeaking
+                                        ? [
+                                            BoxShadow(
+                                              color: AppColors.mintGreen
+                                                  .withValues(alpha: 0.6),
+                                              blurRadius: 6,
+                                              spreadRadius: 1,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: context.forest
+                                        .surfaceFor(AppColors.chatPanel),
+                                    backgroundImage: p.photoUrl != null &&
+                                            p.photoUrl!.isNotEmpty
+                                        ? NetworkImage(p.photoUrl!)
+                                        : null,
+                                    child: p.photoUrl == null ||
+                                            p.photoUrl!.isEmpty
+                                        ? Text(
+                                            p.displayName.isNotEmpty
+                                                ? p.displayName[0].toUpperCase()
+                                                : '?',
+                                            style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold),
+                                          )
+                                        : null,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _voiceService.isAudioMuted
+                          ? Icons.mic_off_rounded
+                          : Icons.mic_rounded,
+                      color: _voiceService.isAudioMuted
+                          ? context.forest.readable(Colors.redAccent)
+                          : context.forest.accentText,
+                      size: 20,
+                    ),
+                    tooltip: l10n.translate(_voiceService.isAudioMuted
+                        ? 'chan_voice_unmute'
+                        : 'chan_voice_mute'),
+                    onPressed: () => _voiceService.toggleAudio(),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.call_end_rounded,
+                        color: context.forest.readable(Colors.redAccent),
+                        size: 20),
+                    tooltip: l10n.translate('chan_voice_leave'),
+                    onPressed: () => _voiceService.leaveVoiceRoom(),
+                  ),
+                ],
               ),
-              IconButton(
-                icon: Icon(
-                  _voiceService.isAudioMuted
-                      ? Icons.mic_off_rounded
-                      : Icons.mic_rounded,
-                  color: _voiceService.isAudioMuted
-                      ? context.forest.readable(Colors.redAccent)
-                      : context.forest.accentText,
-                  size: 20,
-                ),
-                tooltip: l10n.translate(_voiceService.isAudioMuted
-                    ? 'chan_voice_unmute'
-                    : 'chan_voice_mute'),
-                onPressed: () => _voiceService.toggleAudio(),
-              ),
-              IconButton(
-                icon: Icon(Icons.call_end_rounded,
-                    color: context.forest.readable(Colors.redAccent), size: 20),
-                tooltip: l10n.translate('chan_voice_leave'),
-                onPressed: () => _voiceService.leaveVoiceRoom(),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        // Keep 1x1 WebRTC audio sinks mounted while docked on text channels.
+        for (final renderer in _voiceService.remoteRenderers.values)
+          if (renderer.srcObject != null)
+            Positioned(
+              left: 0,
+              top: 0,
+              width: 1,
+              height: 1,
+              child: Opacity(
+                opacity: 0.01,
+                child: RTCVideoView(renderer),
+              ),
+            ),
+      ],
     );
   }
 

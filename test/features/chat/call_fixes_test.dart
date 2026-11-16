@@ -184,4 +184,68 @@ void main() {
           isTrue);
     });
   });
+
+  group('CallScreen display and foreground service policies', () {
+    test('voice calls default to earpiece while video calls start on speaker',
+        () {
+      expect(defaultCallSpeakerOn(isVideoCall: false), isFalse);
+      expect(defaultCallSpeakerOn(isVideoCall: true), isTrue);
+    });
+
+    test('speaker and flip camera controls are independent on mobile only', () {
+      expect(shouldShowSpeakerControl(isWeb: false), isTrue);
+      expect(shouldShowSpeakerControl(isWeb: true), isFalse);
+
+      expect(shouldShowFlipCameraControl(isWeb: false, cameraOn: true), isTrue);
+      expect(
+          shouldShowFlipCameraControl(isWeb: false, cameraOn: false), isFalse);
+      expect(shouldShowFlipCameraControl(isWeb: true, cameraOn: true), isFalse);
+    });
+
+    test('starts ongoing FGS when system call lacked mic or camera permission',
+        () {
+      expect(
+        shouldStartOngoingService(
+          systemCall: true,
+          needsMicFgs: false,
+          needsCameraFgs: false,
+          hasLocalVideo: false,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldStartOngoingService(
+          systemCall: true,
+          needsMicFgs: true,
+          needsCameraFgs: false,
+          hasLocalVideo: false,
+        ),
+        isTrue,
+      );
+      expect(
+        shouldStartOngoingService(
+          systemCall: true,
+          needsMicFgs: false,
+          needsCameraFgs: true,
+          hasLocalVideo: true,
+        ),
+        isTrue,
+      );
+      expect(
+        shouldStartOngoingService(
+          systemCall: false,
+          needsMicFgs: false,
+          needsCameraFgs: false,
+          hasLocalVideo: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('defers immediate exit on onCallEnded when terminal banner is showing',
+        () {
+      expect(shouldExitImmediatelyOnCallEnded(callOver: true), isFalse);
+      expect(shouldExitImmediatelyOnCallEnded(callOver: false), isTrue);
+    });
+  });
 }

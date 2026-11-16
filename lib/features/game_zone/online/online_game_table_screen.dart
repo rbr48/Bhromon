@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../tour_group/data/voice_room_service.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../data/game_analytics_service.dart';
 import '../data/online_game_repository.dart';
@@ -37,6 +40,21 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
   final Set<String> _recordedSessionIds = {};
 
   String get _myEmail => _repository.currentEmail;
+
+  Future<void> _leaveGameVoiceIfConnected() async {
+    final voice = VoiceRoomService();
+    if (voice.isConnected &&
+        voice.currentTourId == widget.tourId &&
+        voice.currentChannelId == 'game_${widget.gameId}') {
+      await voice.leaveVoiceRoom();
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_leaveGameVoiceIfConnected());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +353,7 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
       if (confirm != true) return;
     }
 
+    await _leaveGameVoiceIfConnected();
     await _repository.leaveGameSession(
       tourId: session.tourId,
       gameId: session.id,
