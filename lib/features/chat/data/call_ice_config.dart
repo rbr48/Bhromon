@@ -60,6 +60,21 @@ class CallIceConfig {
     return _inFlight ??= _load().whenComplete(() => _inFlight = null);
   }
 
+  /// Forces a credential refresh (for example before an ICE restart on a long
+  /// call) while keeping any still-valid credential as a fallback if the server
+  /// is briefly unreachable.
+  Future<Map<String, dynamic>> refresh() {
+    _refreshAt = null;
+    return current();
+  }
+
+  /// Clears any cached ICE servers so the next lookup fetches fresh TURN state.
+  void invalidate() {
+    _cached = null;
+    _refreshAt = null;
+    _expiresAt = null;
+  }
+
   Future<Map<String, dynamic>> _load() async {
     var body = await _fetch();
     var config = parse(body);
@@ -68,28 +83,35 @@ class CallIceConfig {
       body = await _fetch();
       config = parse(body);
     }
+    final now = _clock();
     if (config == null) {
       final previous = _cached;
       final expiresAt = _expiresAt;
-      if (previous != null &&
-          expiresAt != null &&
-          _clock().isBefore(expiresAt)) {
+      if (previous != null && expiresAt != null && now.isBefore(expiresAt)) {
         // The last credential still works; the next call asks again.
         return previous;
       }
       // Not cached, so the next call asks the server again.
-      _cached = null;
-      _refreshAt = null;
-      _expiresAt = null;
+      invalidate();
       logWarning('CallIceConfig: no TURN credential, this call uses STUN only');
       return stunOnly;
     }
-    _cached = config;
     final expiresAt = _expiryOf(body!);
+    if (expiresAt != null && !now.isBefore(expiresAt)) {
+      invalidate();
+      return stunOnly;
+    }
+    _cached = config;
     _expiresAt = expiresAt;
-    _refreshAt = expiresAt == null
-        ? _clock().add(const Duration(minutes: 5))
-        : expiresAt.subtract(refreshBeforeExpiry);
+    if (expiresAt == null) {
+      _refreshAt = now.add(const Duration(minutes: 5));
+    } else {
+      final ttl = expiresAt.difference(now);
+      final lead = ttl > refreshBeforeExpiry
+          ? refreshBeforeExpiry
+          : Duration(milliseconds: ttl.inMilliseconds ~/ 2);
+      _refreshAt = expiresAt.subtract(lead);
+    }
     return config;
   }
 

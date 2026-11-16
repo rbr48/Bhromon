@@ -982,10 +982,27 @@ class CallSignalingService {
     _stopRebuildResend();
   }
 
+  /// Refreshes TURN credentials and applies them to [pc] while still active.
+  ///
+  /// Failures (such as platforms that reject mid-call `setConfiguration`) are
+  /// logged without aborting rebuild so ICE restart can still fall back to the
+  /// existing peer configuration.
+  Future<void> _refreshIceConfiguration(RTCPeerConnection pc) async {
+    try {
+      final freshIce = await CallIceConfig.shared.refresh();
+      if (_finished || _peerConnection != pc) return;
+      await pc.setConfiguration(freshIce);
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
+  }
+
   Future<void> _sendRebuildOffer() async {
     final pc = _peerConnection;
     if (pc == null || _callId == null) return;
     try {
+      await _refreshIceConfiguration(pc);
+      if (_finished || _peerConnection != pc) return;
       final offer = await pc.createOffer({
         'iceRestart': true,
         'offerToReceiveAudio': 1,
@@ -1053,6 +1070,8 @@ class CallSignalingService {
     _enterRebuild();
     _stopRebuildResend();
     try {
+      await _refreshIceConfiguration(pc);
+      if (_finished || _peerConnection != pc) return;
       await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
       await _drainPendingIceCandidates();
       final answer = await pc.createAnswer({
@@ -1591,10 +1610,10 @@ class CallSignalingService {
       } catch (error, stackTrace) {
         logSkipped(error, stackTrace);
       }
-    } else {
-      // Audio may have been opened before any connection existed.
-      await CallAudioSession.release();
     }
+    // Always release CallAudioSession so Android audio focus / speaker mode
+    // never stays stuck after peer disposal.
+    await CallAudioSession.release();
 
     _localStream?.getTracks().forEach((track) => track.stop());
     await _localStream?.dispose();

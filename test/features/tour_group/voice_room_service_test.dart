@@ -46,5 +46,16 @@ void main() {
       );
       expect(classifyCallLink(poorSample), CallNetworkQuality.poor);
     });
+
+    test(
+        'leaveVoiceRoom resets connected state and releases audio session cleanly',
+        () async {
+      final service = VoiceRoomService();
+      await service.leaveVoiceRoom();
+      expect(service.isConnected, isFalse);
+      expect(service.currentTourId, isNull);
+      expect(service.currentChannelId, isNull);
+      expect(service.speakingEmails, isEmpty);
+    });
   });
 }

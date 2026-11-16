@@ -137,5 +137,75 @@ void main() {
       expect(text, isNot(contains('openrelay')));
       expect(text, isNot(contains('credential')));
     });
+
+    test('refresh forces a new fetch while keeping valid cache on outage',
+        () async {
+      var fetches = 0;
+      var now = DateTime.fromMillisecondsSinceEpoch(0);
+      final expiresAt = secondsFrom(now.add(const Duration(hours: 1)));
+      var serverUp = true;
+      final ice = CallIceConfig(
+        fetch: () async {
+          fetches++;
+          return serverUp ? serverBody(expiresAtSeconds: expiresAt) : null;
+        },
+        clock: () => now,
+      );
+
+      final first = await ice.current();
+      expect(fetches, 1);
+
+      // Regular current() hits cache.
+      await ice.current();
+      expect(fetches, 1);
+
+      // refresh() fetches again when server is healthy.
+      await ice.refresh();
+      expect(fetches, 2);
+
+      // If refresh() fails before expiry, cached TURN config is still kept.
+      serverUp = false;
+      expect(await ice.refresh(), first);
+
+      // invalidate() drops the cache completely.
+      ice.invalidate();
+      expect(await ice.current(), CallIceConfig.stunOnly);
+    });
+
+    test(
+        'short-TTL credentials schedule refresh before expiry and reject expired',
+        () async {
+      var fetches = 0;
+      var now = DateTime(2026);
+      final ice = CallIceConfig(
+        fetch: () async {
+          fetches++;
+          if (fetches == 1) {
+            // 4-minute TTL (shorter than 10-minute refreshBeforeExpiry).
+            return serverBody(
+                expiresAtSeconds:
+                    secondsFrom(now.add(const Duration(minutes: 4))));
+          }
+          // Expired timestamp must not be cached.
+          return serverBody(
+              expiresAtSeconds:
+                  secondsFrom(now.subtract(const Duration(minutes: 1))));
+        },
+        clock: () => now,
+      );
+
+      await ice.current();
+      expect(fetches, 1);
+
+      // 1 minute later (before 2m halfway point): still cached.
+      now = now.add(const Duration(minutes: 1));
+      await ice.current();
+      expect(fetches, 1);
+
+      // 2.5 minutes later (past 2m halfway refresh, before 4m expiry): refreshes,
+      // receives expired payload -> falls back to STUN only.
+      now = now.add(const Duration(minutes: 2));
+      expect(await ice.current(), CallIceConfig.stunOnly);
+    });
   });
 }
