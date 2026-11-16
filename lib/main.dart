@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/layout/app_scroll_behavior.dart';
+import 'features/tour_group/presentation/safety_alert_host.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -460,7 +461,11 @@ class MyApp extends StatelessWidget {
                   right: false,
                   bottom: true,
                   child: ShareIntakeHost(
-                    child: OtaListenerWrapper(child: child ?? const SizedBox()),
+                    // A safety alert from another member shows over every screen.
+                    child: SafetyAlertHost(
+                      child:
+                          OtaListenerWrapper(child: child ?? const SizedBox()),
+                    ),
                   ),
                 ),
               ),
