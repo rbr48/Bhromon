@@ -51,6 +51,13 @@ class _DesktopGroupSwitcherDialogState
     extends State<DesktopGroupSwitcherDialog> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  late final Stream<List<TourGroup>> _groupsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _groupsStream = widget.repository.watchMyGroups();
+  }
 
   @override
   void dispose() {
@@ -169,7 +176,7 @@ class _DesktopGroupSwitcherDialogState
               // Group List
               Expanded(
                 child: StreamBuilder<List<TourGroup>>(
-                  stream: widget.repository.watchMyGroups(),
+                  stream: _groupsStream,
                   builder: (context, snapshot) {
                     final allGroups = snapshot.data ?? [];
                     final filtered = allGroups.where((g) {
