@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../widgets/group_back_button.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,6 +13,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../../core/web/web_external_scripts.dart';
 import '../../domain/services/map_cache_manager.dart';
 import '../../domain/services/offline_map_regions.dart';
 import '../../domain/models/tour_activity_models.dart';
@@ -45,6 +47,7 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   bool _showCheckpointsList = false;
   bool _isRadarMode = false;
   bool _isLocating = false;
+  bool _isWebMapReady = !kIsWeb;
 
   @override
   void initState() {
@@ -52,8 +55,29 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
     _currentPosition = widget.initialPosition;
     _showCheckpointsList =
         widget.checkpoints.isNotEmpty && widget.region.waypoints.isEmpty;
+    if (kIsWeb) {
+      unawaited(_prepareWebMap());
+    }
     if (_currentPosition == null) {
       unawaited(_fetchGps());
+    }
+  }
+
+  Future<void> _prepareWebMap() async {
+    try {
+      await ensureMapLibreLoaded();
+      if (mounted) {
+        setState(() => _isWebMapReady = true);
+      }
+    } catch (e, st) {
+      logWarning('[MapViewer] failed to load Web MapLibre script, falling back',
+          e, st);
+      if (mounted) {
+        setState(() {
+          _isWebMapReady = true;
+          _isRadarMode = true;
+        });
+      }
     }
   }
 
@@ -809,6 +833,12 @@ class _OfflineMapViewerScreenState extends State<OfflineMapViewerScreen> {
   }
 
   Widget _buildMapWithRadarFallback() {
+    if (!_isWebMapReady) {
+      return const ColoredBox(
+        color: AppColors.backgroundDark,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
     try {
       return maplibre.MapLibreMap(
         initialCameraPosition: maplibre.CameraPosition(

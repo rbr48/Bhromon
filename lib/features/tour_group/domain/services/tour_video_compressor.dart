@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_compress/video_compress.dart';
 
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/web/web_external_scripts.dart';
 import 'media_rules.dart';
 import 'web_video_plan.dart';
 import 'web_video_transcoder.dart';
@@ -145,8 +146,13 @@ class TourVideoCompressor {
     required int targetMaxBytes,
     void Function(double progress)? onProgress,
   }) async {
-    if (originalSize > kMaxWebVideoSourceBytes ||
-        !WebVideoTranscoder.isSupported) {
+    if (originalSize > kMaxWebVideoSourceBytes) {
+      throw const TourVideoCompressionException(_couldNotCompress);
+    }
+    if (!WebVideoTranscoder.isSupported) {
+      await ensureVideoTranscoderLoaded();
+    }
+    if (!WebVideoTranscoder.isSupported) {
       throw const TourVideoCompressionException(_couldNotCompress);
     }
 

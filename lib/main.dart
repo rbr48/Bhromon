@@ -77,8 +77,11 @@ void main() {
     WidgetsFlutterBinding.ensureInitialized();
 
     // Month and weekday names for both languages; see localizedDateFormat.
-    await initializeDateFormatting('en');
-    await initializeDateFormatting('bn');
+    // Started without awaiting immediately so storage/Firebase init can overlap.
+    final dateFormatInit = Future.wait([
+      initializeDateFormatting('en'),
+      initializeDateFormatting('bn'),
+    ]);
 
     // Edge-to-edge: Android 15 (targetSdk 35) enforces it; opting in here
     // keeps the look identical on older Android versions.
@@ -254,6 +257,7 @@ void main() {
     // still gates everything else.
     final integrityCheck = DeviceIntegrityService.isDeviceCompromised();
     final hiveInit = Hive.initFlutter();
+    final mediaStartUp = MediaAccess.instance.startUp();
     final firebaseInit = Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     ).then<bool>((_) => true, onError: (Object e, StackTrace stack) {
@@ -282,11 +286,10 @@ void main() {
         logError('Hive self-healing failed', inner);
       }
     }
-    await LocaleController.instance.load();
-    await ThemeController.instance.load();
-    await ChannelSwipeController.instance.load();
-    GameAnalyticsService.hasStorage = true;
-    await GameAnalyticsService().init();
+    await Future.wait([
+      LocaleController.instance.load(),
+      ThemeController.instance.load(),
+    ]);
     final bool firebaseAvailable = await firebaseInit;
 
     if (!firebaseAvailable) {
@@ -362,9 +365,12 @@ void main() {
       }
     }
 
-    // Reads the saved media key only. The server is asked after the first frame.
-    await MediaAccess.instance.startUp();
+    // Reads the saved media key and locale date symbols overlapped above.
+    await Future.wait([mediaStartUp, dateFormatInit]);
     runApp(const MyApp());
+    unawaited(ChannelSwipeController.instance.load());
+    GameAnalyticsService.hasStorage = true;
+    unawaited(GameAnalyticsService().init());
     unawaited(MediaAccess.instance.refreshInBackground());
     if (kLiveJourney && !kIsWeb) unawaited(startLiveJourney());
 

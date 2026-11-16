@@ -78,8 +78,12 @@ class MediaAccess {
   /// Loads the key saved on this device. Nothing is sent over the network.
   Future<void> restore() async {
     try {
-      final uid = await _storage.read(key: _uidName);
-      final key = await _storage.read(key: _keyName);
+      final results = await Future.wait([
+        _storage.read(key: _uidName),
+        _storage.read(key: _keyName),
+      ]);
+      final uid = results[0];
+      final key = results[1];
       if (uid != null && key != null) {
         _setCredentials(uid, key);
       }
