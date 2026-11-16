@@ -36,7 +36,7 @@
     ],
     "headers": [
       {
-        "source": "/@(main.dart.js|flutter.js|flutter_bootstrap.js|flutter_service_worker.js|index.html|version.json)",
+        "source": "/@(index.html|version.json|flutter_service_worker.js|firebase-messaging-sw.js|flutter_bootstrap.js)",
         "headers": [
           {
             "key": "Cache-Control",
@@ -49,11 +49,24 @@
         ]
       },
       {
-        "source": "/assets/**",
+        "source": "/@(main.dart.js|main.dart.js_*.part.js|flutter.js)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, max-age=0, must-revalidate"
+          },
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          }
+        ]
+      },
+      {
+        "source": "/@(assets|canvaskit|js|icons)/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400, must-revalidate"
           }
         ]
       },

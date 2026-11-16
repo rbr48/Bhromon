@@ -32,9 +32,11 @@ class AuthRepositoryImpl implements IAuthRepository {
   ExplorerProfile? _cachedProfile;
   final String _localBoxName = 'auth_box';
   String? _emailForOtp;
+  late final Future<void> _localCacheReady;
+  Future<void>? _backgroundRefreshInFlight;
 
   AuthRepositoryImpl(this._encryptionService) {
-    _initLocalCache();
+    _localCacheReady = _initLocalCache();
   }
 
   Future<void> _initLocalCache() async {
@@ -63,6 +65,7 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   Future<void> _clearLocalCache() async {
+    await _localCacheReady;
     _cachedProfile = null;
     try {
       final box =
@@ -300,31 +303,81 @@ class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
+  ExplorerProfile _profileFromSnapshot(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+    User user,
+  ) {
+    final data = Map<String, dynamic>.from(doc.data()!);
+    data['uid'] = doc.id;
+    final existingAvatar = data['avatarUrl'] as String?;
+    if ((existingAvatar == null || existingAvatar.trim().isEmpty) &&
+        user.photoURL != null &&
+        user.photoURL!.isNotEmpty) {
+      data['avatarUrl'] = user.photoURL;
+      _firestore
+          .collection('explorer_profiles')
+          .doc(user.uid)
+          .update({'avatarUrl': user.photoURL}).catchError((Object e) {
+        logWarning('AuthRepository: failed to backfill avatarUrl', e);
+      });
+    }
+    return ExplorerProfile.fromJson(data);
+  }
+
+  void _scheduleBackgroundRefresh(User user) {
+    _backgroundRefreshInFlight ??= () async {
+      try {
+        final doc = await _firestore
+            .collection('explorer_profiles')
+            .doc(user.uid)
+            .get()
+            .timeout(const Duration(seconds: 8));
+        if (doc.exists && doc.data() != null) {
+          final fresh = _profileFromSnapshot(doc, user);
+          await _updateLocalCache(fresh);
+        }
+      } catch (e, stack) {
+        logDebug(
+          'AuthRepository: background profile refresh skipped: $e\n$stack',
+        );
+      } finally {
+        _backgroundRefreshInFlight = null;
+      }
+    }();
+  }
+
   @override
   Future<Either<Failure, ExplorerProfile?>> getCurrentProfile() async {
-    if (_cachedProfile != null) return Right(_cachedProfile);
-
     final user = _auth.currentUser;
     if (user == null) return const Right(null);
+
+    await _localCacheReady;
+    if (_cachedProfile != null && _cachedProfile!.uid == user.uid) {
+      _scheduleBackgroundRefresh(user);
+      return Right(_cachedProfile);
+    }
+
+    try {
+      final cachedDoc = await _firestore
+          .collection('explorer_profiles')
+          .doc(user.uid)
+          .get(const GetOptions(source: Source.cache));
+      if (cachedDoc.exists && cachedDoc.data() != null) {
+        final profile = _profileFromSnapshot(cachedDoc, user);
+        await _updateLocalCache(profile);
+        _scheduleBackgroundRefresh(user);
+        return Right(profile);
+      }
+    } catch (e) {
+      logDebug('AuthRepository: Firestore cache miss for profile: $e');
+    }
 
     try {
       final doc = await _withRetry(
         () => _firestore.collection('explorer_profiles').doc(user.uid).get(),
       );
       if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        data['uid'] = doc.id;
-        final existingAvatar = data['avatarUrl'] as String?;
-        if ((existingAvatar == null || existingAvatar.trim().isEmpty) &&
-            user.photoURL != null &&
-            user.photoURL!.isNotEmpty) {
-          data['avatarUrl'] = user.photoURL;
-          _firestore
-              .collection('explorer_profiles')
-              .doc(user.uid)
-              .update({'avatarUrl': user.photoURL}).catchError((_) {});
-        }
-        final profile = ExplorerProfile.fromJson(data);
+        final profile = _profileFromSnapshot(doc, user);
         await _updateLocalCache(profile);
         return Right(profile);
       } else {

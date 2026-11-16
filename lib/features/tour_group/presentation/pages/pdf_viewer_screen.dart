@@ -13,6 +13,7 @@ import '../../../../core/media/media_access.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/forest_palette.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/web/web_external_scripts.dart';
 import '../tour_pdf_download.dart';
 import '../viewer_file_helper.dart';
 import '../widgets/group_back_button.dart';
@@ -90,6 +91,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     });
 
     try {
+      if (kIsWeb) {
+        await ensurePdfJsLoaded();
+      }
       Future<PdfDocument> docFuture;
 
       if (widget.bytes != null && widget.bytes!.isNotEmpty) {

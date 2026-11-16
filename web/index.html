@@ -79,51 +79,175 @@
     });
   </script>
 
-  <!-- MapLibre GL JS & CSS -->
-  <script src="https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.js"></script>
-  <link href="https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <!-- Lazy on-demand loaders for heavy browser plugins (MapLibre GL, PDF.js, video transcoder) -->
+  <script>
+    (function() {
+      var mapLibrePromise = null;
+      var pdfJsPromise = null;
+      var transcoderPromise = null;
 
-  <!-- PDF.js for pdfx PDF viewer support on Web -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
-  <script type="text/javascript">
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js";
+      window.bhromonLoadMapLibre = function() {
+        if (window.maplibregl) return Promise.resolve();
+        if (mapLibrePromise) return mapLibrePromise;
+        mapLibrePromise = new Promise(function(resolve, reject) {
+          var cssId = 'bhromon-maplibre-css';
+          if (!document.getElementById(cssId)) {
+            var link = document.createElement('link');
+            link.id = cssId;
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.css';
+            document.head.appendChild(link);
+          }
+          var script = document.createElement('script');
+          script.src = 'https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.js';
+          script.async = true;
+          script.onload = function() { resolve(); };
+          script.onerror = function(err) {
+            mapLibrePromise = null;
+            reject(err || new Error('Failed to load MapLibre GL JS'));
+          };
+          document.head.appendChild(script);
+        });
+        return mapLibrePromise;
+      };
+
+      window.bhromonLoadPdfJs = function() {
+        if (window.pdfjsLib) {
+          if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+              'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+          }
+          return Promise.resolve();
+        }
+        if (pdfJsPromise) return pdfJsPromise;
+        pdfJsPromise = new Promise(function(resolve, reject) {
+          var script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js';
+          script.async = true;
+          script.onload = function() {
+            if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+            }
+            resolve();
+          };
+          script.onerror = function(err) {
+            pdfJsPromise = null;
+            reject(err || new Error('Failed to load PDF.js'));
+          };
+          document.head.appendChild(script);
+        });
+        return pdfJsPromise;
+      };
+
+      window.bhromonLoadVideoTranscoder = function() {
+        if (window.bhromonVideoTranscoder) return Promise.resolve(true);
+        if (transcoderPromise) return transcoderPromise;
+        transcoderPromise = new Promise(function(resolve) {
+          var script = document.createElement('script');
+          script.type = 'module';
+          script.src = 'js/bhromon_video_transcoder.js';
+          script.onload = function() {
+            setTimeout(function() {
+              resolve(Boolean(window.bhromonVideoTranscoder));
+            }, 0);
+          };
+          script.onerror = function() {
+            transcoderPromise = null;
+            resolve(false);
+          };
+          document.head.appendChild(script);
+        });
+        return transcoderPromise;
+      };
+    })();
   </script>
-
-  <!-- Browser video transcoder for reel uploads, loaded before the app starts -->
-  <script type="module" src="js/bhromon_video_transcoder.js"></script>
 
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
-<body>
+<body style="margin:0;background-color:#121815;overflow:hidden;">
+  <div id="bhromon-boot-splash" aria-label="Loading Bhromon" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#1a2921 0%,#121815 70%);color:#e8f5e9;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;transition:opacity .25s ease-out;">
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <circle cx="32" cy="32" r="28" stroke="#2e7d32" stroke-width="3" stroke-opacity="0.35"/>
+      <path d="M32 4 A28 28 0 0 1 60 32" stroke="#66bb6a" stroke-width="3" stroke-linecap="round">
+        <animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="1.1s" repeatCount="indefinite"/>
+      </path>
+      <circle cx="32" cy="32" r="9" fill="#2e7d32"/>
+      <polygon points="32,16 37,32 32,29 27,32" fill="#a5d6a7"/>
+    </svg>
+    <div style="margin-top:18px;font-size:20px;font-weight:700;letter-spacing:0.4px;color:#ffffff;">Bhromon</div>
+    <div style="margin-top:6px;font-size:13px;color:#9eb5a6;">Walk Together • একসাথে পথচলা</div>
+  </div>
+
   <script>
-    window.addEventListener('load', function(ev) {
-      // Force unregister existing service workers to clear cache
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            registration.unregister();
-          }
-        });
-      }
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          for (let name of names) {
-            caches.delete(name);
-          }
-        });
+    (function() {
+      function dismissBootSplash() {
+        var el = document.getElementById('bhromon-boot-splash');
+        if (!el) return;
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        setTimeout(function() {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 280);
       }
 
-      // Download main.dart.js without service worker with cache-busting timestamp
-      _flutter.loader.loadEntrypoint({
-        entrypointUrl: 'main.dart.js?v=' + new Date().getTime(),
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
+      window.addEventListener('flutter-first-frame', function() {
+        dismissBootSplash();
+        // Warm up optional browser video transcoder after first paint without blocking boot.
+        var scheduleIdle = window.requestIdleCallback || function(cb) { return setTimeout(cb, 1500); };
+        scheduleIdle(function() {
+          if (window.bhromonLoadVideoTranscoder) {
+            window.bhromonLoadVideoTranscoder();
+          }
+        });
+      }, { once: true });
+
+      window.addEventListener('load', function() {
+        var versionPromise = fetch('version.json', { cache: 'no-store' })
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .catch(function() { return null; });
+
+        versionPromise.then(function(ver) {
+          var versionTag = ver && ver.version
+            ? (ver.version + (ver.build_number ? ('+' + ver.build_number) : ''))
+            : '';
+          try {
+            var prevVersion = window.localStorage.getItem('bhromon_web_version');
+            if (versionTag && prevVersion && prevVersion !== versionTag) {
+              // Purge only Flutter web caches on version upgrades; preserve firebase-messaging-sw.
+              if ('caches' in window) {
+                caches.keys().then(function(names) {
+                  for (var i = 0; i < names.length; i++) {
+                    if (names[i].indexOf('flutter') !== -1) {
+                      caches.delete(names[i]);
+                    }
+                  }
+                });
+              }
+            }
+            if (versionTag) {
+              window.localStorage.setItem('bhromon_web_version', versionTag);
+            }
+          } catch (_) {
+            // Storage may be restricted in private windows.
+          }
+
+          var entrypoint = versionTag
+            ? ('main.dart.js?v=' + encodeURIComponent(versionTag))
+            : 'main.dart.js';
+
+          _flutter.loader.loadEntrypoint({
+            entrypointUrl: entrypoint,
+            onEntrypointLoaded: function(engineInitializer) {
+              engineInitializer.initializeEngine().then(function(appRunner) {
+                appRunner.runApp();
+              });
+            }
           });
-        }
+        });
       });
-    });
+    })();
   </script>
 </body>
 </html>

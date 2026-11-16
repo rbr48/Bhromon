@@ -17,6 +17,7 @@ import 'package:video_compress/video_compress.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/utils/logger.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import '../../../../../core/web/web_external_scripts.dart';
 import 'instafeed_day_label.dart';
 
 /// Creation Studio bottom sheet supporting multi-image posts and reels with
@@ -289,6 +290,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       if (!mounted) return;
       // On the web the browser shrinks a large video. It refuses only when it
       // cannot: an older browser, or a file too big to hold in browser memory.
+      if (kIsWeb &&
+          originalSize > kMaxVideoBytes &&
+          originalSize <= kMaxWebVideoSourceBytes &&
+          !WebVideoTranscoder.isSupported) {
+        await ensureVideoTranscoderLoaded();
+        if (!mounted) return;
+      }
       final browserCannotShrink = kIsWeb &&
           (originalSize > kMaxWebVideoSourceBytes ||
               !WebVideoTranscoder.isSupported);
