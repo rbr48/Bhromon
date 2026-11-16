@@ -243,8 +243,8 @@ void main() {
       expect(find.byType(NavigationBar), findsNothing);
     });
 
-    test('the dock never repeats the list the page is showing', () {
-      expect(TripShell.dockShowsGroups('/group-hub'), isFalse);
+    test('the dock shows groups everywhere and hides chats on chat pages', () {
+      expect(TripShell.dockShowsGroups('/group-hub'), isTrue);
       expect(TripShell.dockShowsChats('/group-hub'), isTrue);
       expect(TripShell.dockShowsChats('/chats'), isFalse);
       expect(TripShell.dockShowsChats('/chat/abc'), isFalse);

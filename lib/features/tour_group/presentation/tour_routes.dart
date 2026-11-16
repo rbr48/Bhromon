@@ -16,6 +16,7 @@ String tourHubPath([String? tourId]) {
 /// so the router would leave it on top and the tap would seem to do nothing. Those pages are
 /// closed first.
 void goFromShell(BuildContext context, String route) {
-  Navigator.of(context).popUntil((r) => r.settings is Page);
+  // Close any modal or stacked sub-page first so the shell's router page activates cleanly.
+  Navigator.of(context).popUntil((r) => r.isFirst || r.settings is Page);
   context.go(route);
 }
