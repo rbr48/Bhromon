@@ -79,6 +79,7 @@ functions/lib/
 test_hive/
 firestore-debug.log
 coverage/
+.agent-state.md
 
 # Data crawlers and scraped datasets
 travel_data_crawler/
