@@ -1,10 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hive/hive.dart';
 
 import 'package:bhromon/core/layout/breakpoints.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
@@ -13,8 +10,6 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_hub_preference.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/services/desktop_nav.dart';
-import 'package:bhromon/features/tour_group/presentation/tour_routes.dart';
-import 'package:bhromon/features/tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/desktop_right_dock.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/desktop_tour_sidebar.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/trip_shell.dart';
@@ -290,7 +285,7 @@ void main() {
       // Tap on JAIBB study circle
       await tester.tap(find.text('JAIBB Banking Circle'));
       await tester.runAsync(() async {
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
       });
       await tester.pumpAndSettle();
 
@@ -401,7 +396,7 @@ void main() {
       // Tap on JAIBB in dialog
       await tester.tap(find.text('JAIBB Banking Circle'));
       await tester.runAsync(() async {
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
       });
       await tester.pumpAndSettle();
 
