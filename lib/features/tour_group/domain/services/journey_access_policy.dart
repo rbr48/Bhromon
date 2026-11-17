@@ -22,6 +22,17 @@ enum LocationStep {
   ready,
 }
 
+/// Whether this platform needs OS "always" background location permission.
+///
+/// Android keeps live journeys running with the screen off via
+/// `FOREGROUND_SERVICE_LOCATION` and an ongoing notification, so only
+/// while-in-use access is needed. iOS uses "always" for background updates.
+bool requiresAlwaysLocationPermission({
+  required bool isIos,
+  required bool isWeb,
+}) =>
+    !isWeb && isIos;
+
 /// Decides the next location step (roadmap LJ-2.2).
 ///
 /// A trip that tracks in the background needs "always" access. The app asks for

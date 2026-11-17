@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -46,7 +48,10 @@ Future<JourneyAccessResult> ensureJourneyAccess(BuildContext context) async {
     final step = nextLocationStep(
       access: _accessOf(permission),
       serviceEnabled: serviceOn,
-      needsBackground: true,
+      needsBackground: requiresAlwaysLocationPermission(
+        isIos: defaultTargetPlatform == TargetPlatform.iOS,
+        isWeb: kIsWeb,
+      ),
       disclosureAccepted: session.store.readDisclosureSeen(),
     );
     switch (step) {

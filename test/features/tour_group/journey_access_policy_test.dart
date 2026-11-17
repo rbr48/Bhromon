@@ -133,4 +133,30 @@ void main() {
       );
     });
   });
+
+  group('requiresAlwaysLocationPermission', () {
+    test(
+        'returns false on Android and Web because foreground service handles tracking',
+        () {
+      expect(
+        requiresAlwaysLocationPermission(isIos: false, isWeb: false),
+        isFalse,
+      );
+      expect(
+        requiresAlwaysLocationPermission(isIos: false, isWeb: true),
+        isFalse,
+      );
+      expect(
+        requiresAlwaysLocationPermission(isIos: true, isWeb: true),
+        isFalse,
+      );
+    });
+
+    test('returns true on iOS', () {
+      expect(
+        requiresAlwaysLocationPermission(isIos: true, isWeb: false),
+        isTrue,
+      );
+    });
+  });
 }

@@ -7,6 +7,7 @@ import 'package:bhromon/core/entities/explorer_profile.dart';
 import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/features/auth/domain/usecases/get_current_profile_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/verify_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_google_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_out_usecase.dart';
@@ -25,6 +26,14 @@ class FakeAuthRepository implements IAuthRepository {
 
   @override
   Future<Either<Failure, String>> signInWithEmail(String email) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, ExplorerProfile>> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
     throw UnimplementedError();
   }
 
@@ -55,6 +64,7 @@ void main() {
       SignInGoogleUseCase(repo),
       SignOutUseCase(repo),
       UpdateProfileUseCase(repo),
+      SignInEmailPasswordUseCase(repo),
     );
     expect(cubit.state, isA<AuthInitial>());
   });

@@ -444,8 +444,24 @@ class TranslationKeys {
           'Google Sign-In needs Google Play services on this phone. Sign in to Google Play, update Google Play services, then try again.',
       'auth_error_popup_blocked':
           'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.',
+      'auth_error_invalid_credentials':
+          'Invalid email or password. Please check your credentials and try again.',
+      'auth_error_too_many_requests':
+          'Too many sign-in attempts. Please wait a moment and try again.',
+      'auth_error_user_disabled':
+          'This account has been disabled. Please contact support.',
       'auth_privacy_open_failed':
           'Could not open the Privacy Policy. Please try again.',
+      'auth_or': 'OR',
+      'auth_sign_in_with_email': 'Sign in with Email',
+      'auth_email_label': 'Email',
+      'auth_email_required': 'Please enter a valid email address.',
+      'auth_password_label': 'Password',
+      'auth_password_required': 'Please enter your password.',
+      'auth_sign_in_button': 'Sign in',
+      'auth_back_to_options': 'Back to sign-in options',
+      'login_welcome_subtitle':
+          'Sign in to run your family, office, school, sports team, study group, neighbourhood committee, housing society, mess, savings group or trip.',
       'login_tagline': 'Walk Together',
       'retry': 'Retry',
       'cancel': 'Cancel',
@@ -956,8 +972,24 @@ class TranslationKeys {
           'এই ফোনে Google সাইন-ইনের জন্য Google Play services দরকার। Google Play-তে সাইন ইন করুন, Google Play services আপডেট করুন, তারপর আবার চেষ্টা করুন।',
       'auth_error_popup_blocked':
           'ব্রাউজার Google সাইন-ইনের উইন্ডো আটকে দিয়েছে। এই সাইটের জন্য পপ-আপ চালু করে আবার চেষ্টা করুন।',
+      'auth_error_invalid_credentials':
+          'ইমেইল বা পাসওয়ার্ড সঠিক নয়। তথ্য যাচাই করে আবার চেষ্টা করুন।',
+      'auth_error_too_many_requests':
+          'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন।',
+      'auth_error_user_disabled':
+          'এই অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে। অনুগ্রহ করে সহায়তার জন্য যোগাযোগ করুন।',
       'auth_privacy_open_failed':
           'গোপনীয়তা নীতি খোলা যায়নি। আবার চেষ্টা করুন।',
+      'auth_or': 'অথবা',
+      'auth_sign_in_with_email': 'ইমেইল দিয়ে সাইন-ইন করুন',
+      'auth_email_label': 'ইমেইল',
+      'auth_email_required': 'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা লিখুন।',
+      'auth_password_label': 'পাসওয়ার্ড',
+      'auth_password_required': 'অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন।',
+      'auth_sign_in_button': 'সাইন-ইন করুন',
+      'auth_back_to_options': 'অন্যান্য সাইন-ইন পদ্ধতিতে ফিরুন',
+      'login_welcome_subtitle':
+          'আপনার পরিবার, অফিস, স্কুল, স্পোর্টস টিম, স্টাডি গ্রুপ, মহল্লা কমিটি, হাউজিং সোসাইটি, মেস, সমিতি বা ভ্রমণ পরিচালনা করতে সাইন ইন করুন।',
       'login_tagline': 'একসাথে পথচলা',
       'retry': 'পুনরায় চেষ্টা',
       'cancel': 'বাতিল',

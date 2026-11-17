@@ -11,6 +11,7 @@ import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:bhromon/features/auth/domain/usecases/get_current_profile_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/verify_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_google_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_out_usecase.dart';
@@ -32,6 +33,7 @@ void main() {
   late SignInGoogleUseCase signInGoogle;
   late SignOutUseCase signOut;
   late UpdateProfileUseCase updateProfile;
+  late SignInEmailPasswordUseCase signInEmailPassword;
 
   final tProfile = ExplorerProfile(
     uid: 'uid-cubit-test',
@@ -60,6 +62,7 @@ void main() {
         signInGoogle,
         signOut,
         updateProfile,
+        signInEmailPassword,
       );
 
   setUp(() {
@@ -70,6 +73,7 @@ void main() {
     signInGoogle = SignInGoogleUseCase(mockRepo);
     signOut = SignOutUseCase(mockRepo);
     updateProfile = UpdateProfileUseCase(mockRepo);
+    signInEmailPassword = SignInEmailPasswordUseCase(mockRepo);
   });
 
   // ────────────────────────────────────────────────────
@@ -341,5 +345,60 @@ void main() {
 
       expect(await cubit.updateProfile(tProfile), isTrue);
     });
+  });
+
+  // ────────────────────────────────────────────────────
+  // signInWithEmailPassword
+  // ────────────────────────────────────────────────────
+  group('signInWithEmailPassword', () {
+    const tPassword = 'secret-password';
+    const tInvalidCreds = AuthFailure(
+      'Invalid email or password',
+      reason: AuthFailureReason.invalidCredentials,
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'emits [AuthLoading, Authenticated] when email/password sign-in succeeds',
+      build: () {
+        when(mockRepo.signInWithEmailPassword(
+          email: tEmail,
+          password: tPassword,
+        )).thenAnswer((_) async => Right(tProfile));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.signInWithEmailPassword(
+        email: tEmail,
+        password: tPassword,
+      ),
+      expect: () => [const AuthLoading(), Authenticated(tProfile)],
+      verify: (_) {
+        verify(mockRepo.signInWithEmailPassword(
+          email: tEmail,
+          password: tPassword,
+        )).called(1);
+      },
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'emits [AuthLoading, AuthError(invalidCredentials)] when credentials fail',
+      build: () {
+        when(mockRepo.signInWithEmailPassword(
+          email: tEmail,
+          password: tPassword,
+        )).thenAnswer((_) async => const Left(tInvalidCreds));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.signInWithEmailPassword(
+        email: tEmail,
+        password: tPassword,
+      ),
+      expect: () => [
+        const AuthLoading(),
+        const AuthError(
+          'Invalid email or password',
+          reason: AuthFailureReason.invalidCredentials,
+        ),
+      ],
+    );
   });
 }

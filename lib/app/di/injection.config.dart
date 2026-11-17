@@ -29,6 +29,8 @@ import '../../features/auth/domain/repositories/i_auth_repository.dart'
     as _i589;
 import '../../features/auth/domain/usecases/get_current_profile_usecase.dart'
     as _i176;
+import '../../features/auth/domain/usecases/sign_in_email_password_usecase.dart'
+    as _i330;
 import '../../features/auth/domain/usecases/sign_in_email_usecase.dart'
     as _i336;
 import '../../features/auth/domain/usecases/sign_in_google_usecase.dart'
@@ -105,24 +107,35 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i362.ExplorerRepositoryImpl(gh<_i974.FirebaseFirestore>()));
     gh.lazySingleton<_i1000.ITrustRepository>(
         () => _i842.TrustRepositoryImpl(gh<_i974.FirebaseFirestore>()));
-    gh.factory<_i503.VerifyOtpUseCase>(
-        () => _i503.VerifyOtpUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i176.GetCurrentProfileUseCase>(
         () => _i176.GetCurrentProfileUseCase(gh<_i589.IAuthRepository>()));
-    gh.factory<_i915.SignOutUseCase>(
-        () => _i915.SignOutUseCase(gh<_i589.IAuthRepository>()));
-    gh.factory<_i798.UpdateProfileUseCase>(
-        () => _i798.UpdateProfileUseCase(gh<_i589.IAuthRepository>()));
+    gh.factory<_i330.SignInEmailPasswordUseCase>(
+        () => _i330.SignInEmailPasswordUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i336.SignInEmailUseCase>(
         () => _i336.SignInEmailUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i138.SignInGoogleUseCase>(
         () => _i138.SignInGoogleUseCase(gh<_i589.IAuthRepository>()));
+    gh.factory<_i915.SignOutUseCase>(
+        () => _i915.SignOutUseCase(gh<_i589.IAuthRepository>()));
+    gh.factory<_i798.UpdateProfileUseCase>(
+        () => _i798.UpdateProfileUseCase(gh<_i589.IAuthRepository>()));
+    gh.factory<_i503.VerifyOtpUseCase>(
+        () => _i503.VerifyOtpUseCase(gh<_i589.IAuthRepository>()));
+    gh.lazySingleton<_i117.AuthCubit>(() => _i117.AuthCubit(
+          gh<_i176.GetCurrentProfileUseCase>(),
+          gh<_i336.SignInEmailUseCase>(),
+          gh<_i503.VerifyOtpUseCase>(),
+          gh<_i138.SignInGoogleUseCase>(),
+          gh<_i915.SignOutUseCase>(),
+          gh<_i798.UpdateProfileUseCase>(),
+          gh<_i330.SignInEmailPasswordUseCase>(),
+        ));
     gh.lazySingleton<_i622.FeatureFlags>(
         () => _i622.FeatureFlags(gh<_i627.FirebaseRemoteConfig>()));
-    gh.factory<_i964.FlagContentUseCase>(
-        () => _i964.FlagContentUseCase(gh<_i1000.ITrustRepository>()));
     gh.factory<_i168.AppealFlagUseCase>(
         () => _i168.AppealFlagUseCase(gh<_i1000.ITrustRepository>()));
+    gh.factory<_i964.FlagContentUseCase>(
+        () => _i964.FlagContentUseCase(gh<_i1000.ITrustRepository>()));
     gh.factory<_i111.GetExplorerScoreUseCase>(
         () => _i111.GetExplorerScoreUseCase(gh<_i1000.ITrustRepository>()));
     gh.factory<_i965.OtaCubit>(
@@ -131,14 +144,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i343.GetExplorerProfileUseCase(gh<_i436.IExplorerRepository>()));
     gh.factory<_i146.GetTopExplorersUseCase>(
         () => _i146.GetTopExplorersUseCase(gh<_i436.IExplorerRepository>()));
-    gh.lazySingleton<_i117.AuthCubit>(() => _i117.AuthCubit(
-          gh<_i176.GetCurrentProfileUseCase>(),
-          gh<_i336.SignInEmailUseCase>(),
-          gh<_i503.VerifyOtpUseCase>(),
-          gh<_i138.SignInGoogleUseCase>(),
-          gh<_i915.SignOutUseCase>(),
-          gh<_i798.UpdateProfileUseCase>(),
-        ));
     gh.factory<_i905.TrustBloc>(() => _i905.TrustBloc(
           gh<_i964.FlagContentUseCase>(),
           gh<_i168.AppealFlagUseCase>(),
