@@ -17,6 +17,7 @@ import '../../domain/services/hub_modules.dart';
 import '../../domain/services/tour_record_plan.dart';
 import '../../domain/services/tour_choice.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
 import 'package:bhromon/core/config/feature_flags.dart';
 
@@ -1917,13 +1918,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   Future<void> _switchAccount(BuildContext context) async {
     try {
       await context.read<AuthCubit>().signOut();
-    } catch (_) {
-      // Standalone widget tests may mount without AuthCubit.
+    } catch (e, st) {
+      logWarning(
+          '[TourGroupHub] Switch account signOut skipped or failed', e, st);
     }
     if (context.mounted) {
-      try {
-        context.go('/login');
-      } catch (_) {}
+      GoRouter.maybeOf(context)?.go('/login');
     }
   }
 

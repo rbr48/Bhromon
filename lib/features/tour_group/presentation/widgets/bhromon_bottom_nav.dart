@@ -127,12 +127,11 @@ class BhromonBottomNav extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      String? currentLocation;
-      try {
-        currentLocation = GoRouterState.of(context).matchedLocation;
-      } catch (_) {}
+      final router = GoRouter.maybeOf(context);
+      final currentLocation =
+          router?.routerDelegate.currentConfiguration.uri.path;
       if (currentLocation != '/group-hub') {
-        context.go('/group-hub');
+        router?.go('/group-hub');
       }
       return;
     }

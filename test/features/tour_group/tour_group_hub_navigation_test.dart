@@ -214,7 +214,7 @@ void main() {
     );
     expect(
       enterCodeButton.style?.foregroundColor?.resolve({}),
-      isNot(const Color(0xFF74C69D)),
+      equals(const Color(0xFF2D6A4F)),
     );
 
     // Tapping "Create group" opens the group-type picker sheet instead of jumping to Trip only.
