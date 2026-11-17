@@ -34,7 +34,10 @@ class GooglePlayActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: context.l10n.translate('hub_google_play_tooltip'),
-      icon: const GooglePlayLogo(size: 20),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      icon: const GooglePlayLogo(size: 19),
       onPressed: () => _handleTap(context),
     );
   }

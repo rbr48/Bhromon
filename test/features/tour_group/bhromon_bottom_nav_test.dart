@@ -141,8 +141,7 @@ void main() {
 
       expect(find.text('hub page -'), findsOneWidget);
       expect(
-        find.text(
-            'মোমেন্টস দেখতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।'),
+        find.text('Please select or create a group first to view Moments.'),
         findsOneWidget,
       );
     });

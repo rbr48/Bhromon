@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../localization/locale_controller.dart';
 import '../theme/colors.dart';
+import '../theme/forest_palette.dart';
 
 /// Understandable language switcher combining the universal translate icon
 /// (`A/文`) with explicit `EN` / `বাংলা` labels.
@@ -20,14 +21,15 @@ class LanguageSwitchButton extends StatelessWidget {
       builder: (context, _) {
         final isBn = LocaleController.instance.locale.languageCode == 'bn';
         if (compact) {
-          return _buildCompactChip(isBn);
+          return _buildCompactChip(context, isBn);
         }
         return _buildSegmentedPill(isBn);
       },
     );
   }
 
-  Widget _buildCompactChip(bool isBn) {
+  Widget _buildCompactChip(BuildContext context, bool isBn) {
+    final accent = context.forest.accentText;
     final tooltip = isBn ? 'Switch to English' : 'বাংলায় দেখুন';
     return Tooltip(
       message: tooltip,
@@ -35,9 +37,9 @@ class LanguageSwitchButton extends StatelessWidget {
         button: true,
         label: tooltip,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
           child: Material(
-            color: AppColors.midGreen.withValues(alpha: 0.14),
+            color: accent.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(18),
             child: InkWell(
               key: const Key('compact_language_switch_button'),
@@ -45,30 +47,29 @@ class LanguageSwitchButton extends StatelessWidget {
               onTap: () =>
                   LocaleController.instance.setLanguage(isBn ? 'en' : 'bn'),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: AppColors.midGreen.withValues(alpha: 0.38),
+                    color: accent.withValues(alpha: 0.38),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.translate_rounded,
-                      size: 16,
-                      color: AppColors.midGreen,
+                      size: 15,
+                      color: accent,
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 4),
                     Text(
                       isBn ? 'বাং' : 'EN',
-                      style: const TextStyle(
-                        color: AppColors.midGreen,
-                        fontSize: 12,
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ],

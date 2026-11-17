@@ -6,6 +6,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
@@ -166,5 +167,113 @@ void main() {
 
     // On desktop widths (>= 900), bottom navigation bar is suppressed
     expect(find.byType(NavigationBar), findsNothing);
+  });
+
+  testWidgets(
+      'empty group-hub lays out without overflow on narrow mobile, opens group-type picker, and localizes in Bangla',
+      (tester) async {
+    final repo = _FakeTourGroupRepository(
+      groupsStream: Stream.value(<TourGroup>[]),
+    );
+
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('en'), Locale('bn')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          DefaultMaterialLocalizations.delegate,
+          DefaultWidgetsLocalizations.delegate,
+        ],
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(1.2)),
+          child: child!,
+        ),
+        home: TourGroupHubScreen(repository: repo, groupsV2: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('No groups yet'), findsOneWidget);
+    expect(find.byKey(const Key('hub_switch_account_button')), findsOneWidget);
+    expect(find.byType(ActionChip), findsNWidgets(12));
+
+    // Enter code OutlinedButton uses dark accentText instead of washed-out mint.
+    final enterCodeButton = tester.widget<OutlinedButton>(
+      find.ancestor(
+        of: find.text('Enter code'),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    expect(
+      enterCodeButton.style?.foregroundColor?.resolve({}),
+      equals(const Color(0xFF2D6A4F)),
+    );
+
+    // Tapping "Create group" opens the group-type picker sheet instead of jumping to Trip only.
+    await tester.tap(find.text('Create group'));
+    await tester.pumpAndSettle();
+    expect(find.text('Or start directly with a group type'), findsNWidgets(2));
+    expect(
+      find.descendant(
+        of: find.byType(ListTile),
+        matching: find.text('Create a family circle'),
+      ),
+      findsOneWidget,
+    );
+    final pickerList = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.text('Create a new tour group'),
+      200,
+      scrollable: pickerList,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ListTile),
+        matching: find.text('Create a new tour group'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'empty group-hub localizes brand title and official feed in Bangla',
+      (tester) async {
+    final repo = _FakeTourGroupRepository(
+      groupsStream: Stream.value(<TourGroup>[]),
+    );
+
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('bn'),
+        supportedLocales: const [Locale('en'), Locale('bn')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: TourGroupHubScreen(repository: repo, groupsV2: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ভ্রমণ'), findsOneWidget);
+    expect(find.text('ভ্রমণ অফিশিয়াল ফিড'), findsOneWidget);
+    expect(find.byKey(const Key('compact_language_switch_button')),
+        findsOneWidget);
   });
 }

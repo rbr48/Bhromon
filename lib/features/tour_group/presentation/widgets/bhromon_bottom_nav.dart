@@ -85,7 +85,7 @@ class BhromonBottomNav extends StatelessWidget {
           activeTourId,
           'channels',
           missingTourMessage:
-              'চ্যানেল খুলতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
+              context.l10n.translate('hub_select_group_for_channels'),
         );
         break;
       case 2:
@@ -94,7 +94,7 @@ class BhromonBottomNav extends StatelessWidget {
           activeTourId,
           'feed',
           missingTourMessage:
-              'মোমেন্টস দেখতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
+              context.l10n.translate('hub_select_group_for_moments'),
         );
         break;
       case 3:
@@ -127,7 +127,12 @@ class BhromonBottomNav extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      context.go('/group-hub');
+      final router = GoRouter.maybeOf(context);
+      final currentLocation =
+          router?.routerDelegate.currentConfiguration.uri.path;
+      if (currentLocation != '/group-hub') {
+        router?.go('/group-hub');
+      }
       return;
     }
     final path = '/group/$tourId/$tab';
