@@ -3,6 +3,7 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'dart:async' as _i4;
 
 import 'package:bhromon/core/entities/explorer_profile.dart' as _i6;
@@ -59,6 +60,36 @@ class MockIAuthRepository extends _i1.Mock implements _i3.IAuthRepository {
           ),
         )),
       ) as _i4.Future<_i2.Either<_i5.Failure, String>>);
+
+  @override
+  _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>
+      signInWithEmailPassword({
+    required String? email,
+    required String? password,
+  }) =>
+          (super.noSuchMethod(
+            Invocation.method(
+              #signInWithEmailPassword,
+              [],
+              {
+                #email: email,
+                #password: password,
+              },
+            ),
+            returnValue:
+                _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>.value(
+                    _FakeEither_0<_i5.Failure, _i6.ExplorerProfile>(
+              this,
+              Invocation.method(
+                #signInWithEmailPassword,
+                [],
+                {
+                  #email: email,
+                  #password: password,
+                },
+              ),
+            )),
+          ) as _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>);
 
   @override
   _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>> verifyOtp(

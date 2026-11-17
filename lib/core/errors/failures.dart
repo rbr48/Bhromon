@@ -23,6 +23,9 @@ enum AuthFailureReason {
   network,
   googlePlayServices,
   popupBlocked,
+  invalidCredentials,
+  tooManyRequests,
+  userDisabled,
 }
 
 final class AuthFailure extends Failure {

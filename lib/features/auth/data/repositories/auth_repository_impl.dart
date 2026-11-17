@@ -132,6 +132,36 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   @override
+  Future<Either<Failure, ExplorerProfile>> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = userCredential.user;
+      if (user == null) {
+        logWarning('AuthRepository: email/password sign-in returned no user');
+        return const Left(AuthFailure('Email sign-in returned no user'));
+      }
+      return await _syncUserWithFirestore(user);
+    } on FirebaseAuthException catch (e, stack) {
+      final reason = _firebaseAuthReason(e.code);
+      logWarning(
+        'AuthRepository: email/password sign-in failed (${e.code})',
+        e,
+        stack,
+      );
+      return Left(AuthFailure('Email sign-in failed', reason: reason));
+    } catch (e, stack) {
+      logWarning('AuthRepository: email/password sign-in error', e, stack);
+      return const Left(AuthFailure('Email sign-in failed'));
+    }
+  }
+
+  @override
   Future<Either<Failure, ExplorerProfile>> verifyOtp(String smsCode) async {
     if (_emailForOtp == null) {
       return const Left(AuthFailure(
@@ -222,7 +252,7 @@ class AuthRepositoryImpl implements IAuthRepository {
     return AuthFailure('Google sign-in failed', reason: reason);
   }
 
-  /// The reason for a Firebase Auth error code from a Google sign-in.
+  /// The reason for a Firebase Auth error code from sign-in.
   AuthFailureReason _firebaseAuthReason(String code) {
     // The user closed the account window, or a newer sign-in replaced it.
     if (code == 'popup-closed-by-user' || code == 'cancelled-popup-request') {
@@ -231,6 +261,13 @@ class AuthRepositoryImpl implements IAuthRepository {
     return switch (code) {
       'popup-blocked' => AuthFailureReason.popupBlocked,
       'network-request-failed' => AuthFailureReason.network,
+      'invalid-credential' ||
+      'wrong-password' ||
+      'user-not-found' ||
+      'invalid-email' =>
+        AuthFailureReason.invalidCredentials,
+      'too-many-requests' => AuthFailureReason.tooManyRequests,
+      'user-disabled' => AuthFailureReason.userDisabled,
       _ => AuthFailureReason.unknown,
     };
   }

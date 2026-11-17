@@ -6,6 +6,7 @@ import 'package:bhromon/core/utils/app_logger.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/usecases/get_current_profile_usecase.dart';
+import '../../domain/usecases/sign_in_email_password_usecase.dart';
 import '../../domain/usecases/sign_in_email_usecase.dart';
 import '../../domain/usecases/verify_otp_usecase.dart';
 import '../../domain/usecases/sign_in_google_usecase.dart';
@@ -22,6 +23,7 @@ import 'auth_state.dart';
 class AuthCubit extends Cubit<AuthState> {
   final GetCurrentProfileUseCase _getCurrentProfile;
   final SignInEmailUseCase _signInEmail;
+  final SignInEmailPasswordUseCase _signInEmailPassword;
   final VerifyOtpUseCase _verifyOtp;
   final SignInGoogleUseCase _signInGoogle;
   final SignOutUseCase _signOut;
@@ -40,6 +42,7 @@ class AuthCubit extends Cubit<AuthState> {
     this._signInGoogle,
     this._signOut,
     this._updateProfile,
+    this._signInEmailPassword,
   ) : super(const AuthInitial());
 
   Future<void> checkAuthStatus() async {
@@ -106,6 +109,24 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signInWithGoogle() async {
     emit(const AuthLoading());
     final result = await _signInGoogle();
+    result.fold(
+      (failure) => emit(_failedState(failure)),
+      (profile) {
+        _syncGroupMembership();
+        emit(Authenticated(profile));
+      },
+    );
+  }
+
+  /// Signs in with Firebase Email/Password credentials.
+  Future<void> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    emit(const AuthLoading());
+    final result = await _signInEmailPassword(
+      SignInEmailPasswordParams(email: email, password: password),
+    );
     result.fold(
       (failure) => emit(_failedState(failure)),
       (profile) {

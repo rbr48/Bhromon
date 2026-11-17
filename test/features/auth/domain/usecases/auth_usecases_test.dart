@@ -11,6 +11,7 @@ import 'package:bhromon/core/value_objects/explorer_score.dart';
 import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/verify_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_google_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_out_usecase.dart';
@@ -247,6 +248,63 @@ void main() {
       final result = await useCase(tProfile);
 
       expect(result, const Left<Failure, ExplorerProfile>(tAuthFailure));
+    });
+  });
+
+  // ────────────────────────────────────────────────────
+  // SignInEmailPasswordUseCase
+  // ────────────────────────────────────────────────────
+  group('SignInEmailPasswordUseCase', () {
+    late SignInEmailPasswordUseCase useCase;
+    const tPassword = 'secret-password';
+
+    setUp(() => useCase = SignInEmailPasswordUseCase(mockRepo));
+
+    test('happy path: returns Right(profile) when credentials succeed',
+        () async {
+      when(mockRepo.signInWithEmailPassword(
+        email: tEmail,
+        password: tPassword,
+      )).thenAnswer((_) async => Right(tProfile));
+
+      final result = await useCase(
+        const SignInEmailPasswordParams(
+          email: tEmail,
+          password: tPassword,
+        ),
+      );
+
+      expect(result, Right<Failure, ExplorerProfile>(tProfile));
+      verify(mockRepo.signInWithEmailPassword(
+        email: tEmail,
+        password: tPassword,
+      )).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    });
+
+    test('failure path: returns Left(AuthFailure) when credentials fail',
+        () async {
+      const invalidFailure = AuthFailure(
+        'Invalid credentials',
+        reason: AuthFailureReason.invalidCredentials,
+      );
+      when(mockRepo.signInWithEmailPassword(
+        email: tEmail,
+        password: tPassword,
+      )).thenAnswer((_) async => const Left(invalidFailure));
+
+      final result = await useCase(
+        const SignInEmailPasswordParams(
+          email: tEmail,
+          password: tPassword,
+        ),
+      );
+
+      expect(result, const Left<Failure, ExplorerProfile>(invalidFailure));
+      verify(mockRepo.signInWithEmailPassword(
+        email: tEmail,
+        password: tPassword,
+      )).called(1);
     });
   });
 }

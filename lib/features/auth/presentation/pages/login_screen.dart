@@ -30,6 +30,9 @@ String _authErrorText(BuildContext context, AuthFailureReason reason) {
     AuthFailureReason.network => 'auth_error_network',
     AuthFailureReason.googlePlayServices => 'auth_error_google_play_services',
     AuthFailureReason.popupBlocked => 'auth_error_popup_blocked',
+    AuthFailureReason.invalidCredentials => 'auth_error_invalid_credentials',
+    AuthFailureReason.tooManyRequests => 'auth_error_too_many_requests',
+    AuthFailureReason.userDisabled => 'auth_error_user_disabled',
     AuthFailureReason.unknown || AuthFailureReason.cancelled => 'error_generic',
   };
   return context.l10n.translate(key);
@@ -259,12 +262,7 @@ class _LoginScreenState extends State<LoginScreen>
         ],
       ),
       padding: const EdgeInsets.all(28),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        transitionBuilder: (child, anim) =>
-            FadeTransition(opacity: anim, child: child),
-        child: state is AuthLoading ? const _LoadingView() : const _LoginForm(),
-      ),
+      child: _LoginForm(loading: state is AuthLoading),
     );
   }
 }
@@ -372,9 +370,11 @@ class _DotLine extends StatelessWidget {
   }
 }
 
-// ─── Google form ────────────────────────────────────────────────────────────
+// ─── Sign-in form ───────────────────────────────────────────────────────────
 class _LoginForm extends StatefulWidget {
-  const _LoginForm();
+  const _LoginForm({required this.loading});
+
+  final bool loading;
 
   @override
   State<_LoginForm> createState() => _LoginFormState();
@@ -383,6 +383,11 @@ class _LoginForm extends StatefulWidget {
 class _LoginFormState extends State<_LoginForm> {
   late final TapGestureRecognizer _termsRecognizer;
   late final TapGestureRecognizer _privacyRecognizer;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _showEmailForm = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -416,7 +421,49 @@ class _LoginFormState extends State<_LoginForm> {
   void dispose() {
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  void _submitEmailPassword() {
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
+    context.read<AuthCubit>().signInWithEmailPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+  }
+
+  InputDecoration _emailFieldDecoration({
+    required String label,
+    required IconData prefixIcon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: _kWhite54, fontSize: 13),
+      filled: true,
+      fillColor: const Color(0xFF111D15),
+      prefixIcon: Icon(prefixIcon, color: _kGreen, size: 20),
+      suffixIcon: suffixIcon,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _kBorder, width: 1.3),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _kGreen, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFEF5350), width: 1.3),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFEF5350), width: 1.5),
+      ),
+    );
   }
 
   void _showTermsDialog(BuildContext context) {
@@ -519,6 +566,10 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.loading) {
+      return const _LoadingView();
+    }
+    final l10n = context.l10n;
     return Column(
       key: const ValueKey('login_form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -545,20 +596,135 @@ class _LoginFormState extends State<_LoginForm> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Sign in with Google to run your family, office, school, sports team, study group, neighbourhood committee, housing society, mess, savings group or trip.',
-          style: TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
+        Text(
+          l10n.translate('login_welcome_subtitle'),
+          style: const TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
         ),
-        const SizedBox(height: 28),
-
-        // Google button
-        _GoogleButton(
-          onTap: () {
-            context.read<AuthCubit>().signInWithGoogle();
-          },
-        ),
-
         const SizedBox(height: 24),
+
+        if (!_showEmailForm) ...[
+          _GoogleButton(
+            onTap: () {
+              context.read<AuthCubit>().signInWithGoogle();
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Expanded(child: Divider(color: _kBorder, height: 1)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  l10n.translate('auth_or'),
+                  style: const TextStyle(
+                    color: _kWhite54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider(color: _kBorder, height: 1)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SecondaryAuthButton(
+            icon: Icons.email_outlined,
+            label: l10n.translate('auth_sign_in_with_email'),
+            onTap: () => setState(() => _showEmailForm = true),
+          ),
+        ] else ...[
+          Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  key: const Key('login_email_field'),
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  style: const TextStyle(color: _kWhite, fontSize: 15),
+                  decoration: _emailFieldDecoration(
+                    label: l10n.translate('auth_email_label'),
+                    prefixIcon: Icons.email_outlined,
+                  ),
+                  validator: (value) {
+                    final v = value?.trim() ?? '';
+                    if (v.isEmpty || !v.contains('@')) {
+                      return l10n.translate('auth_email_required');
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  key: const Key('login_password_field'),
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  style: const TextStyle(color: _kWhite, fontSize: 15),
+                  onFieldSubmitted: (_) => _submitEmailPassword(),
+                  decoration: _emailFieldDecoration(
+                    label: l10n.translate('auth_password_label'),
+                    prefixIcon: Icons.lock_outline_rounded,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: _kWhite54,
+                        size: 20,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                  validator: (value) {
+                    if ((value ?? '').isEmpty) {
+                      return l10n.translate('auth_password_required');
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 50,
+                  child: FilledButton(
+                    key: const Key('login_email_submit_button'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _kGreen,
+                      foregroundColor: _kBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: _submitEmailPassword,
+                    child: Text(
+                      l10n.translate('auth_sign_in_button'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => setState(() => _showEmailForm = false),
+                  child: Text(
+                    l10n.translate('auth_back_to_options'),
+                    style: const TextStyle(color: _kWhite54, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 20),
 
         // Terms & Privacy statement
         Center(
@@ -592,6 +758,48 @@ class _LoginFormState extends State<_LoginForm> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SecondaryAuthButton extends StatelessWidget {
+  const _SecondaryAuthButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return BouncyButton(
+      onTap: onTap,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: const Color(0xFF111D15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kBorder, width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: _kGreen, size: 20),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: const TextStyle(
+                color: _kWhite,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

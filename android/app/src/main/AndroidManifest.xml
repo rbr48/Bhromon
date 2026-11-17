@@ -3,8 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- Live Journey smart arrival alarms and group tracking in background -->
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Live Journey runs as a foreground service with an ongoing notification;
+         strip ACCESS_BACKGROUND_LOCATION so Android requires While-in-use only -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" tools:node="remove" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- Required on Android 13+ (API 33+) to post local/FCM notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
