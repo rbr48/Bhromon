@@ -14,6 +14,7 @@ import {
 const db = getFirestore();
 
 type IssueOutcome = 'ok' | 'locked' | 'resend' | 'hourly' | 'overall';
+type OtpPurpose = 'login' | 'signup';
 
 interface AuthConfig {
   provider: string;
@@ -35,6 +36,7 @@ export const sendOtpEmail = functions
   .region('asia-south1')
   .https.onCall(async (data) => {
     const email = typeof data?.email === 'string' ? data.email.trim().toLowerCase() : '';
+    const purpose: OtpPurpose = data?.purpose === 'signup' ? 'signup' : 'login';
     if (!email || !email.includes('@')) {
       throw new functions.https.HttpsError('invalid-argument', 'Valid email address is required');
     }
@@ -116,7 +118,7 @@ export const sendOtpEmail = functions
 
     if (configured) {
       try {
-        await sendViaResend(config.resendApiKey, config.fromEmail, email, code);
+        await sendViaResend(config.resendApiKey, config.fromEmail, email, code, purpose);
       } catch (error) {
         // The provider's answer is logged without the code.
         console.error('Error sending the sign-in code via Resend:', (error as Error).message);
@@ -132,17 +134,31 @@ export const sendOtpEmail = functions
     return { success: true, message: 'Verification code sent.' };
   });
 
-function sendViaResend(apiKey: string, from: string, to: string, otp: string): Promise<void> {
+function sendViaResend(
+  apiKey: string,
+  from: string,
+  to: string,
+  otp: string,
+  purpose: OtpPurpose,
+): Promise<void> {
+  const subject =
+    purpose === 'signup'
+      ? 'Bhromon Account Verification Code'
+      : 'Bhromon Login Verification Code';
+  const promptText =
+    purpose === 'signup'
+      ? 'Use the following 6-digit verification code to create your Bhromon account. This code is valid for 5 minutes.'
+      : 'Use the following 6-digit verification code to log in to your account. This code is valid for 5 minutes.';
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       from: from,
       to: [to],
-      subject: 'Bhromon Login Verification Code',
+      subject,
       html: `
         <div style="font-family: sans-serif; padding: 24px; max-width: 480px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #1b4332; margin-top: 0;">Bhromon Verification</h2>
           <p style="color: #4a4a4a; font-size: 14px; line-height: 1.5;">
-            Use the following 6-digit verification code to log in to your account. This code is valid for 5 minutes.
+            ${promptText}
           </p>
           <div style="font-size: 32px; font-weight: bold; color: #1b4332; text-align: center; letter-spacing: 4px; padding: 16px; margin: 24px 0; background-color: #f4f9f4; border-radius: 8px;">
             ${otp}

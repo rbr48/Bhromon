@@ -1,11 +1,12 @@
 import * as functions from 'firebase-functions/v1';
 import { App, cert, getApp, initializeApp } from 'firebase-admin/app';
 import { UserRecord, getAuth } from 'firebase-admin/auth';
-import { Timestamp, Transaction, getFirestore } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomBytes } from 'crypto';
-import { OTP_LOCK_MS, OTP_MAX_ATTEMPTS, digestsMatch, otpDigest, toMs } from './lib/otp';
+import { digestsMatch, otpDigest } from './lib/otp';
+import { EMULATOR_OTP_CODE, consumeOtpCode } from './lib/otpStore';
 
 const db = getFirestore();
 
@@ -24,77 +25,6 @@ if (fs.existsSync(serviceAccountPath)) {
     } catch (initErr) {
       console.error('Failed to initialize tokenSignerApp:', initErr);
     }
-  }
-}
-
-/** The code the emulator accepts, so local sign-in works without email. Only the emulator reads it. */
-const EMULATOR_CODE = '777777';
-
-type UseOutcome = 'ok' | 'missing' | 'expired' | 'locked' | 'wrong' | 'wrong-locks';
-
-/**
- * Spends one attempt at a code. A right code is used up. A wrong one counts toward a
- * lockout. The decision is returned from the transaction and thrown after it, because
- * a thrown error would roll back the attempt that was just counted.
- */
-async function useCode(email: string, code: string): Promise<void> {
-  const ref = db.collection('otps').doc(email);
-  const nowMs = Date.now();
-  const outcome = await db.runTransaction<UseOutcome>(async (tx: Transaction) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) return 'missing';
-    const data = snap.data() ?? {};
-
-    const lockedUntilMs = toMs(data.lockedUntil);
-    if (lockedUntilMs !== undefined && lockedUntilMs > nowMs) return 'locked';
-
-    const expiresAtMs = toMs(data.expiresAt);
-    if (expiresAtMs !== undefined && expiresAtMs < nowMs) {
-      tx.delete(ref);
-      return 'expired';
-    }
-
-    if (typeof data.digest === 'string' && digestsMatch(otpDigest(email, code), data.digest)) {
-      tx.delete(ref);
-      return 'ok';
-    }
-
-    const attempts = (Number(data.attempts) || 0) + 1;
-    if (attempts >= OTP_MAX_ATTEMPTS) {
-      tx.update(ref, {
-        attempts,
-        lockedUntil: Timestamp.fromMillis(nowMs + OTP_LOCK_MS),
-      });
-      return 'wrong-locks';
-    }
-    tx.update(ref, { attempts });
-    return 'wrong';
-  });
-
-  switch (outcome) {
-    case 'ok':
-      return;
-    case 'missing':
-      throw new functions.https.HttpsError(
-        'not-found',
-        'No verification code found for this email. Please request a new one.',
-      );
-    case 'expired':
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Verification code has expired. Please request a new one.',
-      );
-    case 'locked':
-    case 'wrong-locks':
-      throw new functions.https.HttpsError(
-        'resource-exhausted',
-        'Too many wrong codes. Wait 15 minutes, then ask for a new code.',
-      );
-    case 'wrong':
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Invalid verification code. Please try again.',
-      );
   }
 }
 
@@ -127,8 +57,8 @@ export const verifyOtp = functions
 
     const emulator = process.env.FUNCTIONS_EMULATOR === 'true';
     const accepted =
-      (emulator && code === EMULATOR_CODE) || (await isReviewCode(email, code));
-    if (!accepted) await useCode(email, code);
+      (emulator && code === EMULATOR_OTP_CODE) || (await isReviewCode(email, code));
+    if (!accepted) await consumeOtpCode(db, email, code);
 
     // Get or Create Firebase Auth User
     let userRecord: UserRecord;

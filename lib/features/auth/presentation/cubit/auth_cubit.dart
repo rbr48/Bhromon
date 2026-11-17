@@ -6,6 +6,8 @@ import 'package:bhromon/core/utils/app_logger.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/usecases/get_current_profile_usecase.dart';
+import '../../domain/usecases/register_with_email_otp_usecase.dart';
+import '../../domain/usecases/send_signup_otp_usecase.dart';
 import '../../domain/usecases/sign_in_email_password_usecase.dart';
 import '../../domain/usecases/sign_in_email_usecase.dart';
 import '../../domain/usecases/verify_otp_usecase.dart';
@@ -23,6 +25,8 @@ import 'auth_state.dart';
 class AuthCubit extends Cubit<AuthState> {
   final GetCurrentProfileUseCase _getCurrentProfile;
   final SignInEmailUseCase _signInEmail;
+  final SendSignUpOtpUseCase _sendSignUpOtp;
+  final RegisterWithEmailOtpUseCase _registerWithEmailOtp;
   final SignInEmailPasswordUseCase _signInEmailPassword;
   final VerifyOtpUseCase _verifyOtp;
   final SignInGoogleUseCase _signInGoogle;
@@ -43,6 +47,8 @@ class AuthCubit extends Cubit<AuthState> {
     this._signOut,
     this._updateProfile,
     this._signInEmailPassword,
+    this._sendSignUpOtp,
+    this._registerWithEmailOtp,
   ) : super(const AuthInitial());
 
   Future<void> checkAuthStatus() async {
@@ -109,6 +115,42 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signInWithGoogle() async {
     emit(const AuthLoading());
     final result = await _signInGoogle();
+    result.fold(
+      (failure) => emit(_failedState(failure)),
+      (profile) {
+        _syncGroupMembership();
+        emit(Authenticated(profile));
+      },
+    );
+  }
+
+  /// Sends a 6-digit verification code to [email] for creating an account.
+  Future<void> requestSignUpOtp(String email) async {
+    final trimmed = email.trim();
+    emit(const AuthLoading());
+    final result = await _sendSignUpOtp(trimmed);
+    result.fold(
+      (failure) => emit(_failedState(failure)),
+      (_) => emit(AuthOtpSent(trimmed)),
+    );
+  }
+
+  /// Verifies the 6-digit OTP and creates + signs into an Email/Password account.
+  Future<void> registerWithEmailOtp({
+    required String email,
+    required String password,
+    required String otp,
+    String? displayName,
+  }) async {
+    emit(const AuthLoading());
+    final result = await _registerWithEmailOtp(
+      RegisterWithEmailOtpParams(
+        email: email,
+        password: password,
+        otp: otp,
+        displayName: displayName,
+      ),
+    );
     result.fold(
       (failure) => emit(_failedState(failure)),
       (profile) {

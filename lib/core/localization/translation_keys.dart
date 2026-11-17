@@ -450,14 +450,42 @@ class TranslationKeys {
           'Too many sign-in attempts. Please wait a moment and try again.',
       'auth_error_user_disabled':
           'This account has been disabled. Please contact support.',
+      'auth_error_email_already_in_use':
+          'An account with this email already exists. Please sign in instead.',
+      'auth_error_weak_password': 'Password must be at least 6 characters.',
+      'auth_error_otp_invalid':
+          'Invalid verification code. Please check and try again.',
+      'auth_error_otp_expired':
+          'Verification code has expired. Please request a new code.',
+      'auth_error_otp_not_found':
+          'No verification code found. Please request a new code.',
+      'auth_error_otp_cooldown':
+          'Please wait 60 seconds before requesting another verification code.',
+      'auth_error_email_otp_unavailable':
+          'Email verification is not configured right now. Try Google Sign-In or contact support.',
       'auth_privacy_open_failed':
           'Could not open the Privacy Policy. Please try again.',
       'auth_or': 'OR',
       'auth_sign_in_with_email': 'Sign in with Email',
+      'auth_create_account': 'Create account with Email',
+      'auth_full_name_label': 'Full name',
+      'auth_full_name_required': 'Please enter your name.',
       'auth_email_label': 'Email',
       'auth_email_required': 'Please enter a valid email address.',
       'auth_password_label': 'Password',
       'auth_password_required': 'Please enter your password.',
+      'auth_password_min_length': 'Password must be at least 6 characters.',
+      'auth_otp_label': '6-digit verification code',
+      'auth_otp_required': 'Please enter the 6-digit verification code.',
+      'auth_otp_sent_to':
+          'Enter the 6-digit verification code sent to {email}.',
+      'auth_send_verification_code': 'Send verification code',
+      'auth_verify_and_create': 'Verify & Create Account',
+      'auth_resend_code': 'Resend code',
+      'auth_resend_in_seconds': 'Resend code in {seconds}s',
+      'auth_change_email': 'Edit email details',
+      'auth_no_account_create': 'New to Bhromon? Create an account',
+      'auth_have_account_sign_in': 'Already have an account? Sign in',
       'auth_sign_in_button': 'Sign in',
       'auth_back_to_options': 'Back to sign-in options',
       'login_welcome_subtitle':
@@ -978,14 +1006,41 @@ class TranslationKeys {
           'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন।',
       'auth_error_user_disabled':
           'এই অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে। অনুগ্রহ করে সহায়তার জন্য যোগাযোগ করুন।',
+      'auth_error_email_already_in_use':
+          'এই ইমেইল দিয়ে আগেই একটি অ্যাকাউন্ট খোলা হয়েছে। অনুগ্রহ করে সাইন-ইন করুন।',
+      'auth_error_weak_password': 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।',
+      'auth_error_otp_invalid':
+          'ভেরিফিকেশন কোড সঠিক নয়। অনুগ্রহ করে যাচাই করে আবার চেষ্টা করুন।',
+      'auth_error_otp_expired':
+          'ভেরিফিকেশন কোডের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে নতুন কোড নিন।',
+      'auth_error_otp_not_found':
+          'কোনো ভেরিফিকেশন কোড পাওয়া যায়নি। অনুগ্রহ করে নতুন কোড নিন।',
+      'auth_error_otp_cooldown':
+          'নতুন ভেরিফিকেশন কোড নিতে অনুগ্রহ করে ৬০ সেকেন্ড অপেক্ষা করুন।',
+      'auth_error_email_otp_unavailable':
+          'ইমেইল ভেরিফিকেশন সেবা এখন চালু নেই। Google দিয়ে সাইন-ইন করুন বা সহায়তায় যোগাযোগ করুন।',
       'auth_privacy_open_failed':
           'গোপনীয়তা নীতি খোলা যায়নি। আবার চেষ্টা করুন।',
       'auth_or': 'অথবা',
       'auth_sign_in_with_email': 'ইমেইল দিয়ে সাইন-ইন করুন',
+      'auth_create_account': 'ইমেইল দিয়ে নতুন অ্যাকাউন্ট খুলুন',
+      'auth_full_name_label': 'পূর্ণ নাম',
+      'auth_full_name_required': 'অনুগ্রহ করে আপনার নাম লিখুন।',
       'auth_email_label': 'ইমেইল',
       'auth_email_required': 'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা লিখুন।',
       'auth_password_label': 'পাসওয়ার্ড',
       'auth_password_required': 'অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন।',
+      'auth_password_min_length': 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।',
+      'auth_otp_label': '৬-সংখ্যার ভেরিফিকেশন কোড',
+      'auth_otp_required': 'অনুগ্রহ করে ৬-সংখ্যার ভেরিফিকেশন কোড লিখুন।',
+      'auth_otp_sent_to': '{email} ঠিকানায় পাঠানো ৬-সংখ্যার কোডটি লিখুন।',
+      'auth_send_verification_code': 'ভেরিফিকেশন কোড পাঠান',
+      'auth_verify_and_create': 'যাচাই করে অ্যাকাউন্ট খুলুন',
+      'auth_resend_code': 'আবার কোড পাঠান',
+      'auth_resend_in_seconds': '{seconds} সেকেন্ড পর আবার কোড পাঠান',
+      'auth_change_email': 'ইমেইল তথ্য পরিবর্তন করুন',
+      'auth_no_account_create': 'ভ্রমণে নতুন? অ্যাকাউন্ট খুলুন',
+      'auth_have_account_sign_in': 'আগেই অ্যাকাউন্ট আছে? সাইন-ইন করুন',
       'auth_sign_in_button': 'সাইন-ইন করুন',
       'auth_back_to_options': 'অন্যান্য সাইন-ইন পদ্ধতিতে ফিরুন',
       'login_welcome_subtitle':
