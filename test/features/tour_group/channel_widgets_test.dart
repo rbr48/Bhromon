@@ -1,5 +1,6 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import 'package:bhromon/core/theme/theme.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_composer.dart';
@@ -316,6 +317,32 @@ void main() {
           ));
       await tester.tap(find.text('@everyone · the whole tour'));
       expect(picked?.label, 'everyone');
+    });
+
+    testWidgets(
+        'text field uses full width above actions without theme outline border',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await _pump(
+        tester,
+        composer(onSend: () {}),
+        theme: AppTheme.lightTheme,
+      );
+
+      final fieldRect = tester.getRect(find.byType(TextField));
+      final attachRect = tester.getRect(find.byIcon(Icons.attach_file_rounded));
+      final micRect = tester.getRect(find.byIcon(Icons.mic_rounded));
+      final decoration =
+          tester.widget<TextField>(find.byType(TextField)).decoration!;
+
+      expect(fieldRect.width, greaterThanOrEqualTo(360));
+      expect(attachRect.top, greaterThanOrEqualTo(fieldRect.bottom));
+      expect(micRect.top, greaterThanOrEqualTo(fieldRect.bottom));
+      expect(decoration.enabledBorder, InputBorder.none);
+      expect(decoration.focusedBorder, InputBorder.none);
     });
   });
 

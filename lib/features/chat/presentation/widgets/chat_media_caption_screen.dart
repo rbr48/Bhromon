@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/utils/logger.dart';
+import 'chat_composer_card.dart';
 
 class MediaCaptionResult {
   final List<XFile> files;
@@ -368,12 +369,11 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                             controller: _captionController,
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 15),
-                            decoration: InputDecoration(
+                            decoration: borderlessComposerDecoration(
                               hintText: context.l10n
                                   .translate('chat_media_caption_hint'),
                               hintStyle: const TextStyle(
                                   color: Colors.white54, fontSize: 14),
-                              border: InputBorder.none,
                               contentPadding:
                                   const EdgeInsets.symmetric(vertical: 12),
                             ),

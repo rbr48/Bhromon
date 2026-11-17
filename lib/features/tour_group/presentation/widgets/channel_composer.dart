@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
+import '../../../chat/presentation/widgets/chat_composer_card.dart';
 import '../../../chat/presentation/widgets/chat_formatting_toolbar.dart';
 import '../../../chat/presentation/widgets/voice_message_recorder.dart';
 import '../../../chat/data/web_paste_listener.dart';
@@ -238,152 +239,105 @@ class _ChannelComposerState extends State<ChannelComposer> {
               ),
             )
           else
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: context.forest.inset26,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 2),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: TextField(
-                                controller: widget.controller,
-                                focusNode: widget.focusNode,
-                                minLines: 1,
-                                maxLines: 6,
-                                textInputAction: TextInputAction.send,
-                                onChanged: widget.onChanged,
-                                onSubmitted: (_) => widget.onSend(),
-                                contentInsertionConfiguration: _paste.insertion,
-                                contextMenuBuilder: _paste.contextMenu,
-                                style: TextStyle(
-                                  color: context.forest.text,
-                                  fontSize: 16,
-                                  height: 1.38,
-                                  letterSpacing: 0.05,
-                                  fontFamily: 'NotoSansBengali',
-                                  fontFamilyFallback: const [
-                                    'HindSiliguri',
-                                    'Roboto',
-                                    'sans-serif'
-                                  ],
-                                ),
-                                decoration: InputDecoration(
-                                  counterText: '',
-                                  hintText: widget.hint,
-                                  hintStyle: TextStyle(
-                                    color: context.forest.text54,
-                                    fontSize: 15,
-                                    fontFamily: 'NotoSansBengali',
-                                    fontFamilyFallback: const [
-                                      'HindSiliguri',
-                                      'Roboto',
-                                      'sans-serif'
-                                    ],
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(vertical: 10),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Semantics(
-                            label: l10n.translate('format_toolbar_toggle'),
-                            button: true,
-                            child: SizedBox(
-                              width: 32,
-                              height: 48,
-                              child: IconButton(
-                                tooltip:
-                                    l10n.translate('format_toolbar_toggle'),
-                                padding: EdgeInsets.zero,
-                                icon: Text(
-                                  'Aa',
-                                  style: TextStyle(
-                                    color: _showFormatting
-                                        ? AppColors.mintGreen
-                                        : context.forest.text70,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    letterSpacing: -0.5,
-                                    decoration: _showFormatting
-                                        ? TextDecoration.underline
-                                        : TextDecoration.none,
-                                    decorationColor: AppColors.mintGreen,
-                                  ),
-                                ),
-                                onPressed: widget.sending
-                                    ? null
-                                    : () => setState(() =>
-                                        _showFormatting = !_showFormatting),
-                              ),
-                            ),
-                          ),
-                          Semantics(
-                            label: l10n.translate('chan_attach_tooltip'),
-                            button: true,
-                            child: SizedBox(
-                              width: 34,
-                              height: 48,
-                              child: IconButton(
-                                tooltip: l10n.translate('chan_attach_tooltip'),
-                                padding: EdgeInsets.zero,
-                                icon: Icon(Icons.attach_file_rounded,
-                                    color: context.forest.text70, size: 22),
-                                onPressed:
-                                    widget.sending ? null : widget.onAttach,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+            ChatComposerCard(
+              backgroundColor: context.forest.inset26,
+              textField: TextField(
+                controller: widget.controller,
+                focusNode: widget.focusNode,
+                minLines: 1,
+                maxLines: 6,
+                textInputAction: TextInputAction.send,
+                onChanged: widget.onChanged,
+                onSubmitted: (_) => widget.onSend(),
+                contentInsertionConfiguration: _paste.insertion,
+                contextMenuBuilder: _paste.contextMenu,
+                style: TextStyle(
+                  color: context.forest.text,
+                  fontSize: 16,
+                  height: 1.38,
+                  letterSpacing: 0.05,
+                  fontFamily: 'NotoSansBengali',
+                  fontFamilyFallback: const [
+                    'HindSiliguri',
+                    'Roboto',
+                    'sans-serif'
+                  ],
+                ),
+                decoration: borderlessComposerDecoration(
+                  counterText: '',
+                  hintText: widget.hint,
+                  hintStyle: TextStyle(
+                    color: context.forest.text54,
+                    fontSize: 15,
+                    fontFamily: 'NotoSansBengali',
+                    fontFamilyFallback: const [
+                      'HindSiliguri',
+                      'Roboto',
+                      'sans-serif'
+                    ],
+                  ),
+                ),
+              ),
+              leadingActions: [
+                ComposerFormatButton(
+                  active: _showFormatting,
+                  inactiveColor: context.forest.text70,
+                  onPressed: widget.sending
+                      ? null
+                      : () =>
+                          setState(() => _showFormatting = !_showFormatting),
+                ),
+                Semantics(
+                  label: l10n.translate('chan_attach_tooltip'),
+                  button: true,
+                  child: SizedBox(
+                    width: 38,
+                    height: 38,
+                    child: IconButton(
+                      tooltip: l10n.translate('chan_attach_tooltip'),
+                      padding: EdgeInsets.zero,
+                      icon: Icon(Icons.attach_file_rounded,
+                          color: context.forest.text70, size: 21),
+                      onPressed: widget.sending ? null : widget.onAttach,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: widget.controller,
-                    builder: (context, value, _) {
-                      final canRecord = !widget.sending &&
-                          !widget.editing &&
-                          widget.pending.isEmpty &&
-                          value.text.trim().isEmpty;
-                      if (canRecord) {
-                        return IconButton(
-                          tooltip: l10n.translate('chan_voice_tooltip'),
-                          icon: Icon(Icons.mic_rounded,
-                              color: context.forest.accentText),
-                          onPressed: widget.onStartVoice,
-                        );
-                      }
-                      return IconButton(
-                        tooltip: l10n.translate('tour_send'),
-                        icon: widget.sending
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    color: AppColors.mintGreen, strokeWidth: 2),
-                              )
-                            : Icon(Icons.send_rounded,
-                                color: context.forest.accentText),
-                        onPressed: widget.sending ? null : widget.onSend,
-                      );
-                    },
-                  ),
-                ],
+                ),
+              ],
+              trailingAction: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: widget.controller,
+                builder: (context, value, _) {
+                  final canRecord = !widget.sending &&
+                      !widget.editing &&
+                      widget.pending.isEmpty &&
+                      value.text.trim().isEmpty;
+                  if (canRecord) {
+                    return IconButton(
+                      tooltip: l10n.translate('chan_voice_tooltip'),
+                      constraints:
+                          const BoxConstraints(minWidth: 38, minHeight: 38),
+                      padding: EdgeInsets.zero,
+                      icon: Icon(Icons.mic_rounded,
+                          color: context.forest.accentText),
+                      onPressed: widget.onStartVoice,
+                    );
+                  }
+                  return IconButton(
+                    tooltip: l10n.translate('tour_send'),
+                    constraints:
+                        const BoxConstraints(minWidth: 38, minHeight: 38),
+                    padding: EdgeInsets.zero,
+                    icon: widget.sending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                color: AppColors.mintGreen, strokeWidth: 2),
+                          )
+                        : Icon(Icons.send_rounded,
+                            color: context.forest.accentText),
+                    onPressed: widget.sending ? null : widget.onSend,
+                  );
+                },
               ),
             ),
         ],

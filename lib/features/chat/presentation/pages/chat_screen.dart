@@ -54,6 +54,7 @@ import '../../data/chat_deletion_service.dart';
 import '../../domain/chat_deletion.dart';
 import '../../domain/chat_search.dart';
 import '../widgets/chat_delete_dialogs.dart';
+import '../widgets/chat_composer_card.dart';
 import '../widgets/chat_formatting_toolbar.dart';
 import '../widgets/chat_rich_text.dart';
 import '../../data/vps_chat_service.dart';
@@ -4897,239 +4898,130 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                             onClose: () => setState(
                                                 () => _showFormatting = false),
                                           ),
-                                        Container(
-                                          padding: EdgeInsets.fromLTRB(
-                                              8,
-                                              6,
-                                              8,
-                                              8 +
+                                        ChatComposerCard(
+                                          backgroundColor: context.chat.panel,
+                                          outerPadding: EdgeInsets.fromLTRB(
+                                              4,
+                                              4,
+                                              4,
+                                              6 +
                                                   MediaQuery.paddingOf(context)
                                                       .bottom),
-                                          color: Colors
-                                              .transparent, // Floating look
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              // WhatsApp left rounded input container
-                                              Expanded(
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    color: context.chat.panel,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            24),
-                                                  ),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 2),
-                                                  child: Row(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.end,
-                                                    children: [
-                                                      Expanded(
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal:
-                                                                      4),
-                                                          child: TextField(
-                                                            controller:
-                                                                _messageController,
-                                                            focusNode:
-                                                                _messageFocusNode,
-                                                            minLines: 1,
-                                                            maxLines: 6,
-                                                            contentInsertionConfiguration:
-                                                                _composerPaste
-                                                                    .insertion,
-                                                            contextMenuBuilder:
-                                                                _composerPaste
-                                                                    .contextMenu,
-                                                            keyboardType:
-                                                                TextInputType
-                                                                    .multiline,
-                                                            onTap: () {
-                                                              if (_showEmojiPicker) {
-                                                                setState(() =>
-                                                                    _showEmojiPicker =
-                                                                        false);
-                                                              }
-                                                            },
-                                                            style: TextStyle(
-                                                              color: context
-                                                                  .chat.text,
-                                                              fontSize: 16,
-                                                              height: 1.38,
-                                                              letterSpacing:
-                                                                  0.05,
-                                                              fontFamily:
-                                                                  'NotoSansBengali',
-                                                              fontFamilyFallback: const [
-                                                                'HindSiliguri',
-                                                                'Roboto',
-                                                                'sans-serif'
-                                                              ],
-                                                            ),
-                                                            decoration:
-                                                                InputDecoration(
-                                                              hintText: context
-                                                                  .l10n
-                                                                  .translate(
-                                                                      'chat_message_placeholder'),
-                                                              hintStyle:
-                                                                  TextStyle(
-                                                                color: context
-                                                                    .chat.grey,
-                                                                fontSize: 16,
-                                                                fontFamily:
-                                                                    'NotoSansBengali',
-                                                                fontFamilyFallback: const [
-                                                                  'HindSiliguri',
-                                                                  'Roboto',
-                                                                  'sans-serif'
-                                                                ],
-                                                              ),
-                                                              border:
-                                                                  InputBorder
-                                                                      .none,
-                                                              contentPadding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                      vertical:
-                                                                          10),
-                                                            ),
-                                                            onSubmitted: (_) =>
-                                                                _sendMessage(
-                                                                    currentUid,
-                                                                    currentName),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Semantics(
-                                                        label: context.l10n
-                                                            .translate(
-                                                                'format_toolbar_toggle'),
-                                                        button: true,
-                                                        child: SizedBox(
-                                                          width: 32,
-                                                          height: 48,
-                                                          child: IconButton(
-                                                            tooltip: context
-                                                                .l10n
-                                                                .translate(
-                                                                    'format_toolbar_toggle'),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            icon: Text(
-                                                              'Aa',
-                                                              style: TextStyle(
-                                                                color: _showFormatting
-                                                                    ? AppColors
-                                                                        .mintGreen
-                                                                    : context
-                                                                        .chat
-                                                                        .grey,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 14,
-                                                                letterSpacing:
-                                                                    -0.5,
-                                                                decoration: _showFormatting
-                                                                    ? TextDecoration
-                                                                        .underline
-                                                                    : TextDecoration
-                                                                        .none,
-                                                                decorationColor:
-                                                                    AppColors
-                                                                        .mintGreen,
-                                                              ),
-                                                            ),
-                                                            onPressed: () =>
-                                                                setState(() =>
-                                                                    _showFormatting =
-                                                                        !_showFormatting),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Semantics(
-                                                        label: context.l10n
-                                                            .translate(
-                                                                'chat_attach_tooltip'),
-                                                        button: true,
-                                                        child: SizedBox(
-                                                          width: 34,
-                                                          height: 48,
-                                                          child: IconButton(
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            icon: Icon(
-                                                                Icons
-                                                                    .attach_file,
-                                                                color: context
-                                                                    .chat.grey,
-                                                                size: 22),
-                                                            onPressed: () =>
-                                                                _openAttachmentSheet(
-                                                                    currentUid,
-                                                                    currentName),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                          textField: TextField(
+                                            controller: _messageController,
+                                            focusNode: _messageFocusNode,
+                                            minLines: 1,
+                                            maxLines: 6,
+                                            contentInsertionConfiguration:
+                                                _composerPaste.insertion,
+                                            contextMenuBuilder:
+                                                _composerPaste.contextMenu,
+                                            keyboardType:
+                                                TextInputType.multiline,
+                                            onTap: () {
+                                              if (_showEmojiPicker) {
+                                                setState(() =>
+                                                    _showEmojiPicker = false);
+                                              }
+                                            },
+                                            style: TextStyle(
+                                              color: context.chat.text,
+                                              fontSize: 16,
+                                              height: 1.38,
+                                              letterSpacing: 0.05,
+                                              fontFamily: 'NotoSansBengali',
+                                              fontFamilyFallback: const [
+                                                'HindSiliguri',
+                                                'Roboto',
+                                                'sans-serif'
+                                              ],
+                                            ),
+                                            decoration:
+                                                borderlessComposerDecoration(
+                                              hintText: context.l10n.translate(
+                                                  'chat_message_placeholder'),
+                                              hintStyle: TextStyle(
+                                                color: context.chat.grey,
+                                                fontSize: 16,
+                                                fontFamily: 'NotoSansBengali',
+                                                fontFamilyFallback: const [
+                                                  'HindSiliguri',
+                                                  'Roboto',
+                                                  'sans-serif'
+                                                ],
+                                              ),
+                                            ),
+                                            onSubmitted: (_) => _sendMessage(
+                                                currentUid, currentName),
+                                          ),
+                                          leadingActions: [
+                                            ComposerFormatButton(
+                                              active: _showFormatting,
+                                              inactiveColor: context.chat.grey,
+                                              onPressed: () => setState(() =>
+                                                  _showFormatting =
+                                                      !_showFormatting),
+                                            ),
+                                            Semantics(
+                                              label: context.l10n.translate(
+                                                  'chat_attach_tooltip'),
+                                              button: true,
+                                              child: SizedBox(
+                                                width: 38,
+                                                height: 38,
+                                                child: IconButton(
+                                                  tooltip: context.l10n
+                                                      .translate(
+                                                          'chat_attach_tooltip'),
+                                                  padding: EdgeInsets.zero,
+                                                  icon: Icon(Icons.attach_file,
+                                                      color: context.chat.grey,
+                                                      size: 21),
+                                                  onPressed: () =>
+                                                      _openAttachmentSheet(
+                                                          currentUid,
+                                                          currentName),
                                                 ),
                                               ),
-                                              const SizedBox(width: 6),
-                                              // WhatsApp right circular action button
+                                            ),
+                                          ],
+                                          trailingAction:
                                               ValueListenableBuilder<
                                                   TextEditingValue>(
-                                                valueListenable:
-                                                    _messageController,
-                                                builder: (context, val, child) {
-                                                  final hasText = val.text
-                                                      .trim()
-                                                      .isNotEmpty;
-                                                  final isEditing =
-                                                      _editingMessage != null;
-                                                  return GestureDetector(
-                                                    onTap: () {
-                                                      if (hasText ||
-                                                          isEditing) {
-                                                        _sendMessage(currentUid,
-                                                            currentName);
-                                                      } else {
-                                                        setState(() =>
-                                                            _isRecordingVoice =
-                                                                true);
-                                                      }
-                                                    },
-                                                    child: CircleAvatar(
-                                                      radius: 22,
-                                                      backgroundColor:
-                                                          const Color(
-                                                              0xFF00A884),
-                                                      child: Icon(
-                                                        isEditing
-                                                            ? Icons
-                                                                .check_rounded
-                                                            : (hasText
-                                                                ? Icons
-                                                                    .send_rounded
-                                                                : Icons
-                                                                    .mic_rounded),
-                                                        color:
-                                                            context.chat.text,
-                                                        size: 19,
-                                                      ),
-                                                    ),
-                                                  );
+                                            valueListenable: _messageController,
+                                            builder: (context, val, child) {
+                                              final hasText =
+                                                  val.text.trim().isNotEmpty;
+                                              final isEditing =
+                                                  _editingMessage != null;
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  if (hasText || isEditing) {
+                                                    _sendMessage(currentUid,
+                                                        currentName);
+                                                  } else {
+                                                    setState(() =>
+                                                        _isRecordingVoice =
+                                                            true);
+                                                  }
                                                 },
-                                              ),
-                                            ],
+                                                child: CircleAvatar(
+                                                  radius: 19,
+                                                  backgroundColor:
+                                                      const Color(0xFF00A884),
+                                                  child: Icon(
+                                                    isEditing
+                                                        ? Icons.check_rounded
+                                                        : (hasText
+                                                            ? Icons.send_rounded
+                                                            : Icons
+                                                                .mic_rounded),
+                                                    color: context.chat.text,
+                                                    size: 18,
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ),
                                         if (_showEmojiPicker)
