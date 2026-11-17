@@ -11,6 +11,8 @@ import 'package:bhromon/core/value_objects/explorer_score.dart';
 import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:bhromon/features/auth/domain/usecases/register_with_email_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/reset_password_with_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/send_password_reset_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/send_signup_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
@@ -408,6 +410,81 @@ void main() {
         otp: tOtpCode,
         displayName: null,
       )).called(1);
+    });
+  });
+
+  // ────────────────────────────────────────────────────
+  // SendPasswordResetOtpUseCase & ResetPasswordWithOtpUseCase
+  // ────────────────────────────────────────────────────
+  group('SendPasswordResetOtpUseCase', () {
+    late SendPasswordResetOtpUseCase useCase;
+
+    setUp(() => useCase = SendPasswordResetOtpUseCase(mockRepo));
+
+    test('happy path: returns Right(message) when reset OTP email is sent',
+        () async {
+      when(mockRepo.sendPasswordResetOtp(tEmail))
+          .thenAnswer((_) async => const Right('Verification code sent'));
+
+      final result = await useCase(tEmail);
+
+      expect(result, const Right<Failure, String>('Verification code sent'));
+      verify(mockRepo.sendPasswordResetOtp(tEmail)).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    });
+  });
+
+  group('ResetPasswordWithOtpUseCase', () {
+    late ResetPasswordWithOtpUseCase useCase;
+    const tNewPassword = 'new-secret-password';
+
+    setUp(() => useCase = ResetPasswordWithOtpUseCase(mockRepo));
+
+    test('happy path: resets password with OTP and returns profile', () async {
+      when(mockRepo.resetPasswordWithOtp(
+        email: tEmail,
+        password: tNewPassword,
+        otp: tOtpCode,
+      )).thenAnswer((_) async => Right(tProfile));
+
+      final result = await useCase(
+        const ResetPasswordWithOtpParams(
+          email: tEmail,
+          password: tNewPassword,
+          otp: tOtpCode,
+        ),
+      );
+
+      expect(result, Right<Failure, ExplorerProfile>(tProfile));
+      verify(mockRepo.resetPasswordWithOtp(
+        email: tEmail,
+        password: tNewPassword,
+        otp: tOtpCode,
+      )).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    });
+
+    test('failure path: returns Left(AuthFailure) when account is missing',
+        () async {
+      const missingFailure = AuthFailure(
+        'No account found',
+        reason: AuthFailureReason.accountNotFound,
+      );
+      when(mockRepo.resetPasswordWithOtp(
+        email: tEmail,
+        password: tNewPassword,
+        otp: tOtpCode,
+      )).thenAnswer((_) async => const Left(missingFailure));
+
+      final result = await useCase(
+        const ResetPasswordWithOtpParams(
+          email: tEmail,
+          password: tNewPassword,
+          otp: tOtpCode,
+        ),
+      );
+
+      expect(result, const Left<Failure, ExplorerProfile>(missingFailure));
     });
   });
 }

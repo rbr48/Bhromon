@@ -8,6 +8,8 @@ import 'package:bhromon/core/value_objects/explorer_score.dart';
 import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/usecases/get_current_profile_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/register_with_email_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/reset_password_with_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/send_password_reset_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/send_signup_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
@@ -75,6 +77,8 @@ void main() {
       SignInEmailPasswordUseCase(repo),
       SendSignUpOtpUseCase(repo),
       RegisterWithEmailOtpUseCase(repo),
+      SendPasswordResetOtpUseCase(repo),
+      ResetPasswordWithOtpUseCase(repo),
     );
     cubit.groupRepository = () => groups;
     return cubit;

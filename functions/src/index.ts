@@ -40,3 +40,4 @@ export { backupFirestore } from './backupFirestore';
 export { sendOtpEmail } from './sendOtpEmail';
 export { verifyOtp } from './verifyOtp';
 export { registerWithEmailOtp } from './registerWithEmailOtp';
+export { resetPasswordWithOtp } from './resetPasswordWithOtp';

@@ -11,6 +11,12 @@ abstract class IAuthRepository {
     required String otp,
     String? displayName,
   });
+  Future<Either<Failure, String>> sendPasswordResetOtp(String email);
+  Future<Either<Failure, ExplorerProfile>> resetPasswordWithOtp({
+    required String email,
+    required String password,
+    required String otp,
+  });
   Future<Either<Failure, ExplorerProfile>> signInWithEmailPassword({
     required String email,
     required String password,

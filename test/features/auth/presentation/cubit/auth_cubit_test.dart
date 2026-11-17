@@ -11,6 +11,8 @@ import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:bhromon/features/auth/domain/usecases/get_current_profile_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/register_with_email_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/reset_password_with_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/send_password_reset_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/send_signup_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
@@ -38,6 +40,8 @@ void main() {
   late SignInEmailPasswordUseCase signInEmailPassword;
   late SendSignUpOtpUseCase sendSignUpOtp;
   late RegisterWithEmailOtpUseCase registerWithEmailOtp;
+  late SendPasswordResetOtpUseCase sendPasswordResetOtp;
+  late ResetPasswordWithOtpUseCase resetPasswordWithOtp;
 
   final tProfile = ExplorerProfile(
     uid: 'uid-cubit-test',
@@ -69,6 +73,8 @@ void main() {
         signInEmailPassword,
         sendSignUpOtp,
         registerWithEmailOtp,
+        sendPasswordResetOtp,
+        resetPasswordWithOtp,
       );
 
   setUp(() {
@@ -82,6 +88,8 @@ void main() {
     signInEmailPassword = SignInEmailPasswordUseCase(mockRepo);
     sendSignUpOtp = SendSignUpOtpUseCase(mockRepo);
     registerWithEmailOtp = RegisterWithEmailOtpUseCase(mockRepo);
+    sendPasswordResetOtp = SendPasswordResetOtpUseCase(mockRepo);
+    resetPasswordWithOtp = ResetPasswordWithOtpUseCase(mockRepo);
   });
 
   // ────────────────────────────────────────────────────
@@ -480,6 +488,77 @@ void main() {
         const AuthError(
           'Invalid code',
           reason: AuthFailureReason.otpInvalid,
+        ),
+      ],
+    );
+  });
+
+  // ────────────────────────────────────────────────────
+  // requestPasswordResetOtp & resetPasswordWithOtp
+  // ────────────────────────────────────────────────────
+  group('email OTP password reset', () {
+    const tNewPassword = 'new-secret-password';
+
+    blocTest<AuthCubit, AuthState>(
+      'requestPasswordResetOtp emits [AuthLoading, AuthOtpSent] when code is emailed',
+      build: () {
+        when(mockRepo.sendPasswordResetOtp(tEmail))
+            .thenAnswer((_) async => const Right('Verification code sent'));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.requestPasswordResetOtp('  $tEmail  '),
+      expect: () => [const AuthLoading(), const AuthOtpSent(tEmail)],
+      verify: (_) => verify(mockRepo.sendPasswordResetOtp(tEmail)).called(1),
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'resetPasswordWithOtp emits [AuthLoading, Authenticated] on valid OTP',
+      build: () {
+        when(mockRepo.resetPasswordWithOtp(
+          email: tEmail,
+          password: tNewPassword,
+          otp: tOtpCode,
+        )).thenAnswer((_) async => Right(tProfile));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.resetPasswordWithOtp(
+        email: tEmail,
+        password: tNewPassword,
+        otp: tOtpCode,
+      ),
+      expect: () => [const AuthLoading(), Authenticated(tProfile)],
+      verify: (_) {
+        verify(mockRepo.resetPasswordWithOtp(
+          email: tEmail,
+          password: tNewPassword,
+          otp: tOtpCode,
+        )).called(1);
+      },
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'resetPasswordWithOtp emits [AuthLoading, AuthError(accountNotFound)]',
+      build: () {
+        when(mockRepo.resetPasswordWithOtp(
+          email: tEmail,
+          password: tNewPassword,
+          otp: tOtpCode,
+        )).thenAnswer((_) async => const Left(AuthFailure(
+              'No account found',
+              reason: AuthFailureReason.accountNotFound,
+            )));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.resetPasswordWithOtp(
+        email: tEmail,
+        password: tNewPassword,
+        otp: tOtpCode,
+      ),
+      expect: () => [
+        const AuthLoading(),
+        const AuthError(
+          'No account found',
+          reason: AuthFailureReason.accountNotFound,
         ),
       ],
     );

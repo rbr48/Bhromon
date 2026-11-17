@@ -1,11 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 
 import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/localization/locale_controller.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/features/auth/presentation/pages/login_screen.dart';
@@ -17,6 +21,9 @@ class _FakeAuthCubit extends Cubit<AuthState> implements AuthCubit {
   final List<String> signUpOtpEmails = [];
   final List<({String email, String password, String otp, String? displayName})>
       registerCalls = [];
+  final List<String> resetOtpEmails = [];
+  final List<({String email, String password, String otp})> resetPasswordCalls =
+      [];
   int googleCalls = 0;
 
   @override
@@ -49,6 +56,25 @@ class _FakeAuthCubit extends Cubit<AuthState> implements AuthCubit {
   }
 
   @override
+  Future<void> requestPasswordResetOtp(String email) async {
+    resetOtpEmails.add(email);
+    emit(AuthOtpSent(email));
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    resetPasswordCalls.add((
+      email: email,
+      password: password,
+      otp: otp,
+    ));
+  }
+
+  @override
   Future<void> signInWithGoogle() async {
     googleCalls++;
   }
@@ -68,23 +94,40 @@ Widget _buildTestApp(_FakeAuthCubit authCubit) {
     ],
   );
 
-  return BlocProvider<AuthCubit>.value(
-    value: authCubit,
-    child: MaterialApp.router(
-      locale: const Locale('en'),
-      supportedLocales: const [Locale('en'), Locale('bn')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      routerConfig: router,
+  return ListenableBuilder(
+    listenable: LocaleController.instance,
+    builder: (_, __) => BlocProvider<AuthCubit>.value(
+      value: authCubit,
+      child: MaterialApp.router(
+        locale: LocaleController.instance.locale,
+        supportedLocales: const [Locale('en'), Locale('bn')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: router,
+      ),
     ),
   );
 }
 
 void main() {
+  late Directory hiveDir;
+
+  setUpAll(() {
+    hiveDir = Directory.systemTemp.createTempSync('bhromon_login_test');
+    Hive.init(hiveDir.path);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (hiveDir.existsSync()) {
+      hiveDir.deleteSync(recursive: true);
+    }
+  });
+
   testWidgets('renders Google and Email sign-in options on initial load',
       (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
@@ -281,5 +324,122 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'forgot password flow sends 6-digit reset OTP and resets password',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final cubit = _FakeAuthCubit(const Unauthenticated());
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_buildTestApp(cubit));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('login_open_email_signin_button')),
+    );
+    await tester.tap(find.byKey(const Key('login_open_email_signin_button')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('login_email_field')),
+      'forgot@bhromon.fun',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('login_forgot_password_button')),
+    );
+    await tester.tap(find.byKey(const Key('login_forgot_password_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('forgot_send_otp_button')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('forgot_send_otp_button')),
+    );
+    await tester.tap(find.byKey(const Key('forgot_send_otp_button')));
+    await tester.pumpAndSettle();
+
+    expect(cubit.resetOtpEmails, ['forgot@bhromon.fun']);
+    expect(find.byKey(const Key('forgot_otp_field')), findsOneWidget);
+    expect(find.byKey(const Key('forgot_new_password_field')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('forgot_otp_field')),
+      '654321',
+    );
+    await tester.enterText(
+      find.byKey(const Key('forgot_new_password_field')),
+      'NewSecret123!',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('forgot_reset_submit_button')),
+    );
+    await tester.tap(find.byKey(const Key('forgot_reset_submit_button')));
+    await tester.pump();
+
+    expect(cubit.resetPasswordCalls, [
+      (
+        email: 'forgot@bhromon.fun',
+        password: 'NewSecret123!',
+        otp: '654321',
+      ),
+    ]);
+
+    cubit.emit(const AuthError(
+      'No account found',
+      reason: AuthFailureReason.accountNotFound,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.text(
+        'No account found with this email. Please create a new account instead.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'language switch defaults to English and toggles EN/BN across auth screens',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(() => LocaleController.instance.setLanguage('en'));
+
+    await LocaleController.instance.setLanguage('en');
+    final cubit = _FakeAuthCubit(const Unauthenticated());
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_buildTestApp(cubit));
+    await tester.pumpAndSettle();
+
+    expect(LocaleController.instance.locale.languageCode, 'en');
+    expect(find.byKey(const Key('login_language_switch_pill')), findsOneWidget);
+    expect(find.text('Sign in with Email'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('language_option_bn')));
+    await tester.pumpAndSettle();
+    expect(LocaleController.instance.locale.languageCode, 'bn');
+    expect(find.text('ইমেইল দিয়ে সাইন-ইন করুন'), findsOneWidget);
+
+    // Navigate into Sign in -> Forgot Password: switcher remains visible & works
+    await tester.ensureVisible(
+      find.byKey(const Key('login_open_email_signin_button')),
+    );
+    await tester.tap(find.byKey(const Key('login_open_email_signin_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login_language_switch_pill')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('language_option_en')));
+    await tester.pumpAndSettle();
+    expect(LocaleController.instance.locale.languageCode, 'en');
+    expect(find.text('Forgot password?'), findsOneWidget);
   });
 }
