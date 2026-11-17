@@ -26,6 +26,13 @@ enum AuthFailureReason {
   invalidCredentials,
   tooManyRequests,
   userDisabled,
+  emailAlreadyInUse,
+  weakPassword,
+  otpInvalid,
+  otpExpired,
+  otpNotFound,
+  otpCooldown,
+  emailOtpUnavailable,
 }
 
 final class AuthFailure extends Failure {

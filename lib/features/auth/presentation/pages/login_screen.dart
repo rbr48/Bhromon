@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:bhromon/core/theme/colors.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -33,6 +36,13 @@ String _authErrorText(BuildContext context, AuthFailureReason reason) {
     AuthFailureReason.invalidCredentials => 'auth_error_invalid_credentials',
     AuthFailureReason.tooManyRequests => 'auth_error_too_many_requests',
     AuthFailureReason.userDisabled => 'auth_error_user_disabled',
+    AuthFailureReason.emailAlreadyInUse => 'auth_error_email_already_in_use',
+    AuthFailureReason.weakPassword => 'auth_error_weak_password',
+    AuthFailureReason.otpInvalid => 'auth_error_otp_invalid',
+    AuthFailureReason.otpExpired => 'auth_error_otp_expired',
+    AuthFailureReason.otpNotFound => 'auth_error_otp_not_found',
+    AuthFailureReason.otpCooldown => 'auth_error_otp_cooldown',
+    AuthFailureReason.emailOtpUnavailable => 'auth_error_email_otp_unavailable',
     AuthFailureReason.unknown || AuthFailureReason.cancelled => 'error_generic',
   };
   return context.l10n.translate(key);
@@ -370,6 +380,8 @@ class _DotLine extends StatelessWidget {
   }
 }
 
+enum _AuthFormMode { options, emailSignIn, emailSignUp, emailSignUpOtp }
+
 // ─── Sign-in form ───────────────────────────────────────────────────────────
 class _LoginForm extends StatefulWidget {
   const _LoginForm({required this.loading});
@@ -384,10 +396,15 @@ class _LoginFormState extends State<_LoginForm> {
   late final TapGestureRecognizer _termsRecognizer;
   late final TapGestureRecognizer _privacyRecognizer;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _otpFormKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _showEmailForm = false;
+  final TextEditingController _otpController = TextEditingController();
+  _AuthFormMode _mode = _AuthFormMode.options;
   bool _obscurePassword = true;
+  int _resendSeconds = 0;
+  Timer? _resendTimer;
 
   @override
   void initState() {
@@ -419,11 +436,41 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _otpController.dispose();
     super.dispose();
+  }
+
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 60);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_resendSeconds <= 1) {
+        timer.cancel();
+        setState(() => _resendSeconds = 0);
+      } else {
+        setState(() => _resendSeconds -= 1);
+      }
+    });
+  }
+
+  void _switchMode(_AuthFormMode mode) {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _mode = mode;
+      if (mode != _AuthFormMode.emailSignUpOtp) {
+        _otpController.clear();
+      }
+    });
   }
 
   void _submitEmailPassword() {
@@ -432,6 +479,23 @@ class _LoginFormState extends State<_LoginForm> {
     context.read<AuthCubit>().signInWithEmailPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text,
+        );
+  }
+
+  void _submitSendSignUpOtp() {
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
+    context.read<AuthCubit>().requestSignUpOtp(_emailController.text.trim());
+  }
+
+  void _submitVerifySignUpOtp() {
+    final form = _otpFormKey.currentState;
+    if (form == null || !form.validate()) return;
+    context.read<AuthCubit>().registerWithEmailOtp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          otp: _otpController.text.trim(),
+          displayName: _nameController.text.trim(),
         );
   }
 
@@ -566,204 +630,470 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.loading) {
-      return const _LoadingView();
-    }
     final l10n = context.l10n;
-    return Column(
-      key: const ValueKey('login_form'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 22,
-              decoration: BoxDecoration(
-                color: _kGreen,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Welcome Explorer',
-              style: TextStyle(
-                color: _kWhite,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.translate('login_welcome_subtitle'),
-          style: const TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
-        ),
-        const SizedBox(height: 24),
-
-        if (!_showEmailForm) ...[
-          _GoogleButton(
-            onTap: () {
-              context.read<AuthCubit>().signInWithGoogle();
-            },
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Expanded(child: Divider(color: _kBorder, height: 1)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  l10n.translate('auth_or'),
-                  style: const TextStyle(
-                    color: _kWhite54,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-              const Expanded(child: Divider(color: _kBorder, height: 1)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _SecondaryAuthButton(
-            icon: Icons.email_outlined,
-            label: l10n.translate('auth_sign_in_with_email'),
-            onTap: () => setState(() => _showEmailForm = true),
-          ),
-        ] else ...[
-          Form(
-            key: _formKey,
-            child: Column(
+    return BlocListener<AuthCubit, AuthState>(
+      listenWhen: (_, state) => state is AuthOtpSent,
+      listener: (_, state) {
+        if (state is AuthOtpSent && _mode != _AuthFormMode.emailSignIn) {
+          setState(() => _mode = _AuthFormMode.emailSignUpOtp);
+          _startResendCooldown();
+        }
+      },
+      child: widget.loading
+          ? const _LoadingView()
+          : Column(
+              key: const ValueKey('login_form'),
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  key: const Key('login_email_field'),
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                  style: const TextStyle(color: _kWhite, fontSize: 15),
-                  decoration: _emailFieldDecoration(
-                    label: l10n.translate('auth_email_label'),
-                    prefixIcon: Icons.email_outlined,
-                  ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.isEmpty || !v.contains('@')) {
-                      return l10n.translate('auth_email_required');
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  key: const Key('login_password_field'),
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [AutofillHints.password],
-                  style: const TextStyle(color: _kWhite, fontSize: 15),
-                  onFieldSubmitted: (_) => _submitEmailPassword(),
-                  decoration: _emailFieldDecoration(
-                    label: l10n.translate('auth_password_label'),
-                    prefixIcon: Icons.lock_outline_rounded,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: _kWhite54,
-                        size: 20,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                  validator: (value) {
-                    if ((value ?? '').isEmpty) {
-                      return l10n.translate('auth_password_required');
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  height: 50,
-                  child: FilledButton(
-                    key: const Key('login_email_submit_button'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _kGreen,
-                      foregroundColor: _kBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: _kGreen,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    onPressed: _submitEmailPassword,
-                    child: Text(
-                      l10n.translate('auth_sign_in_button'),
-                      style: const TextStyle(
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Welcome Explorer',
+                      style: TextStyle(
+                        color: _kWhite,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => setState(() => _showEmailForm = false),
-                  child: Text(
-                    l10n.translate('auth_back_to_options'),
-                    style: const TextStyle(color: _kWhite54, fontSize: 13),
+                Text(
+                  l10n.translate('login_welcome_subtitle'),
+                  style: const TextStyle(
+                      color: _kWhite54, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 24),
+                if (_mode == _AuthFormMode.options) ...[
+                  _GoogleButton(
+                    onTap: () {
+                      context.read<AuthCubit>().signInWithGoogle();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Expanded(
+                          child: Divider(color: _kBorder, height: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          l10n.translate('auth_or'),
+                          style: const TextStyle(
+                            color: _kWhite54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                          child: Divider(color: _kBorder, height: 1)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _SecondaryAuthButton(
+                    key: const Key('login_open_email_signin_button'),
+                    icon: Icons.email_outlined,
+                    label: l10n.translate('auth_sign_in_with_email'),
+                    onTap: () => _switchMode(_AuthFormMode.emailSignIn),
+                  ),
+                  const SizedBox(height: 12),
+                  _SecondaryAuthButton(
+                    key: const Key('login_open_create_account_button'),
+                    icon: Icons.person_add_alt_1_outlined,
+                    label: l10n.translate('auth_create_account'),
+                    onTap: () => _switchMode(_AuthFormMode.emailSignUp),
+                  ),
+                ] else if (_mode == _AuthFormMode.emailSignIn) ...[
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          key: const Key('login_email_field'),
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          style: const TextStyle(color: _kWhite, fontSize: 15),
+                          decoration: _emailFieldDecoration(
+                            label: l10n.translate('auth_email_label'),
+                            prefixIcon: Icons.email_outlined,
+                          ),
+                          validator: (value) {
+                            final v = value?.trim() ?? '';
+                            if (v.isEmpty || !v.contains('@')) {
+                              return l10n.translate('auth_email_required');
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          key: const Key('login_password_field'),
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          style: const TextStyle(color: _kWhite, fontSize: 15),
+                          onFieldSubmitted: (_) => _submitEmailPassword(),
+                          decoration: _emailFieldDecoration(
+                            label: l10n.translate('auth_password_label'),
+                            prefixIcon: Icons.lock_outline_rounded,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: _kWhite54,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          validator: (value) {
+                            if ((value ?? '').isEmpty) {
+                              return l10n.translate('auth_password_required');
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          height: 50,
+                          child: FilledButton(
+                            key: const Key('login_email_submit_button'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _kGreen,
+                              foregroundColor: _kBg,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: _submitEmailPassword,
+                            child: Text(
+                              l10n.translate('auth_sign_in_button'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () =>
+                              _switchMode(_AuthFormMode.emailSignUp),
+                          child: Text(
+                            l10n.translate('auth_no_account_create'),
+                            style:
+                                const TextStyle(color: _kGreen, fontSize: 13),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _switchMode(_AuthFormMode.options),
+                          child: Text(
+                            l10n.translate('auth_back_to_options'),
+                            style:
+                                const TextStyle(color: _kWhite54, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (_mode == _AuthFormMode.emailSignUp) ...[
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          key: const Key('signup_name_field'),
+                          controller: _nameController,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.name],
+                          style: const TextStyle(color: _kWhite, fontSize: 15),
+                          decoration: _emailFieldDecoration(
+                            label: l10n.translate('auth_full_name_label'),
+                            prefixIcon: Icons.person_outline_rounded,
+                          ),
+                          validator: (value) {
+                            if ((value?.trim() ?? '').isEmpty) {
+                              return l10n.translate('auth_full_name_required');
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          key: const Key('signup_email_field'),
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          style: const TextStyle(color: _kWhite, fontSize: 15),
+                          decoration: _emailFieldDecoration(
+                            label: l10n.translate('auth_email_label'),
+                            prefixIcon: Icons.email_outlined,
+                          ),
+                          validator: (value) {
+                            final v = value?.trim() ?? '';
+                            if (v.isEmpty || !v.contains('@')) {
+                              return l10n.translate('auth_email_required');
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          key: const Key('signup_password_field'),
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.newPassword],
+                          style: const TextStyle(color: _kWhite, fontSize: 15),
+                          onFieldSubmitted: (_) => _submitSendSignUpOtp(),
+                          decoration: _emailFieldDecoration(
+                            label: l10n.translate('auth_password_label'),
+                            prefixIcon: Icons.lock_outline_rounded,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: _kWhite54,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          validator: (value) {
+                            final v = value ?? '';
+                            if (v.isEmpty) {
+                              return l10n.translate('auth_password_required');
+                            }
+                            if (v.length < 6) {
+                              return l10n.translate('auth_password_min_length');
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          height: 50,
+                          child: FilledButton(
+                            key: const Key('signup_send_otp_button'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _kGreen,
+                              foregroundColor: _kBg,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: _submitSendSignUpOtp,
+                            child: Text(
+                              l10n.translate('auth_send_verification_code'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () =>
+                              _switchMode(_AuthFormMode.emailSignIn),
+                          child: Text(
+                            l10n.translate('auth_have_account_sign_in'),
+                            style:
+                                const TextStyle(color: _kGreen, fontSize: 13),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _switchMode(_AuthFormMode.options),
+                          child: Text(
+                            l10n.translate('auth_back_to_options'),
+                            style:
+                                const TextStyle(color: _kWhite54, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Form(
+                    key: _otpFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF111D15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _kBorder),
+                          ),
+                          child: Text(
+                            l10n.translate('auth_otp_sent_to').replaceAll(
+                                  '{email}',
+                                  _emailController.text.trim(),
+                                ),
+                            style: const TextStyle(
+                                color: _kWhite, fontSize: 13, height: 1.4),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          key: const Key('signup_otp_field'),
+                          controller: _otpController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ],
+                          onFieldSubmitted: (_) => _submitVerifySignUpOtp(),
+                          style: const TextStyle(
+                            color: _kWhite,
+                            fontSize: 18,
+                            letterSpacing: 6,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: _emailFieldDecoration(
+                            label: l10n.translate('auth_otp_label'),
+                            prefixIcon: Icons.mark_email_read_outlined,
+                          ),
+                          validator: (value) {
+                            final v = value?.trim() ?? '';
+                            if (!RegExp(r'^\d{6}$').hasMatch(v)) {
+                              return l10n.translate('auth_otp_required');
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          height: 50,
+                          child: FilledButton(
+                            key: const Key('signup_verify_otp_button'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _kGreen,
+                              foregroundColor: _kBg,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: _submitVerifySignUpOtp,
+                            child: Text(
+                              l10n.translate('auth_verify_and_create'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          children: [
+                            TextButton(
+                              key: const Key('signup_resend_otp_button'),
+                              onPressed: _resendSeconds > 0
+                                  ? null
+                                  : () => context
+                                      .read<AuthCubit>()
+                                      .requestSignUpOtp(
+                                          _emailController.text.trim()),
+                              child: Text(
+                                _resendSeconds > 0
+                                    ? l10n
+                                        .translate('auth_resend_in_seconds')
+                                        .replaceAll(
+                                            '{seconds}', '$_resendSeconds')
+                                    : l10n.translate('auth_resend_code'),
+                                style: TextStyle(
+                                  color:
+                                      _resendSeconds > 0 ? _kWhite30 : _kGreen,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  _switchMode(_AuthFormMode.emailSignUp),
+                              child: Text(
+                                l10n.translate('auth_change_email'),
+                                style: const TextStyle(
+                                    color: _kWhite54, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                // Terms & Privacy statement
+                Center(
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'By continuing, you agree to our ',
+                      style: const TextStyle(color: _kWhite54, fontSize: 12),
+                      children: [
+                        TextSpan(
+                          text: 'Terms of Use',
+                          style: const TextStyle(
+                            color: _kGreen,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: _termsRecognizer,
+                        ),
+                        const TextSpan(text: ' & '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: const TextStyle(
+                            color: _kGreen,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: _privacyRecognizer,
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-
-        const SizedBox(height: 20),
-
-        // Terms & Privacy statement
-        Center(
-          child: Text.rich(
-            TextSpan(
-              text: 'By continuing, you agree to our ',
-              style: const TextStyle(color: _kWhite54, fontSize: 12),
-              children: [
-                TextSpan(
-                  text: 'Terms of Use',
-                  style: const TextStyle(
-                    color: _kGreen,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-                  recognizer: _termsRecognizer,
-                ),
-                const TextSpan(text: ' & '),
-                TextSpan(
-                  text: 'Privacy Policy',
-                  style: const TextStyle(
-                    color: _kGreen,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-                  recognizer: _privacyRecognizer,
-                ),
-              ],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
     );
   }
 }
 
 class _SecondaryAuthButton extends StatelessWidget {
   const _SecondaryAuthButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
@@ -784,17 +1114,22 @@ class _SecondaryAuthButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _kBorder, width: 1.5),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: _kGreen, size: 20),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                color: _kWhite,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _kWhite,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
               ),
             ),
           ],

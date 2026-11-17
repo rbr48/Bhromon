@@ -4,6 +4,13 @@ import '../../../../core/entities/explorer_profile.dart';
 
 abstract class IAuthRepository {
   Future<Either<Failure, String>> signInWithEmail(String email);
+  Future<Either<Failure, String>> sendSignUpOtp(String email);
+  Future<Either<Failure, ExplorerProfile>> registerWithEmailOtp({
+    required String email,
+    required String password,
+    required String otp,
+    String? displayName,
+  });
   Future<Either<Failure, ExplorerProfile>> signInWithEmailPassword({
     required String email,
     required String password,

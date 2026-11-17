@@ -10,6 +10,8 @@ import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/core/value_objects/explorer_score.dart';
 import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart';
+import 'package:bhromon/features/auth/domain/usecases/register_with_email_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/send_signup_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/verify_otp_usecase.dart';
@@ -304,6 +306,107 @@ void main() {
       verify(mockRepo.signInWithEmailPassword(
         email: tEmail,
         password: tPassword,
+      )).called(1);
+    });
+  });
+
+  // ────────────────────────────────────────────────────
+  // SendSignUpOtpUseCase
+  // ────────────────────────────────────────────────────
+  group('SendSignUpOtpUseCase', () {
+    late SendSignUpOtpUseCase useCase;
+
+    setUp(() => useCase = SendSignUpOtpUseCase(mockRepo));
+
+    test('happy path: returns Right(message) when OTP email is sent', () async {
+      when(mockRepo.sendSignUpOtp(tEmail))
+          .thenAnswer((_) async => const Right('Verification code sent'));
+
+      final result = await useCase(tEmail);
+
+      expect(result, const Right<Failure, String>('Verification code sent'));
+      verify(mockRepo.sendSignUpOtp(tEmail)).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    });
+
+    test('failure path: returns Left(AuthFailure) on cooldown', () async {
+      const cooldownFailure = AuthFailure(
+        'Please wait 60 seconds',
+        reason: AuthFailureReason.otpCooldown,
+      );
+      when(mockRepo.sendSignUpOtp(tEmail))
+          .thenAnswer((_) async => const Left(cooldownFailure));
+
+      final result = await useCase(tEmail);
+
+      expect(result, const Left<Failure, String>(cooldownFailure));
+      verify(mockRepo.sendSignUpOtp(tEmail)).called(1);
+    });
+  });
+
+  // ────────────────────────────────────────────────────
+  // RegisterWithEmailOtpUseCase
+  // ────────────────────────────────────────────────────
+  group('RegisterWithEmailOtpUseCase', () {
+    late RegisterWithEmailOtpUseCase useCase;
+    const tPassword = 'secret-password';
+
+    setUp(() => useCase = RegisterWithEmailOtpUseCase(mockRepo));
+
+    test('happy path: returns Right(profile) when OTP & registration succeed',
+        () async {
+      when(mockRepo.registerWithEmailOtp(
+        email: tEmail,
+        password: tPassword,
+        otp: tOtpCode,
+        displayName: 'Test Explorer',
+      )).thenAnswer((_) async => Right(tProfile));
+
+      final result = await useCase(
+        const RegisterWithEmailOtpParams(
+          email: tEmail,
+          password: tPassword,
+          otp: tOtpCode,
+          displayName: 'Test Explorer',
+        ),
+      );
+
+      expect(result, Right<Failure, ExplorerProfile>(tProfile));
+      verify(mockRepo.registerWithEmailOtp(
+        email: tEmail,
+        password: tPassword,
+        otp: tOtpCode,
+        displayName: 'Test Explorer',
+      )).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    });
+
+    test('failure path: returns Left(AuthFailure) on invalid OTP', () async {
+      const otpFailure = AuthFailure(
+        'Invalid code',
+        reason: AuthFailureReason.otpInvalid,
+      );
+      when(mockRepo.registerWithEmailOtp(
+        email: tEmail,
+        password: tPassword,
+        otp: tOtpCode,
+        displayName: null,
+      )).thenAnswer((_) async => const Left(otpFailure));
+
+      final result = await useCase(
+        const RegisterWithEmailOtpParams(
+          email: tEmail,
+          password: tPassword,
+          otp: tOtpCode,
+        ),
+      );
+
+      expect(result, const Left<Failure, ExplorerProfile>(otpFailure));
+      verify(mockRepo.registerWithEmailOtp(
+        email: tEmail,
+        password: tPassword,
+        otp: tOtpCode,
+        displayName: null,
       )).called(1);
     });
   });

@@ -117,17 +117,89 @@ class AuthRepositoryImpl implements IAuthRepository {
 
   @override
   Future<Either<Failure, String>> signInWithEmail(String email) async {
+    return _sendOtpEmailCall(email, purpose: 'login');
+  }
+
+  @override
+  Future<Either<Failure, String>> sendSignUpOtp(String email) async {
+    return _sendOtpEmailCall(email, purpose: 'signup');
+  }
+
+  Future<Either<Failure, String>> _sendOtpEmailCall(
+    String email, {
+    required String purpose,
+  }) async {
     try {
+      final normalized = email.trim();
       final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
       await functions.httpsCallable('sendOtpEmail').call<dynamic>({
-        'email': email,
+        'email': normalized,
+        'purpose': purpose,
       });
-      _emailForOtp = email;
+      _emailForOtp = normalized;
       return const Right('Verification code sent');
-    } on FirebaseFunctionsException catch (e) {
-      return Left(AuthFailure(e.message ?? e.toString()));
-    } catch (e) {
+    } on FirebaseFunctionsException catch (e, stack) {
+      final reason = _otpFunctionsReason(e);
+      logWarning(
+        'AuthRepository: sendOtpEmail ($purpose) failed (${e.code})',
+        e,
+        stack,
+      );
+      return Left(AuthFailure(e.message ?? e.toString(), reason: reason));
+    } catch (e, stack) {
+      logWarning('AuthRepository: sendOtpEmail error', e, stack);
       return Left(AuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ExplorerProfile>> registerWithEmailOtp({
+    required String email,
+    required String password,
+    required String otp,
+    String? displayName,
+  }) async {
+    final normalizedEmail = email.trim();
+    final trimmedName = displayName?.trim() ?? '';
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
+      await functions.httpsCallable('registerWithEmailOtp').call<dynamic>({
+        'email': normalizedEmail,
+        'otp': otp.trim(),
+        'password': password,
+        if (trimmedName.isNotEmpty) 'displayName': trimmedName,
+      });
+
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+      final user = userCredential.user;
+      if (user == null) {
+        logWarning(
+            'AuthRepository: post-registration sign-in returned no user');
+        return const Left(AuthFailure('Email sign-in returned no user'));
+      }
+      return await _syncUserWithFirestore(user);
+    } on FirebaseFunctionsException catch (e, stack) {
+      final reason = _otpFunctionsReason(e);
+      logWarning(
+        'AuthRepository: registerWithEmailOtp failed (${e.code})',
+        e,
+        stack,
+      );
+      return Left(AuthFailure(e.message ?? e.toString(), reason: reason));
+    } on FirebaseAuthException catch (e, stack) {
+      final reason = _firebaseAuthReason(e.code);
+      logWarning(
+        'AuthRepository: post-registration auth sign-in failed (${e.code})',
+        e,
+        stack,
+      );
+      return Left(AuthFailure('Email registration failed', reason: reason));
+    } catch (e, stack) {
+      logWarning('AuthRepository: registerWithEmailOtp error', e, stack);
+      return const Left(AuthFailure('Email registration failed'));
     }
   }
 
@@ -268,6 +340,29 @@ class AuthRepositoryImpl implements IAuthRepository {
         AuthFailureReason.invalidCredentials,
       'too-many-requests' => AuthFailureReason.tooManyRequests,
       'user-disabled' => AuthFailureReason.userDisabled,
+      'email-already-in-use' => AuthFailureReason.emailAlreadyInUse,
+      'weak-password' => AuthFailureReason.weakPassword,
+      _ => AuthFailureReason.unknown,
+    };
+  }
+
+  /// Maps Callable Cloud Function exceptions from OTP send/sign-up endpoints.
+  AuthFailureReason _otpFunctionsReason(FirebaseFunctionsException e) {
+    final msg = (e.message ?? '').toLowerCase();
+    return switch (e.code) {
+      'already-exists' => AuthFailureReason.emailAlreadyInUse,
+      'permission-denied' => AuthFailureReason.otpInvalid,
+      'not-found' => AuthFailureReason.otpNotFound,
+      'failed-precondition' => msg.contains('expired')
+          ? AuthFailureReason.otpExpired
+          : AuthFailureReason.emailOtpUnavailable,
+      'resource-exhausted' => msg.contains('60 seconds')
+          ? AuthFailureReason.otpCooldown
+          : AuthFailureReason.tooManyRequests,
+      'invalid-argument' => msg.contains('password')
+          ? AuthFailureReason.weakPassword
+          : AuthFailureReason.invalidCredentials,
+      'unavailable' || 'deadline-exceeded' => AuthFailureReason.network,
       _ => AuthFailureReason.unknown,
     };
   }

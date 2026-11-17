@@ -6,6 +6,8 @@ import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart
 import 'package:bhromon/core/entities/explorer_profile.dart';
 import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/features/auth/domain/usecases/get_current_profile_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/register_with_email_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/send_signup_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/verify_otp_usecase.dart';
@@ -26,6 +28,21 @@ class FakeAuthRepository implements IAuthRepository {
 
   @override
   Future<Either<Failure, String>> signInWithEmail(String email) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, String>> sendSignUpOtp(String email) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, ExplorerProfile>> registerWithEmailOtp({
+    required String email,
+    required String password,
+    required String otp,
+    String? displayName,
+  }) async {
     throw UnimplementedError();
   }
 
@@ -65,6 +82,8 @@ void main() {
       SignOutUseCase(repo),
       UpdateProfileUseCase(repo),
       SignInEmailPasswordUseCase(repo),
+      SendSignUpOtpUseCase(repo),
+      RegisterWithEmailOtpUseCase(repo),
     );
     expect(cubit.state, isA<AuthInitial>());
   });

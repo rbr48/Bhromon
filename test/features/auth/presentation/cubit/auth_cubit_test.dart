@@ -10,6 +10,8 @@ import 'package:bhromon/core/value_objects/explorer_score.dart';
 import 'package:bhromon/core/value_objects/trust_tier.dart';
 import 'package:bhromon/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:bhromon/features/auth/domain/usecases/get_current_profile_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/register_with_email_otp_usecase.dart';
+import 'package:bhromon/features/auth/domain/usecases/send_signup_otp_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/sign_in_email_password_usecase.dart';
 import 'package:bhromon/features/auth/domain/usecases/verify_otp_usecase.dart';
@@ -34,6 +36,8 @@ void main() {
   late SignOutUseCase signOut;
   late UpdateProfileUseCase updateProfile;
   late SignInEmailPasswordUseCase signInEmailPassword;
+  late SendSignUpOtpUseCase sendSignUpOtp;
+  late RegisterWithEmailOtpUseCase registerWithEmailOtp;
 
   final tProfile = ExplorerProfile(
     uid: 'uid-cubit-test',
@@ -63,6 +67,8 @@ void main() {
         signOut,
         updateProfile,
         signInEmailPassword,
+        sendSignUpOtp,
+        registerWithEmailOtp,
       );
 
   setUp(() {
@@ -74,6 +80,8 @@ void main() {
     signOut = SignOutUseCase(mockRepo);
     updateProfile = UpdateProfileUseCase(mockRepo);
     signInEmailPassword = SignInEmailPasswordUseCase(mockRepo);
+    sendSignUpOtp = SendSignUpOtpUseCase(mockRepo);
+    registerWithEmailOtp = RegisterWithEmailOtpUseCase(mockRepo);
   });
 
   // ────────────────────────────────────────────────────
@@ -397,6 +405,81 @@ void main() {
         const AuthError(
           'Invalid email or password',
           reason: AuthFailureReason.invalidCredentials,
+        ),
+      ],
+    );
+  });
+
+  // ────────────────────────────────────────────────────
+  // requestSignUpOtp & registerWithEmailOtp
+  // ────────────────────────────────────────────────────
+  group('email OTP registration', () {
+    const tPassword = 'secret-password';
+
+    blocTest<AuthCubit, AuthState>(
+      'requestSignUpOtp emits [AuthLoading, AuthOtpSent] when code is emailed',
+      build: () {
+        when(mockRepo.sendSignUpOtp(tEmail))
+            .thenAnswer((_) async => const Right('Verification code sent'));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.requestSignUpOtp('  $tEmail  '),
+      expect: () => [const AuthLoading(), const AuthOtpSent(tEmail)],
+      verify: (_) => verify(mockRepo.sendSignUpOtp(tEmail)).called(1),
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'registerWithEmailOtp emits [AuthLoading, Authenticated] on valid OTP',
+      build: () {
+        when(mockRepo.registerWithEmailOtp(
+          email: tEmail,
+          password: tPassword,
+          otp: tOtpCode,
+          displayName: 'Cubit Test Explorer',
+        )).thenAnswer((_) async => Right(tProfile));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.registerWithEmailOtp(
+        email: tEmail,
+        password: tPassword,
+        otp: tOtpCode,
+        displayName: 'Cubit Test Explorer',
+      ),
+      expect: () => [const AuthLoading(), Authenticated(tProfile)],
+      verify: (_) {
+        verify(mockRepo.registerWithEmailOtp(
+          email: tEmail,
+          password: tPassword,
+          otp: tOtpCode,
+          displayName: 'Cubit Test Explorer',
+        )).called(1);
+      },
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'registerWithEmailOtp emits [AuthLoading, AuthError(otpInvalid)] on bad OTP',
+      build: () {
+        when(mockRepo.registerWithEmailOtp(
+          email: tEmail,
+          password: tPassword,
+          otp: tOtpCode,
+          displayName: null,
+        )).thenAnswer((_) async => const Left(AuthFailure(
+              'Invalid code',
+              reason: AuthFailureReason.otpInvalid,
+            )));
+        return buildCubit();
+      },
+      act: (cubit) => cubit.registerWithEmailOtp(
+        email: tEmail,
+        password: tPassword,
+        otp: tOtpCode,
+      ),
+      expect: () => [
+        const AuthLoading(),
+        const AuthError(
+          'Invalid code',
+          reason: AuthFailureReason.otpInvalid,
         ),
       ],
     );

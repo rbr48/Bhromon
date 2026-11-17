@@ -39,3 +39,4 @@ export { backupFirestore } from './backupFirestore';
 // ── Auth: OTP generation and verification ─────────────────────────────────────
 export { sendOtpEmail } from './sendOtpEmail';
 export { verifyOtp } from './verifyOtp';
+export { registerWithEmailOtp } from './registerWithEmailOtp';
