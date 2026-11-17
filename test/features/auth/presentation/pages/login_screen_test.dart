@@ -17,6 +17,9 @@ class _FakeAuthCubit extends Cubit<AuthState> implements AuthCubit {
   final List<String> signUpOtpEmails = [];
   final List<({String email, String password, String otp, String? displayName})>
       registerCalls = [];
+  final List<String> resetOtpEmails = [];
+  final List<({String email, String password, String otp})> resetPasswordCalls =
+      [];
   int googleCalls = 0;
 
   @override
@@ -45,6 +48,25 @@ class _FakeAuthCubit extends Cubit<AuthState> implements AuthCubit {
       password: password,
       otp: otp,
       displayName: displayName,
+    ));
+  }
+
+  @override
+  Future<void> requestPasswordResetOtp(String email) async {
+    resetOtpEmails.add(email);
+    emit(AuthOtpSent(email));
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    resetPasswordCalls.add((
+      email: email,
+      password: password,
+      otp: otp,
     ));
   }
 
@@ -278,6 +300,84 @@ void main() {
     expect(
       find.text(
         'Invalid email or password. Please check your credentials and try again.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'forgot password flow sends 6-digit reset OTP and resets password',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final cubit = _FakeAuthCubit(const Unauthenticated());
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_buildTestApp(cubit));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('login_open_email_signin_button')),
+    );
+    await tester.tap(find.byKey(const Key('login_open_email_signin_button')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('login_email_field')),
+      'forgot@bhromon.fun',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('login_forgot_password_button')),
+    );
+    await tester.tap(find.byKey(const Key('login_forgot_password_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('forgot_send_otp_button')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('forgot_send_otp_button')),
+    );
+    await tester.tap(find.byKey(const Key('forgot_send_otp_button')));
+    await tester.pumpAndSettle();
+
+    expect(cubit.resetOtpEmails, ['forgot@bhromon.fun']);
+    expect(find.byKey(const Key('forgot_otp_field')), findsOneWidget);
+    expect(find.byKey(const Key('forgot_new_password_field')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('forgot_otp_field')),
+      '654321',
+    );
+    await tester.enterText(
+      find.byKey(const Key('forgot_new_password_field')),
+      'NewSecret123!',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('forgot_reset_submit_button')),
+    );
+    await tester.tap(find.byKey(const Key('forgot_reset_submit_button')));
+    await tester.pump();
+
+    expect(cubit.resetPasswordCalls, [
+      (
+        email: 'forgot@bhromon.fun',
+        password: 'NewSecret123!',
+        otp: '654321',
+      ),
+    ]);
+
+    cubit.emit(const AuthError(
+      'No account found',
+      reason: AuthFailureReason.accountNotFound,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.text(
+        'No account found with this email. Please create a new account instead.',
       ),
       findsOneWidget,
     );

@@ -14,7 +14,31 @@ import {
 const db = getFirestore();
 
 type IssueOutcome = 'ok' | 'locked' | 'resend' | 'hourly' | 'overall';
-type OtpPurpose = 'login' | 'signup';
+type OtpPurpose = 'login' | 'signup' | 'reset';
+
+const OTP_EMAIL_COPY: Record<OtpPurpose, { subject: string; promptText: string }> = {
+  login: {
+    subject: 'Bhromon Login Verification Code',
+    promptText:
+      'Use the following 6-digit verification code to log in to your account. This code is valid for 5 minutes.',
+  },
+  signup: {
+    subject: 'Bhromon Account Verification Code',
+    promptText:
+      'Use the following 6-digit verification code to create your Bhromon account. This code is valid for 5 minutes.',
+  },
+  reset: {
+    subject: 'Bhromon Password Reset Code',
+    promptText:
+      'Use the following 6-digit verification code to reset your Bhromon password. This code is valid for 5 minutes.',
+  },
+};
+
+function parseOtpPurpose(raw: unknown): OtpPurpose {
+  if (raw === 'signup') return 'signup';
+  if (raw === 'reset') return 'reset';
+  return 'login';
+}
 
 interface AuthConfig {
   provider: string;
@@ -36,7 +60,7 @@ export const sendOtpEmail = functions
   .region('asia-south1')
   .https.onCall(async (data) => {
     const email = typeof data?.email === 'string' ? data.email.trim().toLowerCase() : '';
-    const purpose: OtpPurpose = data?.purpose === 'signup' ? 'signup' : 'login';
+    const purpose: OtpPurpose = parseOtpPurpose(data?.purpose);
     if (!email || !email.includes('@')) {
       throw new functions.https.HttpsError('invalid-argument', 'Valid email address is required');
     }
@@ -141,14 +165,7 @@ function sendViaResend(
   otp: string,
   purpose: OtpPurpose,
 ): Promise<void> {
-  const subject =
-    purpose === 'signup'
-      ? 'Bhromon Account Verification Code'
-      : 'Bhromon Login Verification Code';
-  const promptText =
-    purpose === 'signup'
-      ? 'Use the following 6-digit verification code to create your Bhromon account. This code is valid for 5 minutes.'
-      : 'Use the following 6-digit verification code to log in to your account. This code is valid for 5 minutes.';
+  const { subject, promptText } = OTP_EMAIL_COPY[purpose];
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       from: from,

@@ -56,6 +56,31 @@ class MockOfflineAuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<Either<Failure, String>> sendPasswordResetOtp(String email) async {
+    return const Right('Verification code sent');
+  }
+
+  @override
+  Future<Either<Failure, ExplorerProfile>> resetPasswordWithOtp({
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    final profile = ExplorerProfile(
+      uid: 'mock_offline_user_email',
+      displayName: email.split('@').first,
+      division: 'Dhaka',
+      tier: TrustTier.community,
+      badges: ['Offline Explorer'],
+      isPioneer: true,
+      createdAt: DateTime.now(),
+      explorerScore: const ExplorerScore(value: 100, tier: TrustTier.community),
+    );
+    await _updateLocalCache(profile);
+    return Right(profile);
+  }
+
+  @override
   Future<Either<Failure, ExplorerProfile>> registerWithEmailOtp({
     required String email,
     required String password,

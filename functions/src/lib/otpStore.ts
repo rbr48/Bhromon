@@ -80,20 +80,22 @@ export async function consumeOtpCode(
   }
 }
 
-export interface ValidatedSignUpInput {
+export interface ValidatedEmailOtpPasswordInput {
   email: string;
   otp: string;
   password: string;
+}
+
+export interface ValidatedSignUpInput extends ValidatedEmailOtpPasswordInput {
   displayName?: string;
 }
 
-/** Validates and normalizes Email + Password + 6-digit OTP registration payloads. */
-export function validateSignUpInput(data: unknown): ValidatedSignUpInput {
+/** Validates and normalizes common {email, otp, password} payloads. */
+export function validateEmailOtpPassword(data: unknown): ValidatedEmailOtpPasswordInput {
   const raw = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
   const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : '';
   const otp = typeof raw.otp === 'string' ? raw.otp.trim() : '';
   const password = typeof raw.password === 'string' ? raw.password : '';
-  const rawName = typeof raw.displayName === 'string' ? raw.displayName.trim() : '';
 
   if (!email || !email.includes('@')) {
     throw new functions.https.HttpsError('invalid-argument', 'Valid email address is required.');
@@ -111,6 +113,14 @@ export function validateSignUpInput(data: unknown): ValidatedSignUpInput {
     );
   }
 
+  return { email, otp, password };
+}
+
+/** Validates and normalizes Email + Password + 6-digit OTP registration payloads. */
+export function validateSignUpInput(data: unknown): ValidatedSignUpInput {
+  const base = validateEmailOtpPassword(data);
+  const raw = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+  const rawName = typeof raw.displayName === 'string' ? raw.displayName.trim() : '';
   const displayName = rawName ? rawName.slice(0, MAX_DISPLAY_NAME_LENGTH) : undefined;
-  return { email, otp, password, displayName };
+  return { ...base, displayName };
 }

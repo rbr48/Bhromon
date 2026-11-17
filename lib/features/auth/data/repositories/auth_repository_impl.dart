@@ -125,6 +125,11 @@ class AuthRepositoryImpl implements IAuthRepository {
     return _sendOtpEmailCall(email, purpose: 'signup');
   }
 
+  @override
+  Future<Either<Failure, String>> sendPasswordResetOtp(String email) async {
+    return _sendOtpEmailCall(email, purpose: 'reset');
+  }
+
   Future<Either<Failure, String>> _sendOtpEmailCall(
     String email, {
     required String purpose,
@@ -159,15 +164,49 @@ class AuthRepositoryImpl implements IAuthRepository {
     required String otp,
     String? displayName,
   }) async {
-    final normalizedEmail = email.trim();
     final trimmedName = displayName?.trim() ?? '';
+    return _authWithOtpCallable(
+      callableName: 'registerWithEmailOtp',
+      email: email,
+      password: password,
+      otp: otp,
+      extraPayload: {
+        if (trimmedName.isNotEmpty) 'displayName': trimmedName,
+      },
+    );
+  }
+
+  @override
+  Future<Either<Failure, ExplorerProfile>> resetPasswordWithOtp({
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    return _authWithOtpCallable(
+      callableName: 'resetPasswordWithOtp',
+      email: email,
+      password: password,
+      otp: otp,
+    );
+  }
+
+  /// Calls an OTP password-setting Cloud Function, then signs in and syncs
+  /// the user's profile with Firestore.
+  Future<Either<Failure, ExplorerProfile>> _authWithOtpCallable({
+    required String callableName,
+    required String email,
+    required String password,
+    required String otp,
+    Map<String, dynamic> extraPayload = const {},
+  }) async {
+    final normalizedEmail = email.trim();
     try {
       final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
-      await functions.httpsCallable('registerWithEmailOtp').call<dynamic>({
+      await functions.httpsCallable(callableName).call<dynamic>({
         'email': normalizedEmail,
         'otp': otp.trim(),
         'password': password,
-        if (trimmedName.isNotEmpty) 'displayName': trimmedName,
+        ...extraPayload,
       });
 
       final userCredential = await _auth.signInWithEmailAndPassword(
@@ -176,15 +215,14 @@ class AuthRepositoryImpl implements IAuthRepository {
       );
       final user = userCredential.user;
       if (user == null) {
-        logWarning(
-            'AuthRepository: post-registration sign-in returned no user');
+        logWarning('AuthRepository: $callableName sign-in returned no user');
         return const Left(AuthFailure('Email sign-in returned no user'));
       }
       return await _syncUserWithFirestore(user);
     } on FirebaseFunctionsException catch (e, stack) {
       final reason = _otpFunctionsReason(e);
       logWarning(
-        'AuthRepository: registerWithEmailOtp failed (${e.code})',
+        'AuthRepository: $callableName failed (${e.code})',
         e,
         stack,
       );
@@ -192,14 +230,14 @@ class AuthRepositoryImpl implements IAuthRepository {
     } on FirebaseAuthException catch (e, stack) {
       final reason = _firebaseAuthReason(e.code);
       logWarning(
-        'AuthRepository: post-registration auth sign-in failed (${e.code})',
+        'AuthRepository: $callableName auth sign-in failed (${e.code})',
         e,
         stack,
       );
-      return Left(AuthFailure('Email registration failed', reason: reason));
+      return Left(AuthFailure('$callableName failed', reason: reason));
     } catch (e, stack) {
-      logWarning('AuthRepository: registerWithEmailOtp error', e, stack);
-      return const Left(AuthFailure('Email registration failed'));
+      logWarning('AuthRepository: $callableName error', e, stack);
+      return Left(AuthFailure('$callableName failed'));
     }
   }
 
@@ -346,16 +384,24 @@ class AuthRepositoryImpl implements IAuthRepository {
     };
   }
 
-  /// Maps Callable Cloud Function exceptions from OTP send/sign-up endpoints.
+  /// Maps Callable Cloud Function exceptions from OTP send/sign-up/reset endpoints.
   AuthFailureReason _otpFunctionsReason(FirebaseFunctionsException e) {
     final msg = (e.message ?? '').toLowerCase();
     return switch (e.code) {
       'already-exists' => AuthFailureReason.emailAlreadyInUse,
-      'permission-denied' => AuthFailureReason.otpInvalid,
-      'not-found' => AuthFailureReason.otpNotFound,
+      'permission-denied' => msg.contains('disabled')
+          ? AuthFailureReason.userDisabled
+          : AuthFailureReason.otpInvalid,
+      'not-found' => msg.contains('account')
+          ? AuthFailureReason.accountNotFound
+          : AuthFailureReason.otpNotFound,
       'failed-precondition' => msg.contains('expired')
           ? AuthFailureReason.otpExpired
           : AuthFailureReason.emailOtpUnavailable,
+      'internal' =>
+        msg.contains('verification code') || msg.contains('could not send')
+            ? AuthFailureReason.emailOtpUnavailable
+            : AuthFailureReason.unknown,
       'resource-exhausted' => msg.contains('60 seconds')
           ? AuthFailureReason.otpCooldown
           : AuthFailureReason.tooManyRequests,

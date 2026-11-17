@@ -115,6 +115,57 @@ class MockIAuthRepository extends _i1.Mock implements _i3.IAuthRepository {
           ) as _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>);
 
   @override
+  _i4.Future<_i2.Either<_i5.Failure, String>> sendPasswordResetOtp(
+          String? email) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendPasswordResetOtp,
+          [email],
+        ),
+        returnValue: _i4.Future<_i2.Either<_i5.Failure, String>>.value(
+            _FakeEither_0<_i5.Failure, String>(
+          this,
+          Invocation.method(
+            #sendPasswordResetOtp,
+            [email],
+          ),
+        )),
+      ) as _i4.Future<_i2.Either<_i5.Failure, String>>);
+
+  @override
+  _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>
+      resetPasswordWithOtp({
+    required String? email,
+    required String? password,
+    required String? otp,
+  }) =>
+          (super.noSuchMethod(
+            Invocation.method(
+              #resetPasswordWithOtp,
+              [],
+              {
+                #email: email,
+                #password: password,
+                #otp: otp,
+              },
+            ),
+            returnValue:
+                _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>.value(
+                    _FakeEither_0<_i5.Failure, _i6.ExplorerProfile>(
+              this,
+              Invocation.method(
+                #resetPasswordWithOtp,
+                [],
+                {
+                  #email: email,
+                  #password: password,
+                  #otp: otp,
+                },
+              ),
+            )),
+          ) as _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>);
+
+  @override
   _i4.Future<_i2.Either<_i5.Failure, _i6.ExplorerProfile>>
       signInWithEmailPassword({
     required String? email,

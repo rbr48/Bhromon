@@ -37,6 +37,7 @@ String _authErrorText(BuildContext context, AuthFailureReason reason) {
     AuthFailureReason.tooManyRequests => 'auth_error_too_many_requests',
     AuthFailureReason.userDisabled => 'auth_error_user_disabled',
     AuthFailureReason.emailAlreadyInUse => 'auth_error_email_already_in_use',
+    AuthFailureReason.accountNotFound => 'auth_error_account_not_found',
     AuthFailureReason.weakPassword => 'auth_error_weak_password',
     AuthFailureReason.otpInvalid => 'auth_error_otp_invalid',
     AuthFailureReason.otpExpired => 'auth_error_otp_expired',
@@ -380,7 +381,14 @@ class _DotLine extends StatelessWidget {
   }
 }
 
-enum _AuthFormMode { options, emailSignIn, emailSignUp, emailSignUpOtp }
+enum _AuthFormMode {
+  options,
+  emailSignIn,
+  emailSignUp,
+  emailSignUpOtp,
+  forgotPassword,
+  forgotPasswordOtp,
+}
 
 // ─── Sign-in form ───────────────────────────────────────────────────────────
 class _LoginForm extends StatefulWidget {
@@ -397,6 +405,7 @@ class _LoginFormState extends State<_LoginForm> {
   late final TapGestureRecognizer _privacyRecognizer;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _otpFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _resetOtpFormKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -467,8 +476,12 @@ class _LoginFormState extends State<_LoginForm> {
     FocusScope.of(context).unfocus();
     setState(() {
       _mode = mode;
-      if (mode != _AuthFormMode.emailSignUpOtp) {
+      if (mode != _AuthFormMode.emailSignUpOtp &&
+          mode != _AuthFormMode.forgotPasswordOtp) {
         _otpController.clear();
+      }
+      if (mode == _AuthFormMode.forgotPassword) {
+        _passwordController.clear();
       }
     });
   }
@@ -497,6 +510,214 @@ class _LoginFormState extends State<_LoginForm> {
           otp: _otpController.text.trim(),
           displayName: _nameController.text.trim(),
         );
+  }
+
+  void _submitSendForgotPasswordOtp() {
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
+    context
+        .read<AuthCubit>()
+        .requestPasswordResetOtp(_emailController.text.trim());
+  }
+
+  void _submitVerifyForgotPasswordOtp() {
+    final form = _resetOtpFormKey.currentState;
+    if (form == null || !form.validate()) return;
+    context.read<AuthCubit>().resetPasswordWithOtp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          otp: _otpController.text.trim(),
+        );
+  }
+
+  Widget _buildEmailField({
+    required Key fieldKey,
+    required AppLocalizations l10n,
+    TextInputAction textInputAction = TextInputAction.next,
+    VoidCallback? onSubmitted,
+  }) {
+    return TextFormField(
+      key: fieldKey,
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: textInputAction,
+      autofillHints: const [AutofillHints.email],
+      style: const TextStyle(color: _kWhite, fontSize: 15),
+      onFieldSubmitted: onSubmitted == null ? null : (_) => onSubmitted(),
+      decoration: _emailFieldDecoration(
+        label: l10n.translate('auth_email_label'),
+        prefixIcon: Icons.email_outlined,
+      ),
+      validator: (value) {
+        final v = value?.trim() ?? '';
+        if (v.isEmpty || !v.contains('@')) {
+          return l10n.translate('auth_email_required');
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildPasswordField({
+    required Key fieldKey,
+    required String label,
+    required AppLocalizations l10n,
+    required Iterable<String> autofillHints,
+    required bool enforceMinLength,
+    required VoidCallback onSubmitted,
+  }) {
+    return TextFormField(
+      key: fieldKey,
+      controller: _passwordController,
+      obscureText: _obscurePassword,
+      textInputAction: TextInputAction.done,
+      autofillHints: autofillHints,
+      style: const TextStyle(color: _kWhite, fontSize: 15),
+      onFieldSubmitted: (_) => onSubmitted(),
+      decoration: _emailFieldDecoration(
+        label: label,
+        prefixIcon: Icons.lock_outline_rounded,
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            color: _kWhite54,
+            size: 20,
+          ),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        ),
+      ),
+      validator: (value) {
+        final v = value ?? '';
+        if (v.isEmpty) {
+          return l10n.translate('auth_password_required');
+        }
+        if (enforceMinLength && v.length < 6) {
+          return l10n.translate('auth_password_min_length');
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildOtpField({
+    required Key fieldKey,
+    required AppLocalizations l10n,
+    TextInputAction textInputAction = TextInputAction.done,
+    VoidCallback? onSubmitted,
+  }) {
+    return TextFormField(
+      key: fieldKey,
+      controller: _otpController,
+      keyboardType: TextInputType.number,
+      textInputAction: textInputAction,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(6),
+      ],
+      onFieldSubmitted: onSubmitted == null ? null : (_) => onSubmitted(),
+      style: const TextStyle(
+        color: _kWhite,
+        fontSize: 18,
+        letterSpacing: 6,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: _emailFieldDecoration(
+        label: l10n.translate('auth_otp_label'),
+        prefixIcon: Icons.mark_email_read_outlined,
+      ),
+      validator: (value) {
+        final v = value?.trim() ?? '';
+        if (!RegExp(r'^\d{6}$').hasMatch(v)) {
+          return l10n.translate('auth_otp_required');
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildPrimaryButton({
+    required Key buttonKey,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      height: 50,
+      child: FilledButton(
+        key: buttonKey,
+        style: FilledButton.styleFrom(
+          backgroundColor: _kGreen,
+          foregroundColor: _kBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOtpSentBanner(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111D15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Text(
+        l10n.translate('auth_otp_sent_to').replaceAll(
+              '{email}',
+              _emailController.text.trim(),
+            ),
+        style: const TextStyle(color: _kWhite, fontSize: 13, height: 1.4),
+      ),
+    );
+  }
+
+  Widget _buildResendChangeRow({
+    required Key resendKey,
+    required VoidCallback onResend,
+    required VoidCallback onChangeEmail,
+    required AppLocalizations l10n,
+  }) {
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      children: [
+        TextButton(
+          key: resendKey,
+          onPressed: _resendSeconds > 0 ? null : onResend,
+          child: Text(
+            _resendSeconds > 0
+                ? l10n
+                    .translate('auth_resend_in_seconds')
+                    .replaceAll('{seconds}', '$_resendSeconds')
+                : l10n.translate('auth_resend_code'),
+            style: TextStyle(
+              color: _resendSeconds > 0 ? _kWhite30 : _kGreen,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: onChangeEmail,
+          child: Text(
+            l10n.translate('auth_change_email'),
+            style: const TextStyle(color: _kWhite54, fontSize: 13),
+          ),
+        ),
+      ],
+    );
   }
 
   InputDecoration _emailFieldDecoration({
@@ -634,8 +855,14 @@ class _LoginFormState extends State<_LoginForm> {
     return BlocListener<AuthCubit, AuthState>(
       listenWhen: (_, state) => state is AuthOtpSent,
       listener: (_, state) {
-        if (state is AuthOtpSent && _mode != _AuthFormMode.emailSignIn) {
+        if (state is! AuthOtpSent) return;
+        if (_mode == _AuthFormMode.emailSignUp ||
+            _mode == _AuthFormMode.emailSignUpOtp) {
           setState(() => _mode = _AuthFormMode.emailSignUpOtp);
+          _startResendCooldown();
+        } else if (_mode == _AuthFormMode.forgotPassword ||
+            _mode == _AuthFormMode.forgotPasswordOtp) {
+          setState(() => _mode = _AuthFormMode.forgotPasswordOtp);
           _startResendCooldown();
         }
       },
@@ -720,77 +947,39 @@ class _LoginFormState extends State<_LoginForm> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        TextFormField(
-                          key: const Key('login_email_field'),
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.email],
-                          style: const TextStyle(color: _kWhite, fontSize: 15),
-                          decoration: _emailFieldDecoration(
-                            label: l10n.translate('auth_email_label'),
-                            prefixIcon: Icons.email_outlined,
-                          ),
-                          validator: (value) {
-                            final v = value?.trim() ?? '';
-                            if (v.isEmpty || !v.contains('@')) {
-                              return l10n.translate('auth_email_required');
-                            }
-                            return null;
-                          },
+                        _buildEmailField(
+                          fieldKey: const Key('login_email_field'),
+                          l10n: l10n,
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(
-                          key: const Key('login_password_field'),
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
+                        _buildPasswordField(
+                          fieldKey: const Key('login_password_field'),
+                          label: l10n.translate('auth_password_label'),
+                          l10n: l10n,
                           autofillHints: const [AutofillHints.password],
-                          style: const TextStyle(color: _kWhite, fontSize: 15),
-                          onFieldSubmitted: (_) => _submitEmailPassword(),
-                          decoration: _emailFieldDecoration(
-                            label: l10n.translate('auth_password_label'),
-                            prefixIcon: Icons.lock_outline_rounded,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: _kWhite54,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
-                          validator: (value) {
-                            if ((value ?? '').isEmpty) {
-                              return l10n.translate('auth_password_required');
-                            }
-                            return null;
-                          },
+                          enforceMinLength: false,
+                          onSubmitted: _submitEmailPassword,
                         ),
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          height: 50,
-                          child: FilledButton(
-                            key: const Key('login_email_submit_button'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _kGreen,
-                              foregroundColor: _kBg,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            onPressed: _submitEmailPassword,
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            key: const Key('login_forgot_password_button'),
+                            onPressed: () =>
+                                _switchMode(_AuthFormMode.forgotPassword),
                             child: Text(
-                              l10n.translate('auth_sign_in_button'),
+                              l10n.translate('auth_forgot_password'),
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                                color: _kGreen,
+                                fontSize: 13,
                               ),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        _buildPrimaryButton(
+                          buttonKey: const Key('login_email_submit_button'),
+                          label: l10n.translate('auth_sign_in_button'),
+                          onPressed: _submitEmailPassword,
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -838,81 +1027,24 @@ class _LoginFormState extends State<_LoginForm> {
                           },
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(
-                          key: const Key('signup_email_field'),
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.email],
-                          style: const TextStyle(color: _kWhite, fontSize: 15),
-                          decoration: _emailFieldDecoration(
-                            label: l10n.translate('auth_email_label'),
-                            prefixIcon: Icons.email_outlined,
-                          ),
-                          validator: (value) {
-                            final v = value?.trim() ?? '';
-                            if (v.isEmpty || !v.contains('@')) {
-                              return l10n.translate('auth_email_required');
-                            }
-                            return null;
-                          },
+                        _buildEmailField(
+                          fieldKey: const Key('signup_email_field'),
+                          l10n: l10n,
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(
-                          key: const Key('signup_password_field'),
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
+                        _buildPasswordField(
+                          fieldKey: const Key('signup_password_field'),
+                          label: l10n.translate('auth_password_label'),
+                          l10n: l10n,
                           autofillHints: const [AutofillHints.newPassword],
-                          style: const TextStyle(color: _kWhite, fontSize: 15),
-                          onFieldSubmitted: (_) => _submitSendSignUpOtp(),
-                          decoration: _emailFieldDecoration(
-                            label: l10n.translate('auth_password_label'),
-                            prefixIcon: Icons.lock_outline_rounded,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: _kWhite54,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
-                          validator: (value) {
-                            final v = value ?? '';
-                            if (v.isEmpty) {
-                              return l10n.translate('auth_password_required');
-                            }
-                            if (v.length < 6) {
-                              return l10n.translate('auth_password_min_length');
-                            }
-                            return null;
-                          },
+                          enforceMinLength: true,
+                          onSubmitted: _submitSendSignUpOtp,
                         ),
                         const SizedBox(height: 18),
-                        SizedBox(
-                          height: 50,
-                          child: FilledButton(
-                            key: const Key('signup_send_otp_button'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _kGreen,
-                              foregroundColor: _kBg,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            onPressed: _submitSendSignUpOtp,
-                            child: Text(
-                              l10n.translate('auth_send_verification_code'),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
+                        _buildPrimaryButton(
+                          buttonKey: const Key('signup_send_otp_button'),
+                          label: l10n.translate('auth_send_verification_code'),
+                          onPressed: _submitSendSignUpOtp,
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -935,117 +1067,125 @@ class _LoginFormState extends State<_LoginForm> {
                       ],
                     ),
                   ),
-                ] else ...[
+                ] else if (_mode == _AuthFormMode.emailSignUpOtp) ...[
                   Form(
                     key: _otpFormKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF111D15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _kBorder),
-                          ),
-                          child: Text(
-                            l10n.translate('auth_otp_sent_to').replaceAll(
-                                  '{email}',
-                                  _emailController.text.trim(),
-                                ),
-                            style: const TextStyle(
-                                color: _kWhite, fontSize: 13, height: 1.4),
+                        _buildOtpSentBanner(l10n),
+                        const SizedBox(height: 14),
+                        _buildOtpField(
+                          fieldKey: const Key('signup_otp_field'),
+                          l10n: l10n,
+                          onSubmitted: _submitVerifySignUpOtp,
+                        ),
+                        const SizedBox(height: 18),
+                        _buildPrimaryButton(
+                          buttonKey: const Key('signup_verify_otp_button'),
+                          label: l10n.translate('auth_verify_and_create'),
+                          onPressed: _submitVerifySignUpOtp,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildResendChangeRow(
+                          resendKey: const Key('signup_resend_otp_button'),
+                          onResend: () => context
+                              .read<AuthCubit>()
+                              .requestSignUpOtp(_emailController.text.trim()),
+                          onChangeEmail: () =>
+                              _switchMode(_AuthFormMode.emailSignUp),
+                          l10n: l10n,
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (_mode == _AuthFormMode.forgotPassword) ...[
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          l10n.translate('auth_forgot_password_subtitle'),
+                          style: const TextStyle(
+                            color: _kWhite54,
+                            fontSize: 13,
+                            height: 1.4,
                           ),
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(
-                          key: const Key('signup_otp_field'),
-                          controller: _otpController,
-                          keyboardType: TextInputType.number,
+                        _buildEmailField(
+                          fieldKey: const Key('forgot_email_field'),
+                          l10n: l10n,
                           textInputAction: TextInputAction.done,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(6),
-                          ],
-                          onFieldSubmitted: (_) => _submitVerifySignUpOtp(),
-                          style: const TextStyle(
-                            color: _kWhite,
-                            fontSize: 18,
-                            letterSpacing: 6,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          decoration: _emailFieldDecoration(
-                            label: l10n.translate('auth_otp_label'),
-                            prefixIcon: Icons.mark_email_read_outlined,
-                          ),
-                          validator: (value) {
-                            final v = value?.trim() ?? '';
-                            if (!RegExp(r'^\d{6}$').hasMatch(v)) {
-                              return l10n.translate('auth_otp_required');
-                            }
-                            return null;
-                          },
+                          onSubmitted: _submitSendForgotPasswordOtp,
                         ),
                         const SizedBox(height: 18),
-                        SizedBox(
-                          height: 50,
-                          child: FilledButton(
-                            key: const Key('signup_verify_otp_button'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _kGreen,
-                              foregroundColor: _kBg,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            onPressed: _submitVerifySignUpOtp,
-                            child: Text(
-                              l10n.translate('auth_verify_and_create'),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
+                        _buildPrimaryButton(
+                          buttonKey: const Key('forgot_send_otp_button'),
+                          label: l10n.translate('auth_send_reset_code'),
+                          onPressed: _submitSendForgotPasswordOtp,
                         ),
                         const SizedBox(height: 8),
-                        Wrap(
-                          alignment: WrapAlignment.spaceBetween,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 8,
-                          children: [
-                            TextButton(
-                              key: const Key('signup_resend_otp_button'),
-                              onPressed: _resendSeconds > 0
-                                  ? null
-                                  : () => context
-                                      .read<AuthCubit>()
-                                      .requestSignUpOtp(
-                                          _emailController.text.trim()),
-                              child: Text(
-                                _resendSeconds > 0
-                                    ? l10n
-                                        .translate('auth_resend_in_seconds')
-                                        .replaceAll(
-                                            '{seconds}', '$_resendSeconds')
-                                    : l10n.translate('auth_resend_code'),
-                                style: TextStyle(
-                                  color:
-                                      _resendSeconds > 0 ? _kWhite30 : _kGreen,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  _switchMode(_AuthFormMode.emailSignUp),
-                              child: Text(
-                                l10n.translate('auth_change_email'),
-                                style: const TextStyle(
-                                    color: _kWhite54, fontSize: 13),
-                              ),
-                            ),
-                          ],
+                        TextButton(
+                          onPressed: () =>
+                              _switchMode(_AuthFormMode.emailSignIn),
+                          child: Text(
+                            l10n.translate('auth_back_to_sign_in'),
+                            style:
+                                const TextStyle(color: _kGreen, fontSize: 13),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _switchMode(_AuthFormMode.options),
+                          child: Text(
+                            l10n.translate('auth_back_to_options'),
+                            style:
+                                const TextStyle(color: _kWhite54, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Form(
+                    key: _resetOtpFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildOtpSentBanner(l10n),
+                        const SizedBox(height: 14),
+                        _buildOtpField(
+                          fieldKey: const Key('forgot_otp_field'),
+                          l10n: l10n,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 14),
+                        _buildPasswordField(
+                          fieldKey: const Key('forgot_new_password_field'),
+                          label: l10n.translate('auth_new_password_label'),
+                          l10n: l10n,
+                          autofillHints: const [AutofillHints.newPassword],
+                          enforceMinLength: true,
+                          onSubmitted: _submitVerifyForgotPasswordOtp,
+                        ),
+                        const SizedBox(height: 18),
+                        _buildPrimaryButton(
+                          buttonKey: const Key('forgot_reset_submit_button'),
+                          label:
+                              l10n.translate('auth_reset_password_and_sign_in'),
+                          onPressed: _submitVerifyForgotPasswordOtp,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildResendChangeRow(
+                          resendKey: const Key('forgot_resend_otp_button'),
+                          onResend: () => context
+                              .read<AuthCubit>()
+                              .requestPasswordResetOtp(
+                                  _emailController.text.trim()),
+                          onChangeEmail: () =>
+                              _switchMode(_AuthFormMode.forgotPassword),
+                          l10n: l10n,
                         ),
                       ],
                     ),

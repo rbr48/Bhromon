@@ -28,6 +28,7 @@ enum AuthFailureReason {
   userDisabled,
   emailAlreadyInUse,
   weakPassword,
+  accountNotFound,
   otpInvalid,
   otpExpired,
   otpNotFound,

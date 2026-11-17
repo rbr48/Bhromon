@@ -7,6 +7,8 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/usecases/get_current_profile_usecase.dart';
 import '../../domain/usecases/register_with_email_otp_usecase.dart';
+import '../../domain/usecases/reset_password_with_otp_usecase.dart';
+import '../../domain/usecases/send_password_reset_otp_usecase.dart';
 import '../../domain/usecases/send_signup_otp_usecase.dart';
 import '../../domain/usecases/sign_in_email_password_usecase.dart';
 import '../../domain/usecases/sign_in_email_usecase.dart';
@@ -27,6 +29,8 @@ class AuthCubit extends Cubit<AuthState> {
   final SignInEmailUseCase _signInEmail;
   final SendSignUpOtpUseCase _sendSignUpOtp;
   final RegisterWithEmailOtpUseCase _registerWithEmailOtp;
+  final SendPasswordResetOtpUseCase _sendPasswordResetOtp;
+  final ResetPasswordWithOtpUseCase _resetPasswordWithOtp;
   final SignInEmailPasswordUseCase _signInEmailPassword;
   final VerifyOtpUseCase _verifyOtp;
   final SignInGoogleUseCase _signInGoogle;
@@ -49,6 +53,8 @@ class AuthCubit extends Cubit<AuthState> {
     this._signInEmailPassword,
     this._sendSignUpOtp,
     this._registerWithEmailOtp,
+    this._sendPasswordResetOtp,
+    this._resetPasswordWithOtp,
   ) : super(const AuthInitial());
 
   Future<void> checkAuthStatus() async {
@@ -149,6 +155,40 @@ class AuthCubit extends Cubit<AuthState> {
         password: password,
         otp: otp,
         displayName: displayName,
+      ),
+    );
+    result.fold(
+      (failure) => emit(_failedState(failure)),
+      (profile) {
+        _syncGroupMembership();
+        emit(Authenticated(profile));
+      },
+    );
+  }
+
+  /// Sends a 6-digit verification code to [email] for resetting a password.
+  Future<void> requestPasswordResetOtp(String email) async {
+    final trimmed = email.trim();
+    emit(const AuthLoading());
+    final result = await _sendPasswordResetOtp(trimmed);
+    result.fold(
+      (failure) => emit(_failedState(failure)),
+      (_) => emit(AuthOtpSent(trimmed)),
+    );
+  }
+
+  /// Verifies the 6-digit OTP, resets the password, and signs the user in.
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    emit(const AuthLoading());
+    final result = await _resetPasswordWithOtp(
+      ResetPasswordWithOtpParams(
+        email: email,
+        password: password,
+        otp: otp,
       ),
     );
     result.fold(

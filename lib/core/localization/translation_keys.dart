@@ -452,6 +452,8 @@ class TranslationKeys {
           'This account has been disabled. Please contact support.',
       'auth_error_email_already_in_use':
           'An account with this email already exists. Please sign in instead.',
+      'auth_error_account_not_found':
+          'No account found with this email. Please create a new account instead.',
       'auth_error_weak_password': 'Password must be at least 6 characters.',
       'auth_error_otp_invalid':
           'Invalid verification code. Please check and try again.',
@@ -487,6 +489,13 @@ class TranslationKeys {
       'auth_no_account_create': 'New to Bhromon? Create an account',
       'auth_have_account_sign_in': 'Already have an account? Sign in',
       'auth_sign_in_button': 'Sign in',
+      'auth_forgot_password': 'Forgot password?',
+      'auth_forgot_password_subtitle':
+          'Enter your email address to receive a 6-digit verification code and set a new password.',
+      'auth_send_reset_code': 'Send reset code',
+      'auth_new_password_label': 'New password',
+      'auth_reset_password_and_sign_in': 'Reset password & sign in',
+      'auth_back_to_sign_in': 'Back to sign in',
       'auth_back_to_options': 'Back to sign-in options',
       'login_welcome_subtitle':
           'Sign in to run your family, office, school, sports team, study group, neighbourhood committee, housing society, mess, savings group or trip.',
@@ -1008,6 +1017,8 @@ class TranslationKeys {
           'এই অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে। অনুগ্রহ করে সহায়তার জন্য যোগাযোগ করুন।',
       'auth_error_email_already_in_use':
           'এই ইমেইল দিয়ে আগেই একটি অ্যাকাউন্ট খোলা হয়েছে। অনুগ্রহ করে সাইন-ইন করুন।',
+      'auth_error_account_not_found':
+          'এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি। অনুগ্রহ করে নতুন অ্যাকাউন্ট খুলুন।',
       'auth_error_weak_password': 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।',
       'auth_error_otp_invalid':
           'ভেরিফিকেশন কোড সঠিক নয়। অনুগ্রহ করে যাচাই করে আবার চেষ্টা করুন।',
@@ -1042,6 +1053,13 @@ class TranslationKeys {
       'auth_no_account_create': 'ভ্রমণে নতুন? অ্যাকাউন্ট খুলুন',
       'auth_have_account_sign_in': 'আগেই অ্যাকাউন্ট আছে? সাইন-ইন করুন',
       'auth_sign_in_button': 'সাইন-ইন করুন',
+      'auth_forgot_password': 'পাসওয়ার্ড ভুলে গেছেন?',
+      'auth_forgot_password_subtitle':
+          'নতুন পাসওয়ার্ড সেট করতে আপনার ইমেইল লিখুন। আমরা ৬-সংখ্যার একটি কোড পাঠাব।',
+      'auth_send_reset_code': 'রিসেট কোড পাঠান',
+      'auth_new_password_label': 'নতুন পাসওয়ার্ড',
+      'auth_reset_password_and_sign_in': 'পাসওয়ার্ড রিসেট করে সাইন-ইন করুন',
+      'auth_back_to_sign_in': 'সাইন-ইন পাতায় ফিরুন',
       'auth_back_to_options': 'অন্যান্য সাইন-ইন পদ্ধতিতে ফিরুন',
       'login_welcome_subtitle':
           'আপনার পরিবার, অফিস, স্কুল, স্পোর্টস টিম, স্টাডি গ্রুপ, মহল্লা কমিটি, হাউজিং সোসাইটি, মেস, সমিতি বা ভ্রমণ পরিচালনা করতে সাইন ইন করুন।',
