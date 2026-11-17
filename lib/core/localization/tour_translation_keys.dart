@@ -305,6 +305,14 @@ class TourTranslationKeys {
       'hub_member_email_label': 'Email address *',
       'hub_login_or_signup': 'Sign in or sign up',
       'hub_current_account': 'Signed in as {email}',
+      'hub_switch_account': 'Switch account',
+      'hub_brand_title': 'Bhromon',
+      'hub_default_origin': 'Dhaka',
+      'hub_choose_group_type': 'Or start directly with a group type',
+      'hub_select_group_for_channels':
+          'Please select or create a group first to open Channels.',
+      'hub_select_group_for_moments':
+          'Please select or create a group first to view Moments.',
       'hub_copy_invite_code': 'Copy invite code',
       'hub_copy_invite_link': 'Copy invite link',
       'hub_tap_to_copy_code': 'Tap to copy the invite code',
@@ -4004,7 +4012,7 @@ class TourTranslationKeys {
           'পরিবার বা বন্ধুদের জন্য একটি গ্রুপ তৈরি করুন, অথবা আমন্ত্রণ কোড দিয়ে যোগ দিন।',
       'hub_create_tour': 'গ্রুপ তৈরি করুন',
       'hub_enter_code': 'কোড লিখুন',
-      'official_feed_title': 'Bhromon Official Feed',
+      'official_feed_title': 'ভ্রমণ অফিশিয়াল ফিড',
       'official_feed_card_body':
           'Bhromon টিমের রিল ও আপডেট। সাইন ইন করা যে কেউ দেখতে পারবেন।',
       'official_feed_prompt_title': 'Bhromon Official Feed অনুসরণ করবেন?',
@@ -4213,6 +4221,14 @@ class TourTranslationKeys {
       'hub_member_email_label': 'ইমেইল ঠিকানা *',
       'hub_login_or_signup': 'লগইন বা সাইন-আপ করুন',
       'hub_current_account': 'বর্তমান অ্যাকাউন্ট: {email}',
+      'hub_switch_account': 'অ্যাকাউন্ট বদলান',
+      'hub_brand_title': 'ভ্রমণ',
+      'hub_default_origin': 'ঢাকা',
+      'hub_choose_group_type': 'অথবা সরাসরি গ্রুপের ধরন বেছে শুরু করুন',
+      'hub_select_group_for_channels':
+          'চ্যানেল খুলতে অনুগ্রহ করে আগে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
+      'hub_select_group_for_moments':
+          'মোমেন্টস দেখতে অনুগ্রহ করে আগে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
       'hub_copy_invite_code': 'ইনভাইট কোড কপি করুন',
       'hub_copy_invite_link': 'ইনভাইট লিংক কপি করুন',
       'hub_tap_to_copy_code': 'ট্যাপ করে ইনভাইট কোড কপি করুন',
@@ -6128,7 +6144,7 @@ class TourTranslationKeys {
       'hub_sports_badge': 'দল বা জিম',
       'hub_study_badge': 'স্টাডি গ্রুপ',
       'hub_committee_badge': 'কমিটি',
-      'hub_friends_badge': 'Friends',
+      'hub_friends_badge': 'বন্ধু বা সার্কেল',
       'hub_leave_school_title': 'এই স্কুল গ্রুপ থেকে বের হবেন?',
       'hub_leave_sports_title': 'এই দল থেকে বের হবেন?',
       'hub_leave_study_title': 'এই স্টাডি গ্রুপ থেকে বের হবেন?',

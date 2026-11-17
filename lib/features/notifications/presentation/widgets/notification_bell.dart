@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/forest_palette.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../data/notification_center_repository.dart';
@@ -136,12 +136,15 @@ class _NotificationBellState extends State<NotificationBell> {
     final l10n = context.l10n;
     return IconButton(
       tooltip: l10n.translate('notif_bell_tooltip'),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
       onPressed: _openList,
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text(count > 99 ? '${l10n.number(99)}+' : l10n.number(count)),
-        child: const Icon(Icons.notifications_none_rounded,
-            color: AppColors.midGreen),
+        child: Icon(Icons.notifications_none_rounded,
+            color: context.forest.accentText),
       ),
     );
   }

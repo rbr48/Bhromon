@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/family_date_models.dart';
 import '../../domain/services/group_search_engine.dart';
@@ -1085,7 +1087,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               else if (snapshot.hasError && groups.isEmpty)
                 _buildGroupsError(context)
               else if (groups.isEmpty)
-                _buildEmptyState(context)
+                _buildEmptyState(context, embedded: true)
               else if (filteredGroups.isEmpty)
                 _buildNoSearchResults(context)
               else ...[
@@ -1486,7 +1488,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Bhromon',
+                            context.l10n.translate('hub_brand_title'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1520,120 +1522,41 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               // Before the Play Store link on the web and before the language button on phones.
               IconButton(
                 tooltip: context.l10n.translate('hub_scan_qr'),
-                icon: const Icon(Icons.qr_code_scanner_rounded,
-                    color: AppColors.midGreen),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                icon: Icon(Icons.qr_code_scanner_rounded,
+                    color: context.forest.accentText),
                 onPressed: () => _openJoinByQr(context),
               ),
               if (kIsWeb) const GooglePlayActionButton(),
               const LanguageSwitchButton.compact(),
               PopupMenuButton<String>(
                 tooltip: context.l10n.translate('hub_add_menu'),
-                icon: const Icon(Icons.add_circle_outline_rounded,
-                    color: AppColors.midGreen),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                icon: Icon(Icons.add_circle_outline_rounded,
+                    color: context.forest.accentText),
                 color: context.forest.dialog,
                 onSelected: (choice) {
-                  switch (choice) {
-                    case 'family':
-                      _showCreateFamilyDialog(context);
-                    case 'friends':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.friendsPreset);
-                    case 'office':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.officePreset);
-                    case 'campus':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.campusPreset);
-                    case 'mess':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.messPreset);
-                    case 'society':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.societyPreset);
-                    case 'samity':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.samityPreset);
-                    case 'school':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.schoolPreset);
-                    case 'sports':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.sportsPreset);
-                    case 'study':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.studyPreset);
-                    case 'committee':
-                      _showCreateFamilyDialog(context,
-                          preset: TourGroup.committeePreset);
-                    case 'trip':
-                      _showCreateGroupDialog(context);
-                    case 'join':
-                      _showJoinGroupDialog(context);
+                  if (choice == 'join') {
+                    _showJoinGroupDialog(context);
+                    return;
+                  }
+                  for (final opt in _groupTypeOptions) {
+                    if (opt.id == choice) {
+                      _openCreateForOption(context, opt);
+                      return;
+                    }
                   }
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'family',
-                    child: _menuRow(context, Icons.family_restroom_rounded,
-                        context.l10n.translate('hub_create_family')),
-                  ),
-                  PopupMenuItem(
-                    value: 'friends',
-                    child: _menuRow(context, Icons.people_alt_rounded,
-                        context.l10n.translate('hub_create_friends')),
-                  ),
-                  PopupMenuItem(
-                    value: 'office',
-                    child: _menuRow(context, Icons.work_rounded,
-                        context.l10n.translate('hub_create_office')),
-                  ),
-                  PopupMenuItem(
-                    value: 'campus',
-                    child: _menuRow(context, Icons.school_rounded,
-                        context.l10n.translate('hub_create_campus')),
-                  ),
-                  PopupMenuItem(
-                    value: 'mess',
-                    child: _menuRow(context, Icons.kitchen_rounded,
-                        context.l10n.translate('hub_create_mess')),
-                  ),
-                  PopupMenuItem(
-                    value: 'society',
-                    child: _menuRow(context, Icons.apartment_rounded,
-                        context.l10n.translate('hub_create_society')),
-                  ),
-                  PopupMenuItem(
-                    value: 'samity',
-                    child: _menuRow(
-                        context,
-                        Icons.account_balance_wallet_rounded,
-                        context.l10n.translate('hub_create_samity')),
-                  ),
-                  PopupMenuItem(
-                    value: 'school',
-                    child: _menuRow(context, Icons.menu_book_rounded,
-                        context.l10n.translate('hub_create_school')),
-                  ),
-                  PopupMenuItem(
-                    value: 'sports',
-                    child: _menuRow(context, Icons.sports_soccer_rounded,
-                        context.l10n.translate('hub_create_sports')),
-                  ),
-                  PopupMenuItem(
-                    value: 'study',
-                    child: _menuRow(context, Icons.local_library_rounded,
-                        context.l10n.translate('hub_create_study')),
-                  ),
-                  PopupMenuItem(
-                    value: 'committee',
-                    child: _menuRow(context, Icons.how_to_vote_rounded,
-                        context.l10n.translate('hub_create_committee')),
-                  ),
-                  PopupMenuItem(
-                    value: 'trip',
-                    child: _menuRow(context, Icons.card_travel_rounded,
-                        context.l10n.translate('hub_create_new_tour')),
-                  ),
+                  for (final opt in _groupTypeOptions)
+                    PopupMenuItem(
+                      value: opt.id,
+                      child: _menuRow(context, opt.icon,
+                          context.l10n.translate(opt.createKey)),
+                    ),
                   PopupMenuItem(
                     value: 'join',
                     child: _menuRow(context, Icons.group_add_outlined,
@@ -1781,185 +1704,385 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    // The empty state lists every way to start a circle, so it scrolls on a short
-    // screen or with long labels instead of overflowing.
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.midGreen.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.travel_explore_rounded,
-                  size: 72, color: context.forest.accentText),
+  static const List<
+      ({
+        String id,
+        IconData icon,
+        String createKey,
+        String badgeKey,
+        String? preset,
+        bool isTrip,
+      })> _groupTypeOptions = [
+    (
+      id: 'family',
+      icon: Icons.family_restroom_rounded,
+      createKey: 'hub_create_family',
+      badgeKey: 'hub_section_family',
+      preset: null,
+      isTrip: false,
+    ),
+    (
+      id: 'friends',
+      icon: Icons.people_alt_rounded,
+      createKey: 'hub_create_friends',
+      badgeKey: 'hub_friends_badge',
+      preset: TourGroup.friendsPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'office',
+      icon: Icons.work_rounded,
+      createKey: 'hub_create_office',
+      badgeKey: 'hub_office_badge',
+      preset: TourGroup.officePreset,
+      isTrip: false,
+    ),
+    (
+      id: 'campus',
+      icon: Icons.school_rounded,
+      createKey: 'hub_create_campus',
+      badgeKey: 'hub_campus_badge',
+      preset: TourGroup.campusPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'mess',
+      icon: Icons.kitchen_rounded,
+      createKey: 'hub_create_mess',
+      badgeKey: 'hub_mess_badge',
+      preset: TourGroup.messPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'society',
+      icon: Icons.apartment_rounded,
+      createKey: 'hub_create_society',
+      badgeKey: 'hub_society_badge',
+      preset: TourGroup.societyPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'samity',
+      icon: Icons.account_balance_wallet_rounded,
+      createKey: 'hub_create_samity',
+      badgeKey: 'hub_samity_badge',
+      preset: TourGroup.samityPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'school',
+      icon: Icons.menu_book_rounded,
+      createKey: 'hub_create_school',
+      badgeKey: 'hub_school_badge',
+      preset: TourGroup.schoolPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'sports',
+      icon: Icons.sports_soccer_rounded,
+      createKey: 'hub_create_sports',
+      badgeKey: 'hub_sports_badge',
+      preset: TourGroup.sportsPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'study',
+      icon: Icons.local_library_rounded,
+      createKey: 'hub_create_study',
+      badgeKey: 'hub_study_badge',
+      preset: TourGroup.studyPreset,
+      isTrip: false,
+    ),
+    (
+      id: 'committee',
+      icon: Icons.how_to_vote_rounded,
+      createKey: 'hub_create_committee',
+      badgeKey: 'hub_committee_badge',
+      preset: TourGroup.committeePreset,
+      isTrip: false,
+    ),
+    (
+      id: 'trip',
+      icon: Icons.card_travel_rounded,
+      createKey: 'hub_create_new_tour',
+      badgeKey: 'hub_section_trips',
+      preset: null,
+      isTrip: true,
+    ),
+  ];
+
+  void _openCreateForOption(
+    BuildContext context,
+    ({
+      String id,
+      IconData icon,
+      String createKey,
+      String badgeKey,
+      String? preset,
+      bool isTrip,
+    }) option,
+  ) {
+    if (option.isTrip) {
+      _showCreateGroupDialog(context);
+      return;
+    }
+    _showCreateFamilyDialog(context, preset: option.preset);
+  }
+
+  void _showCreateGroupPickerSheet(BuildContext context) {
+    final l10n = context.l10n;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: context.forest.card,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.78,
             ),
-            const SizedBox(height: 20),
-            Text(
-              context.l10n.translate('hub_empty_title'),
-              style: TextStyle(
-                color: context.forest.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              context.l10n.translate('hub_empty_body'),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.forest.text70, fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-            const OfficialFeedEntryCard(),
-            const SizedBox(height: 28),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () => _showCreateGroupDialog(context),
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text(context.l10n.translate('hub_create_tour')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.midGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.translate('hub_choose_group_type'),
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded,
+                            color: context.forest.text54),
+                        onPressed: () => Navigator.pop(sheetCtx),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: () => _showJoinGroupDialog(context),
-                  icon: const Icon(Icons.key_rounded),
-                  label: Text(context.l10n.translate('hub_enter_code')),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.mintGreen,
-                    side: const BorderSide(color: AppColors.mintGreen),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                Divider(height: 1, color: context.forest.divider10),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _groupTypeOptions.length,
+                    itemBuilder: (_, index) {
+                      final opt = _groupTypeOptions[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              context.forest.accentText.withValues(alpha: 0.12),
+                          child: Icon(opt.icon,
+                              color: context.forest.accentText, size: 20),
+                        ),
+                        title: Text(
+                          l10n.translate(opt.badgeKey),
+                          style: TextStyle(
+                            color: context.forest.text,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          l10n.translate(opt.createKey),
+                          style: TextStyle(
+                            color: context.forest.text54,
+                            fontSize: 12,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(sheetCtx);
+                          _openCreateForOption(context, opt);
+                        },
+                      );
+                    },
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context),
-              icon: Icon(Icons.family_restroom_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_family'),
-                  style: TextStyle(color: context.forest.accentText)),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _switchAccount(BuildContext context) async {
+    try {
+      await context.read<AuthCubit>().signOut();
+    } catch (_) {
+      // Standalone widget tests may mount without AuthCubit.
+    }
+    if (context.mounted) {
+      try {
+        context.go('/login');
+      } catch (_) {}
+    }
+  }
+
+  Widget _buildEmptyState(BuildContext context, {bool embedded = false}) {
+    final l10n = context.l10n;
+    final accent = context.forest.accentText;
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.midGreen.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.travel_explore_rounded, size: 48, color: accent),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          l10n.translate('hub_empty_title'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: context.forest.text,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.translate('hub_empty_body'),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.forest.text70, fontSize: 14),
+        ),
+        const SizedBox(height: 18),
+        const OfficialFeedEntryCard(),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () => _showCreateGroupPickerSheet(context),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(l10n.translate('hub_create_tour')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.midGreen,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.friendsPreset),
-              icon: Icon(Icons.people_alt_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_friends'),
-                  style: TextStyle(color: context.forest.accentText)),
+            OutlinedButton.icon(
+              onPressed: () => _showJoinGroupDialog(context),
+              icon: const Icon(Icons.key_rounded),
+              label: Text(l10n.translate('hub_enter_code')),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                side: BorderSide(color: accent),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.officePreset),
-              icon: Icon(Icons.work_rounded, color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_office'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.campusPreset),
-              icon:
-                  Icon(Icons.school_rounded, color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_campus'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.messPreset),
-              icon:
-                  Icon(Icons.kitchen_rounded, color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_mess'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.societyPreset),
-              icon: Icon(Icons.apartment_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_society'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.samityPreset),
-              icon: Icon(Icons.account_balance_wallet_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_samity'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.schoolPreset),
-              icon: Icon(Icons.menu_book_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_school'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.sportsPreset),
-              icon: Icon(Icons.sports_soccer_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_sports'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.studyPreset),
-              icon: Icon(Icons.local_library_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_study'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            TextButton.icon(
-              onPressed: () => _showCreateFamilyDialog(context,
-                  preset: TourGroup.committeePreset),
-              icon: Icon(Icons.how_to_vote_rounded,
-                  color: context.forest.accentText),
-              label: Text(context.l10n.translate('hub_create_committee'),
-                  style: TextStyle(color: context.forest.accentText)),
-            ),
-            const SizedBox(height: 12),
-            if (!_repository.isSignedIn)
-              TextButton.icon(
-                onPressed: () => context.push('/login'),
-                icon: Icon(Icons.login_rounded,
-                    color: context.forest.accentText, size: 18),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Text(
+          l10n.translate('hub_choose_group_type'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: context.forest.text60,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            for (final opt in _groupTypeOptions)
+              ActionChip(
+                avatar: Icon(opt.icon, size: 17, color: accent),
                 label: Text(
-                  context.l10n.translate('hub_login_or_signup'),
+                  l10n.translate(opt.badgeKey),
                   style: TextStyle(
-                    color: context.forest.accentText,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    color: context.forest.text,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              )
-            else
-              Text(
-                context.l10n.translate('hub_current_account',
-                    args: {'email': _repository.currentEmail}),
-                style: TextStyle(color: context.forest.text38, fontSize: 12),
+                backgroundColor: context.forest.card,
+                side: BorderSide(color: context.forest.divider10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                onPressed: () => _openCreateForOption(context, opt),
               ),
           ],
         ),
+        const SizedBox(height: 18),
+        if (!_repository.isSignedIn)
+          TextButton.icon(
+            onPressed: () => context.push('/login'),
+            icon: Icon(Icons.login_rounded, color: accent, size: 18),
+            label: Text(
+              l10n.translate('hub_login_or_signup'),
+              style: TextStyle(
+                color: accent,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          )
+        else
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            children: [
+              Text(
+                l10n.translate('hub_current_account',
+                    args: {'email': _repository.currentEmail}),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.forest.text60, fontSize: 12.5),
+              ),
+              TextButton.icon(
+                key: const Key('hub_switch_account_button'),
+                onPressed: () => _switchAccount(context),
+                icon: Icon(Icons.swap_horiz_rounded, size: 16, color: accent),
+                label: Text(
+                  l10n.translate('hub_switch_account'),
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+
+    if (embedded) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 16),
+        child: content,
+      );
+    }
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: content,
       ),
     );
   }
@@ -3167,7 +3290,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final destCtrl = TextEditingController();
-    final originCtrl = TextEditingController(text: 'ঢাকা');
+    final originCtrl =
+        TextEditingController(text: l10n.translate('hub_default_origin'));
     TourType selectedTourType = TourType.beach;
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now()
