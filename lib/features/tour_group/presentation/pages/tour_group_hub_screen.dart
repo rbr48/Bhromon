@@ -22,7 +22,7 @@ import '../../data/active_group.dart';
 import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
-import '../../../../core/localization/locale_controller.dart';
+import '../../../../core/widgets/language_switch_button.dart';
 import '../../../notifications/presentation/widgets/notification_bell.dart';
 import '../widgets/bhromon_bottom_nav.dart';
 import '../widgets/groups/group_card.dart';
@@ -1525,22 +1525,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 onPressed: () => _openJoinByQr(context),
               ),
               if (kIsWeb) const GooglePlayActionButton(),
-              ListenableBuilder(
-                listenable: LocaleController.instance,
-                builder: (context, _) {
-                  final isBn =
-                      LocaleController.instance.locale.languageCode == 'bn';
-                  return IconButton(
-                    tooltip: isBn ? 'Switch to English' : 'বাংলায় দেখুন',
-                    icon: const Icon(Icons.language_rounded,
-                        color: AppColors.midGreen),
-                    onPressed: () {
-                      final next = isBn ? 'en' : 'bn';
-                      LocaleController.instance.setLanguage(next);
-                    },
-                  );
-                },
-              ),
+              const LanguageSwitchButton.compact(),
               PopupMenuButton<String>(
                 tooltip: context.l10n.translate('hub_add_menu'),
                 icon: const Icon(Icons.add_circle_outline_rounded,

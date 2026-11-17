@@ -12,6 +12,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/widgets/bouncy_button.dart';
+import '../../../../core/widgets/language_switch_button.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
 
@@ -193,6 +194,11 @@ class _LoginScreenState extends State<LoginScreen>
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                const Align(
+                                  alignment: Alignment.centerRight,
+                                  child: LanguageSwitchButton(),
+                                ),
+                                const SizedBox(height: 12),
                                 const _BrandHeader(),
                                 const SizedBox(height: 36),
                                 _loginCard(ctx, state),

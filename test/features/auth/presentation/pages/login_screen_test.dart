@@ -1,11 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 
 import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/localization/locale_controller.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/features/auth/presentation/pages/login_screen.dart';
@@ -90,23 +94,40 @@ Widget _buildTestApp(_FakeAuthCubit authCubit) {
     ],
   );
 
-  return BlocProvider<AuthCubit>.value(
-    value: authCubit,
-    child: MaterialApp.router(
-      locale: const Locale('en'),
-      supportedLocales: const [Locale('en'), Locale('bn')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      routerConfig: router,
+  return ListenableBuilder(
+    listenable: LocaleController.instance,
+    builder: (_, __) => BlocProvider<AuthCubit>.value(
+      value: authCubit,
+      child: MaterialApp.router(
+        locale: LocaleController.instance.locale,
+        supportedLocales: const [Locale('en'), Locale('bn')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: router,
+      ),
     ),
   );
 }
 
 void main() {
+  late Directory hiveDir;
+
+  setUpAll(() {
+    hiveDir = Directory.systemTemp.createTempSync('bhromon_login_test');
+    Hive.init(hiveDir.path);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (hiveDir.existsSync()) {
+      hiveDir.deleteSync(recursive: true);
+    }
+  });
+
   testWidgets('renders Google and Email sign-in options on initial load',
       (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
@@ -381,5 +402,44 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'language switch defaults to English and toggles EN/BN across auth screens',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(() => LocaleController.instance.setLanguage('en'));
+
+    await LocaleController.instance.setLanguage('en');
+    final cubit = _FakeAuthCubit(const Unauthenticated());
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_buildTestApp(cubit));
+    await tester.pumpAndSettle();
+
+    expect(LocaleController.instance.locale.languageCode, 'en');
+    expect(find.byKey(const Key('login_language_switch_pill')), findsOneWidget);
+    expect(find.text('Sign in with Email'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('language_option_bn')));
+    await tester.pumpAndSettle();
+    expect(LocaleController.instance.locale.languageCode, 'bn');
+    expect(find.text('ইমেইল দিয়ে সাইন-ইন করুন'), findsOneWidget);
+
+    // Navigate into Sign in -> Forgot Password: switcher remains visible & works
+    await tester.ensureVisible(
+      find.byKey(const Key('login_open_email_signin_button')),
+    );
+    await tester.tap(find.byKey(const Key('login_open_email_signin_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('login_language_switch_pill')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('language_option_en')));
+    await tester.pumpAndSettle();
+    expect(LocaleController.instance.locale.languageCode, 'en');
+    expect(find.text('Forgot password?'), findsOneWidget);
   });
 }
