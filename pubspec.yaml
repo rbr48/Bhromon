@@ -90,7 +90,7 @@ dependencies:
   talker_flutter: ^5.0.0
   talker_bloc_logger: ^5.2.0
   talker: ^5.2.0
-  firebase_analytics: ^13.0.1
+  firebase_analytics: ^13.1.0
   firebase_performance: ^0.12.1
   firebase_remote_config: ^7.0.1
   permission_handler: ^11.3.1
